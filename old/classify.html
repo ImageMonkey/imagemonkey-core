@@ -1,0 +1,102 @@
+<html>
+<head> 
+
+<!-- Regular Meta Info -->
+    <meta name="description" content="Download precompiled libraries for Visual Studio">
+    <meta name="keywords" content="precompiled,libraries,prebuilt,windows,visual studio,precompiled.io">
+    <title>{{ .title }}</title>
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.css"/>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+	<link rel="stylesheet" href="css/footer.css"/>
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+
+	<style>
+	body {
+		padding: 20px;
+		font-family: 'Open Sans', sans-serif;
+		font-size: 16px;
+	}
+	</style>
+
+	<script type="text/javascript">
+		$(document).ready(function(){
+			$("#imageLabel").val('');
+
+			$('#submitButton').on('click', function() {
+		        var imageLabel = $('#imageLabel').val();
+		        var imageId = $("#image").attr("imageId")
+		        alert(imageId)
+		        var dataString = 'label=' + imageLabel +"&imageId=" + imageId;
+		        $.ajax({
+		            type: "POST",
+		            url: "/label",
+		            data: dataString,
+		            success: function() {
+		            	alert('');
+		                location.reload();
+		            }
+		        });
+		        return false;
+		    });
+		});
+	</script>
+</head>
+
+<body>
+<div class="ui grid">
+	<div class="four wide column"></div>
+	<div class="eight wide column center aligned">
+		<!--<img class="ui fluid image" src="https://images.pexels.com/photos/36764/marguerite-daisy-beautiful-beauty.jpg?w=1260&h=750&auto=compress&cs=tinysrgb">-->
+		{{$bla := nextFlickrPhotoUrl }}
+		<img class="ui fluid image" src="{{ $bla.Url }}" id="image", imageId="{{ $bla.Id }}">
+	</div>
+	<div class="four wide column"></div>
+
+	<div class="four wide column"></div>
+	<div class="eight wide column center aligned">
+		<!--<form class="ui form" action="/label" method="post">-->
+			<div class="ui input">
+				<input placeholder="What do you see?" type="text" id="imageLabel">
+		  		<!--<input placeholder="{{ formatTime 1504358080 }}" type="text" id="imageLabel">-->
+			</div>
+
+			<button class="ui green button" id="submitButton">
+				Submit
+			</button>
+		<!--</form>-->
+
+		<button class="ui green button" onclick="location.reload()">
+			Next
+		</button>
+
+	</div>
+	<div class="four wide column"></div>
+
+	<div class="four wide column"></div>
+	<div class="eight wide column center aligned">
+		<h1>Other Users</h1>
+	</div>
+	<div class="four wide column"></div>
+	
+	<div class="three wide column"></div>
+	<div class="ten wide column center aligned">
+		<section id="graph"></section>
+	</div>
+	<div class="three wide column"></div>
+
+
+
+	<script>
+	var graphData = [{"group": 1, "text": "test", "size": 30}, {"group": 2, "text": "test2", "size": 30}, {"group": 3, "text": "test", "size": 30}];
+	</script>
+	<script src="js/graph.js"></script>
+
+
+
+</div>
+
+</body>
+
+</html>

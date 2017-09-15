@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<head>
+  <title>ImageMonkey</title>
+  <meta charset='utf-8'/>
+  <meta name='description' content='Documentation website'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1'/>
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'/>
+  <link href='assets.css' rel='stylesheet' type='text/css'>
+
+</head>
+<body>  
+  <nav id='sidebar'>
+	<h1><a href="/" style=" text-decoration:none;"><font color="white">ImageMonkey</font></a></h1>
+<ul id='links'>
+  
+    
+  
+    
+  
+    
+  
+    
+  
+  
+  <li><h2>General</h2>
+    <ul>
+    
+              
+        <li class=''><a href='#'></a></li>
+      
+    
+              
+        <li class='POST'><a href='#/v1-post-report'>Report image</a></li>
+              
+        <li class='GET'><a href='#/v1-get-validate'>Validate random image</a></li>
+              
+        <li class='GET'><a href='#/v1-get-validate-id'>Validate specific image</a></li>
+              
+        <li class='GET'><a href='#/v1-get-export'>Export datasets</a></li>
+      
+    
+    </ul>
+  </li>
+
+</ul>
+</nav>
+
+<div class="ui grid" id='content'>
+
+  <div class="ui row">
+  <article class='POST'>
+    <a name='/v1-post-report' href='#/v1-post-report'><h2><code><b>POST</b> /report/:uuid</code> Report image</h2></a>
+    <section class='body'>
+      <p>Report an image with a specific uuid as abusive.</p>
+
+<h3 id="request">Request</h3>
+<p><code>/report/:uuid</code>
+<code>{
+    reason: 'explain briefly why this picture is inappropriate'
+}</code></p>
+
+<h3 id="example">Example</h3>
+<p><code>/report/48780a63-df1f-48d1-99ee-6c60e535a274</code>
+<code>{
+    reason: 'picture contains nudity'
+}</code></p>
+
+<h3 id="response">Response</h3>
+
+<p><code>Status: 200 OK</code></p>
+
+    </section>
+  </article>
+</div>
+
+  <div class="ui row">
+  <article class='GET'>
+    <a name='/v1-get-validate' href='#/v1-get-validate'><h2><code><b>GET</b> /validate</code> Validate random image</h2></a>
+    <section class='body'>
+      <p>This method returns a randomly chosen image together with some usuful metadata.</p>
+
+<h3 id="example">Example</h3>
+
+<p><code>/validate</code></p>
+
+<h3 id="response">Response</h3>
+
+<p><code>Status: 200 OK</code>
+<code>{
+    label: 'dog'
+    provider: 'donation'
+    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
+    uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
+}</code></p>
+
+    </section>
+  </article>
+</div>
+
+  <div class="ui row">
+  <article class='GET'>
+    <a name='/v1-get-validate-id' href='#/v1-get-validate-id'><h2><code><b>GET</b> /validate/:uuid</code> Validate specific image</h2></a>
+    <section class='body'>
+      <p>This method returns a specific image together with some usuful metadata.</p>
+
+<h3 id="request">Request</h3>
+<p><code>/validate/:uuid</code></p>
+
+<h3 id="example">Example</h3>
+<p><code>/validate/48750a63-df1f-48d1-99ee-6c60e535a271</code></p>
+
+<h3 id="response">Response</h3>
+
+<p><code>Status: 200 OK</code>
+<code>{
+    label: 'dog'
+    provider: 'donation'
+    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
+    uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
+}</code></p>
+
+    </section>
+  </article>
+</div>
+
+  <div class="ui row">
+  <article class='GET'>
+    <a name='/v1-get-export' href='#/v1-get-export'><h2><code><b>GET</b> /export</code> Export datasets</h2></a>
+    <section class='body'>
+      <p>This method returns a collection of images that belong to one or more specific tags.</p>
+
+<h3 id="example">Example</h3>
+
+<p><code>/export?tags=dog</code></p>
+
+<h3 id="response">Response</h3>
+
+<p><code>Status: 200 OK</code>
+<code>{
+    label: 'dog'
+    provider: 'donation'
+    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
+    uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
+    probability: 0.9230769
+    num_yes: 12
+    num_no: 1
+}</code></p>
+
+    </section>
+  </article>
+</div>
+
+</div>
+
+  
+  <script src='assets.js' type='text/javascript'></script>
+  <script>require('boot');</script>
+</body>
+</html>

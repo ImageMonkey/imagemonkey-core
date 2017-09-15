@@ -1,0 +1,17 @@
+<div class="ui container">
+      <div class="ui large secondary inverted pointing menu">
+        <a class="toc item">
+          <i class="sidebar icon"></i>
+        </a>
+        <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
+        <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
+        <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/verify">Validate</a>
+        <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" href="/explore">Explore</a>
+        <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/export">Export</a>
+        <a class="item" href="/api">API</a>
+        <!--<div class="right item">
+          <a class="ui inverted button">Log in</a>
+          <a class="ui inverted button">Sign Up</a>
+        </div>-->
+      </div>
+    </div>

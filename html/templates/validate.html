@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="js/common.js"></script> 
+  <script src="js/dropzone.js"></script>
+  <link rel="stylesheet" href="css/dropzone.css">
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+      $("#yesButton").add('#noButton').click(function(e) {
+        var action = (e.target.id === "yesButton") ? "yes" : "no";
+        alert(action)
+
+        e.preventDefault();
+        var url = '/validate/' + $("#image").attr("imageId") + '/' + action;
+          $.ajax({
+              url: url,
+              dataType: 'json',
+              type: 'POST',
+              success: function(data){
+                $.ajax({
+                  url: '/validate',
+                  dataType: 'json',
+                  type: 'GET',
+                  success: function(data){
+                    $("#image").attr("imageId", data.id);
+                    $("#image").attr("src", data.url);
+                    $("#label").text(data.label);
+                  }
+                });
+              }
+          });
+      });
+    });
+
+  </script>
+</head>
+<body>
+
+{{ template "menu.html" .}}
+
+<!-- Page Contents -->
+<div class="pusher">
+  <div class="ui inverted vertical masthead center aligned segment">
+  	{{ template "pointing_menu.html" .}}  
+  	<div class="ui text container">
+  	  <!--<h2 class="ui inverted header">{{ .randomImage.Label }}</h2>-->
+      <h2 class="ui inverted header">What do you see?</h2>
+    </div>
+</div>
+    <div class="ui vertical stripe segment">
+    <div class="ui text container">
+      <div class="row">
+      	<img class="ui large image centered" src="{{ .randomImage.Url }}" imageId="{{ .randomImage.Id }}" id="image">
+        <div class="ui center aligned basic segment">
+          <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
+          <button class="positive ui button center aligned" id="yesButton">YES</button>
+          <button class="negative ui button center aligned" id="noButton">NO</button>
+        </div>
+      </div>
+      <!--<div class="ui center aligned row">-->
+        <!--<div class="center aligned column">-->
+          
+        <!--</div>-->
+      <!--</div>-->
+  </div>
+</div>
+  </div>
+  {{ template "footer.html" .}}
+</div>
+
+</body>
+
+</html>
