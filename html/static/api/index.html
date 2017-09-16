@@ -227,6 +227,9 @@
                   <li>
                     <a href="#donate-a-picture" class="toc-h2 toc-link" data-title="Donations">Donate a picture</a>
                   </li>
+                  <li>
+                    <a href="#get-a-specific-donation" class="toc-h2 toc-link" data-title="Donations">Get a specific donation</a>
+                  </li>
               </ul>
           </li>
           <li>
@@ -271,35 +274,17 @@
       <div class="dark-box"></div>
       <div class="content">
         <h1 id='introduction'>Introduction</h1>
-<p>Welcome to the ImageMonkey API! ImageMonkey is a public, open sourced image dataset project where users can contribute photos to and tag them accordingly.</p>
+<p>Welcome to the ImageMonkey API! </p>
+
+<p>ImageMonkey is a public, open sourced image dataset project where users can contribute photos to and tag them accordingly.</p>
 <h1 id='donations'>Donations</h1><h2 id='donate-a-picture'>Donate a picture</h2><pre class="highlight shell tab-shell"><code>curl <span class="se">\</span>
   -F <span class="s2">"label=banana"</span> <span class="se">\</span>
   -F <span class="s2">"image=@/home/user/Desktop/banana.jpg"</span> <span class="se">\</span>
   https://api.imagemonkey.com/v1/donate
 </code></pre>
-<blockquote>
-<p>The above command returns JSON structured like this:</p>
-</blockquote>
-<pre class="highlight json tab-json"><code><span class="p">[</span><span class="w">
-  </span><span class="p">{</span><span class="w">
-    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Fluffums"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"breed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"calico"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"fluffiness"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"cuteness"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="p">{</span><span class="w">
-    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Max"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"breed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"fluffiness"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"cuteness"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">]</span><span class="w">
-</span></code></pre>
 <p>Upload a picture and tag it with a specific label.</p>
 <h3 id='http-request'>HTTP Request</h3>
-<p>`POST https://api.imagemonkey.com/v1/donate</p>
+<p><code>POST https://api.imagemonkey.com/v1/donate</code></p>
 <h3 id='parameters'>Parameters</h3>
 <table><thead>
 <tr>
@@ -309,7 +294,7 @@
 </thead><tbody>
 <tr>
 <td>label</td>
-<td>a single string which labels the image</td>
+<td>image description</td>
 </tr>
 <tr>
 <td>image</td>
@@ -318,8 +303,25 @@
 </tbody></table>
 
 <aside class="warning">
-Donating a picture only works if you specify a valid (i.e existing) label. If the label doesn't exist, please create a pull request, so that we can add it.
+Donating a picture only works if you specify a valid (i.e existing) label. If the label doesn't exist, please create a pull request, so that we can add it. You can see the list of available labels <a href="https://github.com/bbernhard/imagemonkey-core/blob/master/wordlists/en/misc.txt">here</a>.
 </aside>
+<h2 id='get-a-specific-donation'>Get a specific donation</h2><pre class="highlight shell tab-shell"><code>curl https://api.imagemonkey.com/v1/donation/48750a63-df1f-48d1-99ee-6c60e535a271
+</code></pre>
+<p>The above command returns the donated image.</p>
+<h3 id='http-request-2'>HTTP Request</h3>
+<p><code>GET https://api.imagemonkey.com/v1/donation/&lt;uuid&gt;</code></p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>uuid</td>
+<td>the uuid of the image you want to fetch</td>
+</tr>
+</tbody></table>
 <h1 id='validation'>Validation</h1><h2 id='random-image-for-validation'>Random Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate"</span>
 </code></pre>
 <blockquote>
@@ -327,13 +329,12 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </blockquote>
 <pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
     </span><span class="err">label</span><span class="p">:</span><span class="w"> </span><span class="err">'dog'</span><span class="w">
-    </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">
-    </span><span class="err">url</span><span class="p">:</span><span class="w"> </span><span class="err">'/donations/</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+    </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">    
     </span><span class="err">uuid</span><span class="p">:</span><span class="w"> </span><span class="err">'</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 <p>This endpoint returns the ID of an randomly chosen image together with some usuful metadata.</p>
-<h3 id='http-request-2'>HTTP Request</h3>
+<h3 id='http-request-3'>HTTP Request</h3>
 <p><code>GET https://api.imagemonkey.com/v1/validate/</code></p>
 <h2 id='specific-image-for-validation'>Specific Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271"</span>
 </code></pre>
@@ -343,18 +344,12 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
     </span><span class="err">label</span><span class="p">:</span><span class="w"> </span><span class="err">'dog'</span><span class="w">
     </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">
-    </span><span class="err">url</span><span class="p">:</span><span class="w"> </span><span class="err">'/donations/</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
     </span><span class="err">uuid</span><span class="p">:</span><span class="w"> </span><span class="err">'</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-<p>This endpoint returns some useful metadata for the specified ID.</p>
-<h3 id='http-request-3'>HTTP Request</h3>
-<p><code>GET https://api.imagemonkey.com/v1/validate/&lt;ID&gt;</code></p>
-<h2 id='validate-image'>Validate Image</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"</span>
-</code></pre>
-<p>This endpoint makes it possible to validate a specific image.</p>
+<p>This endpoint returns some useful metadata for the specified uuid.</p>
 <h3 id='http-request-4'>HTTP Request</h3>
-<p><code>POST https://api.imagemonkey.com/v1/validate/&lt;ID&gt;/&lt;action&gt;</code></p>
+<p><code>GET https://api.imagemonkey.com/v1/validate/&lt;uuid&gt;</code></p>
 
 <table><thead>
 <tr>
@@ -363,7 +358,24 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </tr>
 </thead><tbody>
 <tr>
-<td>ID</td>
+<td>uuid</td>
+<td>the uuid of the image you want to validate</td>
+</tr>
+</tbody></table>
+<h2 id='validate-image'>Validate Image</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"</span>
+</code></pre>
+<p>This endpoint makes it possible to validate a specific image.</p>
+<h3 id='http-request-5'>HTTP Request</h3>
+<p><code>POST https://api.imagemonkey.com/v1/validate/&lt;uuid&gt;/&lt;action&gt;</code></p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>uuid</td>
 <td>image id</td>
 </tr>
 <tr>
@@ -379,7 +391,6 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
     </span><span class="err">label</span><span class="p">:</span><span class="w"> </span><span class="err">'dog'</span><span class="w">
     </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">
-    </span><span class="err">url</span><span class="p">:</span><span class="w"> </span><span class="err">'/donations/</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
     </span><span class="err">uuid</span><span class="p">:</span><span class="w"> </span><span class="err">'</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
     </span><span class="err">probability</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9230769</span><span class="w">
     </span><span class="err">num_yes</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w">
@@ -387,7 +398,7 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 <p>This endpoint returns a collection of images that belong to one or more specific tags.</p>
-<h3 id='http-request-5'>HTTP Request</h3>
+<h3 id='http-request-6'>HTTP Request</h3>
 <p><code>GET https://api.imagemonkey.com/v1/export</code></p>
 
 <table><thead>
@@ -404,8 +415,8 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <h1 id='report'>Report</h1><h2 id='mark-an-image-as-abusive'>Mark an image as abusive</h2><pre class="highlight shell tab-shell"><code>curl -H <span class="s2">"Content-Type: application/json"</span> 
      -X POST -d <span class="s1">'{"reason":"picture contains nudity"}'</span> 
      https://api.imagemonkey.com/v1/report/48750a63-df1f-48d1-99ee-6c60e535a271
-</code></pre><h3 id='http-request-6'>HTTP Request</h3>
-<p><code>POST https://api.imagemonkey.com/v1/report/&lt;ID&gt;</code></p>
+</code></pre><h3 id='http-request-7'>HTTP Request</h3>
+<p><code>POST https://api.imagemonkey.com/v1/report/&lt;uuid&gt;</code></p>
 
 <table><thead>
 <tr>
@@ -413,6 +424,10 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <th>Description</th>
 </tr>
 </thead><tbody>
+<tr>
+<td>uuid</td>
+<td>The uuid of the image which is abusive</td>
+</tr>
 <tr>
 <td>reason</td>
 <td>Brief explanation why this picture is inappropriate.</td>

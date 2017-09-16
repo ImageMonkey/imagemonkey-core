@@ -129,7 +129,7 @@ func main() {
 
 	router.GET("/validate", func(c *gin.Context) {
 		randomImage := getRandomImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "url": randomImage.Url, "label": randomImage.Label, "provider": randomImage.Provider})
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
 	})
 
 	router.POST("/donate", func(c *gin.Context) {

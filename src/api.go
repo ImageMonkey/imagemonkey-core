@@ -49,7 +49,7 @@ func main(){
 
 	router.GET("/v1/validate", func(c *gin.Context) {
 		randomImage := getRandomImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "url": randomImage.Url, "label": randomImage.Label, "provider": randomImage.Provider})
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
 	})
 
 	router.POST("/v1/validate/:imageid/:param", func(c *gin.Context) {

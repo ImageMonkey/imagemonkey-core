@@ -37,8 +37,8 @@
                   dataType: 'json',
                   type: 'GET',
                   success: function(data){
-                    $("#image").attr("imageId", data.id);
-                    $("#image").attr("src", data.url);
+                    $("#image").attr("imageId", data.uuid);
+                    $("#image").attr("src", ("donations/"+data.uuid));
                     $("#label").text(data.label);
                   }
                 });
@@ -65,23 +65,17 @@
     <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
-      	<img class="ui large image centered" src="{{ .randomImage.Url }}" imageId="{{ .randomImage.Id }}" id="image">
+      	<img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
         <div class="ui center aligned basic segment">
           <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
           <button class="positive ui button center aligned" id="yesButton">YES</button>
           <button class="negative ui button center aligned" id="noButton">NO</button>
         </div>
       </div>
-      <!--<div class="ui center aligned row">-->
-        <!--<div class="center aligned column">-->
-          
-        <!--</div>-->
-      <!--</div>-->
   </div>
 </div>
   </div>
   {{ template "footer.html" .}}
-</div>
 
 </body>
 

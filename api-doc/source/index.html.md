@@ -15,7 +15,9 @@ search: true
 
 # Introduction
 
-Welcome to the ImageMonkey API! ImageMonkey is a public, open sourced image dataset project where users can contribute photos to and tag them accordingly.
+Welcome to the ImageMonkey API! 
+
+ImageMonkey is a public, open sourced image dataset project where users can contribute photos to and tag them accordingly.
 
 # Donations
 
@@ -29,43 +31,39 @@ curl \
   https://api.imagemonkey.com/v1/donate
 ```
 
-> The above command returns JSON structured like this:
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Fluffums",
-    "breed": "calico",
-    "fluffiness": 6,
-    "cuteness": 7
-  },
-  {
-    "id": 2,
-    "name": "Max",
-    "breed": "unknown",
-    "fluffiness": 5,
-    "cuteness": 10
-  }
-]
-```
-
 Upload a picture and tag it with a specific label.
 
 ### HTTP Request
 
-`POST https://api.imagemonkey.com/v1/donate
+`POST https://api.imagemonkey.com/v1/donate`
 
 ### Parameters
 
 Parameter | Description
 --------- | ------- | -----------
-label  | a single string which labels the image
+label  | image description
 image | the image you want to donate
 
 <aside class="warning">
-Donating a picture only works if you specify a valid (i.e existing) label. If the label doesn't exist, please create a pull request, so that we can add it.
+Donating a picture only works if you specify a valid (i.e existing) label. If the label doesn't exist, please create a pull request, so that we can add it. You can see the list of available labels <a href="https://github.com/bbernhard/imagemonkey-core/blob/master/wordlists/en/misc.txt">here</a>.
 </aside>
+
+
+
+## Get a specific donation
+
+```shell
+curl https://api.imagemonkey.com/v1/donation/48750a63-df1f-48d1-99ee-6c60e535a271
+```
+The above command returns the donated image.
+
+### HTTP Request
+
+`GET https://api.imagemonkey.com/v1/donation/<uuid>`
+
+Parameter | Description
+--------- | ------- | -----------
+uuid  | the uuid of the image you want to fetch
 
 
 
@@ -83,8 +81,7 @@ curl "https://api.imagemonkey.com/v1/validate"
 ```json
 {
     label: 'dog'
-    provider: 'donation'
-    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
+    provider: 'donation'    
     uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
 }
 ```
@@ -111,18 +108,20 @@ curl "https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a2
 {
     label: 'dog'
     provider: 'donation'
-    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
     uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
 }
 ```
 
 
-This endpoint returns some useful metadata for the specified ID.
+This endpoint returns some useful metadata for the specified uuid.
 
 ### HTTP Request
 
-`GET https://api.imagemonkey.com/v1/validate/<ID>`
+`GET https://api.imagemonkey.com/v1/validate/<uuid>`
 
+Parameter | Description
+--------- | ------- | -----------
+uuid  | the uuid of the image you want to validate
 
 
 
@@ -136,11 +135,11 @@ This endpoint makes it possible to validate a specific image.
 
 ### HTTP Request
 
-`POST https://api.imagemonkey.com/v1/validate/<ID>/<action>`
+`POST https://api.imagemonkey.com/v1/validate/<uuid>/<action>`
 
 Parameter | Description
 --------- | ------- | -----------
-ID  | image id
+uuid  | image id
 action | either 'yes' or 'no'
 
 
@@ -161,7 +160,6 @@ curl "https://api.imagemonkey.com/v1/export/tags=dog"
 {
     label: 'dog'
     provider: 'donation'
-    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
     uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
     probability: 0.9230769
     num_yes: 12
@@ -197,10 +195,11 @@ curl -H "Content-Type: application/json"
 
 ### HTTP Request
 
-`POST https://api.imagemonkey.com/v1/report/<ID>`
+`POST https://api.imagemonkey.com/v1/report/<uuid>`
 
 
 
 Parameter | Description
 --------- | ------- | -----------
+uuid  | The uuid of the image which is abusive
 reason  | Brief explanation why this picture is inappropriate.

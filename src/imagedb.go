@@ -9,7 +9,6 @@ import (
 
 type Image struct {
     Id string `json:"uuid"`
-    Url string `json:"url"`
     Label string `json:"label"`
     Provider string `json:"provider"`
     Probability float32 `json:"probability"`
@@ -117,7 +116,6 @@ func export(labels []string) ([]Image, error){
             raven.CaptureError(err, nil)
             return nil, err
         }
-        image.Url = "/donations/" + image.Id
 
         imageEntries = append(imageEntries, image)
     }
@@ -194,7 +192,6 @@ func getRandomImage() Image{
 	var image Image
 
 	image.Id = ""
-	image.Url = ""
 	image.Label = ""
 	image.Provider = "donation"
 
@@ -230,7 +227,6 @@ func getRandomImage() Image{
 		raven.CaptureError(err, nil)
 		return image
 	}
-	image.Url = ("/donations/" + image.Id)
 
 	return image
 }
