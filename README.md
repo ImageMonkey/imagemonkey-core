@@ -98,10 +98,10 @@ mkdir -p /home/imagemonkey/unverified_donations
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
 
 
-## What's next? ##
+# What's next? #
 
-### General ###
-* API abuse prevention: I strongly believe that such a project only works out, if we keep the API as open as possible (i.e ideally accessible without any registration). However, without any kind of registration or API tokens, it's easily possible that malicious bots/people will destroy valid datasets by wrongly classifying a picture. 
+## General ##
+* **API abuse prevention:** I strongly believe that such a project only works out, if we keep the API as open as possible (i.e ideally accessible without any registration). However, without any kind of registration or API tokens, it's easily possible that malicious bots/people will destroy valid datasets by wrongly classifying a picture. 
 
 Possible attempts to solve that: 
 - implement an alerting mechanism that fires when a image rapidly changes it's validity
@@ -110,13 +110,13 @@ Possible attempts to solve that:
 
 * remember already seen images to avoid that users verify a specific image twice
 
-### Infrastructure ###
+## Infrastructure ##
 * currently there are a lot of manual steps involved to host your own instance of `imagemonkey`. There should be a script which automates that. What about a dockerizable image? 
 * add a deployment script which makes deploying changes easier and less error prone.
 
-### REST API ###
+## REST API ##
 * make it possible to export images only when `probability > treshold`
 
-### Sourcecode ###
+## Sourcecode ##
 * there is some duplicated code in `api.go` and `web.go` -> we should get rid of it
 
