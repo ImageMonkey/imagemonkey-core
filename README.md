@@ -58,6 +58,8 @@ iptables -A OUTPUT -o lo -j ACCEPT
 ```
 CREATE USER monkey WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE imagemonkey to monkey;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO monkey;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
 
 ```
 * test if newly created user works with: `psql -d imagemonkey -U monkey -h 127.0.0.1`
