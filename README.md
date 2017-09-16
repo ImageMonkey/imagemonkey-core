@@ -80,8 +80,14 @@ GRANT ALL PRIVILEGES ON DATABASE imagemonkey to monkey;
 * install all dependencies with `go get -d ./... `
 * install API application with `go install api.go api_secrets.go common.go imagedb.go`
 * install API application with `go install web.go web_secrets.go common.go imagedb.go` 
+
+## Miscellaneous ##
 * copy `wordlists/en/misc.txt` to `/home/imagemonkey/wordlists/en/misc.txt`
-* create donations directory with: `mkdir -p /home/imagemonkey/donations`
+* create donation directories with: 
+```
+mkdir -p /home/imagemonkey/donations
+mkdir -p /home/imagemonkey/unverified_donations
+```
 
 ## Watchdog ##
 * install supervisor with `apt-get install supervisor`
