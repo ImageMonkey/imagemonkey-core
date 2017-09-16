@@ -7,13 +7,15 @@ ImageMonkey is a free, public open source image validation service. With all the
 
 # Getting started #
 
-## INFRASTRUCTURE ##
+## General Information ##
 
-The following section contains some notes on how to set up your own instance to host `imagemonkey` yourself.
+The following section contains some notes on how to set up your own instance to host ImageMonkey yourself.
 This should only give you an idea how you *could* configure your system. Of course you are totally free in choosing 
-a different linux distribution, tools and scripts. 
+a different linux distribution, tools and scripts. If you are only interested in how to compile ImageMonkey, then you can jump directly to the *Build Application* section 
 
-Info: Some commands are distribution (Debian 9.1) specific and may not work on your system. 
+*Info:* Some commands are distribution (Debian 9.1) specific and may not work on your system. 
+
+## Base System Configuration ##
 
 * create a new user `imagemonkey`  with `adduser imagemonkey` 
 * disable root login via ssh by changing the `PermitRootLogin` line in `/etc/ssh/sshd_config` to `PermitRootLogin no`)
@@ -45,6 +47,9 @@ iptables -A OUTPUT -o lo -j ACCEPT
 * install `iptables-persistent` to load firewall rules at startup
 * save firewall rules with: `iptables-save > /etc/iptables/rules.v4`
 * verify that rules are loaded with `iptables -L`
+
+## Database ##
+
 * install PostgreSQL
 * edit `/etc/postgresql/9.6/main/postgresql.conf` and set `listen_addresses = 'localhost'`
 * restart PostgreSQL service with `service postgresql restart` to apply changes
@@ -57,17 +62,16 @@ GRANT ALL PRIVILEGES ON DATABASE imagemonkey to monkey;
 ```
 * test if newly created user works with: `psql -d imagemonkey -U monkey -h 127.0.0.1`
 
+## Webserver & SSL ##
+
 * install nginx with `apt-get install nginx`
 * install nginx-extras with `apt-get install nginx-extras`
 * install letsencrypt certbot with `apt-get install certbot`
 * add a A-Record DNS entry which points to the IP address of your instance
 * run `certbot certonly` to obtain a certificate for your registered domain
 * modify `conf/nginx/nginx.conf` and replace `imagemonkey.io` and `api.imagemonkey.io` with your own domain names, copy it to `/etc/nginx/nginx.conf` and reload nginx with `service nginx reload`
-* install supervisor with `apt-get install supervisor`
-* add `imagemonkey` user to supervisor group with `adduser imagemonkey supervisor`
-* create logging directories with `mkdir -p /var/log/imagemonkey-api` and `mkdir -p /var/log/imagemonkey-web`
 
-### Building Application ###
+### Build Application ###
 * install git with `apt-get install git`
 * install golang with `apt-get install golang`
 * clone repository
@@ -78,6 +82,11 @@ GRANT ALL PRIVILEGES ON DATABASE imagemonkey to monkey;
 * install API application with `go install web.go web_secrets.go common.go imagedb.go` 
 * copy `wordlists/en/misc.txt` to `/home/imagemonkey/wordlists/en/misc.txt`
 * create donations directory with: `mkdir -p /home/imagemonkey/donations`
+
+## Watchdog ##
+* install supervisor with `apt-get install supervisor`
+* add `imagemonkey` user to supervisor group with `adduser imagemonkey supervisor`
+* create logging directories with `mkdir -p /var/log/imagemonkey-api` and `mkdir -p /var/log/imagemonkey-web`
 * copy `conf/supervisor/imagemonkey-api.conf` to `/etc/supervisor/conf.d/imagemonkey-api.conf`
 * copy `conf/supervisor/imagemonkey-web.conf` to `/etc/supervisor/conf.d/imagemonkey-web.conf`
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
