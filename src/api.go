@@ -20,6 +20,7 @@ func main(){
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
+	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 
 	flag.Parse()
 	if(*releaseMode){
@@ -130,7 +131,7 @@ func main(){
         }
 
 		uuid := uuid.NewV4().String()
-		c.SaveUploadedFile(header, (*donationsDir + uuid))
+		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 
 		err = addDonatedPhoto(uuid, label)
 		if(err != nil){

@@ -1,3 +1,5 @@
 .DS_Store
 src/web_secrets.go
 src/api_secrets.go
+donations/*
+unverified_donations/*

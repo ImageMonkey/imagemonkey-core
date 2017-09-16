@@ -27,6 +27,7 @@
   <script type="text/javascript">
 
 		$(document).ready(function(){
+      $('#dataStructureContainer').hide();
 			$('.ui.dropdown').dropdown();
 
 			$('pre code').each(function(i, block) {
@@ -47,6 +48,7 @@
 			        success: function(data){
                 var jsonStr = JSON.stringify(data, null, 2);
                 $('#dataStructure').text(jsonStr);
+                $('#dataStructureContainer').show();
 			        }
 			    });
     		});
@@ -63,7 +65,7 @@
   	{{ template "pointing_menu.html" .}}  
   	<div class="ui text container">
   		<h2 class="ui inverted header">
-        All the data belongs to YOU
+        All data belongs to YOU
       </h2>
       <h2>Data should be easily accessible. For Everybody.</h2>
     </div>
@@ -90,7 +92,7 @@
       <br>
       </div> 
       <div class="row">
-      	<div class="ui raised segment">
+      	<div class="ui raised segment" id="dataStructureContainer">
           <pre class="prettyprint" id="dataStructure">
           </pre>
 </div>

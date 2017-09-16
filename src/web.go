@@ -25,7 +25,8 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
-	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
+	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
+	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 
 	flag.Parse()
@@ -57,7 +58,9 @@ func main() {
 	router.SetHTMLTemplate(tmpl)
 	router.Static("./js", "../js") //serve javascript files
 	router.Static("./css", "../css") //serve css files
-	router.Static("./donations", *donationsDir) //serve images
+	router.Static("./img", "../img") //serve images
+	router.Static("./api", "../html/static/api")
+	router.Static("./donations", *donationsDir) //serve doncations
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "ImageMonkey",
@@ -66,7 +69,7 @@ func main() {
 	})
 	router.GET("/donate", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "donate.html", gin.H{
-			"title": "Donate",
+			"title": "Donate Image",
 			"randomWord": words[random(0, len(words) - 1)],
 			"activeMenuNr": 2,
 		})
@@ -78,20 +81,25 @@ func main() {
 			"activeMenuNr": 3,
 		})
 	})
-
+	router.GET("/explore", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "explore.html", gin.H{
+			"title": "Explore Dataset",
+			"words": words,
+			"activeMenuNr": 4,
+			"graphData": explore(),
+		})
+	})
 	router.GET("/export", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "export.html", gin.H{
-			"title": "Export",
+			"title": "Export Dataset",
 			"words": words,
 			"activeMenuNr": 5,
 		})
 	})
-	router.GET("/explore", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "explore.html", gin.H{
-			"title": "Explore",
-			"words": words,
-			"activeMenuNr": 4,
-			"graphData": explore(),
+	router.GET("/mobile", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "mobile.html", gin.H{
+			"title": "Mobile App",
+			"activeMenuNr": 6,
 		})
 	})
 
@@ -137,24 +145,24 @@ func main() {
         fileHeader := make([]byte, 512)
 
         // Copy the file header into the buffer
-        if _, err := file.Read(fileHeader); err != nil {
-        	c.String(422, "Unable to detect MIME type")
-        	return
-        }
+		if _, err := file.Read(fileHeader); err != nil {
+			c.String(422, "Unable to detect MIME type")
+			return
+		}
 
-        // set position back to start.
-        if _, err := file.Seek(0, 0); err != nil {
-        	c.String(422, "Unable to detect MIME type")
-        	return
-        }
-
-        if(!filetype.IsImage(fileHeader)){
-        	c.String(422, "Unsopported MIME type detected")
-        	return
-        }
+		// set position back to start.
+		if _, err := file.Seek(0, 0); err != nil {
+			c.String(422, "Unable to detect MIME type")
+			return
+		}
+		
+		if(!filetype.IsImage(fileHeader)){
+			c.String(422, "Unsopported MIME type detected")
+			return
+		}
 
 		uuid := uuid.NewV4().String()
-		err = c.SaveUploadedFile(header, (*donationsDir + uuid))
+		err = c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 		if(err != nil){
 			c.String(500, "Couldn't add photo - please try again later")
         	return

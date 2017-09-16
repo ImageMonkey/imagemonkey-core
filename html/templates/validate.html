@@ -24,7 +24,6 @@
     $(document).ready(function(){
       $("#yesButton").add('#noButton').click(function(e) {
         var action = (e.target.id === "yesButton") ? "yes" : "no";
-        alert(action)
 
         e.preventDefault();
         var url = '/validate/' + $("#image").attr("imageId") + '/' + action;

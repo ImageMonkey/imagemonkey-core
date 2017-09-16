@@ -1,159 +1,476 @@
-<!DOCTYPE html>
-<head>
-  <title>ImageMonkey</title>
-  <meta charset='utf-8'/>
-  <meta name='description' content='Documentation website'/>
-  <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1'/>
-  <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'/>
-  <link href='assets.css' rel='stylesheet' type='text/css'>
 
-</head>
-<body>  
-  <nav id='sidebar'>
-	<h1><a href="/" style=" text-decoration:none;"><font color="white">ImageMonkey</font></a></h1>
-<ul id='links'>
-  
-    
-  
-    
-  
-    
-  
-    
-  
-  
-  <li><h2>General</h2>
-    <ul>
-    
-              
-        <li class=''><a href='#'></a></li>
-      
-    
-              
-        <li class='POST'><a href='#/v1-post-report'>Report image</a></li>
-              
-        <li class='GET'><a href='#/v1-get-validate'>Validate random image</a></li>
-              
-        <li class='GET'><a href='#/v1-get-validate-id'>Validate specific image</a></li>
-              
-        <li class='GET'><a href='#/v1-get-export'>Export datasets</a></li>
-      
-    
-    </ul>
-  </li>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>API Reference</title>
 
-</ul>
-</nav>
+    <style>
+      .highlight table td { padding: 5px; }
+.highlight table pre { margin: 0; }
+.highlight .gh {
+  color: #999999;
+}
+.highlight .sr {
+  color: #f6aa11;
+}
+.highlight .go {
+  color: #888888;
+}
+.highlight .gp {
+  color: #555555;
+}
+.highlight .gs {
+}
+.highlight .gu {
+  color: #aaaaaa;
+}
+.highlight .nb {
+  color: #f6aa11;
+}
+.highlight .cm {
+  color: #75715e;
+}
+.highlight .cp {
+  color: #75715e;
+}
+.highlight .c1 {
+  color: #75715e;
+}
+.highlight .cs {
+  color: #75715e;
+}
+.highlight .c, .highlight .cd {
+  color: #75715e;
+}
+.highlight .err {
+  color: #960050;
+}
+.highlight .gr {
+  color: #960050;
+}
+.highlight .gt {
+  color: #960050;
+}
+.highlight .gd {
+  color: #49483e;
+}
+.highlight .gi {
+  color: #49483e;
+}
+.highlight .ge {
+  color: #49483e;
+}
+.highlight .kc {
+  color: #66d9ef;
+}
+.highlight .kd {
+  color: #66d9ef;
+}
+.highlight .kr {
+  color: #66d9ef;
+}
+.highlight .no {
+  color: #66d9ef;
+}
+.highlight .kt {
+  color: #66d9ef;
+}
+.highlight .mf {
+  color: #ae81ff;
+}
+.highlight .mh {
+  color: #ae81ff;
+}
+.highlight .il {
+  color: #ae81ff;
+}
+.highlight .mi {
+  color: #ae81ff;
+}
+.highlight .mo {
+  color: #ae81ff;
+}
+.highlight .m, .highlight .mb, .highlight .mx {
+  color: #ae81ff;
+}
+.highlight .sc {
+  color: #ae81ff;
+}
+.highlight .se {
+  color: #ae81ff;
+}
+.highlight .ss {
+  color: #ae81ff;
+}
+.highlight .sd {
+  color: #e6db74;
+}
+.highlight .s2 {
+  color: #e6db74;
+}
+.highlight .sb {
+  color: #e6db74;
+}
+.highlight .sh {
+  color: #e6db74;
+}
+.highlight .si {
+  color: #e6db74;
+}
+.highlight .sx {
+  color: #e6db74;
+}
+.highlight .s1 {
+  color: #e6db74;
+}
+.highlight .s {
+  color: #e6db74;
+}
+.highlight .na {
+  color: #a6e22e;
+}
+.highlight .nc {
+  color: #a6e22e;
+}
+.highlight .nd {
+  color: #a6e22e;
+}
+.highlight .ne {
+  color: #a6e22e;
+}
+.highlight .nf {
+  color: #a6e22e;
+}
+.highlight .vc {
+  color: #ffffff;
+}
+.highlight .nn {
+  color: #ffffff;
+}
+.highlight .nl {
+  color: #ffffff;
+}
+.highlight .ni {
+  color: #ffffff;
+}
+.highlight .bp {
+  color: #ffffff;
+}
+.highlight .vg {
+  color: #ffffff;
+}
+.highlight .vi {
+  color: #ffffff;
+}
+.highlight .nv {
+  color: #ffffff;
+}
+.highlight .w {
+  color: #ffffff;
+}
+.highlight {
+  color: #ffffff;
+}
+.highlight .n, .highlight .py, .highlight .nx {
+  color: #ffffff;
+}
+.highlight .ow {
+  color: #f92672;
+}
+.highlight .nt {
+  color: #f92672;
+}
+.highlight .k, .highlight .kv {
+  color: #f92672;
+}
+.highlight .kn {
+  color: #f92672;
+}
+.highlight .kp {
+  color: #f92672;
+}
+.highlight .o {
+  color: #f92672;
+}
+    </style>
+    <link href="stylesheets/screen.css" rel="stylesheet" media="screen" />
+    <link href="stylesheets/print.css" rel="stylesheet" media="print" />
+      <script src="javascripts/all.js"></script>
+  </head>
 
-<div class="ui grid" id='content'>
+  <body class="index" data-languages="[&quot;shell&quot;]">
+    <a href="#" id="nav-button">
+      <span>
+        NAV
+        <img src="images/navbar.png" alt="Navbar" />
+      </span>
+    </a>
+    <div class="toc-wrapper">
+      <img src="images/logo.png" class="logo" alt="Logo" />
+        <div class="lang-selector">
+              <a href="#" data-language-name="shell">shell</a>
+        </div>
+        <div class="search">
+          <input type="text" class="search" id="input-search" placeholder="Search">
+        </div>
+        <ul class="search-results"></ul>
+      <div id="toc" class="toc-list-h1">
+          <li>
+            <a href="#introduction" class="toc-h1 toc-link" data-title="Introduction">Introduction</a>
+          </li>
+          <li>
+            <a href="#donations" class="toc-h1 toc-link" data-title="Donations">Donations</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#donate-a-picture" class="toc-h2 toc-link" data-title="Donations">Donate a picture</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#validation" class="toc-h1 toc-link" data-title="Validation">Validation</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#random-image-for-validation" class="toc-h2 toc-link" data-title="Validation">Random Image for Validation</a>
+                  </li>
+                  <li>
+                    <a href="#specific-image-for-validation" class="toc-h2 toc-link" data-title="Validation">Specific Image for Validation</a>
+                  </li>
+                  <li>
+                    <a href="#validate-image" class="toc-h2 toc-link" data-title="Validation">Validate Image</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#export" class="toc-h1 toc-link" data-title="Export">Export</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#export-datasets" class="toc-h2 toc-link" data-title="Export">Export datasets</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#report" class="toc-h1 toc-link" data-title="Report">Report</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#mark-an-image-as-abusive" class="toc-h2 toc-link" data-title="Report">Mark an image as abusive</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#errors" class="toc-h1 toc-link" data-title="Errors">Errors</a>
+          </li>
+      </div>
+        <ul class="toc-footer">
+            <li><a href='#'>Fork us on Github</a></li>
+        </ul>
+    </div>
+    <div class="page-wrapper">
+      <div class="dark-box"></div>
+      <div class="content">
+        <h1 id='introduction'>Introduction</h1>
+<p>Welcome to the ImageMonkey API! ImageMonkey is a public, open sourced image dataset project where users can contribute photos to and tag them accordingly.</p>
+<h1 id='donations'>Donations</h1><h2 id='donate-a-picture'>Donate a picture</h2><pre class="highlight shell tab-shell"><code>curl <span class="se">\</span>
+  -F <span class="s2">"label=banana"</span> <span class="se">\</span>
+  -F <span class="s2">"image=@/home/user/Desktop/banana.jpg"</span> <span class="se">\</span>
+  https://api.imagemonkey.com/v1/donate
+</code></pre>
+<blockquote>
+<p>The above command returns JSON structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Fluffums"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"breed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"calico"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"fluffiness"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cuteness"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Max"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"breed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"fluffiness"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cuteness"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre>
+<p>Upload a picture and tag it with a specific label.</p>
+<h3 id='http-request'>HTTP Request</h3>
+<p>`POST https://api.imagemonkey.com/v1/donate</p>
+<h3 id='parameters'>Parameters</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>label</td>
+<td>a single string which labels the image</td>
+</tr>
+<tr>
+<td>image</td>
+<td>the image you want to donate</td>
+</tr>
+</tbody></table>
 
-  <div class="ui row">
-  <article class='POST'>
-    <a name='/v1-post-report' href='#/v1-post-report'><h2><code><b>POST</b> /report/:uuid</code> Report image</h2></a>
-    <section class='body'>
-      <p>Report an image with a specific uuid as abusive.</p>
+<aside class="warning">
+Donating a picture only works if you specify a valid (i.e existing) label. If the label doesn't exist, please create a pull request, so that we can add it.
+</aside>
+<h1 id='validation'>Validation</h1><h2 id='random-image-for-validation'>Random Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate"</span>
+</code></pre>
+<blockquote>
+<p>The above command returns JSON structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+    </span><span class="err">label</span><span class="p">:</span><span class="w"> </span><span class="err">'dog'</span><span class="w">
+    </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">
+    </span><span class="err">url</span><span class="p">:</span><span class="w"> </span><span class="err">'/donations/</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+    </span><span class="err">uuid</span><span class="p">:</span><span class="w"> </span><span class="err">'</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>This endpoint returns the ID of an randomly chosen image together with some usuful metadata.</p>
+<h3 id='http-request-2'>HTTP Request</h3>
+<p><code>GET https://api.imagemonkey.com/v1/validate/</code></p>
+<h2 id='specific-image-for-validation'>Specific Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271"</span>
+</code></pre>
+<blockquote>
+<p>The above command returns JSON structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+    </span><span class="err">label</span><span class="p">:</span><span class="w"> </span><span class="err">'dog'</span><span class="w">
+    </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">
+    </span><span class="err">url</span><span class="p">:</span><span class="w"> </span><span class="err">'/donations/</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+    </span><span class="err">uuid</span><span class="p">:</span><span class="w"> </span><span class="err">'</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>This endpoint returns some useful metadata for the specified ID.</p>
+<h3 id='http-request-3'>HTTP Request</h3>
+<p><code>GET https://api.imagemonkey.com/v1/validate/&lt;ID&gt;</code></p>
+<h2 id='validate-image'>Validate Image</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"</span>
+</code></pre>
+<p>This endpoint makes it possible to validate a specific image.</p>
+<h3 id='http-request-4'>HTTP Request</h3>
+<p><code>POST https://api.imagemonkey.com/v1/validate/&lt;ID&gt;/&lt;action&gt;</code></p>
 
-<h3 id="request">Request</h3>
-<p><code>/report/:uuid</code>
-<code>{
-    reason: 'explain briefly why this picture is inappropriate'
-}</code></p>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ID</td>
+<td>image id</td>
+</tr>
+<tr>
+<td>action</td>
+<td>either &#39;yes&#39; or &#39;no&#39;</td>
+</tr>
+</tbody></table>
+<h1 id='export'>Export</h1><h2 id='export-datasets'>Export datasets</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/export/tags=dog"</span>
+</code></pre>
+<blockquote>
+<p>The above command returns JSON structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+    </span><span class="err">label</span><span class="p">:</span><span class="w"> </span><span class="err">'dog'</span><span class="w">
+    </span><span class="err">provider</span><span class="p">:</span><span class="w"> </span><span class="err">'donation'</span><span class="w">
+    </span><span class="err">url</span><span class="p">:</span><span class="w"> </span><span class="err">'/donations/</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+    </span><span class="err">uuid</span><span class="p">:</span><span class="w"> </span><span class="err">'</span><span class="mi">48750</span><span class="err">a</span><span class="mi">63</span><span class="err">-df</span><span class="mi">1</span><span class="err">f</span><span class="mi">-48</span><span class="err">d</span><span class="mi">1-99</span><span class="err">ee</span><span class="mi">-6</span><span class="err">c</span><span class="mi">60</span><span class="err">e</span><span class="mi">535</span><span class="err">a</span><span class="mi">271</span><span class="err">'</span><span class="w">
+    </span><span class="err">probability</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9230769</span><span class="w">
+    </span><span class="err">num_yes</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w">
+    </span><span class="err">num_no</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>This endpoint returns a collection of images that belong to one or more specific tags.</p>
+<h3 id='http-request-5'>HTTP Request</h3>
+<p><code>GET https://api.imagemonkey.com/v1/export</code></p>
 
-<h3 id="example">Example</h3>
-<p><code>/report/48780a63-df1f-48d1-99ee-6c60e535a274</code>
-<code>{
-    reason: 'picture contains nudity'
-}</code></p>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>tags</td>
+<td>Comma separated list of tags you are interested in.</td>
+</tr>
+</tbody></table>
+<h1 id='report'>Report</h1><h2 id='mark-an-image-as-abusive'>Mark an image as abusive</h2><pre class="highlight shell tab-shell"><code>curl -H <span class="s2">"Content-Type: application/json"</span> 
+     -X POST -d <span class="s1">'{"reason":"picture contains nudity"}'</span> 
+     https://api.imagemonkey.com/v1/report/48750a63-df1f-48d1-99ee-6c60e535a271
+</code></pre><h3 id='http-request-6'>HTTP Request</h3>
+<p><code>POST https://api.imagemonkey.com/v1/report/&lt;ID&gt;</code></p>
 
-<h3 id="response">Response</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>reason</td>
+<td>Brief explanation why this picture is inappropriate.</td>
+</tr>
+</tbody></table>
+<h1 id='errors'>Errors</h1>
+<p>The ImageMonkey API uses the following error codes:</p>
 
-<p><code>Status: 200 OK</code></p>
+<table><thead>
+<tr>
+<th>Error Code</th>
+<th>Meaning</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>400</td>
+<td>Bad Request -- Your request is missing something.</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Not Found -- The specified resource could not be found.</td>
+</tr>
+<tr>
+<td>405</td>
+<td>Method Not Allowed -- You tried to access a kitten with an invalid method.</td>
+</tr>
+<tr>
+<td>406</td>
+<td>Not Acceptable -- You requested a format that isn&#39;t json.</td>
+</tr>
+<tr>
+<td>418</td>
+<td>I&#39;m a teapot.</td>
+</tr>
+<tr>
+<td>422</td>
+<td>Unprocessable -- Your request couldn&#39;t get processed.</td>
+</tr>
+<tr>
+<td>429</td>
+<td>Too Many Requests -- You&#39;re requesting too many resources!</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Internal Server Error -- We had a problem with our server. Try again later.</td>
+</tr>
+<tr>
+<td>503</td>
+<td>Service Unavailable -- We&#39;re temporarily offline for maintenance. Please try again later.</td>
+</tr>
+</tbody></table>
 
-    </section>
-  </article>
-</div>
-
-  <div class="ui row">
-  <article class='GET'>
-    <a name='/v1-get-validate' href='#/v1-get-validate'><h2><code><b>GET</b> /validate</code> Validate random image</h2></a>
-    <section class='body'>
-      <p>This method returns a randomly chosen image together with some usuful metadata.</p>
-
-<h3 id="example">Example</h3>
-
-<p><code>/validate</code></p>
-
-<h3 id="response">Response</h3>
-
-<p><code>Status: 200 OK</code>
-<code>{
-    label: 'dog'
-    provider: 'donation'
-    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
-    uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
-}</code></p>
-
-    </section>
-  </article>
-</div>
-
-  <div class="ui row">
-  <article class='GET'>
-    <a name='/v1-get-validate-id' href='#/v1-get-validate-id'><h2><code><b>GET</b> /validate/:uuid</code> Validate specific image</h2></a>
-    <section class='body'>
-      <p>This method returns a specific image together with some usuful metadata.</p>
-
-<h3 id="request">Request</h3>
-<p><code>/validate/:uuid</code></p>
-
-<h3 id="example">Example</h3>
-<p><code>/validate/48750a63-df1f-48d1-99ee-6c60e535a271</code></p>
-
-<h3 id="response">Response</h3>
-
-<p><code>Status: 200 OK</code>
-<code>{
-    label: 'dog'
-    provider: 'donation'
-    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
-    uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
-}</code></p>
-
-    </section>
-  </article>
-</div>
-
-  <div class="ui row">
-  <article class='GET'>
-    <a name='/v1-get-export' href='#/v1-get-export'><h2><code><b>GET</b> /export</code> Export datasets</h2></a>
-    <section class='body'>
-      <p>This method returns a collection of images that belong to one or more specific tags.</p>
-
-<h3 id="example">Example</h3>
-
-<p><code>/export?tags=dog</code></p>
-
-<h3 id="response">Response</h3>
-
-<p><code>Status: 200 OK</code>
-<code>{
-    label: 'dog'
-    provider: 'donation'
-    url: '/donations/48750a63-df1f-48d1-99ee-6c60e535a271'
-    uuid: '48750a63-df1f-48d1-99ee-6c60e535a271'
-    probability: 0.9230769
-    num_yes: 12
-    num_no: 1
-}</code></p>
-
-    </section>
-  </article>
-</div>
-
-</div>
-
-  
-  <script src='assets.js' type='text/javascript'></script>
-  <script>require('boot');</script>
-</body>
+      </div>
+      <div class="dark-box">
+          <div class="lang-selector">
+                <a href="#" data-language-name="shell">shell</a>
+          </div>
+      </div>
+    </div>
+  </body>
 </html>
