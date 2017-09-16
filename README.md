@@ -57,6 +57,8 @@ iptables -A OUTPUT -o lo -j ACCEPT
 * create new postgres user `monkey` by executing the following in psql: 
 ```
 CREATE USER monkey WITH PASSWORD 'your_password';
+
+\connect imagemonkey 
 GRANT ALL PRIVILEGES ON DATABASE imagemonkey to monkey;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO monkey;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
