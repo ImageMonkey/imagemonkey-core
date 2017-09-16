@@ -66,6 +66,9 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
 ```
 * test if newly created user works with: `psql -d imagemonkey -U monkey -h 127.0.0.1`
 
+* populate labels with `go run populate_labels.go common.go web_secrets.go`
+* add donation image provider with `insert into image_provider(name) values('donation');`
+
 ## Webserver & SSL ##
 
 * install nginx with `apt-get install nginx`
