@@ -117,6 +117,8 @@ Possible attempts to solve that:
 
 * remember already seen images to avoid that users verify a specific image twice
 
+* add client-side/server-side image compression
+
 ## Infrastructure ##
 * currently there are a lot of manual steps involved to host your own instance of `imagemonkey`. There should be a script which automates that. What about a dockerizable image? 
 * add a deployment script which makes deploying changes easier and less error prone.
