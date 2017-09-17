@@ -66,6 +66,9 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
 ```
 * test if newly created user works with: `psql -d imagemonkey -U monkey -h 127.0.0.1`
 
+* populate labels with `go run populate_labels.go common.go web_secrets.go`
+* add donation image provider with `insert into image_provider(name) values('donation');`
+
 ## Webserver & SSL ##
 
 * install nginx with `apt-get install nginx`
@@ -113,6 +116,8 @@ Possible attempts to solve that:
 - add an registration mechanism to make abusive voting less attractive (not my prefered option, but yeah...)
 
 * remember already seen images to avoid that users verify a specific image twice
+
+* add client-side/server-side image compression
 
 ## Infrastructure ##
 * currently there are a lot of manual steps involved to host your own instance of `imagemonkey`. There should be a script which automates that. What about a dockerizable image? 
