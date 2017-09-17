@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"github.com/lib/pq"
 	"github.com/getsentry/raven-go"
 	log "github.com/Sirupsen/logrus"
@@ -23,42 +22,37 @@ type GraphNode struct {
 }
 
 func addDonatedPhoto(filename string, label string) error{
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-	if err != nil {
-		log.Debug("[Adding donated photo] Couldn't open database: ", err.Error())
-		raven.CaptureError(err, nil)
-		return err
-	}
+	tx, err := db.Begin()
+    if err != nil {
+    	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
 
 	imageId := 0
-	err = db.QueryRow("INSERT INTO image(key, unlocked, image_provider_id) SELECT $1, $2, p.id FROM image_provider p WHERE p.name = $3 RETURNING id", 
+	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id) SELECT $1, $2, p.id FROM image_provider p WHERE p.name = $3 RETURNING id", 
 					  filename, false, "donation").Scan(&imageId)
 	if(err != nil){
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
+		tx.Rollback()
 		return err
 	}
 
 	labelId := 0
-	err = db.QueryRow("INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, label_id) SELECT $1, $2, $3, l.id FROM label l WHERE l.name = $4 RETURNING id", 
+	err = tx.QueryRow("INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, label_id) SELECT $1, $2, $3, l.id FROM label l WHERE l.name = $4 RETURNING id", 
 					  imageId, 0, 0, label).Scan(&labelId)
 	if(err != nil){
+		tx.Rollback()
 		log.Debug("[Adding donated photo] Couldn't insert image validation entry: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func validateDonatedPhoto(imageId string, valid bool) error{
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-	if err != nil {
-		log.Debug("[Validating donated photo] Couldn't open database: ", err.Error())
-		raven.CaptureError(err, nil)
-		return err
-	}
-
 	if(valid){
 		_,err := db.Exec(`UPDATE image_validation AS v 
 						  SET num_of_valid = num_of_valid + 1
@@ -70,7 +64,7 @@ func validateDonatedPhoto(imageId string, valid bool) error{
 			return err
 		}
 	} else{
-		_,err = db.Exec(`UPDATE image_validation AS v 
+		_,err := db.Exec(`UPDATE image_validation AS v 
 						  SET num_of_invalid = num_of_invalid + 1
 						  FROM image AS i
 						  WHERE v.image_id = i.id AND key = $1`, imageId)
@@ -85,13 +79,6 @@ func validateDonatedPhoto(imageId string, valid bool) error{
 }
 
 func export(labels []string) ([]Image, error){
-    db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-    if err != nil {
-        log.Debug("[Export] Couldn't open database: ", err.Error())
-        raven.CaptureError(err, nil)
-        return nil, err
-    }
-
     rows, err := db.Query(`SELECT i.key, l.name, CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END, 
     					   v.num_of_valid, v.num_of_invalid
     					   FROM image_validation v 
@@ -120,25 +107,27 @@ func export(labels []string) ([]Image, error){
         imageEntries = append(imageEntries, image)
     }
 
-    return imageEntries, nil
+    return imageEntries, err
 }
 
 func explore() []GraphNode{
 	graphNodeEntries := []GraphNode{}
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+
+    tx, err := db.Begin()
     if err != nil {
-        log.Debug("[Explore] Couldn't open database: ", err.Error())
+    	log.Debug("[Explore] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return graphNodeEntries
     }
 
-    rows, err := db.Query(`SELECT MIN(count), MAX(count) FROM 
+    rows, err := tx.Query(`SELECT MIN(count), MAX(count) FROM 
     						(SELECT COUNT(*) FROM image_validation v 
     						 JOIN label l ON v.label_id = l.id 
     						 GROUP BY l.name) t`)
     if(err != nil){
         log.Debug("[Explore] Couldn't explore min/max: ", err.Error())
         raven.CaptureError(err, nil)
+        tx.Rollback()
         return graphNodeEntries
     }
 
@@ -149,8 +138,11 @@ func explore() []GraphNode{
     	if(err != nil){
         	log.Debug("[Explore] Couldn't scan min/max row: ", err.Error())
         	raven.CaptureError(err, nil)
+        	tx.Rollback()
         	return graphNodeEntries
     	}
+
+    	rows.Close()
     }
 
     scaleFactor := float64((float64(maxSize) - float64(minSize))/float64(30))
@@ -160,13 +152,14 @@ func explore() []GraphNode{
     	scaleFactor = 1/scaleFactor
     }
 
-    rows, err = db.Query(`SELECT l.name, count(l.name) 
+    rows, err = tx.Query(`SELECT l.name, count(l.name) 
     					   FROM image_validation v 
     					   JOIN label l ON v.label_id = l.id 
     					   GROUP BY l.name ORDER BY count(l.name) DESC`)
     if(err != nil){
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
+        tx.Rollback()
         return graphNodeEntries
     }
 
@@ -178,12 +171,18 @@ func explore() []GraphNode{
     	if(err != nil) {
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
+            tx.Rollback()
             return graphNodeEntries
         }
         graphNode.Size = int(float64(graphNode.Size) * scaleFactor)
         graphNodeEntries = append(graphNodeEntries, graphNode)
         groupNr += 1
     }
+
+    rows.Close()
+
+    tx.Commit()
+
     return graphNodeEntries
 }
 
@@ -194,14 +193,6 @@ func getRandomImage() Image{
 	image.Id = ""
 	image.Label = ""
 	image.Provider = "donation"
-
-	//open database
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-	if err != nil {
-		log.Debug("[Fetch random image] Couldn't open database: ", err.Error())
-		raven.CaptureError(err, nil)
-		return image
-	}
 
 	rows, err := db.Query(`SELECT i.key, l.name FROM image i 
 						   JOIN image_provider p ON i.image_provider_id = p.id 
@@ -228,19 +219,14 @@ func getRandomImage() Image{
 		return image
 	}
 
+	rows.Close()
+
 	return image
 }
 
 func reportImage(imageId string, reason string) error{
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-	if err != nil {
-		log.Debug("[Report image] Couldn't open database: ", err.Error())
-		raven.CaptureError(err, nil)
-		return err
-	}
-
 	insertedId := 0
-	err = db.QueryRow("INSERT INTO image_report(image_id, reason) SELECT i.id, $2 FROM image i WHERE i.key = $1 RETURNING id", 
+	err := db.QueryRow("INSERT INTO image_report(image_id, reason) SELECT i.id, $2 FROM image i WHERE i.key = $1 RETURNING id", 
 					  imageId, reason).Scan(&insertedId)
 	if(err != nil){
 		log.Debug("[Report image] Couldn't add report: ", err.Error())

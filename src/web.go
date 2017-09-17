@@ -13,7 +13,10 @@ import (
 	"gopkg.in/h2non/filetype.v1"
 	log "github.com/Sirupsen/logrus"
 	"flag"
+	"database/sql"
 )
+
+var db *sql.DB
 
 func main() {
 	fmt.Printf("Starting Web Service...\n")
@@ -44,11 +47,23 @@ func main() {
 	}
 
 	fmt.Printf("Reading wordlists...")
-	words, err := getWordLists(*wordlistDir)
+	words, err := getStrWordLists(*wordlistDir)
 	if(err != nil){
 		fmt.Printf("Couldn't read wordlists...terminating!")
 		log.Fatal(err)
 	}
+
+	//open database and make sure that we can ping it
+	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	if err != nil {
+		log.Fatal("[Main] Couldn't open database: ", err.Error())
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("[Main] Couldn't ping database: ", err.Error())
+	}
+
 
 
 	tmpl := template.Must(template.New("main").Funcs(funcMap).ParseGlob(*htmlDir + "*"))

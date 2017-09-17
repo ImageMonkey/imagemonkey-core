@@ -11,6 +11,10 @@ type Report struct {
     Reason string `json:"reason"`
 }
 
+type Label struct {
+    Name string `json:"name"`
+}
+
 func use(vals ...interface{}) {
     for _, val := range vals {
         _ = val
@@ -32,14 +36,30 @@ func random(min, max int) int {
  * Loads all data in memory.
  * If file gets too big, refactor it!
  */
-func getWordLists(path string) ([]string, error) {
+func getWordLists(path string) ([]Label, error) {
     var lines []string
+    var labels []Label
 	data, err := ioutil.ReadFile(path)
+    if(err != nil){
+        return labels, err
+    }
+    lines = strings.Split(string(data), "\r\n")
+    for _, v := range lines {
+        var label Label
+        label.Name = v
+        labels = append(labels, label)
+    }
+
+    return labels, nil
+}
+
+func getStrWordLists(path string) ([]string, error) {
+    var lines []string
+    data, err := ioutil.ReadFile(path)
     if(err != nil){
         return lines, err
     }
     lines = strings.Split(string(data), "\r\n")
-
     return lines, nil
 }
 

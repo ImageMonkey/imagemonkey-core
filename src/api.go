@@ -9,7 +9,10 @@ import (
 	"gopkg.in/h2non/filetype.v1"
 	log "github.com/Sirupsen/logrus"
 	"flag"
+	"database/sql"
 )
+
+var db *sql.DB
 
 
 func main(){
@@ -31,9 +34,21 @@ func main(){
 	fmt.Printf("Reading wordlists...\n")
 	words, err := getWordLists(*wordlistDir)
 	if(err != nil){
-		fmt.Printf("Couldn't read wordlists...terminating!")
+		fmt.Printf("[Main] Couldn't read wordlists...terminating!")
 		log.Fatal(err)
 	}
+
+	//open database and make sure that we can ping it
+	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	if err != nil {
+		log.Fatal("[Main] Couldn't open database: ", err.Error())
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("[Main] Couldn't ping database: ", err.Error())
+	}
+
 
 	router := gin.Default()
 
@@ -96,7 +111,12 @@ func main(){
 	})
 
 	router.GET("/v1/label", func(c *gin.Context) {
-		label := words[random(0, len(words) - 1)]
+		c.JSON(http.StatusOK, words)
+	})
+
+
+	router.GET("/v1/label/random", func(c *gin.Context) {
+		label := words[random(0, len(words) - 1)].Name
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
 
