@@ -4,6 +4,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/getsentry/raven-go"
 	log "github.com/Sirupsen/logrus"
+)
 
 type Image struct {
     Id string `json:"uuid"`
