@@ -4,7 +4,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/getsentry/raven-go"
 	log "github.com/Sirupsen/logrus"
-)
 
 type Image struct {
     Id string `json:"uuid"`
@@ -198,8 +197,8 @@ func getRandomImage() Image{
 						   JOIN image_provider p ON i.image_provider_id = p.id 
 						   JOIN image_validation v ON v.image_id = i.id
 						   JOIN label l ON v.label_id = l.id
-						   WHERE i.unlocked = true AND p.name = 'donation' 
-						   OFFSET floor(random() * (SELECT count(*) FROM image i JOIN image_provider p ON i.image_provider_id = p.id WHERE i.unlocked = true AND p.name = 'donation')) LIMIT 1`)
+						   WHERE ((i.unlocked = true) AND (p.name = 'donation') 
+                           AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)) LIMIT 1`)
 	if(err != nil){
 		log.Debug("[Fetch random image] Couldn't fetch random image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -207,9 +206,18 @@ func getRandomImage() Image{
 	}
 	
 	if(!rows.Next()){
-		log.Debug("[Fetch random image] Missing result set")
-		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
-		return image
+        rows, err = db.Query(`SELECT i.key, l.name FROM image i 
+                           JOIN image_provider p ON i.image_provider_id = p.id 
+                           JOIN image_validation v ON v.image_id = i.id
+                           JOIN label l ON v.label_id = l.id
+                           WHERE i.unlocked = true AND p.name = 'donation' 
+                           OFFSET floor(random() * (SELECT count(*) FROM image i JOIN image_provider p ON i.image_provider_id = p.id 
+                           WHERE i.unlocked = true AND p.name = 'donation')) LIMIT 1`)
+        if(!rows.Next()){
+    		log.Debug("[Fetch random image] Missing result set")
+    		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
+    		return image
+        }
 	}
 
 	err = rows.Scan(&image.Id, &image.Label)
