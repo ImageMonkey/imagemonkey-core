@@ -21,7 +21,7 @@ type GraphNode struct {
 	Size int `json:"size"`
 }
 
-func addDonatedPhoto(filename string, label string) error{
+func addDonatedPhoto(filename string, hash uint64, label string) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -29,9 +29,11 @@ func addDonatedPhoto(filename string, label string) error{
         return err
     }
 
+    //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
+    //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	imageId := 0
-	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id) SELECT $1, $2, p.id FROM image_provider p WHERE p.name = $3 RETURNING id", 
-					  filename, false, "donation").Scan(&imageId)
+	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash) SELECT $1, $2, p.id, $3 FROM image_provider p WHERE p.name = $4 RETURNING id", 
+					  filename, false, int64(hash), "donation").Scan(&imageId)
 	if(err != nil){
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -50,6 +52,33 @@ func addDonatedPhoto(filename string, label string) error{
 	}
 
 	return tx.Commit()
+}
+
+func imageExists(hash uint64) (bool, error){
+    //PostgreSQL can't handle unsigned 64bit, so we are casting the hash to a signed 64bit value when comparing against the stored hash (so values above maxuint64/2 are negative). 
+    rows, err := db.Query("SELECT COUNT(hash) FROM image where hash = $1", int64(hash))
+    if(err != nil){
+        log.Debug("[Checking if photo exists] Couldn't get hash: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    var numOfOccurences int
+    if(rows.Next()){
+        err = rows.Scan(&numOfOccurences)
+        if(err != nil){
+            log.Debug("[Checking if photo exists] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return false, err
+        }
+        rows.Close()
+    }
+
+    if(numOfOccurences > 0){
+        return true, nil
+    } else{
+        return false, nil
+    }
 }
 
 func validateDonatedPhoto(imageId string, valid bool) error{

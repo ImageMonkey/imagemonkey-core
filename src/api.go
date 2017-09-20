@@ -150,10 +150,28 @@ func main(){
         	return
         }
 
+        //check if image already exists by using an image hash
+        hash, err := hashImage(file)
+        if(err != nil){
+        	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
+        	return 
+        }
+        exists, err := imageExists(hash)
+        if(err != nil){
+        	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
+        	return
+        }
+        if(exists){
+        	c.JSON(409, gin.H{"error": "Couldn't add photo - image already exists"})
+        	return
+        }
+
+
+        //image doesn't already exist, so save it and add it to the database
 		uuid := uuid.NewV4().String()
 		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 
-		err = addDonatedPhoto(uuid, label)
+		err = addDonatedPhoto(uuid, hash, label)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return

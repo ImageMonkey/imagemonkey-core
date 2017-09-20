@@ -25,6 +25,7 @@
     $(document).ready(function(){
       $('#successMsg').hide();
       $('#failureMsg').hide();
+      $('#warningMsg').hide();
 
       function clearDropzone(){
         Dropzone.forElement("#dropzone").removeAllFiles(true);
@@ -42,7 +43,12 @@
           });
 
           this.on('error', function(file, errorMessage) {
-            $('#failureMsg').show(200).delay(1500).hide(200);
+            if(errorMessage.indexOf("already exists") !== -1){
+              $('#warningMsg').show(200).delay(1500).hide(200);
+            }
+            else{
+              $('#failureMsg').show(200).delay(1500).hide(200);
+            }
             setTimeout(clearDropzone, 700);
           });
         }
@@ -85,6 +91,13 @@
             <i class="close icon"></i>
             <div class="header">
               Couldn't upload picture - please try again later!
+            </div>
+          </div>
+
+          <div class="ui warning message" id="warningMsg">
+            <i class="close icon"></i>
+            <div class="header">
+              Couldn't upload picture - image already exists!
             </div>
           </div>
 
