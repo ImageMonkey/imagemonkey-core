@@ -26,7 +26,7 @@
         var action = (e.target.id === "yesButton") ? "yes" : "no";
 
         e.preventDefault();
-        var url = '/validate/' + $("#image").attr("imageId") + '/' + action;
+        var url = '/donation/' + $("#image").attr("imageId") + '/validate/' + action;
           $.ajax({
               url: url,
               dataType: 'json',
@@ -68,8 +68,8 @@
       	<img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
         <div class="ui center aligned basic segment">
           <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
-          <button class="positive ui button center aligned" id="yesButton">YES</button>
           <button class="negative ui button center aligned" id="noButton">NO</button>
+          <button class="positive ui button center aligned" id="yesButton">YES</button>
         </div>
       </div>
   </div>
