@@ -315,6 +315,10 @@ func reportImage(imageId string, reason string) error{
 }
 
 func addAnnotations(imageId string, annotations []Annotation) error{
+    //currently there is a uniqueness constraint on the image_id column to ensure that we only have
+    //one image annotation per image. That means that the below query can fail with a unique constraint error. 
+    //we might want to change that in the future to support multiple annotations per image (if there is a use case for it),
+    //but for now it should be fine.
     byt, err := json.Marshal(annotations)
     if(err != nil){
         log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
