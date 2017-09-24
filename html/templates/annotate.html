@@ -20,44 +20,44 @@
   <script src="js/fabric_helper.js"></script>
 
   <style>
-    .canvas-container{margin: 0 auto;}
+  .canvas-container{margin: 0 auto;}
   </style>
 
   <script>
-        var Rectangle = (function () {
+  var Rectangle = (function () {
     function Rectangle(canvas) {
-        var inst=this;
-        this.canvas = canvas;
-        this.className= 'Rectangle';
-        this.isDrawing = false;
-        this.overObject = false;
-        this.blocked = false; 
-        this.bindEvents();
+      var inst=this;
+      this.canvas = canvas;
+      this.className= 'Rectangle';
+      this.isDrawing = false;
+      this.overObject = false;
+      this.blocked = false; 
+      this.bindEvents();
     }
 
-   Rectangle.prototype.bindEvents = function() {
-    var inst = this;
-    inst.canvas.on('mouse:down', function(o) {
-      inst.onMouseDown(o);
-    });
-    inst.canvas.on('mouse:move', function(o) {
-      inst.onMouseMove(o);
-    });
-    inst.canvas.on('mouse:up', function(o) {
-      inst.onMouseUp(o);
-    });
-    inst.canvas.on('object:moving', function(o) {
-      inst.disable();
-    })
-    inst.canvas.on('mouse:over', function(o) {
-      if(o.target)
-        inst.over();
-    })
-    inst.canvas.on('mouse:out', function(o) {
-      if(o.target)
-        inst.out();
-    })
-  }
+    Rectangle.prototype.bindEvents = function() {
+      var inst = this;
+      inst.canvas.on('mouse:down', function(o) {
+        inst.onMouseDown(o);
+      });
+      inst.canvas.on('mouse:move', function(o) {
+        inst.onMouseMove(o);
+      });
+      inst.canvas.on('mouse:up', function(o) {
+        inst.onMouseUp(o);
+      });
+      inst.canvas.on('object:moving', function(o) {
+        inst.disable();
+      })
+      inst.canvas.on('mouse:over', function(o) {
+        if(o.target)
+          inst.over();
+      })
+      inst.canvas.on('mouse:out', function(o) {
+        if(o.target)
+          inst.out();
+      })
+    }
     Rectangle.prototype.onMouseUp = function (o) {
       var inst = this;
       inst.disable();
@@ -76,10 +76,10 @@
       activeObj.fill = 'transparent';
 
       if(origX > pointer.x){
-          activeObj.set({ left: Math.abs(pointer.x) }); 
+        activeObj.set({ left: Math.abs(pointer.x) }); 
       }
       if(origY > pointer.y){
-          activeObj.set({ top: Math.abs(pointer.y) });
+        activeObj.set({ top: Math.abs(pointer.y) });
       }
 
       activeObj.set({ width: Math.abs(origX - pointer.x) });
@@ -100,16 +100,16 @@
         origY = pointer.y;
 
         var rect = new fabric.Rect({
-            left: origX,
-            top: origY,
-            originX: 'left',
-            originY: 'top',
-            width: pointer.x-origX,
-            height: pointer.y-origY,
-            angle: 0,
-            transparentCorners: false,
-            hasBorders: true,
-            hasControls: true
+          left: origX,
+          top: origY,
+          originX: 'left',
+          originY: 'top',
+          width: pointer.x-origX,
+          height: pointer.y-origY,
+          angle: 0,
+          transparentCorners: false,
+          hasBorders: true,
+          hasControls: true
         });
 
         inst.canvas.add(rect).setActiveObject(rect);
@@ -154,103 +154,103 @@
 
 
     return Rectangle;
-}());
+  }());
 
-    function getUrlFromImageId(imageId){
-      return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
+function getUrlFromImageId(imageId){
+  return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
+}
+
+function changeControl(rect){
+  if($("#annotationArea").attr("imageId") === ""){
+    $("#labelContainer").hide();
+    $("#doneButton").hide();
+    rect.block();
+  }
+  else{
+    $("#labelContainer").show();
+    $("#doneButton").show();
+    rect.unblock();
+  }
+}
+
+$(document).ready(function(){
+  $("#doneButton").click(function(e) {
+    var data = canvas.toJSON();
+    var imgScaleX = data["backgroundImage"]["scaleX"];
+    var imgScaleY = data["backgroundImage"]["scaleY"];
+    var objs = data["objects"];
+    var res = [];
+    for(var i = 0; i < objs.length; i++){
+      var left = Math.round((objs[i]["left"] / imgScaleX), 0);
+      var top = Math.round((objs[i]["top"] / imgScaleY), 0);
+      var width = Math.round((objs[i]["width"] / imgScaleX), 0);
+      var height = Math.round((objs[i]["height"] / imgScaleY), 0);
+
+      if((width != 0) && (height != 0))
+        res.push({"left" : left, "top": top, "width": width, "height": height});
     }
 
-    function changeControl(rect){
-      if($("#annotationArea").attr("imageId") === ""){
-        $("#labelContainer").hide();
-        $("#doneButton").hide();
-        rect.block();
+    e.preventDefault();
+    var url = '/annotate/' + $("#annotationArea").attr("imageId");
+    $.ajax({
+      url: url,
+      type: 'POST',
+      data: JSON.stringify(res),
+      success: function(data){
+        $.ajax({
+          url: '/annotate/data',
+          dataType: 'json',
+          type: 'GET',
+          success: function(data){
+            $("#annotationArea").attr("imageId", data.uuid);
+            $("#label").text(data.label);
+            canvas.clear();
+            setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
+            changeControl(rect);
+          }
+        });
       }
-      else{
-        $("#labelContainer").show();
-        $("#doneButton").show();
-        rect.unblock();
-      }
-    }
-
-    $(document).ready(function(){
-      $("#doneButton").click(function(e) {
-        var data = canvas.toJSON();
-        var imgScaleX = data["backgroundImage"]["scaleX"];
-        var imgScaleY = data["backgroundImage"]["scaleY"];
-        var objs = data["objects"];
-        var res = [];
-        for(var i = 0; i < objs.length; i++){
-          var left = Math.round((objs[i]["left"] / imgScaleX), 0);
-          var top = Math.round((objs[i]["top"] / imgScaleY), 0);
-          var width = Math.round((objs[i]["width"] / imgScaleX), 0);
-          var height = Math.round((objs[i]["height"] / imgScaleY), 0);
-
-          if((width != 0) && (height != 0))
-            res.push({"left" : left, "top": top, "width": width, "height": height});
-        }
-
-        e.preventDefault();
-        var url = '/annotate/' + $("#annotationArea").attr("imageId");
-          $.ajax({
-              url: url,
-              type: 'POST',
-              data: JSON.stringify(res),
-              success: function(data){
-                $.ajax({
-                  url: '/annotate/data',
-                  dataType: 'json',
-                  type: 'GET',
-                  success: function(data){
-                    $("#annotationArea").attr("imageId", data.uuid);
-                    $("#label").text(data.label);
-                    canvas.clear();
-                    setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
-                    changeControl(rect);
-                  }
-                });
-              }
-          });
-      });
-
-
-      var canvas = new fabric.Canvas('annotationArea');
-      var rect = new Rectangle(canvas);
-      var randomImgId = {{ .randomImage.Id }};
-      setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId));
-      changeControl(rect);
     });
-  </script>
+  });
+
+
+var canvas = new fabric.Canvas('annotationArea');
+var rect = new Rectangle(canvas);
+var randomImgId = {{ .randomImage.Id }};
+setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId));
+changeControl(rect);
+});
+</script>
 </head>
 <body>
 
-{{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
-  	{{ template "pointing_menu.html" .}}  
-  	<div class="ui text container" id="labelContainer">
-  		<h2 class="ui inverted header">
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container" id="labelContainer">
+      <h2 class="ui inverted header">
         {{ .randomImage.Label }}
       </h2>
       <h2>Annotate all occurences of the above.</h2>
     </div>
-</div>
-    <div class="ui vertical stripe segment">
-      <div class="ui text container">
-        <div class="row">
-          <div class="ui center aligned basic segment">
-        	   <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
-             <p></p>
-             <button class="positive ui button center aligned" id="doneButton">DONE</button>
-          </div>
-
+  </div>
+  <div class="ui vertical stripe segment">
+    <div class="ui text container">
+      <div class="row">
+        <div class="ui center aligned basic segment">
+          <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
+          <p></p>
+          <button class="positive ui button center aligned" id="doneButton">DONE</button>
         </div>
+
       </div>
     </div>
   </div>
-  {{ template "footer.html" .}}
+</div>
+{{ template "footer.html" .}}
 </div>
 
 </body>
