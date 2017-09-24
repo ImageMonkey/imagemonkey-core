@@ -33,6 +33,8 @@
 
       Dropzone.options.dropzone = {
         maxFiles: 1,
+        resizeWidth: 1000,
+        resizeQuality: 0.8, 
         init: function() {
           this.on("maxfilesexceeded", function(file){
               alert("No more files please!");
