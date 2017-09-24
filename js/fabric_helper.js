@@ -28,6 +28,12 @@ function scaleAndPositionImage(canvas, img, callback) {
 
 function calcScaleFactor(img){
     var maxImageWidth = 600.0;
+    
+    //on mobile, make image full width
+    var isMobile = window.matchMedia("only screen and (max-width: 760px)");
+    if (isMobile.matches) {
+        maxImageWidth = document.body.clientWidth - 70;
+    }
     var scaleFactor = maxImageWidth/img.width;
     if(scaleFactor > 1.0)
         scaleFactor = 1.0;

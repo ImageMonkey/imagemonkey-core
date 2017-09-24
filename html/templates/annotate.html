@@ -174,7 +174,9 @@ function changeControl(rect){
 }
 
 $(document).ready(function(){
-  $("#doneButton").click(function(e) {
+  $('#warningMsg').hide();
+
+  $('#doneButton').click(function(e) {
     var data = canvas.toJSON();
     var imgScaleX = data["backgroundImage"]["scaleX"];
     var imgScaleY = data["backgroundImage"]["scaleY"];
@@ -188,6 +190,11 @@ $(document).ready(function(){
 
       if((width != 0) && (height != 0))
         res.push({"left" : left, "top": top, "width": width, "height": height});
+    }
+
+    if(res.length === 0){ //at least one annotation needs to be there
+      $('#warningMsg').show(200).delay(1500).hide(200);
+      return;
     }
 
     e.preventDefault();
@@ -244,6 +251,13 @@ changeControl(rect);
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
           <p></p>
           <button class="positive ui button center aligned" id="doneButton">DONE</button>
+        </div>
+
+        <div class="ui warning message" id="warningMsg">
+          <i class="close icon"></i>
+          <div class="header">
+            Please annotate the image first.
+          </div>
         </div>
 
       </div>
