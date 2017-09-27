@@ -183,11 +183,11 @@ $(document).ready(function(){
     var objs = data["objects"];
     var res = [];
     for(var i = 0; i < objs.length; i++){
-      var left = Math.round((objs[i]["left"] / imgScaleX), 0);
-      var top = Math.round((objs[i]["top"] / imgScaleY), 0);
-      var width = Math.round((objs[i]["width"] / imgScaleX), 0);
-      var height = Math.round((objs[i]["height"] / imgScaleY), 0);
-
+      var left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+      var top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+      var width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
+      var height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
+      
       if((width != 0) && (height != 0))
         res.push({"left" : left, "top": top, "width": width, "height": height});
     }

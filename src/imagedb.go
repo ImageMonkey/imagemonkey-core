@@ -10,10 +10,10 @@ import (
 )
 
 type Annotation struct{
-    Left int32 `json:"left"`
-    Top int32 `json:"top"`
-    Width int32 `json:"width"`
-    Height int32 `json:"height"`
+    Left float32 `json:"left"`
+    Top float32 `json:"top"`
+    Width float32 `json:"width"`
+    Height float32 `json:"height"`
 }
 
 type Image struct {
@@ -354,7 +354,10 @@ func getRandomUnannotatedImage() Image{
                                    (
                                         SELECT count(*) FROM image i
                                         JOIN image_provider p ON i.image_provider_id = p.id
-                                        WHERE i.unlocked = true AND p.name = 'donation' AND i.id NOT IN
+                                        JOIN image_validation v ON v.image_id = i.id
+                                        WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                        CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                        AND i.id NOT IN
                                         (
                                             SELECT image_id FROM image_annotation 
                                         )
