@@ -18,63 +18,66 @@
 </head>
 <body>
 
-{{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
 
-  {{ template "pointing_menu.html" .}}  
+      {{ template "pointing_menu.html" .}}  
 
-    <div class="ui text container">
-      <h1 class="ui inverted header">
-        ImageMonkey
-      </h1>
-      <h2>Let's create our own image dataset</h2>
-      <div class="ui huge primary button" onclick="location.href='/donate';">Donate a picture <i class="right arrow icon"></i></div>
+      <div class="ui text container">
+        <h1 class="ui inverted header">ImageMonkey</h1>
+        <h2>Let's create our own image dataset</h2>
+        <div class="ui huge primary button" onclick="location.href='/donate';">Donate a picture <i class="right arrow icon"></i></div>
+
+        <h1 class="ui inverted header">#{{ .numOfDonations }}</h1>
+        <p style="font-size:25px;">Donations</p>
+      </div>
+
     </div>
 
-  </div>
-
-  <div class="ui vertical stripe segment">
-    <div class="ui text container">
+    <div class="ui vertical stripe segment">
+      <div class="ui text container">
         <h3 class="ui header center aligned">Because training a ML model is easy - finding a good image dataset is hard.</h3>
       </div>
-  </div>
-  <div class="ui vertical stripe segment">
-    <div class="ui middle aligned stackable grid container">
-      <div class="row">
-        <div class="eight wide column">
-          <h3 class="ui header">Easy as pie</h3>
-          <p>Donating a photo should be as easy as clicking a single button. Everybody should be able do it. Everywhere.</p>
-          <h3 class="ui header">Publicly available</h3>
-          <p>Image datasets should be publicly available. Everybody should have access to it.</p>
-          <h3 class="ui header">Install your own</h3>
-          <p>Want to host your own image collecting service? Fork us on <a href="https://github.com/bbernhard/imagemonkey-core">Github</a></p>
+    </div>
+    <div class="ui vertical stripe segment">
+      <div class="ui middle aligned stackable grid container">
+        <div class="row">
+          <div class="eight wide column">
+            <h3 class="ui header">Easy as pie</h3>
+            <p>Donating a photo should be as easy as clicking a single button. Everybody should be able do it. Everywhere.</p>
+            <h3 class="ui header">Publicly available</h3>
+            <p>Image datasets should be publicly available. Everybody should have access to it.</p>
+            <h3 class="ui header">Install your own</h3>
+            <p>Want to host your own image collecting service? Fork us on <a href="https://github.com/bbernhard/imagemonkey-core">Github</a></p>
+          </div>
+          <div class="six wide right floated column">
+            <img src="img/animation.gif" class="ui large bordered rounded image">
+          </div>
         </div>
-        <div class="six wide right floated column">
-          <img src="img/animation.gif" class="ui large bordered rounded image">
-        </div>
-      </div>
-      <div class="row">
-        <div class="center aligned column">
-          <a class="ui huge button" href="/verify">Check It Out</a>
+        <div class="row">
+          <div class="center aligned column">
+            <a class="ui huge button" href="/verify">Check It Out</a>
+          </div>
         </div>
       </div>
     </div>
+
+    <div class="ui one column stackable grid container">
+      <div class="column"></div>
+      <h2 class="ui center aligned header">About</h2>
+      <div class="ui vertical stripe column">
+        <p><b>ImageMonkey is a free, public open source image validation service.</b><br>With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources.<br><br>ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain.</p>
+      </div>
+      <div class="column"></div>
+    </div>
+
+    {{ template "footer.html" .}}
+
   </div>
-
-  <!--<div class="ui vertical stripe quote segment">
-    <div class="ui text container">
-          <h3 class="ui header center aligned">About</h3>
-          <p>ImageMonkey is a free, public open source image validation service. With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources. ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain.</p>
-        </div>
-  </div>-->
-
-  {{ template "footer.html" .}}
-  
-</div>
 
 </body>
 

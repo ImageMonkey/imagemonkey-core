@@ -1,10 +1,20 @@
 package main
 
 import (
-	"github.com/lib/pq"
+    "github.com/lib/pq"
 	"github.com/getsentry/raven-go"
 	log "github.com/Sirupsen/logrus"
+    "encoding/json"
+    //"errors"
+    //"database/sql/driver"
 )
+
+type Annotation struct{
+    Left float32 `json:"left"`
+    Top float32 `json:"top"`
+    Width float32 `json:"width"`
+    Height float32 `json:"height"`
+}
 
 type Image struct {
     Id string `json:"uuid"`
@@ -13,6 +23,7 @@ type Image struct {
     Probability float32 `json:"probability"`
     NumOfValid int32 `json:"num_yes"`
     NumOfInvalid int32 `json:"num_no"`
+    Annotations []Annotation `json:"annotations"`
 }
 
 type GraphNode struct {
@@ -21,7 +32,35 @@ type GraphNode struct {
 	Size int `json:"size"`
 }
 
-func addDonatedPhoto(filename string, label string) error{
+
+/*type AnnotationMap map[string]interface{}
+
+func (p AnnotationMap) Value() (driver.Value, error) {
+    j, err := json.Marshal(p)
+    return j, err
+}
+
+func (p *AnnotationMap) Scan(src interface{}) error {
+    source, ok := src.([]byte)
+    if !ok {
+        return errors.New("Type assertion .([]byte) failed.")
+    }
+
+    var i interface{}
+    err := json.Unmarshal(source, &i)
+    if err != nil {
+        return err
+    }
+
+    *p, ok = i.(map[string]interface{})
+    if !ok {
+        return errors.New("Type assertion .(map[string]interface{}) failed.")
+    }
+
+    return nil
+}*/
+
+func addDonatedPhoto(filename string, hash uint64, label string) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -29,9 +68,11 @@ func addDonatedPhoto(filename string, label string) error{
         return err
     }
 
+    //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
+    //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	imageId := 0
-	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id) SELECT $1, $2, p.id FROM image_provider p WHERE p.name = $3 RETURNING id", 
-					  filename, false, "donation").Scan(&imageId)
+	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash) SELECT $1, $2, p.id, $3 FROM image_provider p WHERE p.name = $4 RETURNING id", 
+					  filename, false, int64(hash), "donation").Scan(&imageId)
 	if(err != nil){
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -50,6 +91,33 @@ func addDonatedPhoto(filename string, label string) error{
 	}
 
 	return tx.Commit()
+}
+
+func imageExists(hash uint64) (bool, error){
+    //PostgreSQL can't handle unsigned 64bit, so we are casting the hash to a signed 64bit value when comparing against the stored hash (so values above maxuint64/2 are negative). 
+    rows, err := db.Query("SELECT COUNT(hash) FROM image where hash = $1", int64(hash))
+    if(err != nil){
+        log.Debug("[Checking if photo exists] Couldn't get hash: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    var numOfOccurences int
+    if(rows.Next()){
+        err = rows.Scan(&numOfOccurences)
+        if(err != nil){
+            log.Debug("[Checking if photo exists] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return false, err
+        }
+        rows.Close()
+    }
+
+    if(numOfOccurences > 0){
+        return true, nil
+    } else{
+        return false, nil
+    }
 }
 
 func validateDonatedPhoto(imageId string, valid bool) error{
@@ -244,4 +312,207 @@ func reportImage(imageId string, reason string) error{
 	}
 
 	return nil
+}
+
+func addAnnotations(imageId string, annotations []Annotation) error{
+    //currently there is a uniqueness constraint on the image_id column to ensure that we only have
+    //one image annotation per image. That means that the below query can fail with a unique constraint error. 
+    //we might want to change that in the future to support multiple annotations per image (if there is a use case for it),
+    //but for now it should be fine.
+    byt, err := json.Marshal(annotations)
+    if(err != nil){
+        log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
+        return err
+    }
+
+    insertedId := 0
+    err = db.QueryRow("INSERT INTO image_annotation(image_id, annotations, num_of_valid, num_of_invalid) SELECT i.id, $2, $3, $4 FROM image i WHERE i.key = $1 RETURNING id", 
+                      imageId, byt, 0, 0).Scan(&insertedId)
+    if(err != nil){
+        log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+    return nil
+}
+
+func getRandomUnannotatedImage() Image{
+    var image Image
+    //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
+    rows, err := db.Query(`SELECT i.key, l.name FROM image i 
+                               JOIN image_provider p ON i.image_provider_id = p.id 
+                               JOIN image_validation v ON v.image_id = i.id
+                               JOIN label l ON v.label_id = l.id
+                               WHERE i.unlocked = true AND p.name = 'donation' AND 
+                               CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                               AND i.id NOT IN
+                               (
+                                    SELECT image_id FROM image_annotation 
+                               )
+                               OFFSET floor
+                               ( random() * 
+                                   (
+                                        SELECT count(*) FROM image i
+                                        JOIN image_provider p ON i.image_provider_id = p.id
+                                        JOIN image_validation v ON v.image_id = i.id
+                                        WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                        CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                        AND i.id NOT IN
+                                        (
+                                            SELECT image_id FROM image_annotation 
+                                        )
+                                   ) 
+                               )LIMIT 1`)
+    if(err != nil) {
+        log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
+        raven.CaptureError(err, nil)
+        return image
+    }
+
+    if(rows.Next()){
+        image.Provider = "donation"
+
+        err = rows.Scan(&image.Id, &image.Label)
+        if(err != nil){
+            log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return image
+        }
+    }
+
+    return image
+}
+
+func getRandomAnnotatedImage() Image{
+    var image Image
+
+    rows, err := db.Query(`SELECT i.key, l.name, a.annotations FROM image i 
+                               JOIN image_provider p ON i.image_provider_id = p.id 
+                               JOIN image_validation v ON v.image_id = i.id
+                               JOIN image_annotation a ON a.image_id = v.image_id
+                               JOIN label l ON v.label_id = l.id
+                               WHERE i.unlocked = true AND p.name = 'donation' 
+                               OFFSET floor(random() * 
+                               (
+                                SELECT count(*) FROM image i 
+                                JOIN image_provider p ON i.image_provider_id = p.id 
+                                JOIN image_annotation a ON a.image_id = i.id
+                                WHERE i.unlocked = true AND p.name = 'donation')
+                               ) LIMIT 1`)
+    if(err != nil){
+        log.Debug("[Get Random Annotated Image] Couldn't get annotated image: ", err.Error())
+        raven.CaptureError(err, nil)
+        return image
+    }
+
+    if(rows.Next()){
+        var annotations []byte
+        image.Provider = "donation"
+
+        err = rows.Scan(&image.Id, &image.Label, &annotations)
+        if(err != nil) {
+            log.Debug("[Get Random Annotated Image] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return image
+        }
+
+        err := json.Unmarshal(annotations, &image.Annotations)
+        if(err != nil) {
+            log.Debug("[Get Random Annotated Image] Couldn't unmarshal: ", err.Error())
+            raven.CaptureError(err, nil)
+            return image
+        }
+    }
+
+    return image
+}
+
+func validateAnnotatedImage(imageId string, valid bool) error{
+    if(valid){
+        _,err := db.Exec(`UPDATE image_annotation AS a 
+                          SET num_of_valid = num_of_valid + 1
+                          FROM image AS i
+                          WHERE a.image_id = i.id AND key = $1`, imageId)
+        if(err != nil){
+            log.Debug("[Validating annotated photo] Couldn't increase num_of_valid: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    } else{
+        _,err := db.Exec(`UPDATE image_annotation AS a 
+                          SET num_of_invalid = num_of_invalid + 1
+                          FROM image AS i
+                          WHERE a.image_id = i.id AND key = $1`, imageId)
+        if(err != nil){
+            log.Debug("[Validating annotated photo] Couldn't increase num_of_invalid: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    return nil
+}
+
+func getNumOfDonatedImages() (int64, error){
+    var num int64
+    rows, err := db.Query("SELECT count(*) FROM image")
+    if(err != nil){
+        log.Debug("[Fetch images] Couldn't get num of available images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return 0, err
+    }
+
+    if(rows.Next()){
+        err = rows.Scan(&num)
+        if(err != nil){
+            log.Debug("[Fetch images] Couldn't parse num of available images: ", err.Error())
+            raven.CaptureError(err, nil)
+            return 0, err
+        }
+    }
+
+    return num, nil
+}
+
+func getNumOfAnnotatedImages() (int64, error){
+    var num int64
+    rows, err := db.Query("SELECT count(*) FROM image_annotation")
+    if(err != nil){
+        log.Debug("[Fetch images] Couldn't get num of annotated images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return 0, err
+    }
+
+    if(rows.Next()){
+        err = rows.Scan(&num)
+        if(err != nil){
+            log.Debug("[Fetch images] Couldn't parse num of annotated images: ", err.Error())
+            raven.CaptureError(err, nil)
+            return 0, err
+        }
+    }
+
+    return num, nil
+}
+
+
+func getNumOfValidatedImages() (int64, error){
+    var num int64
+    rows, err := db.Query("SELECT count(*) FROM image_validation")
+    if(err != nil){
+        log.Debug("[Fetch images] Couldn't get num of validated images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return 0, err
+    }
+
+    if(rows.Next()){
+        err = rows.Scan(&num)
+        if(err != nil){
+            log.Debug("[Fetch images] Couldn't parse num of validated images: ", err.Error())
+            raven.CaptureError(err, nil)
+            return 0, err
+        }
+    }
+
+    return num, nil
 }
