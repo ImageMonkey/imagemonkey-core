@@ -38,6 +38,10 @@ func random(min, max int) int {
     return rand.Intn(max - min) + min
 }
 
+func pick(args ...interface{}) []interface{} {
+    return args
+}
+
 /*
  * Loads all data in memory.
  * If file gets too big, refactor it!

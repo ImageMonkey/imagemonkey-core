@@ -80,6 +80,9 @@ func main() {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "ImageMonkey",
 			"activeMenuNr": 1,
+			"numOfDonations": pick(getNumOfDonatedImages())[0],
+			//"numOfAnnotations": pick(getNumOfAnnotatedImages())[0],
+			//"numOfValidations": pick(getNumOfValidatedImages())[0],
 		})
 	})
 	router.GET("/donate", func(c *gin.Context) {

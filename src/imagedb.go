@@ -452,3 +452,67 @@ func validateAnnotatedImage(imageId string, valid bool) error{
 
     return nil
 }
+
+func getNumOfDonatedImages() (int64, error){
+    var num int64
+    rows, err := db.Query("SELECT count(*) FROM image")
+    if(err != nil){
+        log.Debug("[Fetch images] Couldn't get num of available images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return 0, err
+    }
+
+    if(rows.Next()){
+        err = rows.Scan(&num)
+        if(err != nil){
+            log.Debug("[Fetch images] Couldn't parse num of available images: ", err.Error())
+            raven.CaptureError(err, nil)
+            return 0, err
+        }
+    }
+
+    return num, nil
+}
+
+func getNumOfAnnotatedImages() (int64, error){
+    var num int64
+    rows, err := db.Query("SELECT count(*) FROM image_annotation")
+    if(err != nil){
+        log.Debug("[Fetch images] Couldn't get num of annotated images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return 0, err
+    }
+
+    if(rows.Next()){
+        err = rows.Scan(&num)
+        if(err != nil){
+            log.Debug("[Fetch images] Couldn't parse num of annotated images: ", err.Error())
+            raven.CaptureError(err, nil)
+            return 0, err
+        }
+    }
+
+    return num, nil
+}
+
+
+func getNumOfValidatedImages() (int64, error){
+    var num int64
+    rows, err := db.Query("SELECT count(*) FROM image_validation")
+    if(err != nil){
+        log.Debug("[Fetch images] Couldn't get num of validated images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return 0, err
+    }
+
+    if(rows.Next()){
+        err = rows.Scan(&num)
+        if(err != nil){
+            log.Debug("[Fetch images] Couldn't parse num of validated images: ", err.Error())
+            raven.CaptureError(err, nil)
+            return 0, err
+        }
+    }
+
+    return num, nil
+}
