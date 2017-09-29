@@ -32,34 +32,6 @@ type GraphNode struct {
 	Size int `json:"size"`
 }
 
-
-/*type AnnotationMap map[string]interface{}
-
-func (p AnnotationMap) Value() (driver.Value, error) {
-    j, err := json.Marshal(p)
-    return j, err
-}
-
-func (p *AnnotationMap) Scan(src interface{}) error {
-    source, ok := src.([]byte)
-    if !ok {
-        return errors.New("Type assertion .([]byte) failed.")
-    }
-
-    var i interface{}
-    err := json.Unmarshal(source, &i)
-    if err != nil {
-        return err
-    }
-
-    *p, ok = i.(map[string]interface{})
-    if !ok {
-        return errors.New("Type assertion .(map[string]interface{}) failed.")
-    }
-
-    return nil
-}*/
-
 func addDonatedPhoto(filename string, hash uint64, label string) error{
 	tx, err := db.Begin()
     if err != nil {
@@ -101,6 +73,7 @@ func imageExists(hash uint64) (bool, error){
         raven.CaptureError(err, nil)
         return false, err
     }
+    defer rows.Close()
 
     var numOfOccurences int
     if(rows.Next()){
@@ -110,7 +83,6 @@ func imageExists(hash uint64) (bool, error){
             raven.CaptureError(err, nil)
             return false, err
         }
-        rows.Close()
     }
 
     if(numOfOccurences > 0){
@@ -159,6 +131,7 @@ func export(labels []string) ([]Image, error){
         raven.CaptureError(err, nil)
         return nil, err
     }
+    defer rows.Close()
 
     imageEntries := []Image{}
     for(rows.Next()){
@@ -188,29 +161,19 @@ func explore() []GraphNode{
         return graphNodeEntries
     }
 
-    rows, err := tx.Query(`SELECT MIN(count), MAX(count) FROM 
+    var minSize int32
+    var maxSize int32
+    maxSize = 0
+    minSize = 0
+    err = tx.QueryRow(`SELECT MIN(count), MAX(count) FROM 
     						(SELECT COUNT(*) FROM image_validation v 
     						 JOIN label l ON v.label_id = l.id 
-    						 GROUP BY l.name) t`)
+    						 GROUP BY l.name) t`).Scan(&minSize, &maxSize)
     if(err != nil){
         log.Debug("[Explore] Couldn't explore min/max: ", err.Error())
         raven.CaptureError(err, nil)
         tx.Rollback()
         return graphNodeEntries
-    }
-
-    minSize := 0
-    maxSize := 0
-    if(rows.Next()){
-    	err = rows.Scan(&minSize, &maxSize)
-    	if(err != nil){
-        	log.Debug("[Explore] Couldn't scan min/max row: ", err.Error())
-        	raven.CaptureError(err, nil)
-        	tx.Rollback()
-        	return graphNodeEntries
-    	}
-
-    	rows.Close()
     }
 
     scaleFactor := float64((float64(maxSize) - float64(minSize))/float64(30))
@@ -220,7 +183,7 @@ func explore() []GraphNode{
     	scaleFactor = 1/scaleFactor
     }
 
-    rows, err = tx.Query(`SELECT l.name, count(l.name) 
+    rows, err := tx.Query(`SELECT l.name, count(l.name) 
     					   FROM image_validation v 
     					   JOIN label l ON v.label_id = l.id 
     					   GROUP BY l.name ORDER BY count(l.name) DESC`)
@@ -230,6 +193,7 @@ func explore() []GraphNode{
         tx.Rollback()
         return graphNodeEntries
     }
+    defer rows.Close()
 
     groupNr := 1
     for(rows.Next()){
@@ -246,8 +210,6 @@ func explore() []GraphNode{
         graphNodeEntries = append(graphNodeEntries, graphNode)
         groupNr += 1
     }
-
-    rows.Close()
 
     tx.Commit()
 
@@ -273,30 +235,37 @@ func getRandomImage() Image{
 		raven.CaptureError(err, nil)
 		return image
 	}
+    defer rows.Close()
 	
 	if(!rows.Next()){
-        rows, err = db.Query(`SELECT i.key, l.name FROM image i 
+        otherRows, err := db.Query(`SELECT i.key, l.name FROM image i 
                            JOIN image_provider p ON i.image_provider_id = p.id 
                            JOIN image_validation v ON v.image_id = i.id
                            JOIN label l ON v.label_id = l.id
                            WHERE i.unlocked = true AND p.name = 'donation' 
                            OFFSET floor(random() * (SELECT count(*) FROM image i JOIN image_provider p ON i.image_provider_id = p.id 
                            WHERE i.unlocked = true AND p.name = 'donation')) LIMIT 1`)
-        if(!rows.Next()){
+        if(!otherRows.Next()){
     		log.Debug("[Fetch random image] Missing result set")
     		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
     		return image
         }
-	}
+        defer otherRows.Close()
 
-	err = rows.Scan(&image.Id, &image.Label)
-	if(err != nil){
-		log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
-		raven.CaptureError(err, nil)
-		return image
-	}
-
-	rows.Close()
+        err = otherRows.Scan(&image.Id, &image.Label)
+        if(err != nil){
+            log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return image
+        }
+	} else{
+        err = rows.Scan(&image.Id, &image.Label)
+        if(err != nil){
+            log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return image
+        }
+    }
 
 	return image
 }
@@ -369,6 +338,8 @@ func getRandomUnannotatedImage() Image{
         return image
     }
 
+    defer rows.Close()
+
     if(rows.Next()){
         image.Provider = "donation"
 
@@ -404,6 +375,8 @@ func getRandomAnnotatedImage() Image{
         raven.CaptureError(err, nil)
         return image
     }
+
+    defer rows.Close()
 
     if(rows.Next()){
         var annotations []byte
@@ -455,20 +428,11 @@ func validateAnnotatedImage(imageId string, valid bool) error{
 
 func getNumOfDonatedImages() (int64, error){
     var num int64
-    rows, err := db.Query("SELECT count(*) FROM image")
+    err := db.QueryRow("SELECT count(*) FROM image").Scan(&num)
     if(err != nil){
         log.Debug("[Fetch images] Couldn't get num of available images: ", err.Error())
         raven.CaptureError(err, nil)
         return 0, err
-    }
-
-    if(rows.Next()){
-        err = rows.Scan(&num)
-        if(err != nil){
-            log.Debug("[Fetch images] Couldn't parse num of available images: ", err.Error())
-            raven.CaptureError(err, nil)
-            return 0, err
-        }
     }
 
     return num, nil
@@ -476,20 +440,11 @@ func getNumOfDonatedImages() (int64, error){
 
 func getNumOfAnnotatedImages() (int64, error){
     var num int64
-    rows, err := db.Query("SELECT count(*) FROM image_annotation")
+    err := db.QueryRow("SELECT count(*) FROM image_annotation").Scan(&num)
     if(err != nil){
         log.Debug("[Fetch images] Couldn't get num of annotated images: ", err.Error())
         raven.CaptureError(err, nil)
         return 0, err
-    }
-
-    if(rows.Next()){
-        err = rows.Scan(&num)
-        if(err != nil){
-            log.Debug("[Fetch images] Couldn't parse num of annotated images: ", err.Error())
-            raven.CaptureError(err, nil)
-            return 0, err
-        }
     }
 
     return num, nil
@@ -498,20 +453,11 @@ func getNumOfAnnotatedImages() (int64, error){
 
 func getNumOfValidatedImages() (int64, error){
     var num int64
-    rows, err := db.Query("SELECT count(*) FROM image_validation")
+    err := db.QueryRow("SELECT count(*) FROM image_validation").Scan(&num)
     if(err != nil){
         log.Debug("[Fetch images] Couldn't get num of validated images: ", err.Error())
         raven.CaptureError(err, nil)
         return 0, err
-    }
-
-    if(rows.Next()){
-        err = rows.Scan(&num)
-        if(err != nil){
-            log.Debug("[Fetch images] Couldn't parse num of validated images: ", err.Error())
-            raven.CaptureError(err, nil)
-            return 0, err
-        }
     }
 
     return num, nil
