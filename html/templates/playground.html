@@ -27,6 +27,12 @@
     $("#label").fadeTo(0,0);
     $("#probability").fadeTo(0,0);
     $("#loadingIndicator").fadeTo(0,0);
+    $("#moreInfo").hide();
+
+
+    $("#moreInfoButton").click(function(e) {
+      $('.modal').modal('setting', { detachable:false }).modal('show');
+    });
 
     function clearDropzone(){
       Dropzone.forElement("#dropzone").removeAllFiles(true);
@@ -43,9 +49,15 @@
           $('#probability').text(Math.round(response["score"], 1) + '%');
           $('#label').fadeTo(200, 1);
           $('#probability').fadeTo(200, 1);
+          $('#moreInfo').show();
+
+          var jsonStr = JSON.stringify(response["model_info"], null, 2);
+          $('#dataStructure').text(jsonStr);
         }
       });
     };
+
+
     Dropzone.options.dropzone = {
       maxFiles: 1,
       paramName: "image",
@@ -90,12 +102,17 @@
   <div class="pusher">
     <div class="ui inverted vertical masthead center aligned segment">
      {{ template "pointing_menu.html" .}}
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Online Playground
+      </h2>
+    </div>
   </div>
   <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
        <form action="{{ .playgroundPredictBaseUrl }}/v1/predict" class="ui segment dropzone" id="dropzone"></form>
-       <p id="infoText">Upload a photo to see how good (or bad) our image classification model is performing at the moment. <b>Not satisfied with the result?</b> Help us to improve our dataset's quality.</p>
+       <p id="infoText">Upload a photo to see how good (or bad) our image classification model is performing at the moment. <b>Not satisfied with the result?</b> <a href="/verify">Help us</a> to improve our dataset's quality.</p>
 
       <div class="ui basic segment" id="loadingIndicator">
         <div class="ui active inverted dimmer">
@@ -105,6 +122,25 @@
 
       <p class="ui center aligned header" style="font-size:80px" id="label">demo</p>
       <p class="ui center aligned header" style="font-size:50px" id="probability">90%</p>
+      <div class="ui center aligned basic segment" id="moreInfo">
+        <button class="ui button" id="moreInfoButton">Info</button>
+      </div>
+
+
+      <div class="ui longer modal" id="moreInfoDlg">
+        <i class="close icon"></i>
+        <div class="center aligned header">
+          Model Info
+        </div>
+        <div class="scrolling content">
+          <pre class="prettyprint" id="dataStructure"></pre>
+        </div>
+        <div class="actions">
+          <div class="ui right labeled cancel button">
+            Close
+          </div>
+        </div>
+      </div>
 
       <div class="ui basic segment"></div>
       <div class="ui basic segment"></div>
