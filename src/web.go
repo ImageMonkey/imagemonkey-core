@@ -134,6 +134,14 @@ func main() {
 			"activeMenuNr": 8,
 		})
 	})
+	router.GET("/playground", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "playground.html", gin.H{
+			"title": "Playground",
+			"activeMenuNr": 9,
+			"playgroundPredictBaseUrl": "https://playground.imagemonkey.io",
+			//"playgroundPredictBaseUrl": "http://127.0.0.1:8081",
+		})
+	})
 
 	router.GET("/validate", func(c *gin.Context) {
 		randomImage := getRandomImage()
@@ -301,7 +309,6 @@ func main() {
 			return
 		}
 	})
-
 
 	router.Run(":8080")
 }

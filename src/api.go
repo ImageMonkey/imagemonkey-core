@@ -10,9 +10,48 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"flag"
 	"database/sql"
+	"os"
 )
 
 var db *sql.DB
+
+//Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
+func ClientAuthRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var clientId string
+		var clientSecret string
+
+		clientId = ""
+		if values, _ := c.Request.Header["X-Client-Id"]; len(values) > 0 {
+			clientId = values[0]
+		}
+
+		clientSecret = ""
+		if values, _ := c.Request.Header["X-Client-Secret"]; len(values) > 0 {
+			clientSecret = values[0]
+		}
+
+		if(!((clientSecret == X_CLIENT_SECRET) && (clientId == X_CLIENT_ID))) {
+			c.String(401, "Please provide a valid client id and client secret")
+			c.AbortWithStatus(401)
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func RequestId() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if values, _ := c.Request.Header["X-Request-Id"]; len(values) > 0 {
+			if(values[0] != ""){
+				c.Writer.Header().Set("X-Request-Id", values[0])
+			}
+		}
+
+		c.Next()
+	}
+}
 
 
 func main(){
@@ -27,7 +66,7 @@ func main(){
 
 	flag.Parse()
 	if(*releaseMode){
-		fmt.Printf("Starting gin in release mode!\n")
+		fmt.Printf("[Main] Starting gin in release mode!\n")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -51,16 +90,68 @@ func main(){
 
 
 	router := gin.Default()
-
+	router.Use(RequestId())
 	router.Static("./v1/donation", *donationsDir) //serve static images
 
-	router.Use(func(c *gin.Context) {
-		if values, _ := c.Request.Header["X-Request-Id"]; len(values) > 0 {
-			if(values[0] != ""){
-				c.Writer.Header().Set("X-Request-Id", values[0])
+	//the following endpoints are secured with a client id + client secret. 
+	//that's mostly because currently each donation needs to be unlocked manually. 
+	//(as we want to make sure that we don't accidentally host inappropriate content, like nudity)
+	clientAuth := router.Group("/")
+	clientAuth.Use(RequestId())
+	clientAuth.Use(ClientAuthRequired())
+	{
+		clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
+		clientAuth.GET("/v1/unverified/donation", func(c *gin.Context) {
+			images, err := getAllUnverifiedImages()
+			use(images)
+			if err != nil {
+				c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"}) 
+			} else {
+				c.JSON(http.StatusOK, images)
 			}
-		}
-    })
+		})
+
+		clientAuth.POST("/v1/unverified/donation/:imageid/:param",  func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			//verify that uuid is a valid UUID (to prevent path injection)
+			_, err := uuid.FromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+			if err != nil {
+				c.JSON(400, gin.H{"error" : "Couldn't process request - not a valid image id"})
+				return
+			}
+
+			param := c.Param("param")
+			isBad := true
+			if param == "bad" {
+				isBad = true
+			} else if param == "good" {
+				isBad = false
+			} else{
+				c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
+				return
+			}
+
+			if !isBad {
+				src := *unverifiedDonationsDir + imageId
+				dst := *donationsDir + imageId
+				err := os.Rename(src, dst)
+				if err != nil {
+					log.Debug("[Main] Couldn't move file ", src, " to ", dst)
+					c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
+					return
+				}
+
+				err = unlockImage(imageId)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+			}
+
+			c.JSON(http.StatusOK, nil)
+		})
+	}
 
 	router.GET("/v1/validate", func(c *gin.Context) {
 		randomImage := getRandomImage()
