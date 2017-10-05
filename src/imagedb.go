@@ -462,3 +462,45 @@ func getNumOfValidatedImages() (int64, error){
 
     return num, nil
 }
+
+func getAllUnverifiedImages() ([]Image, error){
+    var images []Image
+    rows, err := db.Query(`SELECT i.key, l.name FROM image i 
+                            JOIN image_provider p ON i.image_provider_id = p.id 
+                            JOIN image_validation v ON v.image_id = i.id
+                            JOIN label l ON v.label_id = l.id
+                            WHERE ((i.unlocked = false) AND (p.name = 'donation'))`)
+
+    if(err != nil){
+        log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return images, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var image Image
+        image.Provider = "donation"
+        err = rows.Scan(&image.Id, &image.Label)
+        if err != nil {
+            log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return images, err
+        }
+
+        images = append(images, image)
+    }
+
+    return images, nil
+}
+
+func unlockImage(imageId string) error {
+    _,err := db.Exec("UPDATE image SET unlocked = true WHERE key = $1", imageId)
+    if err != nil {
+        log.Debug("[Unlock Image] Couldn't unlock image: ", err.Error())
+        return err
+    }
+
+    return nil
+}
