@@ -76,6 +76,7 @@ func main() {
 	router.Static("./img", "../img") //serve images
 	router.Static("./api", "../html/static/api")
 	router.Static("./donations", *donationsDir) //serve doncations
+	router.Static("./blog", "../html/static/blog")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "ImageMonkey",

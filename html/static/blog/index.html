@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>ImageMonkey - Blog</title>
+  <meta name="description" content="ImageMonkey - a public, open source image dataset
+" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="" />
+    <meta name="twitter:title" content="ImageMonkey - Blog" />
+    <meta name="twitter:image" content="http://localhost:4000/blog" />
+    
+    <meta name="twitter:description" content="ImageMonkey - a public, open source image dataset" />
+    
+  
+  
+  <meta property="og:site_name" content="ImageMonkey - Blog" />
+  <meta property="og:title" content="ImageMonkey - Blog"/>
+  
+  <meta property="og:description" content="ImageMonkey - a public, open source image dataset" />
+  
+  <meta property="og:image" content="http://localhost:4000/blog" />
+  <meta property="og:url" content="http://localhost:4000/blog/" >
+  <meta property="og:type" content="blog" />
+  
+
+  <link rel="canonical" href="http://localhost:4000/blog/"/>
+  <!--<link rel="shortcut icon" href="/blog/assets/images/favicon.png" type="image/png"/>-->
+  <link rel="stylesheet" href="//brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/blog/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/blog/css/print.css" />
+</head>
+
+
+  <body>
+
+    <!-- header start -->
+
+
+<!-- header end -->
+
+
+    <!-- content start -->
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="teaserimage">
+    <div class="teaserimage-image" style="background-image: url(/blog/assets/images/header.jpg)">
+        Teaser Image
+    </div>
+</div>
+
+<header class="blog-header">
+    
+    <h1 class="blog-title">ImageMonkey - Blog</h1>
+    <h2 class="blog-description">ImageMonkey - a public, open source image dataset
+</h2>
+    <div class="custom-links">
+      
+        
+            <a class="icon-github" href="https://github.com/bbernhard/imagemonkey-core"  title="Fork me on github"">
+              <i class="fa fa-github"></i>
+            </a>
+            &nbsp;&nbsp;·&nbsp;&nbsp;
+        
+      
+        
+            <a class="icon-home" href="https://imagemonkey.io"  title="Home"">
+              <i class="fa fa-home"></i>
+            </a>
+            &nbsp;&nbsp;·&nbsp;&nbsp;
+        
+      
+      <a href=/blog/about/>About</a>
+    </div>
+</header>
+
+
+<main class="content" role="main">
+
+    
+
+    <div class="cf frame">
+      
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
+          <div class="article-item">
+            <header class="post-header">
+              <h2 class="post-title" itemprop="name"><a href="/blog/general/2017/10/06/ImageMonkey-Introduction.html" itemprop="url">Let's create our own image dataset</a></h2>
+            </header>
+            <section class="post-excerpt" itemprop="description">
+              <p>It’s now a week since I posted about ImageMonkey on reddit. While the initial rush on ImageMonkey has slowed down and the load on the server stabilized again, it’s time to reflect and plan the next development steps.
+
+</p>
+            </section>
+            <div class="post-meta">
+              <time datetime="06 October 2017">06 October 2017</time>
+<!--            <span class="post-tags-set">on <span class="post-tag-">, <a href="/tag/"></a></span></span>-->
+            </div>
+          </div>
+        </article>
+      
+    </div>
+
+    <nav class="pagination" role="navigation">
+      
+      <span class="page-number">Page 1 of 1</span>
+      
+    </nav>
+
+
+    <!-- 
+     -->
+
+</main>
+
+      </div>
+    </div>
+
+    <!-- content end -->
+
+    <!-- footer start -->
+
+<footer class="site-footer">
+  <a class="subscribe" href="/blog/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> Subscribe!</span></a>
+    <div class="inner">
+         <section class="copyright">All content copyright <a href="mailto:">Bernhard Beroun</a> &copy; 2017 &bull; All rights reserved.</section>
+         <section class="poweredby">Made with <a href="http://jekyllrb.com"> Jekyll</a></section>
+    </div>
+</footer>
+
+<!-- footer end -->
+
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/blog/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/blog/assets/js/index.js"></script>
+<script type="text/javascript" src="/blog/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+
+  </body>
+
+</html>
