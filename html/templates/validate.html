@@ -21,48 +21,50 @@
   <link rel="stylesheet" href="css/dropzone.css">
 
   <script type="text/javascript">
-    $(document).ready(function(){
-      $("#yesButton").add('#noButton').click(function(e) {
-        var action = (e.target.id === "yesButton") ? "yes" : "no";
+  $(document).ready(function(){
+    $("#yesButton").add('#noButton').click(function(e) {
+      var action = (e.target.id === "yesButton") ? "yes" : "no";
 
-        e.preventDefault();
-        var url = '/donation/' + $("#image").attr("imageId") + '/validate/' + action;
+      e.preventDefault();
+      var url = '/donation/' + $("#image").attr("imageId") + '/validate/' + action;
+      $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'POST',
+        success: function(data){
           $.ajax({
-              url: url,
-              dataType: 'json',
-              type: 'POST',
-              success: function(data){
-                $.ajax({
-                  url: '/validate',
-                  dataType: 'json',
-                  type: 'GET',
-                  success: function(data){
-                    $("#image").attr("imageId", data.uuid);
-                    $("#image").attr("src", ("donations/"+data.uuid));
-                    $("#label").text(data.label);
-                  }
-                });
-              }
+            url: '/validate',
+            dataType: 'json',
+            type: 'GET',
+            success: function(data){
+              $("#image").attr("imageId", data.uuid);
+              $("#image").attr("src", ("donations/"+data.uuid));
+              $("#label").text(data.label);
+            }
           });
+        }
       });
     });
+  });
 
   </script>
 </head>
 <body>
 
-{{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
-  	{{ template "pointing_menu.html" .}}  
-  	<div class="ui text container">
-  	  <!--<h2 class="ui inverted header">{{ .randomImage.Label }}</h2>-->
-      <h2 class="ui inverted header">What do you see?</h2>
-    </div>
-</div>
-    <div class="ui vertical stripe segment">
+  <!-- Page Contents -->
+  <div class="pusher">
+    {{ if .showHeader }} 
+    <div class="ui inverted vertical masthead center aligned segment">
+      {{ template "pointing_menu.html" .}}
+      <div class="ui text container">
+       <h2 class="ui inverted header">What do you see?</h2>
+     </div>
+   </div>
+   {{ end }}
+
+   <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
       	<img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
@@ -72,10 +74,12 @@
           <button class="positive ui button center aligned" id="yesButton">YES</button>
         </div>
       </div>
+    </div>
   </div>
 </div>
-  </div>
-  {{ template "footer.html" .}}
+{{ if .showFooter }} 
+{{ template "footer.html" .}}
+{{ end }}
 
 </body>
 

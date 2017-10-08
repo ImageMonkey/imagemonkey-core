@@ -81,8 +81,6 @@ func main() {
 			"title": "ImageMonkey",
 			"activeMenuNr": 1,
 			"numOfDonations": pick(getNumOfDonatedImages())[0],
-			//"numOfAnnotations": pick(getNumOfAnnotatedImages())[0],
-			//"numOfValidations": pick(getNumOfValidatedImages())[0],
 		})
 	})
 	router.GET("/donate", func(c *gin.Context) {
@@ -100,10 +98,27 @@ func main() {
 		})
 	})
 	router.GET("/verify", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		
+		showHeader := true
+		if temp, ok := params["show_header"]; ok {
+			if temp[0] == "false" {
+				showHeader = false
+			}
+		}
+
+		showFooter := true
+		if temp, ok := params["show_footer"]; ok {
+			if temp[0] == "false" {
+				showFooter = false
+			}
+		}
 		c.HTML(http.StatusOK, "validate.html", gin.H{
 			"title": "Validate Label",
 			"randomImage": getRandomImage(),
 			"activeMenuNr": 4,
+			"showHeader": showHeader,
+			"showFooter": showFooter,
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {
