@@ -120,13 +120,14 @@ func validateDonatedPhoto(imageId string, valid bool) error{
 
 func export(labels []string) ([]Image, error){
     rows, err := db.Query(`SELECT i.key, l.name, CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END, 
-    					   v.num_of_valid, v.num_of_invalid
+    					   v.num_of_valid, v.num_of_invalid, a.annotations
     					   FROM image_validation v 
                            JOIN image i ON v.image_id = i.id 
                            JOIN label l ON v.label_id = l.id 
                            JOIN image_provider p ON i.image_provider_id = p.id 
+                           LEFT JOIN image_annotation a ON a.image_id = i.id
                            WHERE i.unlocked = true and p.name = 'donation' AND l.name = ANY($1)`, pq.Array(labels))
-    if(err != nil){
+    if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
         raven.CaptureError(err, nil)
         return nil, err
@@ -134,20 +135,29 @@ func export(labels []string) ([]Image, error){
     defer rows.Close()
 
     imageEntries := []Image{}
-    for(rows.Next()){
+    for rows.Next() {
     	var image Image
+        var annotations []byte
     	image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &image.Label, &image.Probability, &image.NumOfValid, &image.NumOfInvalid)
-    	if(err != nil) {
+        err = rows.Scan(&image.Id, &image.Label, &image.Probability, &image.NumOfValid, &image.NumOfInvalid, &annotations)
+    	if err != nil {
             log.Debug("[Export] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return nil, err
         }
 
+        if len(annotations) > 0 {
+            err := json.Unmarshal(annotations, &image.Annotations)
+            if err != nil {
+                log.Debug("[Export] Couldn't unmarshal: ", err.Error())
+                raven.CaptureError(err, nil)
+                return nil, err
+            }
+        }
+
         imageEntries = append(imageEntries, image)
     }
-
     return imageEntries, err
 }
 
