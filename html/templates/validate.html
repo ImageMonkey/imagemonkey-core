@@ -64,18 +64,27 @@
    </div>
    {{ end }}
 
-   <div class="ui vertical stripe segment">
-    <div class="ui text container">
-      <div class="row">
-      	<img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
-        <div class="ui center aligned basic segment">
-          <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
-          <button class="negative ui button center aligned" id="noButton">NO</button>
-          <button class="positive ui button center aligned" id="yesButton">YES</button>
-        </div>
+   <div class="ui stackable grid vertical stripe">
+    <div class="four wide column">
+    </div>
+    <div class="eight wide center aligned column">
+      <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
+      <div class="ui center aligned basic segment">
+        <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
+        <button class="negative ui button center aligned" id="noButton">NO</button>
+        <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
+
+
+      {{ template "report_dlg.html" .}}
+
+    </div>
+    <div class="four wide center aligned column">
+      {{ template "img_info.html" .}}
     </div>
   </div>
+
+
 </div>
 {{ if .showFooter }} 
 {{ template "footer.html" .}}

@@ -16,7 +16,7 @@ import (
 var db *sql.DB
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
-func ClientAuthRequired() gin.HandlerFunc {
+func ClientAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var clientId string
 		var clientSecret string
@@ -36,6 +36,17 @@ func ClientAuthRequired() gin.HandlerFunc {
 			c.AbortWithStatus(401)
 			return
 		}
+
+		c.Next()
+	}
+}
+
+//CORS Middleware 
+func CorsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control")
+	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
 		c.Next()
 	}
@@ -90,6 +101,7 @@ func main(){
 
 
 	router := gin.Default()
+	router.Use(CorsMiddleware())
 	router.Use(RequestId())
 	router.Static("./v1/donation", *donationsDir) //serve static images
 
@@ -98,7 +110,7 @@ func main(){
 	//(as we want to make sure that we don't accidentally host inappropriate content, like nudity)
 	clientAuth := router.Group("/")
 	clientAuth.Use(RequestId())
-	clientAuth.Use(ClientAuthRequired())
+	clientAuth.Use(ClientAuthMiddleware())
 	{
 		clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
 		clientAuth.GET("/v1/unverified/donation", func(c *gin.Context) {
@@ -273,6 +285,7 @@ func main(){
 
 	router.POST("/v1/report/:imageid", func(c *gin.Context) {
 		imageId := c.Param("imageid")
+
 		var report Report
 		if(c.BindJSON(&report) != nil){
 			c.JSON(422, gin.H{"error": "reason missing - please provide a valid 'reason'"})

@@ -120,6 +120,8 @@ func main() {
 			"activeMenuNr": 4,
 			"showHeader": showHeader,
 			"showFooter": showFooter,
+			"apiBaseUrl": "https://api.imagemonkey.io",
+			//"apiBaseUrl": "http://127.0.0.1:8081",
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {
