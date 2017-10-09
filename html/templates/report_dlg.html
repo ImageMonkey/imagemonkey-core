@@ -1,9 +1,9 @@
 <script type='text/javascript'>
 $(document).ready(function(){
+  $('#reportSuccessMsg').hide();
+  $('#reportWarningMsg').hide();
+  
   function getViolationReason(){
-    $('#reportSuccessMsg').hide();
-    $('#reportWarningMsg').hide();
-
     var radioButtonId = $("#radio :radio:checked").attr('id');
     if(radioButtonId === "sensitiveContentRadioButton"){
       return "Sensitive Content";
