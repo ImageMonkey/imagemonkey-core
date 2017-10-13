@@ -248,6 +248,8 @@ func main(){
 			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return
 		}
+
+		c.JSON(200, nil)
 	})
 
 	router.GET("/v1/export", func(c *gin.Context) {

@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="css/justifiedGallery.css">
   <script src="js/justifiedGallery.min.js"></script>
   <script src="js/jquery-ui.min.js"></script>
+  <script src="js/mousetrap.min.js"></script>
 
 
   <style>
@@ -70,7 +71,7 @@
 
   function getRandomImages(){
     var multiValidationMode = isMultiValidationMode();
-    var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 4 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+    var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
 
     $.ajax({
       url: url,
