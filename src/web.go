@@ -161,11 +161,6 @@ func main() {
 		})
 	})
 
-	router.GET("/validate", func(c *gin.Context) {
-		randomImage := getRandomImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
-	})
-
 	router.GET("/annotate/data", func(c *gin.Context) {
 		randomImage := getRandomUnannotatedImage()
 		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
@@ -276,30 +271,6 @@ func main() {
 		err = addAnnotations(imageId, annotations)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
-			return
-		}
-	})
-
-	router.POST("/donation/:imageid/validate/:param", func(c *gin.Context) {
-		imageId := c.Param("imageid")
-		param := c.Param("param")
-
-		parameter := false
-		if(param == "yes"){
-			parameter = true
-		} else if(param == "no"){
-			parameter = false
-		} else{
-			c.JSON(404, nil)
-			return
-		}
-
-		err := validateDonatedPhoto(imageId, parameter)
-		if(err != nil){
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
-			return
-		} else{
-			c.JSON(http.StatusOK, nil)
 			return
 		}
 	})

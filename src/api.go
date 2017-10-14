@@ -11,6 +11,7 @@ import (
 	"flag"
 	"database/sql"
 	"os"
+	"strconv"
 )
 
 var db *sql.DB
@@ -46,9 +47,13 @@ func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control")
-	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
-		c.Next()
+		if c.Request.Method == "OPTIONS" {
+             c.AbortWithStatus(200)
+         } else {
+             c.Next()
+         }
 	}
 }
 
@@ -87,6 +92,8 @@ func main(){
 		fmt.Printf("[Main] Couldn't read wordlists...terminating!")
 		log.Fatal(err)
 	}
+
+	mostPopularLabels := []string{"cat", "dog"}
 
 	//open database and make sure that we can ping it
 	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
@@ -127,7 +134,7 @@ func main(){
 			imageId := c.Param("imageid")
 
 			//verify that uuid is a valid UUID (to prevent path injection)
-			_, err := uuid.FromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+			_, err := uuid.FromString(imageId)
 			if err != nil {
 				c.JSON(400, gin.H{"error" : "Couldn't process request - not a valid image id"})
 				return
@@ -166,11 +173,45 @@ func main(){
 	}
 
 	router.GET("/v1/validate", func(c *gin.Context) {
-		randomImage := getRandomImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
+		params := c.Request.URL.Query()
+
+		grouped := false
+		if temp, ok := params["grouped"]; ok {
+			if temp[0] == "true" {
+				grouped = true
+			}
+		}
+
+		limit := 20
+		if temp, ok := params["limit"]; ok {
+			limit, err = strconv.Atoi(temp[0])
+			if err != nil {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid limit parameter"})
+				return
+			}
+		}
+
+		if grouped {
+			pos := 0
+			if len(mostPopularLabels) > 0 {
+				pos = random(0, (len(mostPopularLabels) - 1))
+			}
+				
+
+			randomGroupedImages, err := getRandomGroupedImages(mostPopularLabels[pos], limit)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"label": mostPopularLabels[pos], "donations": randomGroupedImages})
+
+		} else {
+			randomImage := getRandomImage()
+			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
+		}
 	})
 
-	router.POST("/v1/validate/:imageid/:param", func(c *gin.Context) {
+	router.POST("/v1/donation/:imageid/validate/:param", func(c *gin.Context) {
 		imageId := c.Param("imageid")
 		param := c.Param("param")
 
@@ -192,6 +233,23 @@ func main(){
 			c.JSON(http.StatusOK, nil)
 			return
 		}
+	})
+
+	router.PATCH("/v1/donation/validate", func(c *gin.Context) {
+		var imageValidationBatch []ImageValidation
+		
+		if c.BindJSON(&imageValidationBatch) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - invalid patch"})
+			return
+		}
+
+		err := validateImages(imageValidationBatch)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		c.JSON(200, nil)
 	})
 
 	router.GET("/v1/export", func(c *gin.Context) {

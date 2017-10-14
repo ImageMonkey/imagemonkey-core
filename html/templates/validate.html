@@ -20,34 +20,190 @@
   <script src="js/dropzone.js"></script>
   <link rel="stylesheet" href="css/dropzone.css">
 
+  <link rel="stylesheet" href="css/justifiedGallery.css">
+  <script src="js/justifiedGallery.min.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <script src="js/mousetrap.min.js"></script>
+
+
+  <style>
+  #imageGrid .ui-selecting { border: 2px dashed #ff0000; }
+  #imageGrid .ui-selected { border: 2px solid #ff0000; }
+  </style>
+
   <script type="text/javascript">
+  //global image validation map that holds if a image is marked as valid or not
+  var imageValidationMapping = {};
+
+  function populateImageGrid(data){
+    imageValidationMapping = {};
+    $('#imageGrid').justifiedGallery('destroy');
+    $('#imageGrid').html(''); //clear all images inside imageGrid (unfortunately the 'destroy' doesn't do that automatically)
+    $('#multiValidateDoneButton').hide();
+    $('#multivalidationLabel').hide();
+    $('#multiValidationInfoText').hide();
+
+    var donations = data["donations"];
+    for(var i = 0; i < donations.length; i++){
+      var imageEndpoint = "donations/" + donations[i].uuid;
+      $('#imageGrid').append('<div class="img-container">' +
+        '<img src="' + imageEndpoint + '" imageId="' + donations[i].uuid + '" />' + 
+        '</div>');
+
+      //we just loaded some images, so no image is marked as valid yet
+      imageValidationMapping[donations[i].uuid] = false;
+    }
+
+    $("#multivalidationLabel").text(data.label);
+
+    $("#imageGrid").justifiedGallery({
+      margins: 5,
+      rowHeight: 150,
+      lastRow: 'center'
+    });
+  }
+
+  function isMultiValidationMode(){
+    if($("#multiValidationContainer").is(":visible"))
+      return true;
+    return false;
+  }
+
+  function getRandomImages(){
+    var multiValidationMode = isMultiValidationMode();
+    var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      success: function(data){
+        if(multiValidationMode){
+          populateImageGrid(data);
+        }
+        else{
+          $("#image").attr("imageId", data.uuid);
+          $("#image").attr("src", ("donations/"+data.uuid));
+          $("#label").text(data.label);
+        }
+      }
+    });
+  }
+
+  function multiValidate(data){
+    $.ajax({
+      url: '{{ .apiBaseUrl }}/v1/donation/validate',
+      dataType: 'json',
+      type: 'PATCH',
+      data: JSON.stringify(data),
+      success: function(data){
+        getRandomImages();
+      }
+    });
+  }
+
+  function getMultiValidationRequestData(){
+    data = []
+    containsOnlyInvalid = true;
+    for (var key in imageValidationMapping) {
+      if (imageValidationMapping.hasOwnProperty(key)) {
+        data.push({"uuid": key, "valid": ((imageValidationMapping[key]) ? "yes" : "no")})
+        if(imageValidationMapping[key])  containsOnlyInvalid = false;
+      }
+    }
+    return {
+      data : data,
+      containsOnlyInvalid: containsOnlyInvalid
+    }
+
+  }
+
+  function toggleValidationMode(){
+    if(isMultiValidationMode()){
+      $("#singleValidationContainer").show();
+      $("#multiValidationContainer").hide();
+    }
+    else {
+      $("#singleValidationContainer").hide();
+      $("#multiValidationContainer").show();
+    }
+  }
+
   $(document).ready(function(){
+    $("#multiValidationContainer").hide();
+
+    //switch between multi-validation mode and single-validation mode with 'm'
+    Mousetrap.bind('m', function() { 
+      toggleValidationMode();
+
+      getRandomImages();
+    });
+
+    //image grid is loaded, we can now show the "done" button
+    $('#imageGrid').on('jg.complete', function() {
+      $('#multiValidateDoneButton').show();
+      $('#multivalidationLabel').show();
+      $('#multiValidationInfoText').show();
+    });
+
+
+    $("#imageGrid").selectable({
+      filter: ':not(div[class*="img-container"])'
+    });
+
+    $("#imageGrid").selectable({
+      selected: function(event, ui) {
+        imageValidationMapping[$(ui.selected).attr('imageId')] = true;
+      },
+      unselected: function(event, ui) {
+        imageValidationMapping[$(ui.unselected).attr('imageId')] = false;
+      }
+    });
+
+    $("#imageGrid").on("selectablestart", function (event, ui) {
+      event.originalEvent.ctrlKey = true;
+    });
+
+
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
       e.preventDefault();
-      var url = '/donation/' + $("#image").attr("imageId") + '/validate/' + action;
+      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
       $.ajax({
         url: url,
         dataType: 'json',
         type: 'POST',
         success: function(data){
-          $.ajax({
-            url: '/validate',
-            dataType: 'json',
-            type: 'GET',
-            success: function(data){
-              $("#image").attr("imageId", data.uuid);
-              $("#image").attr("src", ("donations/"+data.uuid));
-              $("#label").text(data.label);
-            }
-          });
+          getRandomImages();
         }
       });
     });
-  });
 
-  </script>
+    $("#confirmNoValidOkButton").click(function(e) {
+      e.preventDefault();
+      multiValidate(getMultiValidationRequestData().data);
+    });
+
+
+    //when user wants to submit a multi validation, check if we have at least one positively labeled image. If not, show a confirmation
+    //dialog (it's very unlikey that we don't have a single positvely labeled image)
+    $("#multiValidateDoneButton").click(function(e) {
+      e.preventDefault();
+
+      data = getMultiValidationRequestData();
+
+      if(data.containsOnlyInvalid) {
+        $("#confirmNoValidDlgContent").html(("Are you sure that there is no <b>" + $("#label").text() + "</b> in the image?"));
+        $("#confirmNoValidDlg").modal('setting', { detachable:false }).modal('show');
+      }
+      else {
+        multiValidate(data.data);
+      }
+    });
+
+  });
+</script>
 </head>
 <body>
 
@@ -67,18 +223,48 @@
    <div class="ui stackable grid vertical stripe">
     <div class="four wide column">
     </div>
-    <div class="eight wide center aligned column">
+    <div class="eight wide center aligned column" id="singleValidationContainer">
       <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
       <div class="ui center aligned basic segment">
         <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
         <button class="negative ui button center aligned" id="noButton">NO</button>
         <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
-
-
       {{ template "report_dlg.html" .}}
+    </div>
+
+    <div class="eight wide center aligned column" id="multiValidationContainer">
+      <div id="imageGrid" class="selectable justified-gallery">
+      </div>
+
+      <div class="ui center aligned basic segment">
+        <p id="multiValidationInfoText">Select all images where you see: </p>
+        <h1 class="ui header" id="multivalidationLabel"></h1>
+        <p></p>
+        <button class="positive ui button center aligned" id="multiValidateDoneButton">DONE</button>
+      </div>
+
+      <div class="ui modal" id="confirmNoValidDlg">
+        <div class="ui header">
+          Confirmation
+        </div>
+        <div class="content" id="confirmNoValidDlgContent">
+          <p>Are you sure that there is no <b>{{ .randomImage.Label }}</b> in the image?</p>
+        </div>
+        <div class="actions">
+          <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
+            <i class="remove icon"></i>
+            Cancel
+          </div>
+          <div class="ui green ok inverted button" id="confirmNoValidOkButton">
+            <i class="checkmark icon"></i>
+            Yes
+          </div>
+        </div>
+      </div>
 
     </div>
+
     <div class="four wide center aligned column">
       {{ template "img_info.html" .}}
     </div>
