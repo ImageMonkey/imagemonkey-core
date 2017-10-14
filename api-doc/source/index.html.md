@@ -28,14 +28,14 @@ ImageMonkey is a public, open sourced image dataset project where users can cont
 curl \
   -F "label=banana" \
   -F "image=@/home/user/Desktop/banana.jpg" \
-  https://api.imagemonkey.com/v1/donate
+  https://api.imagemonkey.io/v1/donate
 ```
 
 Upload a picture and tag it with a specific label.
 
 ### HTTP Request
 
-`POST https://api.imagemonkey.com/v1/donate`
+`POST https://api.imagemonkey.io/v1/donate`
 
 ### Parameters
 
@@ -53,13 +53,13 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 ## Get a specific donation
 
 ```shell
-curl https://api.imagemonkey.com/v1/donation/48750a63-df1f-48d1-99ee-6c60e535a271
+curl https://api.imagemonkey.io/v1/donation/48750a63-df1f-48d1-99ee-6c60e535a271
 ```
 The above command returns the donated image.
 
 ### HTTP Request
 
-`GET https://api.imagemonkey.com/v1/donation/<uuid>`
+`GET https://api.imagemonkey.io/v1/donation/<uuid>`
 
 Parameter | Description
 --------- | ------- | -----------
@@ -73,7 +73,7 @@ uuid  | the uuid of the image you want to fetch
 ## Random Image for Validation
 
 ```shell
-curl "https://api.imagemonkey.com/v1/validate"
+curl "https://api.imagemonkey.io/v1/validate"
 ```
 
 > The above command returns JSON structured like this:
@@ -90,7 +90,7 @@ This endpoint returns the ID of an randomly chosen image together with some usuf
 
 ### HTTP Request
 
-`GET https://api.imagemonkey.com/v1/validate/`
+`GET https://api.imagemonkey.io/v1/validate/`
 
 
 
@@ -99,7 +99,7 @@ This endpoint returns the ID of an randomly chosen image together with some usuf
 ## Specific Image for Validation
 
 ```shell
-curl "https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271"
+curl "https://api.imagemonkey.io/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271"
 ```
 
 > The above command returns JSON structured like this:
@@ -117,7 +117,7 @@ This endpoint returns some useful metadata for the specified uuid.
 
 ### HTTP Request
 
-`GET https://api.imagemonkey.com/v1/validate/<uuid>`
+`GET https://api.imagemonkey.io/v1/validate/<uuid>`
 
 Parameter | Description
 --------- | ------- | -----------
@@ -128,14 +128,14 @@ uuid  | the uuid of the image you want to validate
 ## Validate Image
 
 ```shell
-curl "https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"
+curl "https://api.imagemonkey.io/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"
 ```
 
 This endpoint makes it possible to validate a specific image.
 
 ### HTTP Request
 
-`POST https://api.imagemonkey.com/v1/validate/<uuid>/<action>`
+`POST https://api.imagemonkey.io/v1/validate/<uuid>/<action>`
 
 Parameter | Description
 --------- | ------- | -----------
@@ -151,7 +151,7 @@ action | either 'yes' or 'no'
 ## Export datasets
 
 ```shell
-curl "https://api.imagemonkey.com/v1/export/tags=dog"
+curl "https://api.imagemonkey.io/v1/export/tags=dog"
 ```
 
 > The above command returns JSON structured like this:
@@ -171,7 +171,7 @@ This endpoint returns a collection of images that belong to one or more specific
 
 ### HTTP Request
 
-`GET https://api.imagemonkey.com/v1/export`
+`GET https://api.imagemonkey.io/v1/export`
 
 
 
@@ -190,12 +190,12 @@ tags  | Comma separated list of tags you are interested in.
 ```shell
 curl -H "Content-Type: application/json" 
      -X POST -d '{"reason":"picture contains nudity"}' 
-     https://api.imagemonkey.com/v1/report/48750a63-df1f-48d1-99ee-6c60e535a271
+     https://api.imagemonkey.io/v1/report/48750a63-df1f-48d1-99ee-6c60e535a271
 ```
 
 ### HTTP Request
 
-`POST https://api.imagemonkey.com/v1/report/<uuid>`
+`POST https://api.imagemonkey.io/v1/report/<uuid>`
 
 
 

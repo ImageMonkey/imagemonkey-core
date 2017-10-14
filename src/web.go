@@ -76,13 +76,12 @@ func main() {
 	router.Static("./img", "../img") //serve images
 	router.Static("./api", "../html/static/api")
 	router.Static("./donations", *donationsDir) //serve doncations
+	router.Static("./blog", "../html/static/blog")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "ImageMonkey",
 			"activeMenuNr": 1,
 			"numOfDonations": pick(getNumOfDonatedImages())[0],
-			//"numOfAnnotations": pick(getNumOfAnnotatedImages())[0],
-			//"numOfValidations": pick(getNumOfValidatedImages())[0],
 		})
 	})
 	router.GET("/donate", func(c *gin.Context) {
@@ -100,10 +99,29 @@ func main() {
 		})
 	})
 	router.GET("/verify", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		
+		showHeader := true
+		if temp, ok := params["show_header"]; ok {
+			if temp[0] == "false" {
+				showHeader = false
+			}
+		}
+
+		showFooter := true
+		if temp, ok := params["show_footer"]; ok {
+			if temp[0] == "false" {
+				showFooter = false
+			}
+		}
 		c.HTML(http.StatusOK, "validate.html", gin.H{
 			"title": "Validate Label",
 			"randomImage": getRandomImage(),
 			"activeMenuNr": 4,
+			"showHeader": showHeader,
+			"showFooter": showFooter,
+			"apiBaseUrl": "https://api.imagemonkey.io",
+			//"apiBaseUrl": "http://127.0.0.1:8081",
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {
@@ -141,11 +159,6 @@ func main() {
 			"playgroundPredictBaseUrl": "https://playground.imagemonkey.io",
 			//"playgroundPredictBaseUrl": "http://127.0.0.1:8081",
 		})
-	})
-
-	router.GET("/validate", func(c *gin.Context) {
-		randomImage := getRandomImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
 	})
 
 	router.GET("/annotate/data", func(c *gin.Context) {
@@ -258,30 +271,6 @@ func main() {
 		err = addAnnotations(imageId, annotations)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
-			return
-		}
-	})
-
-	router.POST("/donation/:imageid/validate/:param", func(c *gin.Context) {
-		imageId := c.Param("imageid")
-		param := c.Param("param")
-
-		parameter := false
-		if(param == "yes"){
-			parameter = true
-		} else if(param == "no"){
-			parameter = false
-		} else{
-			c.JSON(404, nil)
-			return
-		}
-
-		err := validateDonatedPhoto(imageId, parameter)
-		if(err != nil){
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
-			return
-		} else{
-			c.JSON(http.StatusOK, nil)
 			return
 		}
 	})

@@ -280,11 +280,11 @@
 <h1 id='donations'>Donations</h1><h2 id='donate-a-picture'>Donate a picture</h2><pre class="highlight shell tab-shell"><code>curl <span class="se">\</span>
   -F <span class="s2">"label=banana"</span> <span class="se">\</span>
   -F <span class="s2">"image=@/home/user/Desktop/banana.jpg"</span> <span class="se">\</span>
-  https://api.imagemonkey.com/v1/donate
+  https://api.imagemonkey.io/v1/donate
 </code></pre>
 <p>Upload a picture and tag it with a specific label.</p>
 <h3 id='http-request'>HTTP Request</h3>
-<p><code>POST https://api.imagemonkey.com/v1/donate</code></p>
+<p><code>POST https://api.imagemonkey.io/v1/donate</code></p>
 <h3 id='parameters'>Parameters</h3>
 <table><thead>
 <tr>
@@ -305,11 +305,11 @@
 <aside class="warning">
 Donating a picture only works if you specify a valid (i.e existing) label. If the label doesn't exist, please create a pull request, so that we can add it. You can see the list of available labels <a href="https://github.com/bbernhard/imagemonkey-core/blob/master/wordlists/en/misc.txt">here</a>.
 </aside>
-<h2 id='get-a-specific-donation'>Get a specific donation</h2><pre class="highlight shell tab-shell"><code>curl https://api.imagemonkey.com/v1/donation/48750a63-df1f-48d1-99ee-6c60e535a271
+<h2 id='get-a-specific-donation'>Get a specific donation</h2><pre class="highlight shell tab-shell"><code>curl https://api.imagemonkey.io/v1/donation/48750a63-df1f-48d1-99ee-6c60e535a271
 </code></pre>
 <p>The above command returns the donated image.</p>
 <h3 id='http-request-2'>HTTP Request</h3>
-<p><code>GET https://api.imagemonkey.com/v1/donation/&lt;uuid&gt;</code></p>
+<p><code>GET https://api.imagemonkey.io/v1/donation/&lt;uuid&gt;</code></p>
 
 <table><thead>
 <tr>
@@ -322,7 +322,7 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <td>the uuid of the image you want to fetch</td>
 </tr>
 </tbody></table>
-<h1 id='validation'>Validation</h1><h2 id='random-image-for-validation'>Random Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate"</span>
+<h1 id='validation'>Validation</h1><h2 id='random-image-for-validation'>Random Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.io/v1/validate"</span>
 </code></pre>
 <blockquote>
 <p>The above command returns JSON structured like this:</p>
@@ -335,8 +335,8 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </span></code></pre>
 <p>This endpoint returns the ID of an randomly chosen image together with some usuful metadata.</p>
 <h3 id='http-request-3'>HTTP Request</h3>
-<p><code>GET https://api.imagemonkey.com/v1/validate/</code></p>
-<h2 id='specific-image-for-validation'>Specific Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271"</span>
+<p><code>GET https://api.imagemonkey.io/v1/validate/</code></p>
+<h2 id='specific-image-for-validation'>Specific Image for Validation</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.io/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271"</span>
 </code></pre>
 <blockquote>
 <p>The above command returns JSON structured like this:</p>
@@ -349,7 +349,7 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </span></code></pre>
 <p>This endpoint returns some useful metadata for the specified uuid.</p>
 <h3 id='http-request-4'>HTTP Request</h3>
-<p><code>GET https://api.imagemonkey.com/v1/validate/&lt;uuid&gt;</code></p>
+<p><code>GET https://api.imagemonkey.io/v1/validate/&lt;uuid&gt;</code></p>
 
 <table><thead>
 <tr>
@@ -362,11 +362,11 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <td>the uuid of the image you want to validate</td>
 </tr>
 </tbody></table>
-<h2 id='validate-image'>Validate Image</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"</span>
+<h2 id='validate-image'>Validate Image</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.io/v1/validate/48750a63-df1f-48d1-99ee-6c60e535a271/yes"</span>
 </code></pre>
 <p>This endpoint makes it possible to validate a specific image.</p>
 <h3 id='http-request-5'>HTTP Request</h3>
-<p><code>POST https://api.imagemonkey.com/v1/validate/&lt;uuid&gt;/&lt;action&gt;</code></p>
+<p><code>POST https://api.imagemonkey.io/v1/validate/&lt;uuid&gt;/&lt;action&gt;</code></p>
 
 <table><thead>
 <tr>
@@ -383,7 +383,7 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 <td>either &#39;yes&#39; or &#39;no&#39;</td>
 </tr>
 </tbody></table>
-<h1 id='export'>Export</h1><h2 id='export-datasets'>Export datasets</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.com/v1/export/tags=dog"</span>
+<h1 id='export'>Export</h1><h2 id='export-datasets'>Export datasets</h2><pre class="highlight shell tab-shell"><code>curl <span class="s2">"https://api.imagemonkey.io/v1/export/tags=dog"</span>
 </code></pre>
 <blockquote>
 <p>The above command returns JSON structured like this:</p>
@@ -399,7 +399,7 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </span></code></pre>
 <p>This endpoint returns a collection of images that belong to one or more specific tags.</p>
 <h3 id='http-request-6'>HTTP Request</h3>
-<p><code>GET https://api.imagemonkey.com/v1/export</code></p>
+<p><code>GET https://api.imagemonkey.io/v1/export</code></p>
 
 <table><thead>
 <tr>
@@ -414,9 +414,9 @@ Donating a picture only works if you specify a valid (i.e existing) label. If th
 </tbody></table>
 <h1 id='report'>Report</h1><h2 id='mark-an-image-as-abusive'>Mark an image as abusive</h2><pre class="highlight shell tab-shell"><code>curl -H <span class="s2">"Content-Type: application/json"</span> 
      -X POST -d <span class="s1">'{"reason":"picture contains nudity"}'</span> 
-     https://api.imagemonkey.com/v1/report/48750a63-df1f-48d1-99ee-6c60e535a271
+     https://api.imagemonkey.io/v1/report/48750a63-df1f-48d1-99ee-6c60e535a271
 </code></pre><h3 id='http-request-7'>HTTP Request</h3>
-<p><code>POST https://api.imagemonkey.com/v1/report/&lt;uuid&gt;</code></p>
+<p><code>POST https://api.imagemonkey.io/v1/report/&lt;uuid&gt;</code></p>
 
 <table><thead>
 <tr>

@@ -26,6 +26,11 @@ type Image struct {
     Annotations []Annotation `json:"annotations"`
 }
 
+type ImageValidation struct {
+    Uuid string `json:"uuid"`
+    Valid string `json:"valid"`
+}
+
 type GraphNode struct {
 	Group int `json:"group"`
 	Text string `json:"text"`
@@ -118,15 +123,64 @@ func validateDonatedPhoto(imageId string, valid bool) error{
 	return nil
 }
 
+func validateImages(imageValidationBatch []ImageValidation) error {
+    var validEntries []string
+    var invalidEntries []string
+    for i := range imageValidationBatch {
+        if imageValidationBatch[i].Valid == "yes" {
+            validEntries = append(validEntries, imageValidationBatch[i].Uuid)
+        } else if imageValidationBatch[i].Valid == "no" {
+            invalidEntries = append(invalidEntries, imageValidationBatch[i].Uuid)
+        }
+    }
+
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Batch Validating donated photos] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if len(invalidEntries) > 0 {
+        _,err := tx.Exec(`UPDATE image_validation AS v 
+                              SET num_of_invalid = num_of_invalid + 1
+                              FROM image AS i
+                              WHERE v.image_id = i.id AND key = ANY($1)`, pq.Array(invalidEntries))
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Batch Validating donated photos] Couldn't increase num_of_invalid: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    if len(validEntries) > 0 {
+        _,err := tx.Exec(`UPDATE image_validation AS v 
+                              SET num_of_valid = num_of_valid + 1
+                              FROM image AS i
+                              WHERE v.image_id = i.id AND key = ANY($1)`, pq.Array(validEntries))
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Batch Validating donated photos] Couldn't increase num_of_valid: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    return tx.Commit()
+}
+
 func export(labels []string) ([]Image, error){
     rows, err := db.Query(`SELECT i.key, l.name, CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END, 
-    					   v.num_of_valid, v.num_of_invalid
+    					   v.num_of_valid, v.num_of_invalid, a.annotations
     					   FROM image_validation v 
                            JOIN image i ON v.image_id = i.id 
                            JOIN label l ON v.label_id = l.id 
                            JOIN image_provider p ON i.image_provider_id = p.id 
+                           LEFT JOIN image_annotation a ON a.image_id = i.id
                            WHERE i.unlocked = true and p.name = 'donation' AND l.name = ANY($1)`, pq.Array(labels))
-    if(err != nil){
+    if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
         raven.CaptureError(err, nil)
         return nil, err
@@ -134,20 +188,29 @@ func export(labels []string) ([]Image, error){
     defer rows.Close()
 
     imageEntries := []Image{}
-    for(rows.Next()){
+    for rows.Next() {
     	var image Image
+        var annotations []byte
     	image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &image.Label, &image.Probability, &image.NumOfValid, &image.NumOfInvalid)
-    	if(err != nil) {
+        err = rows.Scan(&image.Id, &image.Label, &image.Probability, &image.NumOfValid, &image.NumOfInvalid, &annotations)
+    	if err != nil {
             log.Debug("[Export] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return nil, err
         }
 
+        if len(annotations) > 0 {
+            err := json.Unmarshal(annotations, &image.Annotations)
+            if err != nil {
+                log.Debug("[Export] Couldn't unmarshal: ", err.Error())
+                raven.CaptureError(err, nil)
+                return nil, err
+            }
+        }
+
         imageEntries = append(imageEntries, image)
     }
-
     return imageEntries, err
 }
 
@@ -281,6 +344,79 @@ func reportImage(imageId string, reason string) error{
 	}
 
 	return nil
+}
+
+//returns a list of n - random images (n = limit) that were uploaded with the given label. 
+func getRandomGroupedImages(label string, limit int) ([]Image, error) {
+    var images []Image
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Random grouped images] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return images, err
+    }
+
+    //get number of images for a given label. we need that to calculate a random number between
+    //0 and (numOfImages - limit). If (numOfImages - limit) < 0 then offset = 0.
+
+    //TODO: the following SQL query is a potential candidate for improvement, as it probably gets slow if there
+    //are ten thousands of rows in the DB.
+    var numOfRows int
+    err = tx.QueryRow(`SELECT count(*) FROM image i 
+                        JOIN image_provider p ON i.image_provider_id = p.id 
+                        JOIN image_validation v ON v.image_id = i.id
+                        JOIN label l ON v.label_id = l.id
+                        WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1`, label).Scan(&numOfRows)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Random grouped images] Couldn't get num of rows: ", err.Error())
+        raven.CaptureError(err, nil)
+        return images, err
+    }
+
+    randomNumber := 0
+    end := numOfRows - limit
+    if end < 0 {
+        end = 0
+    } 
+
+    if end != 0 {
+        randomNumber = random(0, end)
+    }
+
+    //fetch images
+    rows, err := db.Query(`SELECT i.key, l.name FROM image i 
+                           JOIN image_provider p ON i.image_provider_id = p.id 
+                           JOIN image_validation v ON v.image_id = i.id
+                           JOIN label l ON v.label_id = l.id
+                           WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1
+                           OFFSET $2 LIMIT $3`, label, randomNumber, limit)
+
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Random grouped images] Couldn't get images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return images, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var image Image
+        image.Provider = "donation"
+        err = rows.Scan(&image.Id, &image.Label)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Fetch random grouped image] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return images, err
+        }
+
+        images = append(images, image)
+    }
+
+    return images, tx.Commit()
 }
 
 func addAnnotations(imageId string, annotations []Annotation) error{

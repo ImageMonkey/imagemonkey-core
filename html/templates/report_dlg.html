@@ -1,0 +1,102 @@
+<script type='text/javascript'>
+$(document).ready(function(){
+  $('#reportSuccessMsg').hide();
+  $('#reportWarningMsg').hide();
+  
+  function getViolationReason(){
+    var radioButtonId = $("#radio :radio:checked").attr('id');
+    if(radioButtonId === "sensitiveContentRadioButton"){
+      return "Sensitive Content";
+    }
+    if(radioButtonId === "copyrightViolationRadioButton"){
+      return "Copyright Violation";
+    }
+    return "Other Violation";
+  }
+
+  $("#submitReportButton").click(function(e) {
+    e.preventDefault();
+    data = {};
+    data['reason'] = getViolationReason() + ': ' + $('#additionalInformation').val();
+    var url = '{{ .apiBaseUrl }}/v1/report/' + $("#image").attr("imageId");
+    $.ajax({
+      url: url,
+          //dataType: 'json',
+          type: 'POST',
+          data: JSON.stringify(data),
+          success: function(data){
+            $('.modal').modal('close');
+            $('#reportSuccessMsg').show(200).delay(1500).hide(200);
+          },
+          error: function (jqXHR, textStatus, errorThrown){
+            $('.modal').modal('close');
+            $('#reportWarningMsg').show(200).delay(1500).hide(200);
+          }
+        });
+  });
+
+  $("#reportButton").click(function(e) {
+    $('.modal').modal('setting', { detachable:false }).modal('show');
+  });
+});
+</script>
+
+<div class="ui longer modal" id="reportDlg">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Report Picture
+  </div>
+  <div class="scrolling content">
+    <div class="grouped fields" id="radio">
+      <label>Please select a reason</label>
+      <p></p>
+      <div class="field">
+        <div class="ui radio checkbox">
+          <input name="violation" checked="checked" type="radio" id="sensitiveContentRadioButton">
+          <label>Sensitive Content (Nudity, Racism, ...)</label>
+        </div>
+      </div>
+      <div class="field">
+        <div class="ui radio checkbox">
+          <input name="violation" checked="checked" type="radio" id="copyrightViolationRadioButton">
+          <label>Copyright Violation</label>
+        </div>
+      </div>
+      <div class="field">
+        <div class="ui radio checkbox">
+          <input name="violation" checked="checked" type="radio" id="otherViolationRadioButton">
+          <label>Other</label>
+        </div>
+      </div>
+      <p></p>
+      <div class="ui fluid input">
+        <input placeholder="Any additional information helps us" type="text" id="additionalInformation">
+      </div>
+    </div>
+
+
+  </div>
+  <div class="actions">
+    <div class="ui black deny button">
+      Cancel
+    </div>
+    <div class="ui positive right labeled icon button" id="submitReportButton">
+      Submit
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+
+<div class="ui positive message" id="reportSuccessMsg">
+  <i class="close icon"></i>
+  <div class="header">
+    Thanks for reporting!
+  </div>
+</div>
+
+<div class="ui warning message" id="reportWarningMsg">
+  <i class="close icon"></i>
+  <div class="header">
+    Couldn't submit request - please try again later!
+  </div>
+</div>
