@@ -14,3 +14,14 @@ bullet
 car
 tree
 pizza
+bicycle
+urban scene
+domestic scene
+rural scene
+industrial scene
+natural scene
+agriculture
+architecture
+plants
+animals
+unknown
