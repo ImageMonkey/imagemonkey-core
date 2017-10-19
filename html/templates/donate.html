@@ -33,6 +33,7 @@
 
       Dropzone.options.dropzone = {
         maxFiles: 1,
+        paramName: "image",
         resizeWidth: 1000,
         resizeQuality: 0.8, 
         init: function() {
@@ -44,7 +45,8 @@
             setTimeout(clearDropzone, 700);
           });
 
-          this.on('error', function(file, errorMessage) {
+          this.on('error', function(file, data) {
+            var errorMessage = data["error"];
             if(errorMessage.indexOf("already exists") !== -1){
               $('#warningMsg').show(200).delay(1500).hide(200);
             }
@@ -76,7 +78,7 @@
     <div class="ui vertical stripe segment">
       <div class="ui text container">
         <div class="row">
-        	<form action="/donate" class="ui segment dropzone" id="dropzone">
+        	<form action="{{ .apiBaseUrl }}/v1/donate" class="ui segment dropzone" id="dropzone">
   	         <input type="hidden" name="label" value="{{ .randomWord }}" />
   	      </form>
           <div class="ui basic segment"></div>

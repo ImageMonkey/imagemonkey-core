@@ -198,14 +198,14 @@ $(document).ready(function(){
     }
 
     e.preventDefault();
-    var url = '/annotate/' + $("#annotationArea").attr("imageId");
+    var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
     $.ajax({
       url: url,
       type: 'POST',
       data: JSON.stringify(res),
       success: function(data){
         $.ajax({
-          url: '/annotate/data',
+          url: '{{ .apiBaseUrl }}/v1/annotate',
           dataType: 'json',
           type: 'GET',
           success: function(data){

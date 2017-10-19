@@ -37,6 +37,35 @@ type GraphNode struct {
 	Size int `json:"size"`
 }
 
+type ValidationStat struct {
+    Label string `json:"label"`
+    Count int `json:"count"`
+    ErrorRate float32 `json:"error_rate"`
+    TotalValidations int `json:"total_validations"`
+}
+
+type DonationsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
+type ValidationsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
+type AnnotationsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
+type Statistics struct {
+    Validations []ValidationStat `json:"validations"`
+    DonationsPerCountry []DonationsPerCountryStat `json:"donations_per_country"`
+    ValidationsPerCountry []ValidationsPerCountryStat `json:"validations_per_country"`
+    AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
+}
+
 func addDonatedPhoto(filename string, hash uint64, label string) error{
 	tx, err := db.Begin()
     if err != nil {
@@ -214,69 +243,133 @@ func export(labels []string) ([]Image, error){
     return imageEntries, err
 }
 
-func explore() []GraphNode{
-	graphNodeEntries := []GraphNode{}
+func explore(words []string) (Statistics, error) {
+    statistics := Statistics{}
+
+    //use temporary map for faster lookup
+    temp := make(map[string]ValidationStat)
 
     tx, err := db.Begin()
     if err != nil {
-    	log.Debug("[Explore] Couldn't begin transaction: ", err.Error())
+        log.Debug("[Explore] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
-        return graphNodeEntries
+        return statistics, err
     }
-
-    var minSize int32
-    var maxSize int32
-    maxSize = 0
-    minSize = 0
-    err = tx.QueryRow(`SELECT MIN(count), MAX(count) FROM 
-    						(SELECT COUNT(*) FROM image_validation v 
-    						 JOIN label l ON v.label_id = l.id 
-    						 GROUP BY l.name) t`).Scan(&minSize, &maxSize)
-    if(err != nil){
-        log.Debug("[Explore] Couldn't explore min/max: ", err.Error())
-        raven.CaptureError(err, nil)
+    
+    rows, err := tx.Query(`SELECT l.name, count(l.name), 
+                           CASE WHEN SUM(v.num_of_valid + v.num_of_invalid) = 0 THEN 0 ELSE (CAST (SUM(v.num_of_invalid) AS float)/(SUM(v.num_of_valid) + SUM(v.num_of_invalid))) END as error_rate, 
+                           SUM(v.num_of_valid + v.num_of_invalid) as total_validations
+                           FROM image_validation v 
+                           JOIN label l ON v.label_id = l.id 
+                           GROUP BY l.name ORDER BY count(l.name) DESC`)
+    if err != nil {
         tx.Rollback()
-        return graphNodeEntries
-    }
-
-    scaleFactor := float64((float64(maxSize) - float64(minSize))/float64(30))
-    if(scaleFactor == 0){
-    	scaleFactor = 30
-    } else {
-    	scaleFactor = 1/scaleFactor
-    }
-
-    rows, err := tx.Query(`SELECT l.name, count(l.name) 
-    					   FROM image_validation v 
-    					   JOIN label l ON v.label_id = l.id 
-    					   GROUP BY l.name ORDER BY count(l.name) DESC`)
-    if(err != nil){
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
-        tx.Rollback()
-        return graphNodeEntries
+        return statistics, err
     }
     defer rows.Close()
 
-    groupNr := 1
-    for(rows.Next()){
-    	var graphNode GraphNode
-    	graphNode.Group = groupNr
-    	err = rows.Scan(&graphNode.Text, &graphNode.Size)
-    	if(err != nil) {
+    for rows.Next() {
+        var validationStat ValidationStat
+        err = rows.Scan(&validationStat.Label, &validationStat.Count, &validationStat.ErrorRate, &validationStat.TotalValidations)
+        if err != nil {
+            tx.Rollback()
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
-            tx.Rollback()
-            return graphNodeEntries
+            return statistics, err
         }
-        graphNode.Size = int(float64(graphNode.Size) * scaleFactor)
-        graphNodeEntries = append(graphNodeEntries, graphNode)
-        groupNr += 1
+
+        temp[validationStat.Label] = validationStat
     }
 
-    tx.Commit()
+    //add labels where we don't have a donation yet
+    for _, value := range words {
+        _, contains := temp[value]
+        if !contains {
+            var validationStat ValidationStat
+            validationStat.Label = value
+            validationStat.Count = 0
+            temp[value] = validationStat
+        }
+    }
 
-    return graphNodeEntries
+    for _, value := range temp {
+        statistics.Validations = append(statistics.Validations, value)
+    }
+
+    //get donations grouped by country
+    donationsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM donations_per_country ORDER BY count DESC`)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore data: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+    defer donationsPerCountryRows.Close()
+
+    for donationsPerCountryRows.Next() {
+        var donationsPerCountryStat DonationsPerCountryStat
+        err = donationsPerCountryRows.Scan(&donationsPerCountryStat.CountryCode, &donationsPerCountryStat.Count)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Explore] Couldn't scan data row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return statistics, err
+        }
+
+        statistics.DonationsPerCountry = append(statistics.DonationsPerCountry, donationsPerCountryStat)
+    }
+
+
+    //get validations grouped by country
+    validationsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM validations_per_country ORDER BY count DESC`)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore data: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+    defer validationsPerCountryRows.Close()
+
+    for validationsPerCountryRows.Next() {
+        var validationsPerCountryStat ValidationsPerCountryStat
+        err = validationsPerCountryRows.Scan(&validationsPerCountryStat.CountryCode, &validationsPerCountryStat.Count)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Explore] Couldn't scan data row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return statistics, err
+        }
+
+        statistics.ValidationsPerCountry = append(statistics.ValidationsPerCountry, validationsPerCountryStat)
+    }
+
+    //get annotations grouped by country
+    annotationsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM annotations_per_country ORDER BY count DESC`)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore data: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+    defer annotationsPerCountryRows.Close()
+
+    for annotationsPerCountryRows.Next() {
+        var annotationsPerCountryStat AnnotationsPerCountryStat
+        err = annotationsPerCountryRows.Scan(&annotationsPerCountryStat.CountryCode, &annotationsPerCountryStat.Count)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Explore] Couldn't scan data row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return statistics, err
+        }
+
+        statistics.AnnotationsPerCountry = append(statistics.AnnotationsPerCountry, annotationsPerCountryStat)
+    }
+
+
+    return statistics, tx.Commit()
 }
 
 
@@ -636,6 +729,36 @@ func unlockImage(imageId string) error {
     if err != nil {
         log.Debug("[Unlock Image] Couldn't unlock image: ", err.Error())
         return err
+    }
+
+    return nil
+}
+
+func updateContributionsPerCountry(contributionType string, countryCode string) error {
+    if contributionType == "donation" {
+        _, err := db.Exec(`INSERT INTO donations_per_country (country_code, count)
+                            VALUES ($1, $2) ON CONFLICT (country_code)
+                            DO UPDATE SET count = donations_per_country.count + 1`, countryCode, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per Country] Couldn't insert into/update donations_per_country: ", err.Error())
+            return err
+        }
+    } else if contributionType == "validation" {
+        _, err := db.Exec(`INSERT INTO validations_per_country (country_code, count)
+                            VALUES ($1, $2) ON CONFLICT (country_code)
+                            DO UPDATE SET count = validations_per_country.count + 1`, countryCode, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per Country] Couldn't insert into/update validations_per_country: ", err.Error())
+            return err
+        }
+    } else if contributionType == "annotation" {
+        _, err := db.Exec(`INSERT INTO annotations_per_country (country_code, count)
+                            VALUES ($1, $2) ON CONFLICT (country_code)
+                            DO UPDATE SET count = annotations_per_country.count + 1`, countryCode, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per Country] Couldn't insert into/update annotations_per_country: ", err.Error())
+            return err
+        }
     }
 
     return nil

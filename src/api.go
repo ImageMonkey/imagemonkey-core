@@ -12,9 +12,14 @@ import (
 	"database/sql"
 	"os"
 	"strconv"
+	"github.com/oschwald/geoip2-golang"
+	"github.com/garyburd/redigo/redis"
+	"encoding/json"
+	"net"
 )
 
 var db *sql.DB
+var geoipDb *geoip2.Reader
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
 func ClientAuthMiddleware() gin.HandlerFunc {
@@ -46,7 +51,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -70,6 +75,25 @@ func RequestId() gin.HandlerFunc {
 }
 
 
+func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCountryRequest ContributionsPerCountryRequest) {
+	serialized, err := json.Marshal(contributionsPerCountryRequest)
+	if err != nil { 
+		log.Debug("[Donate] Couldn't create contributions-per-country request: ", err.Error())
+		return
+	}
+
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+
+	_, err = redisConn.Do("RPUSH", "contributions-per-country", serialized)
+	if err != nil { //just log error, but not abort (it's just some statistical information)
+		log.Debug("[Donate] Couldn't update contributions-per-country: ", err.Error())
+		return
+	}
+
+}
+
+
 func main(){
 	fmt.Printf("Starting API Service...\n")
 
@@ -79,6 +103,9 @@ func main(){
 	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
+	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
+	redisMaxConnections := flag.Int("redis_max_connections", 500, "Max connections to Redis")
+	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
 
 	flag.Parse()
 	if(*releaseMode){
@@ -105,6 +132,26 @@ func main(){
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
+
+
+	//open geoip database
+	geoipDb, err := geoip2.Open(*geoIpDbPath)
+	if err != nil {
+		log.Fatal("[Main] Couldn't read geoip database: ", err.Error())
+	}
+	defer geoipDb.Close()
+
+	//create redis pool
+	redisPool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", *redisAddress)
+
+		if err != nil {
+			log.Fatal("[Main] Couldn't dial redis: ", err.Error())
+		}
+
+		return c, err
+	}, *redisMaxConnections)
+	defer redisPool.Close()
 
 
 	router := gin.Default()
@@ -229,10 +276,25 @@ func main(){
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
-		} else{
-			c.JSON(http.StatusOK, nil)
-			return
+		} 
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "validation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Validation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
 		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+
+		c.JSON(http.StatusOK, nil)
 	})
 
 	router.PATCH("/v1/donation/validate", func(c *gin.Context) {
@@ -248,6 +310,22 @@ func main(){
 			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return
 		}
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "validation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Validation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
 		c.JSON(200, nil)
 	})
@@ -296,13 +374,13 @@ func main(){
 
         // Copy the file header into the buffer
         if _, err := file.Read(fileHeader); err != nil {
-        	c.JSON(422, gin.H{"error": "Unable detect MIME type"})
+        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
         	return
         }
 
         // set position back to start.
         if _, err := file.Seek(0, 0); err != nil {
-        	c.JSON(422, gin.H{"error": "Unable detect MIME type"})
+        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
         	return
         }
 
@@ -327,7 +405,6 @@ func main(){
         	return
         }
 
-
         //image doesn't already exist, so save it and add it to the database
 		uuid := uuid.NewV4().String()
 		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
@@ -337,6 +414,22 @@ func main(){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return
 		}
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "donation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -355,6 +448,76 @@ func main(){
 			return
 		}
 		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/v1/annotation/:imageid/validate/:param", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+		param := c.Param("param")
+
+		parameter := false
+		if(param == "yes"){
+			parameter = true
+		} else if(param == "no"){
+			parameter = false
+		} else{
+			c.JSON(404, nil)
+			return
+		}
+
+		err := validateAnnotatedImage(imageId, parameter)
+		if(err != nil){
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
+			return
+		} 
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "annotation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Annotation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+
+		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/v1/annotate/:imageid", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+		if(imageId == ""){
+			c.JSON(422, gin.H{"error": "invalid request - image id missing"})
+			return
+		}
+
+		var annotations []Annotation
+		err := c.BindJSON(&annotations)
+		if(err != nil){
+			c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
+			return
+		}
+
+		err = addAnnotations(imageId, annotations)
+		if(err != nil){
+			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
+			return
+		}
+	})
+
+	router.GET("/v1/annotate", func(c *gin.Context) {
+		randomImage := getRandomUnannotatedImage()
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
+	})
+
+	router.GET("/v1/annotation", func(c *gin.Context) {
+		randomImage := getRandomAnnotatedImage()
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "annotations": randomImage.Annotations})
 	})
 
 	router.Run(":8081")
