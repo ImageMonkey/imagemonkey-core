@@ -18,6 +18,7 @@
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js"></script>
+  <script src="js/fingerprint2.min.js"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -175,6 +176,7 @@ function changeControl(rect){
 
 $(document).ready(function(){
   $('#warningMsg').hide();
+  var browserFingerprint = null;
 
   $('#doneButton').click(function(e) {
     var data = canvas.toJSON();
@@ -197,12 +199,17 @@ $(document).ready(function(){
       return;
     }
 
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers["X-Browser-Fingerprint"] = browserFingerprint;
+
     e.preventDefault();
     var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
     $.ajax({
       url: url,
       type: 'POST',
       data: JSON.stringify(res),
+      headers: headers,
       success: function(data){
         $.ajax({
           url: '{{ .apiBaseUrl }}/v1/annotate',
@@ -218,6 +225,12 @@ $(document).ready(function(){
         });
       }
     });
+
+
+    new Fingerprint2().get(function(result, components){
+      browserFingerprint = result;
+    });
+
   });
 
 

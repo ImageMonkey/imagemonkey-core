@@ -66,7 +66,7 @@ type Statistics struct {
     AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
 }
 
-func addDonatedPhoto(filename string, hash uint64, label string) error{
+func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, label string) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -87,8 +87,9 @@ func addDonatedPhoto(filename string, hash uint64, label string) error{
 	}
 
 	labelId := 0
-	err = tx.QueryRow("INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, label_id) SELECT $1, $2, $3, l.id FROM label l WHERE l.name = $4 RETURNING id", 
-					  imageId, 0, 0, label).Scan(&labelId)
+	err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
+                        SELECT $1, $2, $3, $5, l.id FROM label l WHERE l.name = $4 RETURNING id`, 
+					  imageId, 0, 0, label, clientFingerprint).Scan(&labelId)
 	if(err != nil){
 		tx.Rollback()
 		log.Debug("[Adding donated photo] Couldn't insert image validation entry: ", err.Error())
@@ -126,23 +127,23 @@ func imageExists(hash uint64) (bool, error){
     }
 }
 
-func validateDonatedPhoto(imageId string, valid bool) error{
-	if(valid){
+func validateDonatedPhoto(clientFingerprint string, imageId string, valid bool) error {
+	if valid {
 		_,err := db.Exec(`UPDATE image_validation AS v 
-						  SET num_of_valid = num_of_valid + 1
+						  SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
 						  FROM image AS i
-						  WHERE v.image_id = i.id AND key = $1`, imageId)
-		if(err != nil){
+						  WHERE v.image_id = i.id AND key = $2`, clientFingerprint, imageId)
+		if err != nil {
 			log.Debug("[Validating donated photo] Couldn't increase num_of_valid: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
 		}
-	} else{
+	} else {
 		_,err := db.Exec(`UPDATE image_validation AS v 
-						  SET num_of_invalid = num_of_invalid + 1
+						  SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
 						  FROM image AS i
-						  WHERE v.image_id = i.id AND key = $1`, imageId)
-		if(err != nil){
+						  WHERE v.image_id = i.id AND key = $2`, clientFingerprint, imageId)
+		if err != nil {
 			log.Debug("[Validating donated photo] Couldn't increase num_of_invalid: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
@@ -152,7 +153,7 @@ func validateDonatedPhoto(imageId string, valid bool) error{
 	return nil
 }
 
-func validateImages(imageValidationBatch []ImageValidation) error {
+func validateImages(clientFingerprint string, imageValidationBatch []ImageValidation) error {
     var validEntries []string
     var invalidEntries []string
     for i := range imageValidationBatch {
@@ -173,9 +174,9 @@ func validateImages(imageValidationBatch []ImageValidation) error {
 
     if len(invalidEntries) > 0 {
         _,err := tx.Exec(`UPDATE image_validation AS v 
-                              SET num_of_invalid = num_of_invalid + 1
+                              SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
                               FROM image AS i
-                              WHERE v.image_id = i.id AND key = ANY($1)`, pq.Array(invalidEntries))
+                              WHERE v.image_id = i.id AND key = ANY($2)`, clientFingerprint, pq.Array(invalidEntries))
         if err != nil {
             tx.Rollback()
             log.Debug("[Batch Validating donated photos] Couldn't increase num_of_invalid: ", err.Error())
@@ -186,9 +187,9 @@ func validateImages(imageValidationBatch []ImageValidation) error {
 
     if len(validEntries) > 0 {
         _,err := tx.Exec(`UPDATE image_validation AS v 
-                              SET num_of_valid = num_of_valid + 1
+                              SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
                               FROM image AS i
-                              WHERE v.image_id = i.id AND key = ANY($1)`, pq.Array(validEntries))
+                              WHERE v.image_id = i.id AND key = ANY($2)`, clientFingerprint, pq.Array(validEntries))
         if err != nil {
             tx.Rollback()
             log.Debug("[Batch Validating donated photos] Couldn't increase num_of_valid: ", err.Error())
@@ -512,21 +513,22 @@ func getRandomGroupedImages(label string, limit int) ([]Image, error) {
     return images, tx.Commit()
 }
 
-func addAnnotations(imageId string, annotations []Annotation) error{
+func addAnnotations(clientFingerprint string, imageId string, annotations []Annotation) error{
     //currently there is a uniqueness constraint on the image_id column to ensure that we only have
     //one image annotation per image. That means that the below query can fail with a unique constraint error. 
     //we might want to change that in the future to support multiple annotations per image (if there is a use case for it),
     //but for now it should be fine.
     byt, err := json.Marshal(annotations)
-    if(err != nil){
+    if err != nil {
         log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
         return err
     }
 
     insertedId := 0
-    err = db.QueryRow("INSERT INTO image_annotation(image_id, annotations, num_of_valid, num_of_invalid) SELECT i.id, $2, $3, $4 FROM image i WHERE i.key = $1 RETURNING id", 
-                      imageId, byt, 0, 0).Scan(&insertedId)
-    if(err != nil){
+    err = db.QueryRow(`INSERT INTO image_annotation(image_id, annotations, num_of_valid, num_of_invalid, fingerprint_of_last_modification) 
+                        SELECT i.id, $2, $3, $4, $5 FROM image i WHERE i.key = $1 RETURNING id`, 
+                      imageId, byt, 0, 0, clientFingerprint).Scan(&insertedId)
+    if err != nil {
         log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
         raven.CaptureError(err, nil)
         return err
@@ -629,23 +631,23 @@ func getRandomAnnotatedImage() Image{
     return image
 }
 
-func validateAnnotatedImage(imageId string, valid bool) error{
-    if(valid){
+func validateAnnotatedImage(clientFingerprint string, imageId string, valid bool) error {
+    if valid {
         _,err := db.Exec(`UPDATE image_annotation AS a 
-                          SET num_of_valid = num_of_valid + 1
+                          SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
                           FROM image AS i
-                          WHERE a.image_id = i.id AND key = $1`, imageId)
-        if(err != nil){
+                          WHERE a.image_id = i.id AND key = $2`, clientFingerprint, imageId)
+        if err != nil {
             log.Debug("[Validating annotated photo] Couldn't increase num_of_valid: ", err.Error())
             raven.CaptureError(err, nil)
             return err
         }
-    } else{
+    } else {
         _,err := db.Exec(`UPDATE image_annotation AS a 
-                          SET num_of_invalid = num_of_invalid + 1
+                          SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
                           FROM image AS i
-                          WHERE a.image_id = i.id AND key = $1`, imageId)
-        if(err != nil){
+                          WHERE a.image_id = i.id AND key = $2`, clientFingerprint, imageId)
+        if err != nil {
             log.Debug("[Validating annotated photo] Couldn't increase num_of_invalid: ", err.Error())
             raven.CaptureError(err, nil)
             return err

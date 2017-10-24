@@ -51,7 +51,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -90,7 +90,15 @@ func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCount
 		log.Debug("[Donate] Couldn't update contributions-per-country: ", err.Error())
 		return
 	}
+}
 
+func getBrowserFingerprint(c *gin.Context) string {
+	browserFingerprint := ""
+	if values, _ := c.Request.Header["X-Browser-Fingerprint"]; len(values) > 0 {
+		browserFingerprint = values[0]
+	}
+
+	return browserFingerprint
 }
 
 
@@ -272,7 +280,11 @@ func main(){
 			return
 		}
 
-		err := validateDonatedPhoto(imageId, parameter)
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+
+		err := validateDonatedPhoto(browserFingerprint, imageId, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
@@ -305,7 +317,9 @@ func main(){
 			return
 		}
 
-		err := validateImages(imageValidationBatch)
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := validateImages(browserFingerprint, imageValidationBatch)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return
@@ -409,7 +423,9 @@ func main(){
 		uuid := uuid.NewV4().String()
 		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 
-		err = addDonatedPhoto(uuid, hash, label)
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err = addDonatedPhoto(browserFingerprint, uuid, hash, label)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return
@@ -464,7 +480,9 @@ func main(){
 			return
 		}
 
-		err := validateAnnotatedImage(imageId, parameter)
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := validateAnnotatedImage(browserFingerprint, imageId, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
@@ -503,7 +521,9 @@ func main(){
 			return
 		}
 
-		err = addAnnotations(imageId, annotations)
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err = addAnnotations(browserFingerprint, imageId, annotations)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 			return
