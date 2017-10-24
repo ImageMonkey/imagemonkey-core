@@ -24,6 +24,7 @@
   <script src="js/justifiedGallery.min.js"></script>
   <script src="js/jquery-ui.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
+  <script src="js/fingerprint2.min.js"></script>
 
 
   <style>
@@ -90,11 +91,16 @@
     });
   }
 
-  function multiValidate(data){
+  function multiValidate(data, browserFingerprint){
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers['X-Browser-Fingerprint'] = browserFingerprint;
+
     $.ajax({
       url: '{{ .apiBaseUrl }}/v1/donation/validate',
       dataType: 'json',
       type: 'PATCH',
+      headers: headers,
       data: JSON.stringify(data),
       success: function(data){
         getRandomImages();
@@ -130,6 +136,8 @@
   }
 
   $(document).ready(function(){
+    var browserFingerprint = null;
+
     $("#multiValidationContainer").hide();
 
     //switch between multi-validation mode and single-validation mode with 'm'
@@ -168,12 +176,17 @@
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
+      var headers = {}
+      if(browserFingerprint !== null)
+        headers['X-Browser-Fingerprint'] = browserFingerprint;
+
       e.preventDefault();
       var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
       $.ajax({
         url: url,
         dataType: 'json',
         type: 'POST',
+        headers: headers, 
         success: function(data){
           getRandomImages();
         }
@@ -182,7 +195,7 @@
 
     $("#confirmNoValidOkButton").click(function(e) {
       e.preventDefault();
-      multiValidate(getMultiValidationRequestData().data);
+      multiValidate(getMultiValidationRequestData().data, browserFingerprint);
     });
 
 
@@ -198,8 +211,12 @@
         $("#confirmNoValidDlg").modal('setting', { detachable:false }).modal('show');
       }
       else {
-        multiValidate(data.data);
+        multiValidate(data.data, browserFingerprint);
       }
+    });
+
+    new Fingerprint2().get(function(result, components){
+      browserFingerprint = result;
     });
 
   });

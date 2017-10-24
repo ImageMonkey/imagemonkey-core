@@ -18,6 +18,7 @@
   <script src="js/common.js"></script> 
   <script src="js/fabric_helper.js"></script>
   <script src="js/fabric.min.js"></script>
+  <script src="js/fingerprint2.min.js"></script>
 
   <style>
     .canvas-container{margin: 0 auto;}
@@ -53,6 +54,8 @@
     }
 
     $(document).ready(function(){
+      var browserFingerprint = null;
+
       var canvas = new fabric.Canvas('canvas');
       setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.Id }}', function() {
         drawAnnotations(canvas, {{ .randomImage.Annotations }}, canvas.backgroundImage.scaleX);
@@ -63,12 +66,17 @@
       $("#yesButton").add('#noButton').click(function(e) {
         var action = (e.target.id === "yesButton") ? "yes" : "no";
 
+        var headers = {}
+        if(browserFingerprint !== null)
+          headers["X-Browser-Fingerprint"] = browserFingerprint;
+
         e.preventDefault();
         var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + action;
           $.ajax({
               url: url,
               dataType: 'json',
               type: 'POST',
+              headers: headers,
               success: function(data){
                 $.ajax({
                   url: '{{ .apiBaseUrl }}/v1/annotation',
@@ -86,6 +94,11 @@
               }
           });
       });
+
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
+      });
+
     });
 
   </script>

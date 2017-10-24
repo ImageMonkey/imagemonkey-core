@@ -20,12 +20,15 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/dropzone.js"></script>
   <link rel="stylesheet" href="css/dropzone.css">
+  <script src="js/fingerprint2.min.js"></script>
 
   <script>
     $(document).ready(function(){
       $('#successMsg').hide();
       $('#failureMsg').hide();
       $('#warningMsg').hide();
+
+      var browserFingerprint = "";
 
       function clearDropzone(){
         Dropzone.forElement("#dropzone").removeAllFiles(true);
@@ -36,6 +39,7 @@
         paramName: "image",
         resizeWidth: 1000,
         resizeQuality: 0.8, 
+        headers: { 'X-Browser-Fingerprint' : browserFingerprint },
         init: function() {
           this.on("maxfilesexceeded", function(file){
               alert("No more files please!");
@@ -57,6 +61,11 @@
           });
         }
       };
+
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
+      });
+
     });
   </script>
 </head>
