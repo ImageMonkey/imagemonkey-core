@@ -69,6 +69,9 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
 * populate labels with `go run populate_labels.go common.go web_secrets.go`
 * add donation image provider with `insert into image_provider(name) values('donation');`
 
+* build `temporal_table` extension, as described here: https://github.com/arkhipov/temporal_tables
+* connect to imagemonkey database and execute `CREATE EXTENSION temporal_tables;`
+
 ## Webserver & SSL ##
 
 * install nginx with `apt-get install nginx`
