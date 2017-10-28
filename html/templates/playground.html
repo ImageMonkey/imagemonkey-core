@@ -31,7 +31,7 @@
 
 
     $("#moreInfoButton").click(function(e) {
-      $('.modal').modal('setting', { detachable:false }).modal('show');
+      $('#moreInfoDlg').modal('setting', { detachable:false }).modal('show');
     });
 
     function clearDropzone(){
@@ -71,6 +71,10 @@
       }
       return "";
     }
+
+    $('#showNsfwInfoDlg').click(function(){
+      $('#nsfwInfoDlg').modal('setting', { detachable:false }).modal('show');
+    });
 
 
     Dropzone.options.dropzone = {
@@ -144,7 +148,7 @@
             <div class="field">
               <div class="ui radio checkbox">
                 <input name="type" type="radio" id="nsfwDetectionRadioButton">
-                <label>NSFW Detection</label>
+                <label>NSFW Detection <a href="#" id="showNsfwInfoDlg">[?]</a></label>
               </div>
             </div>
 
@@ -174,6 +178,19 @@
         <div class="scrolling content">
           <pre class="prettyprint" id="dataStructure"></pre>
         </div>
+        <div class="actions">
+          <div class="ui right labeled cancel button">
+            Close
+          </div>
+        </div>
+      </div>
+
+      <div class="ui longer modal" id="nsfwInfoDlg">
+        <i class="close icon"></i>
+        <div class="center aligned header">
+          What's this?
+        </div>
+        <p>ImageMonkey uses a neuronal net for content moderation.<br><br>The neuronal net was trained on thousands of images extracted from NSFW and SFW videos.<br>It for sure doesn't replace manual moderation, but helps us to quickly scan uploaded content for NSFW content.<br><br>This feature is still in <b>Beta mode</b> and will be constantly improved. If you want to give it a try, just upload a photo ;-).<br>If you are interested in the model, have a look at the <a href="https://github.com/bbernhard/imagemonkey-playground">imagemonkey-playground repository</a> - it's Open-Source! </p>
         <div class="actions">
           <div class="ui right labeled cancel button">
             Close
