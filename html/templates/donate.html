@@ -23,7 +23,8 @@
   <script src="js/fingerprint2.min.js"></script>
 
   <script>
-    $(document).ready(function(){
+  $(document).ready(function(){
+      $('#labelSelector').dropdown('set selected', '{{ .randomWord }}'); //set random word as pre-selected
       $('#successMsg').hide();
       $('#failureMsg').hide();
       $('#warningMsg').hide();
@@ -34,6 +35,11 @@
         Dropzone.forElement("#dropzone").removeAllFiles(true);
       }
 
+      function getSelectedLabel(){
+        var label = $('#labelSelector' ).dropdown('get value').toString();
+        return label;
+      }
+
       Dropzone.options.dropzone = {
         maxFiles: 1,
         paramName: "image",
@@ -42,7 +48,7 @@
         headers: { 'X-Browser-Fingerprint' : browserFingerprint },
         init: function() {
           this.on("maxfilesexceeded", function(file){
-              alert("No more files please!");
+            alert("No more files please!");
           });
           this.on("success", function (file, responseText) {
             $('#successMsg').show(200).delay(1500).hide(200);
@@ -59,6 +65,10 @@
             }
             setTimeout(clearDropzone, 700);
           });
+
+          this.on('sending', function(file, xhr, formData) {
+            formData.append("label", getSelectedLabel());
+          });
         }
       };
 
@@ -67,65 +77,74 @@
       });
 
     });
-  </script>
+</script>
 </head>
 <body>
 
-{{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
-  	{{ template "pointing_menu.html" .}}  
-  	<div class="ui text container">
-  		<h2 class="ui inverted header">
-        {{ .randomWord }}
-      </h2>
-      <h2>Upload a photo which represents the above.</h2>
-    </div>
-</div>
-    <div class="ui vertical stripe segment">
-      <div class="ui text container">
-        <div class="row">
-        	<form action="{{ .apiBaseUrl }}/v1/donate" class="ui segment dropzone" id="dropzone">
-  	         <input type="hidden" name="label" value="{{ .randomWord }}" />
-  	      </form>
-          <div class="ui basic segment"></div>
-          <div class="ui basic segment"></div>
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container">
+      <!--<h2 class="ui inverted header">-->
+      <br><br>
 
-          <div class="ui positive message" id="successMsg">
-            <i class="close icon"></i>
-            <div class="header">
-              Successfully uploaded picture
-            </div>
-          </div>
-
-          <div class="ui negative message" id="failureMsg">
-            <i class="close icon"></i>
-            <div class="header">
-              Couldn't upload picture - please try again later!
-            </div>
-          </div>
-
-          <div class="ui warning message" id="warningMsg">
-            <i class="close icon"></i>
-            <div class="header">
-              Couldn't upload picture - image already exists!
-            </div>
-          </div>
-
-          <h2 class="ui header">
-            <i class="creative commons icon"></i>
-            <div class="content">
-              License
-            </div>
-          </h2>
-          <p>By uploading a photo you agree that you are the owner of the photo and you are comfortable with releasing the photo under the <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 license</a>.</p>
+      <div class="ui floating dropdown labeled search icon large blue button" id="labelSelector">
+        <i class="tags icon"></i>
+        <span class="text">Select Label</span>
+        <div class="menu">
+          {{range .words}}
+          <div class="item">{{.}}</div>
+          {{ end }}
         </div>
       </div>
     </div>
+
+    <!--</h2>-->
+    <h2>Upload a photo which represents the above.</h2>
   </div>
-  {{ template "footer.html" .}}
+  <div class="ui vertical stripe segment">
+    <div class="ui text container">
+      <div class="row">
+       <form action="{{ .apiBaseUrl }}/v1/donate" class="ui segment dropzone" id="dropzone"></form>
+       <div class="ui basic segment"></div>
+       <div class="ui basic segment"></div>
+
+       <div class="ui positive message" id="successMsg">
+        <i class="close icon"></i>
+        <div class="header">
+          Successfully uploaded picture
+        </div>
+      </div>
+
+      <div class="ui negative message" id="failureMsg">
+        <i class="close icon"></i>
+        <div class="header">
+          Couldn't upload picture - please try again later!
+        </div>
+      </div>
+
+      <div class="ui warning message" id="warningMsg">
+        <i class="close icon"></i>
+        <div class="header">
+          Couldn't upload picture - image already exists!
+        </div>
+      </div>
+
+      <h2 class="ui header">
+        <i class="creative commons icon"></i>
+        <div class="content">
+          License
+        </div>
+      </h2>
+      <p>By uploading a photo you agree that you are the owner of the photo and you are comfortable with releasing the photo under the <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 license</a>.</p>
+    </div>
+  </div>
+</div>
+</div>
+{{ template "footer.html" .}}
 </div>
 
 </body>

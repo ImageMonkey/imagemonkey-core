@@ -88,6 +88,7 @@ func main() {
 			"randomWord": words[random(0, len(words) - 1)],
 			"activeMenuNr": 2,
 			"apiBaseUrl": apiBaseUrl,
+			"words": words,
 		})
 	})
 	router.GET("/annotate", func(c *gin.Context) {
