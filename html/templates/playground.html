@@ -57,6 +57,21 @@
       });
     };
 
+    function getClassificationType(){
+      var radioButtonId = $("#classificationType :radio:checked").attr('id');
+      console.log(radioButtonId)
+      if(radioButtonId === "objectClassificationRadioButton"){
+        return "";
+      }
+      if(radioButtonId === "objectDetectionRadioButton"){
+        return "";
+      }
+      if(radioButtonId === "nsfwDetectionRadioButton"){
+        return "nsfw";
+      }
+      return "";
+    }
+
 
     Dropzone.options.dropzone = {
       maxFiles: 1,
@@ -71,23 +86,18 @@
           $("#dropzone").hide();
           $("#loadingIndicator").fadeTo(200,1);
           $("#infoText").hide();
+          $("#classificationType").hide();
           pollUntilProcessed(file.xhr.getResponseHeader("Location"));
-          //$("#loadingIndicator").fadeTo(0,0);
-          //$('#label').text(response["label"]);
-          //$('#probability').text(Math.round(response["score"], 1) + '%');
-          //$('#label').fadeTo(200, 1);
-          //$('#probability').fadeTo(200, 1);
         });
-        /*this.on("sending", function (file) {
-          $("#dropzone").hide();
-          $("#loadingIndicator").fadeTo(200,1);
-          $("#infoText").hide();
-        });*/
 
         this.on('error', function(file, errorMessage) {
           $("#loadingIndicator").fadeTo(0,0);
           $('#failureMsg').show();
           setTimeout(clearDropzone, 700);
+        });
+
+        this.on('sending', function(file, xhr, formData) {
+          formData.append("classification_type", getClassificationType());
         });
       }
     };
@@ -111,8 +121,37 @@
   <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
+        
        <form action="{{ .playgroundPredictBaseUrl }}/v1/predict" class="ui segment dropzone" id="dropzone"></form>
-       <p id="infoText">Upload a photo to see how good (or bad) our image classification model is performing at the moment. <b>Not satisfied with the result?</b> <a href="/verify">Help us</a> to improve our dataset's quality.</p>
+
+       <div class="ui form">
+          <div class="inline fields" id="classificationType">
+            <!--<label>How often do you use checkboxes?</label>-->
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input name="type" checked="checked" type="radio" id="objectClassificationRadioButton">
+                <label>Object Classification</label>
+              </div>
+            </div>
+
+            <!--<div class="field">
+              <div class="ui radio checkbox">
+                <input name="type" type="radio" id="objectDetectionRadioButton">
+                <label>Object Detection</label>
+              </div>
+            </div>-->
+
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input name="type" type="radio" id="nsfwDetectionRadioButton">
+                <label>NSFW Detection</label>
+              </div>
+            </div>
+
+          </div>
+        </div>
+       
+       <p id="infoText">Upload a photo to see how good (or bad) our image classification models are performing at the moment. <b>Not satisfied with the result?</b> <a href="/verify">Help us</a> to improve our dataset's quality.</p>
 
       <div class="ui basic segment" id="loadingIndicator">
         <div class="ui active inverted dimmer">
