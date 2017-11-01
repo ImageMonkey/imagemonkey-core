@@ -4,11 +4,109 @@
     <title>ImageMonkey - Blog</title>
     <description>ImageMonkey - a public, open source image dataset
 </description>
-    <link>http://localhost:4000/blog/</link>
-    <atom:link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 08 Oct 2017 18:28:46 +0200</pubDate>
-    <lastBuildDate>Sun, 08 Oct 2017 18:28:46 +0200</lastBuildDate>
+    <link>http://myblog.***.***/blog/</link>
+    <atom:link href="http://myblog.***.***/blog/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Mon, 30 Oct 2017 23:24:14 +0100</pubDate>
+    <lastBuildDate>Mon, 30 Oct 2017 23:24:14 +0100</lastBuildDate>
     <generator>Jekyll v3.5.2</generator>
+    
+      <item>
+        <title>We made some progress</title>
+        <description>&lt;p&gt;It’s now almost 30 days since the &lt;a href=&quot;https://imagemonkey.io/blog/general/2017/10/06/ImageMonkey-Introduction.html&quot;&gt;last blog post&lt;/a&gt; and we made some really good progress. If you haven’t kept up with us, then here’s a quick summary:&lt;/p&gt;
+
+&lt;h1 id=&quot;content-moderation&quot;&gt;Content Moderation&lt;/h1&gt;
+&lt;p&gt;One of the core principles of ImageMonkey is: Keep it open and accessible for &lt;strong&gt;everybody&lt;/strong&gt; - without the need to sign up. While this is great from the user experience point of view, it brings some serious problems with it:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;How can we make sure the uploaded content doesn’t contain any sensitive material?&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Manual content moderation is possible, but doesn’t scale. That’s why we are investing some time and energy into mechanisms which (hopefully) can assist us with content moderation. One of those mechanisms is a NSFW detection engine, which pre-classifies each uploaded image with a NSFW score. This for sure can’t replace manual content moderation entirely, but definitely could help us to identify problematic images early in the process.&lt;/p&gt;
+
+&lt;p&gt;We started our experiment with a handful &lt;a href=&quot;https://github.com/bbernhard/imagemonkey-playground/blob/master/conf/nsfw/nsfw.json&quot;&gt;more or less randomly selected&lt;/a&gt; P**rnhub and Youtube videos, which were split up in frames and fed to a neural net. With now 10k frames in each category (NSFW/SFW) we already get some pretty decent results. Of course it is still far away from being perfect and produces some false positives, but as an initial attempt I am pretty satisfied with the result. The whole thing is still in an alpha phase and was only trained on nudity, but if you want to give it a try: It’s available &lt;a href=&quot;https://imagemonkey.io/playground&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/nsfw-experiment.png&quot; alt=&quot;NSFW detection&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;dataset-statistics&quot;&gt;Dataset Statistics&lt;/h1&gt;
+
+&lt;p&gt;The dataset statistics tab was completely reworked and now provides more detailed statistical insight into the dataset.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/statistics.png&quot; alt=&quot;Dataset Statistics&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Important Info&lt;/strong&gt; At ImageMonkey we are taking your privacy seriously, that means we do &lt;strong&gt;not&lt;/strong&gt; store any personal information (like your IP address) in our database. Neither do we send your IP address to some external service to determine your geolocation. Instead, ImageMonkey uses a local geolocation database for the geolocation lookup.&lt;/p&gt;
+
+&lt;h1 id=&quot;multi-validation-mode&quot;&gt;Multi Validation Mode&lt;/h1&gt;
+
+&lt;p&gt;Another feature that’s still in beta mode, but already available for try out, is the &lt;strong&gt;Multivalidation Mode&lt;/strong&gt;. The Multivalidation Mode is inspired by that &lt;a href=&quot;https://www.reddit.com/r/MachineLearning/comments/75gqit/p_imagemonkey_whats_next/do6fm1p/&quot;&gt;reddit comment&lt;/a&gt; and allows users to validate multiple images in one go. You can enable it in the &lt;em&gt;validation tab&lt;/em&gt; by clicking ‘m’ on your keyboard.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/multi-validation.gif&quot; alt=&quot;Multivalidation Mode&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;detecting-malicious-behavior&quot;&gt;Detecting malicious behavior&lt;/h1&gt;
+
+&lt;p&gt;While a completely open and publicly modifiable dataset has it’s benefits, it also gives users the possibility to destroy the dataset’s quality by maliciously voting for the wrong label on purpose.We for sure can’t prevent that, but we can try to make it harder. For that reason a history table was introduced, which now keeps track of every single action that’s performed on the dataset and in which way it affected the dataset.&lt;/p&gt;
+
+&lt;p&gt;Together with a browser fingerprint we get some pretty good information about the image’s state and how it changes over time (e.q if an image transitions from being classified as an ‘apple’ to being ‘not an apple’ in a very short time, it could be an malicious attempt).&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Important info&lt;/strong&gt; We do &lt;strong&gt;not&lt;/strong&gt; store any personal information (like your IP address or your browser version) of you. The only thing we are storing is an anonymized hash.&lt;/p&gt;
+
+&lt;h1 id=&quot;possibility-to-choose-a-label-on-upload&quot;&gt;Possibility to choose a label on upload&lt;/h1&gt;
+
+&lt;p&gt;Up to now it wasn’t possible to select a label other than the one that was randomly chosen by the system. As this was quite inflexible and resulted in users pressing the refresh button of their browsers until the desired label would eventually show up, we decided to change that behavior.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/label-selection.png&quot; alt=&quot;Choose a label&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;experiments&quot;&gt;Experiments&lt;/h1&gt;
+
+&lt;p&gt;There are also some ongoing experiments and proof of concepts, which haven’t made it into an ImageMonkey release yet.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Pre-annotation of video frames (based on background subtraction):&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/background-subtraction.gif&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Using the grabcut algorithm to select objects&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/grabcut.gif&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Gamification&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/game.gif&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Validate an image each time you open a new browser tab&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/google-chrome-extension.gif&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;want-to-contribute&quot;&gt;Want to contribute?&lt;/h1&gt;
+&lt;p&gt;Once again, I would like to thank &lt;a href=&quot;https://github.com/dobkeratops&quot;&gt;@dobkeratops&lt;/a&gt; for all the awesome ideas, the feedback and technical advice. Many thanks for your contribution!&lt;/p&gt;
+
+&lt;p&gt;As ImageMonkey and all it’s parts are completely OpenSource, every contribution is highly appreciated. In case you want to check it out, here are some links:&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-core&quot;&gt;https://github.com/bbernhard/imagemonkey-core&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-client&quot;&gt;https://github.com/bbernhard/imagemonkey-client&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-playground&quot;&gt;https://github.com/bbernhard/imagemonkey-playground&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-chrome-extension&quot;&gt;https://github.com/bbernhard/imagemonkey-chrome-extension&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-admin&quot;&gt;https://github.com/bbernhard/imagemonkey-admin&lt;/a&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Sat, 28 Oct 2017 14:34:25 +0200</pubDate>
+        <link>http://myblog.***.***/blog/general/2017/10/28/ImageMonkey-v0.2.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/blog/general/2017/10/28/ImageMonkey-v0.2.html</guid>
+        
+        
+        <category>general</category>
+        
+      </item>
     
       <item>
         <title>Let's create our own image dataset</title>
@@ -104,8 +202,8 @@
 
 </description>
         <pubDate>Fri, 06 Oct 2017 20:34:25 +0200</pubDate>
-        <link>http://localhost:4000/blog/general/2017/10/06/ImageMonkey-Introduction.html</link>
-        <guid isPermaLink="true">http://localhost:4000/blog/general/2017/10/06/ImageMonkey-Introduction.html</guid>
+        <link>http://myblog.***.***/blog/general/2017/10/06/ImageMonkey-Introduction.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/blog/general/2017/10/06/ImageMonkey-Introduction.html</guid>
         
         
         <category>general</category>
