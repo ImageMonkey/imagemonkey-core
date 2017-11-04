@@ -67,7 +67,9 @@
           });
 
           this.on('sending', function(file, xhr, formData) {
-            formData.append("label", getSelectedLabel());
+            var label = getSelectedLabel();
+            if(label !== "")
+              formData.append("label", label);
           });
         }
       };
@@ -98,6 +100,7 @@
           {{range .words}}
           <div class="item">{{.}}</div>
           {{ end }}
+          <div class="item"></div> <!--no label -->
         </div>
       </div>
     </div>

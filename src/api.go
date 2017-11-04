@@ -266,17 +266,49 @@ func main(){
 		}
 	})
 
-	router.POST("/v1/donation/:imageid/validate/:param", func(c *gin.Context) {
+	router.POST("/v1/donation/:imageid/labelme", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+
+		var labels Labels
+		if c.BindJSON(&labels) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - labels missing"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+
+		//convert labels to lower to avoid possibility of duplicates
+		var lowerCasedLabels []string
+		for _, label := range labels.Names {
+			lowerCasedLabels = append(lowerCasedLabels, strings.ToLower(label))
+		}
+
+		err := addLabelsToImage(browserFingerprint, imageId, lowerCasedLabels)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/v1/donation/:imageid/validate/:label/:param", func(c *gin.Context) {
 		imageId := c.Param("imageid")
 		param := c.Param("param")
+		label := c.Param("label")
 
 		parameter := false
-		if(param == "yes"){
+		if param == "yes" {
 			parameter = true
-		} else if(param == "no"){
+		} else if param == "no" {
 			parameter = false
 		} else{
 			c.JSON(404, nil)
+			return
+		}
+
+		if label == "" {
+			c.JSON(400, gin.H{"error": "Please provide a valid label"})
 			return
 		}
 
@@ -284,9 +316,9 @@ func main(){
 		browserFingerprint := getBrowserFingerprint(c)
 
 
-		err := validateDonatedPhoto(browserFingerprint, imageId, parameter)
+		err := validateDonatedPhoto(browserFingerprint, imageId, label, parameter)
 		if(err != nil){
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 			return
 		} 
 
@@ -309,8 +341,18 @@ func main(){
 		c.JSON(http.StatusOK, nil)
 	})
 
+	router.GET("/v1/labelme", func(c *gin.Context) {
+		image, err := getImageToLabel()
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
+	})
+
 	router.PATCH("/v1/donation/validate", func(c *gin.Context) {
-		var imageValidationBatch []ImageValidation
+		var imageValidationBatch ImageValidationBatch
 		
 		if c.BindJSON(&imageValidationBatch) != nil {
 			c.JSON(400, gin.H{"error": "Couldn't process request - invalid patch"})
@@ -466,23 +508,29 @@ func main(){
 		c.JSON(http.StatusOK, nil)
 	})
 
-	router.POST("/v1/annotation/:imageid/validate/:param", func(c *gin.Context) {
+	router.POST("/v1/annotation/:imageid/validate/:label/:param", func(c *gin.Context) {
 		imageId := c.Param("imageid")
 		param := c.Param("param")
+		label := c.Param("label")
 
 		parameter := false
-		if(param == "yes"){
+		if param == "yes" {
 			parameter = true
-		} else if(param == "no"){
+		} else if param == "no" {
 			parameter = false
 		} else{
 			c.JSON(404, nil)
 			return
 		}
 
+		if label == "" {
+			c.JSON(400, gin.H{"error": "Please provide a valid label"})
+			return
+		}
+
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err := validateAnnotatedImage(browserFingerprint, imageId, parameter)
+		err := validateAnnotatedImage(browserFingerprint, imageId, label, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
@@ -514,7 +562,7 @@ func main(){
 			return
 		}
 
-		var annotations []Annotation
+		var annotations Annotations
 		err := c.BindJSON(&annotations)
 		if(err != nil){
 			c.JSON(422, gin.H{"error": "invalid request - annotations missing"})

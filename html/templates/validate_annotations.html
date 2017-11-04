@@ -71,7 +71,7 @@
           headers["X-Browser-Fingerprint"] = browserFingerprint;
 
         e.preventDefault();
-        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + action;
+        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + $('#label').text()  + '/' + action;
           $.ajax({
               url: url,
               dataType: 'json',
@@ -112,9 +112,7 @@
   <div class="ui inverted vertical masthead center aligned segment">
   	{{ template "pointing_menu.html" .}}  
   	<div class="ui text container">
-      <h2 class="ui inverted header" id="label">
-        {{ .randomImage.Label }}
-      </h2>
+      <h2 class="ui inverted header" id="label">{{ .randomImage.Label }}</h2>
       <h2>All occurrences annotated?</h2>
     </div>
   </div>

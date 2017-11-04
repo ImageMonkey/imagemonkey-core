@@ -199,6 +199,10 @@ $(document).ready(function(){
       return;
     }
 
+    var postData = {}
+    postData["annotations"] = res;
+    postData["label"] = $('#label').text();
+
     var headers = {}
     if(browserFingerprint !== null)
       headers["X-Browser-Fingerprint"] = browserFingerprint;
@@ -208,7 +212,7 @@ $(document).ready(function(){
     $.ajax({
       url: url,
       type: 'POST',
-      data: JSON.stringify(res),
+      data: JSON.stringify(postData),
       headers: headers,
       success: function(data){
         $.ajax({
@@ -251,9 +255,7 @@ changeControl(rect);
     <div class="ui inverted vertical masthead center aligned segment">
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer">
-      <h2 class="ui inverted header" id="label">
-        {{ .randomImage.Label }}
-      </h2>
+      <h2 class="ui inverted header" id="label">{{ .randomImage.Label }}</h2>
       <h2>Annotate all occurences of the above.</h2>
     </div>
   </div>

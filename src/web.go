@@ -91,14 +91,26 @@ func main() {
 			"words": words,
 		})
 	})
-	router.GET("/annotate", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "annotate.html", gin.H{
-			"title": "Annotate",
-			"randomImage": getRandomUnannotatedImage(),
+
+	router.GET("/label", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "label.html", gin.H{
+			"title": "Label",
+			"image": pick(getImageToLabel())[0],
 			"activeMenuNr": 3,
 			"apiBaseUrl": apiBaseUrl,
 		})
 	})
+
+
+	router.GET("/annotate", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "annotate.html", gin.H{
+			"title": "Annotate",
+			"randomImage": getRandomUnannotatedImage(),
+			"activeMenuNr": 4,
+			"apiBaseUrl": apiBaseUrl,
+		})
+	})
+
 	router.GET("/verify", func(c *gin.Context) {
 		params := c.Request.URL.Query()
 		
@@ -118,7 +130,7 @@ func main() {
 		c.HTML(http.StatusOK, "validate.html", gin.H{
 			"title": "Validate Label",
 			"randomImage": getRandomImage(),
-			"activeMenuNr": 4,
+			"activeMenuNr": 5,
 			"showHeader": showHeader,
 			"showFooter": showFooter,
 			"apiBaseUrl": apiBaseUrl,
@@ -128,7 +140,7 @@ func main() {
 		c.HTML(http.StatusOK, "validate_annotations.html", gin.H{
 			"title": "Validate Annotations",
 			"randomImage": getRandomAnnotatedImage(),
-			"activeMenuNr": 5,
+			"activeMenuNr": 6,
 			"apiBaseUrl": apiBaseUrl,
 		})
 	})
@@ -136,27 +148,27 @@ func main() {
 		c.HTML(http.StatusOK, "explore.html", gin.H{
 			"title": "Explore Dataset",
 			"words": words,
-			"activeMenuNr": 6,
+			"activeMenuNr": 7,
 			"statistics": pick(explore(words))[0],
 		})
 	})
 	router.GET("/export", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "export.html", gin.H{
 			"title": "Export Dataset",
-			"words": words,
-			"activeMenuNr": 7,
+			"labels": pick(getAllImageLabels())[0],
+			"activeMenuNr": 8,
 		})
 	})
 	router.GET("/mobile", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "mobile.html", gin.H{
 			"title": "Mobile App",
-			"activeMenuNr": 8,
+			"activeMenuNr": 9,
 		})
 	})
 	router.GET("/playground", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "playground.html", gin.H{
 			"title": "Playground",
-			"activeMenuNr": 9,
+			"activeMenuNr": 10,
 			"playgroundPredictBaseUrl": playgroundBaseUrl,
 		})
 	})

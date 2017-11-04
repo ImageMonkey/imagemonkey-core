@@ -109,14 +109,18 @@
   }
 
   function getMultiValidationRequestData(){
-    data = []
+    data = {}
+    validations = []
     containsOnlyInvalid = true;
     for (var key in imageValidationMapping) {
       if (imageValidationMapping.hasOwnProperty(key)) {
-        data.push({"uuid": key, "valid": ((imageValidationMapping[key]) ? "yes" : "no")})
+        validations.push({"uuid": key, "valid": ((imageValidationMapping[key]) ? "yes" : "no")})
         if(imageValidationMapping[key])  containsOnlyInvalid = false;
       }
     }
+
+    data["validations"] = validations;
+    data["label"] = $("#label").text();
     return {
       data : data,
       containsOnlyInvalid: containsOnlyInvalid
@@ -181,7 +185,7 @@
         headers['X-Browser-Fingerprint'] = browserFingerprint;
 
       e.preventDefault();
-      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
+      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + $('#label').text()  + '/' + action;
       $.ajax({
         url: url,
         dataType: 'json',

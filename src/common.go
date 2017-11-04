@@ -24,6 +24,11 @@ type Label struct {
     Name string `json:"name"`
 }
 
+type Labels struct {
+    Names []string `json:"labels"`
+}
+
+
 type ContributionsPerCountryRequest struct {
     CountryCode string `json:"country_code"`
     Type string `json:"type"`
