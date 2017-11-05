@@ -13,7 +13,6 @@
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
-  <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
@@ -251,6 +250,7 @@
         <button class="negative ui button center aligned" id="noButton">NO</button>
         <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
+      {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
     </div>
 

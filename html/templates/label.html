@@ -70,21 +70,21 @@
 
   function addLabel(label){
     if(!labelExists(label)){
-        newlyAddedLabels[label] = true;
-        $('#labels ').prepend($(('<div class="ui huge label">' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
-      }
+      newlyAddedLabels[label] = true;
+      $('#labels ').prepend($(('<div class="ui huge label">' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
+  }
 
-    $(document).ready(function(){
-      var browserFingerprint = null;
+  $(document).ready(function(){
+    var browserFingerprint = null;
 
-      {{range .image.AllLabels}}
-      oldLabels[{{.}}] = true;
-      {{ end }}
+    {{range .image.AllLabels}}
+    oldLabels[{{.}}] = true;
+    {{ end }}
 
-      $('#addLabelButton').click(function(e){
-        if($('#newLabel').val() !== ""){
-          addLabel($('#newLabel').val());
+    $('#addLabelButton').click(function(e){
+      if($('#newLabel').val() !== ""){
+        addLabel($('#newLabel').val());
           $('#newLabel').val(''); //clear label after add
         }
       });
@@ -92,13 +92,13 @@
 
       //when enter gets pressed in input, add label
       $("#newLabel").on('keyup', function (e){
-          if (e.keyCode == 13){
-            if($('#newLabel').val() !== ""){
-              addLabel($('#newLabel').val());
+        if (e.keyCode == 13){
+          if($('#newLabel').val() !== ""){
+            addLabel($('#newLabel').val());
               $('#newLabel').val(''); //clear label after add
             }
           }
-      });
+        });
 
 
 
@@ -159,20 +159,10 @@
    </div>
 
    <div class="ui stackable grid vertical stripe">
-    <div class="four wide column">
+    <div class="one wide column">
     </div>
-    <div class="eight wide center aligned column">
-      <img class="ui large image centered" src="donations/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
-      
-
-      <h2></h2>
-      <div class="ui action input">
-        <input placeholder="Enter Label..." type="text" id="newLabel">
-        <button class="ui button" id="addLabelButton">Add</button>
-        <button class="ui positive button" id="doneButton">Done</button>
-      </div>
-      <h1></h1>
-      <p><b>Labels:</b></p>
+    <div class="three wide center aligned column">
+      <p><h2>Labels:</h2></p>
 
       <div id="labels">
         {{range .image.AllLabels}}
@@ -180,7 +170,28 @@
         </div>
         {{ end }}
       </div>
+    </div>
+    <div class="eight wide center aligned column">
+      <img class="ui large image centered" src="donations/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
+      
 
+      <h2></h2>
+      <p>Do you see any objects without a label? Add them here</p>
+      <div class="ui action input">
+        <input placeholder="Enter Label..." type="text" id="newLabel">
+        <button class="ui button" id="addLabelButton">Add</button>
+      </div>
+      <h1></h1>
+
+      <div class="row">
+        <div class="ui centered grid">
+          <div class="four wide center aligned column">
+            <button class="ui fluid positive button" id="doneButton">Done</button>
+          </div>
+        </div>
+      </div>
+
+      {{ template "label_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
     </div>
 

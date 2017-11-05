@@ -1,0 +1,33 @@
+<script type='text/javascript'>
+$(document).ready(function(){
+
+  $("#helpMeButton").click(function(e) {
+    $('#helpMeDlg').modal('setting', { detachable:false }).modal('show');
+  });
+});
+</script>
+
+<div class="ui longer modal" id="helpMeDlg">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Labeling Objects
+  </div>
+  <div class="scrolling content">
+    <b>Best Practice</b>
+    <ul>
+      <li><p>Only label objects that are visible in the image</p></li>
+      <li><p>Use common english names to describe objects, avoid using abbreviations.</p></li>
+      <li><p>If possible use the singular form (i.e 'eye' instead of 'eyes')</p></li>
+    </ul>
+
+    <b>Demo</b>
+    <p></p>
+    <img src="img/labelme_help.gif" class="ui large bordered rounded image">
+
+  </div>
+  <div class="actions">
+    <div class="ui positive button">
+      Got it
+    </div>
+  </div>
+</div>
