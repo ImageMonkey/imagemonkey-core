@@ -409,10 +409,42 @@ func main(){
 		c.JSON(http.StatusOK, words)
 	})
 
+	router.GET("/v1/label/search", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		if temp, ok := params["q"]; ok {
+			res, err := autocompleteLabel(temp[0])
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Couldn't process request, please try again later."})
+				return
+			}
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		c.JSON(422, gin.H{"error": "please provide a search query"})
+	})
+
 
 	router.GET("/v1/label/random", func(c *gin.Context) {
 		label := words[random(0, len(words) - 1)].Name
 		c.JSON(http.StatusOK, gin.H{"label": label})
+	})
+
+	router.GET("/v1/label/suggest", func(c *gin.Context) {
+		tags := ""
+		params := c.Request.URL.Query()
+		temp, ok := params["tags"] 
+		if !ok {
+			c.JSON(422, gin.H{"error": "Couldn't process request - no tags specified"})
+			return
+		}
+		tags = temp[0]
+		suggestedTags, err := getLabelSuggestions(tags)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, suggestedTags)
 	})
 
 	router.POST("/v1/donate", func(c *gin.Context) {

@@ -35,8 +35,11 @@
   function getNextImage(){
     $('#newLabel').val(''); //clear current label
     removeAllLabels();
+    $('#suggestedLabelsContainer').hide();
+    removeAllSuggestedLabels();
     oldLabels = {}
     newlyAddedLabels = {}
+
 
     var url = '{{ .apiBaseUrl }}/v1/labelme';
     $.ajax({
@@ -48,10 +51,35 @@
         $("#image").attr("imageId", data.uuid);
         $("#image").attr("src", ("donations/"+data.uuid));
         oldLabels = {};
+        var labelStr = "";
         for(var i = 0; i < data["all_labels"].length; i++){
           oldLabels[data["all_labels"][i]] = true;
+
+          labelStr += data["all_labels"][i];
+
           $('#labels').prepend($(('<div class="ui big label">' + data["all_labels"][i] + '</div>')));
         }
+
+        //get suggested labels
+        getSuggestedLabels(labelStr);
+      }
+    });
+  }
+
+  function getSuggestedLabels(labels){
+    var url = '{{ .apiBaseUrl }}/v1/label/suggest?tags=' + labels;
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      complete: function(data){
+      },
+      success: function(data){
+        for(var i = 0; i < data.length; i++){
+          addLabelSuggestion(data[i]);
+        }
+
+        if(data.length > 0 ) //only show if there is at least one suggestion
+          $("#suggestedLabelsContainer").fadeIn("slow");
       }
     });
   }
@@ -61,6 +89,10 @@
     $(e).parent().remove();
   };
 
+  var createLabelFromLabelSuggestion = function(e){
+    addLabel($(e).text());
+  };
+
   var removeAllLabels = function(){
     $('#labels').children().each(function (){
       delete newlyAddedLabels[$(this).text()];
@@ -68,19 +100,34 @@
     })
   }
 
+  var removeAllSuggestedLabels = function(){
+    $('#suggestedLabels').children().each(function (){
+      $(this).remove();
+    })
+  }
+
   function addLabel(label){
     if(!labelExists(label)){
       newlyAddedLabels[label] = true;
-      $('#labels ').prepend($(('<div class="ui huge label">' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+      $('#labels').prepend($(('<div class="ui huge label">' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
   }
 
+  function addLabelSuggestion(label){
+    $('#suggestedLabels').prepend($(('<div class="ui big label button" onclick="createLabelFromLabelSuggestion(this)">' + label + '</div>')));
+  }
+
   $(document).ready(function(){
+    $('#suggestedLabelsContainer').hide();
     var browserFingerprint = null;
 
+    var labelStr = "";
     {{range .image.AllLabels}}
     oldLabels[{{.}}] = true;
+    labelStr += ( {{.}} + "," );
     {{ end }}
+
+    getSuggestedLabels(labelStr);
 
     $('#addLabelButton').click(function(e){
       if($('#newLabel').val() !== ""){
@@ -138,6 +185,21 @@
         
       });
 
+      $('.ui.search')
+      .search({
+        debug: true,
+        apiSettings: {
+          url: '{{ .apiBaseUrl}}/v1/label/search?q={query}'
+        },
+        fields: {
+          results : 'items',
+          title   : 'label'
+        },
+        minCharacters : 2,
+        searchOnFocus: false,
+        showNoResults: false,
+      });
+
       new Fingerprint2().get(function(result, components){
         browserFingerprint = result;
       });
@@ -170,6 +232,16 @@
         </div>
         {{ end }}
       </div>
+
+      <h1></h1>
+      <h1></h1>
+      <div id="suggestedLabelsContainer">
+        <h2 style="margin-bottom:0px;">Suggested Labels:</h2>
+        <p style="font-size:12px; margin-bottom:20px;">Similar images have the following labels</p>
+        <div id="suggestedLabels">
+        </div>
+      </div>
+
     </div>
     <div class="eight wide center aligned column">
       <img class="ui large image centered" src="donations/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
@@ -177,11 +249,17 @@
 
       <h2></h2>
       <p>Do you see any objects without a label? Add them here</p>
-      <div class="ui action input">
-        <input placeholder="Enter Label..." type="text" id="newLabel">
-        <button class="ui button" id="addLabelButton">Add</button>
+      <div class="ui centered grid">
+        <div class="row">
+          <div class="ui search">
+            <div class="ui center aligned action input">
+              <input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">
+              <button class="ui button" id="addLabelButton">Add</button>
+            </div>
+          </div>
+          <h1></h1>
+        </div>
       </div>
-      <h1></h1>
 
       <div class="row">
         <div class="ui centered grid">

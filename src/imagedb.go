@@ -79,6 +79,14 @@ type Statistics struct {
     NumOfUnlabeledDonations int64 `json:"num_of_unlabeled_donations"`
 }
 
+type LabelSearchItem struct {
+    Label string `json:"label"`
+}
+
+type LabelSearchResult struct {
+    Labels []LabelSearchItem `json:"items"`
+}
+
 func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, label string) error{
 	tx, err := db.Begin()
     if err != nil {
@@ -948,4 +956,73 @@ func getAllImageLabels() ([]string, error) {
     }
 
     return labels, nil
+}
+
+func getLabelSuggestions(labelsStr string) ([]string, error) {
+    var labelSuggestions []string
+    similarity := 0.3
+
+    rows, err := db.Query(`SELECT q.labels FROM
+                            (
+                                SELECT string_agg(l.name::text, ',') AS labels FROM image_validation v JOIN label l ON v.label_id = l.id GROUP BY image_id
+                            ) q 
+                           WHERE similarity(q.labels, $1) > $2`, labelsStr, similarity)
+    if err != nil {
+        log.Debug("[Fetching label suggestions] Couldn't get label suggestions: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelSuggestions, err 
+    }
+
+    defer rows.Close()
+
+    var labelSuggestionStr string
+    temp := make(map[string]bool)
+    for rows.Next() {
+        err = rows.Scan(&labelSuggestionStr)
+        if err != nil {
+            log.Debug("[Fetching label suggestions] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelSuggestions, err 
+        }
+
+        labels := strings.Split(labelSuggestionStr, ",")
+        for _, label := range labels {
+            temp[label] = true; //store labels in map for faster lookup (and to make sure that we don't get any duplicates)
+        }
+    }
+
+    //map -> string
+    for key, _ := range temp { 
+        labelSuggestions = append(labelSuggestions, key)
+    }
+
+    return labelSuggestions, nil
+}
+
+func autocompleteLabel(text string) (LabelSearchResult, error) {
+    var labelSearchResult LabelSearchResult
+
+    rows, err := db.Query(`SELECT name
+                           FROM label l
+                           WHERE name % $1
+                           ORDER BY similarity(name, $1) DESC`, text)
+    if err != nil {
+        log.Debug("[Autocomplete Label] Couldn't fetch results: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelSearchResult, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var labelSearchItem LabelSearchItem
+        err = rows.Scan(&labelSearchItem.Label)
+        if err != nil {
+            log.Debug("[Autocomplete Label] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelSearchResult, err
+        }
+        labelSearchResult.Labels = append(labelSearchResult.Labels, labelSearchItem)
+    }
+    return labelSearchResult, nil
 }
