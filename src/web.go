@@ -94,7 +94,7 @@ func main() {
 
 	router.GET("/label", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "label.html", gin.H{
-			"title": "Label",
+			"title": "Add Labels",
 			"image": pick(getImageToLabel())[0],
 			"activeMenuNr": 3,
 			"apiBaseUrl": apiBaseUrl,
