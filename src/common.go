@@ -51,7 +51,11 @@ type LabelMapEntry struct {
 type LabelMap struct {
     LabelMapEntries []LabelMapEntry  `json:"labels"`
     MetaLabelMapEntries []MetaLabelMapEntry  `json:"metalabels"`
+}
 
+type LabelValidationEntry struct {
+    Label string  `json:"label"`
+    Sublabel string `json:"sublabel"`
 }
 
 func use(vals ...interface{}) {

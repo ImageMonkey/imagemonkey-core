@@ -84,7 +84,7 @@
         else{
           $("#image").attr("imageId", data.uuid);
           $("#image").attr("src", ("donations/"+data.uuid));
-          $("#label").text(data.label);
+          setLabel(data.label, data.sublabel);
         }
       }
     });
@@ -119,7 +119,8 @@
     }
 
     data["validations"] = validations;
-    data["label"] = $("#label").text();
+    data["label"] = $("#label").attr("label");
+    data["sublabel"] = $("#label").attr("sublabel");
     return {
       data : data,
       containsOnlyInvalid: containsOnlyInvalid
@@ -138,8 +139,20 @@
     }
   }
 
+  function setLabel(label, sublabel){
+    $("#label").attr("label", label)
+    $("#label").attr("sublabel", sublabel)
+    if(sublabel === ""){
+      $("#label").text(label)
+    } 
+    else {
+      $("#label").text((sublabel + "/" + label))
+    }
+  }
+
   $(document).ready(function(){
     var browserFingerprint = null;
+    setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
     $("#multiValidationContainer").hide();
 
@@ -179,16 +192,19 @@
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
+      var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
+
       var headers = {}
       if(browserFingerprint !== null)
         headers['X-Browser-Fingerprint'] = browserFingerprint;
 
       e.preventDefault();
-      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + $('#label').text()  + '/' + action;
+      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
       $.ajax({
         url: url,
         dataType: 'json',
         type: 'POST',
+        data: JSON.stringify(data),
         headers: headers, 
         success: function(data){
           getRandomImages();
@@ -246,7 +262,7 @@
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
       <div class="ui center aligned basic segment">
-        <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
+        <h1 class="ui header" id="label" label="" sublabel=""></h1>
         <button class="negative ui button center aligned" id="noButton">NO</button>
         <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>

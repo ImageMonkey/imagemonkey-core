@@ -20,11 +20,13 @@ type Annotation struct{
 type Annotations struct{
     Annotations []Annotation `json:"annotations"`
     Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
 }
 
 type Image struct {
     Id string `json:"uuid"`
     Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
     Provider string `json:"provider"`
     Probability float32 `json:"probability"`
     NumOfValid int32 `json:"num_yes"`
@@ -41,6 +43,7 @@ type ImageValidation struct {
 type ImageValidationBatch struct {
     Validations []ImageValidation `json:"validations"`
     Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
 }
 
 type GraphNode struct {
@@ -163,22 +166,53 @@ func imageExists(hash uint64) (bool, error){
     }
 }
 
-func validateDonatedPhoto(clientFingerprint string, imageId string, label string, valid bool) error {
+func validateDonatedPhoto(clientFingerprint string, imageId string, labelValidationEntry LabelValidationEntry, valid bool) error {
 	if valid {
-		_,err := db.Exec(`UPDATE image_validation AS v 
-						  SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
-						  FROM image AS i 
-						  WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3)`, clientFingerprint, imageId, label)
+        log.Debug("HERE " +labelValidationEntry.Label)
+        var err error
+        if labelValidationEntry.Sublabel == "" {
+    		_, err = db.Exec(`UPDATE image_validation AS v 
+    						   SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
+    						   FROM image AS i 
+    						   WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null)`, 
+                               clientFingerprint, imageId, labelValidationEntry.Label)
+        } else {
+            _, err = db.Exec(`UPDATE image_validation AS v 
+                              SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
+                              FROM image AS i 
+                              WHERE v.image_id = i.id AND key = $2 AND v.label_id = (
+                                SELECT l.id FROM label l 
+                                JOIN label pl ON l.parent_id = pl.id
+                                WHERE l.name = $3 AND pl.name = $4
+                              )`, 
+                              clientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label)
+        }
+
 		if err != nil {
 			log.Debug("[Validating donated photo] Couldn't increase num_of_valid: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
 		}
 	} else {
-		_,err := db.Exec(`UPDATE image_validation AS v 
-						  SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
-						  FROM image AS i
-						  WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3)`, clientFingerprint, imageId, label)
+        var err error
+        if labelValidationEntry.Sublabel == "" {
+    		_, err = db.Exec(`UPDATE image_validation AS v 
+    						   SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
+    						   FROM image AS i
+    						   WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null)`, 
+                               clientFingerprint, imageId, labelValidationEntry.Label)
+        } else {
+            _, err = db.Exec(`UPDATE image_validation AS v 
+                               SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
+                               FROM image AS i
+                               WHERE v.image_id = i.id AND key = $2 AND v.label_id = (
+                                SELECT l.id FROM label l 
+                                JOIN label pl ON l.parent_id = pl.id
+                                WHERE l.name = $3 AND pl.name = $4
+                               )`, 
+                               clientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label)
+        }
+
 		if err != nil {
 			log.Debug("[Validating donated photo] Couldn't increase num_of_invalid: ", err.Error())
 			raven.CaptureError(err, nil)
@@ -432,10 +466,11 @@ func getRandomImage() Image{
 	image.Label = ""
 	image.Provider = "donation"
 
-	rows, err := db.Query(`SELECT i.key, l.name FROM image i 
+	rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
 						   JOIN image_provider p ON i.image_provider_id = p.id 
 						   JOIN image_validation v ON v.image_id = i.id
 						   JOIN label l ON v.label_id = l.id
+                           LEFT JOIN label pl ON l.parent_id = pl.id
 						   WHERE ((i.unlocked = true) AND (p.name = 'donation') 
                            AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)) LIMIT 1`)
 	if(err != nil){
@@ -445,11 +480,14 @@ func getRandomImage() Image{
 	}
     defer rows.Close()
 	
+    var label1 string
+    var label2 string
 	if(!rows.Next()){
-        otherRows, err := db.Query(`SELECT i.key, l.name FROM image i 
+        otherRows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
                                     JOIN image_provider p ON i.image_provider_id = p.id 
                                     JOIN image_validation v ON v.image_id = i.id
                                     JOIN label l ON v.label_id = l.id
+                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                     WHERE i.unlocked = true AND p.name = 'donation' 
                                     OFFSET floor(random() * 
                                         ( SELECT count(*) FROM image i 
@@ -465,19 +503,27 @@ func getRandomImage() Image{
         }
         defer otherRows.Close()
 
-        err = otherRows.Scan(&image.Id, &image.Label)
+        err = otherRows.Scan(&image.Id, &label1, &label2)
         if(err != nil){
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
         }
 	} else{
-        err = rows.Scan(&image.Id, &image.Label)
+        err = rows.Scan(&image.Id, &label1, &label2)
         if(err != nil){
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
         }
+    }
+
+    if label2 == "" {
+        image.Label = label1
+        image.Sublabel = ""
+    } else {
+        image.Label = label2
+        image.Sublabel = label1
     }
 
 	return image
@@ -517,7 +563,7 @@ func getRandomGroupedImages(label string, limit int) ([]Image, error) {
                         JOIN image_provider p ON i.image_provider_id = p.id 
                         JOIN image_validation v ON v.image_id = i.id
                         JOIN label l ON v.label_id = l.id
-                        WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1`, label).Scan(&numOfRows)
+                        WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1 AND l.parent_id is null`, label).Scan(&numOfRows)
     if err != nil {
         tx.Rollback()
         log.Debug("[Random grouped images] Couldn't get num of rows: ", err.Error())
@@ -540,7 +586,7 @@ func getRandomGroupedImages(label string, limit int) ([]Image, error) {
                            JOIN image_provider p ON i.image_provider_id = p.id 
                            JOIN image_validation v ON v.image_id = i.id
                            JOIN label l ON v.label_id = l.id
-                           WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1
+                           WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1 AND l.parent_id is null
                            OFFSET $2 LIMIT $3`, label, randomNumber, limit)
 
     if err != nil {
@@ -581,9 +627,18 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
     }
 
     insertedId := 0
-    err = db.QueryRow(`INSERT INTO image_annotation(label_id, annotations, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id) 
-                        SELECT (SELECT l.id FROM label l WHERE l.name = $6), $2, $3, $4, $5, (SELECT i.id FROM image i WHERE i.key = $1) RETURNING id`, 
-                      imageId, byt, 0, 0, clientFingerprint, annotations.Label).Scan(&insertedId)
+
+    if annotations.Sublabel == "" {
+        err = db.QueryRow(`INSERT INTO image_annotation(label_id, annotations, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id) 
+                            SELECT (SELECT l.id FROM label l WHERE l.name = $6 AND l.parent_id is null), $2, $3, $4, $5, (SELECT i.id FROM image i WHERE i.key = $1) RETURNING id`, 
+                          imageId, byt, 0, 0, clientFingerprint, annotations.Label).Scan(&insertedId)
+    } else {
+        err = db.QueryRow(`INSERT INTO image_annotation(label_id, annotations, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id) 
+                            SELECT (SELECT l.id FROM label l JOIN label pl ON l.parent_id = pl.id WHERE l.name = $6 AND pl.name = $7), $2, $3, $4, $5, (SELECT i.id FROM image i WHERE i.key = $1) RETURNING id`, 
+                          imageId, byt, 0, 0, clientFingerprint, annotations.Sublabel, annotations.Label).Scan(&insertedId)
+    }
+
+
     if err != nil {
         log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
         raven.CaptureError(err, nil)
@@ -595,10 +650,11 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
 func getRandomUnannotatedImage() Image{
     var image Image
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
-    rows, err := db.Query(`SELECT i.key, l.name FROM image i 
+    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
                                JOIN image_provider p ON i.image_provider_id = p.id 
                                JOIN image_validation v ON v.image_id = i.id
                                JOIN label l ON v.label_id = l.id
+                               LEFT JOIN label pl ON l.parent_id = pl.id
                                WHERE i.unlocked = true AND p.name = 'donation' AND 
                                CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                                AND NOT EXISTS
@@ -627,14 +683,24 @@ func getRandomUnannotatedImage() Image{
 
     defer rows.Close()
 
+    var label1 string
+    var label2 string
     if(rows.Next()){
         image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &image.Label)
+        err = rows.Scan(&image.Id, &label1, &label2)
         if(err != nil){
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
+        }
+
+        if label2 == "" {
+            image.Label = label1
+            image.Sublabel = ""
+        } else {
+            image.Label = label2
+            image.Sublabel = label1
         }
     }
 
@@ -644,10 +710,11 @@ func getRandomUnannotatedImage() Image{
 func getRandomAnnotatedImage() Image{
     var image Image
 
-    rows, err := db.Query(`SELECT i.key, l.name, a.annotations FROM image i 
+    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), a.annotations FROM image i 
                                JOIN image_provider p ON i.image_provider_id = p.id 
                                JOIN image_annotation a ON a.image_id = i.id
                                JOIN label l ON a.label_id = l.id
+                               LEFT JOIN label pl ON l.parent_id = pl.id
                                WHERE i.unlocked = true AND p.name = 'donation' 
                                OFFSET floor(random() * 
                                (
@@ -665,11 +732,13 @@ func getRandomAnnotatedImage() Image{
 
     defer rows.Close()
 
+    var label1 string
+    var label2 string
     if(rows.Next()){
         var annotations []byte
         image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &image.Label, &annotations)
+        err = rows.Scan(&image.Id, &label1, &label2, &annotations)
         if(err != nil) {
             log.Debug("[Get Random Annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -682,27 +751,69 @@ func getRandomAnnotatedImage() Image{
             raven.CaptureError(err, nil)
             return image
         }
+
+        if label2 == "" {
+            image.Label = label1
+            image.Sublabel = ""
+        } else {
+            image.Label = label2
+            image.Sublabel = label1
+        }
     }
 
     return image
 }
 
-func validateAnnotatedImage(clientFingerprint string, imageId string, label string, valid bool) error {
+func validateAnnotatedImage(clientFingerprint string, imageId string, labelValidationEntry LabelValidationEntry, valid bool) error {
     if valid {
-        _,err := db.Exec(`UPDATE image_annotation AS a 
-                          SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
-                          FROM image AS i
-                          WHERE a.image_id = i.id AND key = $2 AND a.label_id = (SELECT id FROM label WHERE name = $3)`, clientFingerprint, imageId, label)
+        var err error
+        if labelValidationEntry.Sublabel == "" {
+            _, err = db.Exec(`UPDATE image_annotation AS a 
+                              SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
+                              FROM image AS i
+                              WHERE a.image_id = i.id AND key = $2 AND a.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null)`, 
+                              clientFingerprint, imageId, labelValidationEntry.Label)
+        } else {
+            _, err = db.Exec(`UPDATE image_annotation AS a 
+                              SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
+                              FROM image AS i
+                              WHERE a.image_id = i.id AND key = $2 AND a.label_id = (
+                                SELECT l.id FROM label l 
+                                JOIN label pl ON l.parent_id = pl.id
+                                WHERE l.name = $3 AND pl.name = $4
+                              )`, 
+                              clientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label)
+        }
+
+
         if err != nil {
             log.Debug("[Validating annotated photo] Couldn't increase num_of_valid: ", err.Error())
             raven.CaptureError(err, nil)
             return err
         }
     } else {
-        _,err := db.Exec(`UPDATE image_annotation AS a 
-                          SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
-                          FROM image AS i
-                          WHERE a.image_id = i.id AND key = $2 AND a.label_id = (SELECT id FROM label WHERE name = $3)`, clientFingerprint, imageId, label)
+        var err error
+        if labelValidationEntry.Sublabel == "" {
+            _,err = db.Exec(`UPDATE image_annotation AS a 
+                              SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
+                              FROM image AS i
+                              WHERE a.image_id = i.id AND key = $2 AND a.label_id = (
+                                SELECT id FROM label WHERE name = $3 AND parent_id is null
+                              )`, 
+                              clientFingerprint, imageId, labelValidationEntry.Label)
+        } else {
+            _,err = db.Exec(`UPDATE image_annotation AS a 
+                              SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
+                              FROM image AS i
+                              WHERE a.image_id = i.id AND key = $2 AND a.label_id = (
+                                SELECT l.id FROM label l 
+                                JOIN label pl ON l.parent_id = pl.id
+                                WHERE l.name = $3 AND pl.name = $4
+                              )`, 
+                              clientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label)
+        }
+
+
         if err != nil {
             log.Debug("[Validating annotated photo] Couldn't increase num_of_invalid: ", err.Error())
             raven.CaptureError(err, nil)
@@ -845,15 +956,6 @@ func getImageToLabel() (Image, error) {
     defer unlabeledRows.Close()
 
     if !unlabeledRows.Next() {
-        /*rows, err := tx.Query(`SELECT q.key, l.name as label, 
-                               CASE WHEN length((array_agg(pl.name))[1]) > 0
-                               THEN array_agg(pl.name::text) 
-                               ELSE ARRAY[]::text[] END as sublabels 
-
-                               FROM image_validation v 
-                               JOIN (SELECT i.id as id, i.key as key FROM image i OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
-                               JOIN label l on v.label_id = l.id 
-                               LEFT JOIN label pl on l.parent_id = pl.id GROUP BY l.name, q.key`)*/
         rows, err := tx.Query(`SELECT q.key, l.name as label, COALESCE(pl.name, '') as parentLabel
                                FROM image_validation v 
                                JOIN (SELECT i.id as id, i.key as key FROM image i OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
@@ -902,16 +1004,6 @@ func getImageToLabel() (Image, error) {
                 }
                 temp[baseLabel] = labelMeEntry 
             }
-
-            /*var labelMeEntry LabelMeEntry
-            err = rows.Scan(&image.Id, &labelMeEntry.Label, pq.Array(&labelMeEntry.Sublabels))
-            if err != nil {
-                tx.Rollback()
-                raven.CaptureError(err, nil)
-                log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
-                return image, err
-            }
-            labelMeEntries = append(labelMeEntries, labelMeEntry)*/
         }
 
         rows.Close()

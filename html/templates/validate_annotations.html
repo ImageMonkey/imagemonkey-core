@@ -53,7 +53,19 @@
       }
     }
 
+    function setLabel(label, sublabel){
+      $("#label").attr("label", label)
+      $("#label").attr("sublabel", sublabel)
+      if(sublabel === ""){
+        $("#label").text(label)
+      } 
+      else {
+        $("#label").text((sublabel + "/" + label))
+      }
+    }
+
     $(document).ready(function(){
+      setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
       var browserFingerprint = null;
 
       var canvas = new fabric.Canvas('canvas');
@@ -65,17 +77,19 @@
 
       $("#yesButton").add('#noButton').click(function(e) {
         var action = (e.target.id === "yesButton") ? "yes" : "no";
+        var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")};
 
         var headers = {}
         if(browserFingerprint !== null)
           headers["X-Browser-Fingerprint"] = browserFingerprint;
 
         e.preventDefault();
-        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + $('#label').text()  + '/' + action;
+        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + action;
           $.ajax({
               url: url,
               dataType: 'json',
               type: 'POST',
+              data: JSON.stringify(data),
               headers: headers,
               success: function(data){
                 $.ajax({
@@ -88,7 +102,7 @@
                     setCanvasBackgroundImageUrl(canvas, ('donations/' + data.uuid), function() {
                       drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
                     });
-                    $("#label").text(data.label);
+                    setLabel(data.label, data.sublabel);
                   }
                 });
               }
@@ -112,7 +126,7 @@
   <div class="ui inverted vertical masthead center aligned segment">
   	{{ template "pointing_menu.html" .}}  
   	<div class="ui text container">
-      <h2 class="ui inverted header" id="label">{{ .randomImage.Label }}</h2>
+      <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
       <h2>All occurrences annotated?</h2>
     </div>
   </div>
