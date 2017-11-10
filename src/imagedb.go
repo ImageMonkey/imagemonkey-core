@@ -330,12 +330,13 @@ func explore(words []string) (Statistics, error) {
         return statistics, err
     }
     
-    rows, err := tx.Query(`SELECT l.name, count(l.name), 
+    rows, err := tx.Query(`SELECT CASE WHEN pl.name is null THEN l.name ELSE l.name || '/' || pl.name END, count(l.name), 
                            CASE WHEN SUM(v.num_of_valid + v.num_of_invalid) = 0 THEN 0 ELSE (CAST (SUM(v.num_of_invalid) AS float)/(SUM(v.num_of_valid) + SUM(v.num_of_invalid))) END as error_rate, 
                            SUM(v.num_of_valid + v.num_of_invalid) as total_validations
                            FROM image_validation v 
                            JOIN label l ON v.label_id = l.id 
-                           GROUP BY l.name ORDER BY count(l.name) DESC`)
+                           LEFT JOIN label pl on l.parent_id = pl.id
+                           GROUP BY l.name, pl.name ORDER BY count(l.name) DESC`)
     if err != nil {
         tx.Rollback()
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
