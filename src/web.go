@@ -25,7 +25,7 @@ func main() {
 	os.Setenv("SENTRY_DSN", WEB_SENTRY_DSN)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8081", "Playground Base URL")
@@ -46,14 +46,8 @@ func main() {
 		},
 	}
 
-	fmt.Printf("Reading wordlists...")
-	words, err := getStrWordLists(*wordlistDir)
-	if(err != nil){
-		fmt.Printf("Couldn't read wordlists...terminating!")
-		log.Fatal(err)
-	}
-
-	labelMap, err := getLabelMap("../wordlists/en/labels.json")
+	log.Debug("[Main] Reading Label Map")
+	labelMap, words, err := getLabelMap(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)

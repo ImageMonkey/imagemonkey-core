@@ -75,37 +75,6 @@ func pick(args ...interface{}) []interface{} {
     return args
 }
 
-/*
- * Loads all data in memory.
- * If file gets too big, refactor it!
- */
-func getWordLists(path string) ([]Label, error) {
-    var lines []string
-    var labels []Label
-	data, err := ioutil.ReadFile(path)
-    if(err != nil){
-        return labels, err
-    }
-    lines = strings.Split(string(data), "\r\n")
-    for _, v := range lines {
-        var label Label
-        label.Name = v
-        labels = append(labels, label)
-    }
-
-    return labels, nil
-}
-
-func getStrWordLists(path string) ([]string, error) {
-    var lines []string
-    data, err := ioutil.ReadFile(path)
-    if(err != nil){
-        return lines, err
-    }
-    lines = strings.Split(string(data), "\r\n")
-    return lines, nil
-}
-
 func hashImage(file io.Reader) (uint64, error){
     img, _, err := image.Decode(file)
     if err != nil {
@@ -197,24 +166,26 @@ func getIPAddress(r *http.Request) string {
     return ""
 }
 
-func getLabelMap(path string) (map[string]LabelMapEntry, error) {
+func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
+    var words []string
     m := make(map[string]LabelMapEntry)
 
     data, err := ioutil.ReadFile(path)
     if err != nil {
-        return m, err
+        return m, words, err
     }
 
     var labelMap LabelMap
     err = json.Unmarshal(data, &labelMap)
     if err != nil {
-        return m, err
+        return m, words, err
     }
 
     
     for _, value := range labelMap.LabelMapEntries {
         m[value.Name] = value
+        words = append(words, value.Name)
     }
 
-    return m, nil
+    return m, words, nil
 }

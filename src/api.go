@@ -132,7 +132,7 @@ func main(){
 	log.SetLevel(log.DebugLevel)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
@@ -145,18 +145,13 @@ func main(){
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	fmt.Printf("Reading wordlists...\n")
-	words, err := getWordLists(*wordlistDir)
-	if(err != nil){
-		fmt.Printf("[Main] Couldn't read wordlists...terminating!")
-		log.Fatal(err)
-	}
-
-	labelMap, err := getLabelMap("../wordlists/en/labels.json")
+	log.Debug("[Main] Reading Label Map")
+	labelMap, words, err := getLabelMap(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
 	}
+
 
 	mostPopularLabels := []string{"cat", "dog"}
 
@@ -463,7 +458,7 @@ func main(){
 
 
 	router.GET("/v1/label/random", func(c *gin.Context) {
-		label := words[random(0, len(words) - 1)].Name
+		label := words[random(0, len(words) - 1)]
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
 
