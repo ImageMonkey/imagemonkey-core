@@ -17,27 +17,64 @@
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
+  <script src="js/label.js"></script>
 
   <script src="js/fingerprint2.min.js"></script>
 
   <script type="text/javascript">
-  var oldLabels = {}
+  var colorMap = {}
+  var oldLabelMap = {}
   var newlyAddedLabels = {}
+  var labelMap = {{ .labels }};
+
+  buildColorMap();
 
   function labelExists(label){
-    if(label in oldLabels)
+    if(label in oldLabelMap)
       return true;
     if(label in newlyAddedLabels)
       return true;
     return false;
   }
 
+  function buildColorMap(){
+    for(var key in labelMap){
+      if(labelMap.hasOwnProperty(key)){
+        var color = StringToColor.next(key);
+        colorMap[key] = color;
+      }
+    }
+  }
+
+  function sublabelExists(label, sublabel){
+    var sublabels = [];
+    if(label in oldLabelMap){
+      var sublabels = oldLabelMap[label];
+      if(sublabels !== null){
+        for(var i = 0; i < sublabels.length; i++){
+          if(sublabels[i] === sublabel)
+            return true;
+        }
+      }
+    }
+    if(label in newlyAddedLabels){
+      var sublabels = newlyAddedLabels[label];
+      if(sublabels !== null){
+        for(var i = 0; i < sublabels.length; i++){
+          if(sublabels[i] === sublabel)
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
   function getNextImage(){
-    $('#newLabel').val(''); //clear current label
+    clearSelectedLabel(); //clear current label
     removeAllLabels();
-    $('#suggestedLabelsContainer').hide();
-    removeAllSuggestedLabels();
-    oldLabels = {}
+    $('#mostPopularLabelsContainer').hide();
+    removeAllMostPopularLabels();
+    oldLabelMap = {}
     newlyAddedLabels = {}
 
 
@@ -50,46 +87,86 @@
       success: function(data){
         $("#image").attr("imageId", data.uuid);
         $("#image").attr("src", ("donations/"+data.uuid));
-        oldLabels = {};
-        var labelStr = "";
-        for(var i = 0; i < data["all_labels"].length; i++){
-          oldLabels[data["all_labels"][i]] = true;
 
-          labelStr += data["all_labels"][i];
-
-          $('#labels').prepend($(('<div class="ui big label">' + data["all_labels"][i] + '</div>')));
-        }
+        addOldLabels(data["all_labels"]);
 
         //get suggested labels
-        getSuggestedLabels(labelStr);
+        getMostPopularLabels();
       }
     });
   }
 
-  function getSuggestedLabels(labels){
-    var url = '{{ .apiBaseUrl }}/v1/label/suggest?tags=' + labels;
+  function showHideNoLabelsDefined(){
+    if((Object.keys(oldLabelMap).length === 0) && (Object.keys(newlyAddedLabels).length === 0)){
+      $("#noLabelsDefined").show();
+    }
+    else{
+      $("#noLabelsDefined").hide();
+    }
+  }
+
+  function addOldLabels(input) {
+    oldLabelMap = {};
+    if(input !== null){
+      for(var i = 0; i < input.length; i++){
+        oldLabelMap[input[i]["label"]] = input[i]["sublabels"];
+        addOldLabel(input[i]["label"]);
+      }
+    }
+
+    showHideNoLabelsDefined();
+  }
+
+  function getMostPopularLabels(){
+    var url = '{{ .apiBaseUrl }}/v1/label/popular';
     $.ajax({
       url: url,
       dataType: 'json',
       complete: function(data){
       },
       success: function(data){
-        for(var i = 0; i < data.length; i++){
-          addLabelSuggestion(data[i]);
-        }
+        if(data !== null){
+          for(var i = 0; i < data.length; i++){
+            addPopularLabel(data[i]);
+          }
 
-        if(data.length > 0 ) //only show if there is at least one suggestion
-          $("#suggestedLabelsContainer").fadeIn("slow");
+          if(data.length > 0 ) //only show if there is at least one suggestion
+            $("#mostPopularLabelsContainer").fadeIn("slow");
+        }
       }
     });
   }
 
   var removeLabel = function(e){
-    delete newlyAddedLabels[$(e).parent().text()];
-    $(e).parent().remove();
+    var sublabel = $(e).parent().attr('sublabel');
+    var label = $(e).parent().attr('label');
+    if(sublabel === undefined){ //remove base label + all it's sublabels
+      //remove actual label...
+      $(e).parent().remove();
+
+      //..and all it's sublabels
+      $('#labels').children().each(function (){
+        if($(this).attr("label") === label){
+          $(this).remove();
+        }
+      })
+
+      delete newlyAddedLabels[label];
+    }
+    else{ //remove a specific sublabel
+      sublabels = newlyAddedLabels[label];
+      var index = sublabels.indexOf(sublabel);
+      if(index > -1){
+        sublabels.splice(index, 1);
+      }
+      newlyAddedLabels[label] = sublabels;
+      $(e).parent().remove();
+    }
+
+    showHideNoLabelsDefined();
   };
 
-  var createLabelFromLabelSuggestion = function(e){
+  var createLabelFromMostPopularLabel = function(e){
     addLabel($(e).text());
   };
 
@@ -100,62 +177,100 @@
     })
   }
 
-  var removeAllSuggestedLabels = function(){
-    $('#suggestedLabels').children().each(function (){
+  var removeAllMostPopularLabels = function(){
+    $('#mostPopularLabels').children().each(function (){
       $(this).remove();
     })
   }
 
-  function addLabel(label){
-    if(!labelExists(label)){
-      newlyAddedLabels[label] = true;
-      $('#labels').prepend($(('<div class="ui huge label">' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+
+  function addOldLabel(label){
+    var color = colorMap[label];
+    var subLabels = oldLabelMap[label];
+    if((subLabels !== null) && (subLabels.length > 0)){
+      for(var i = 0; i < subLabels.length; i++){
+        $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[i] +'" label="' + label + '"' + '>' + subLabels[i] + '/' + label + '</div>')));
+      }
+
     }
+    $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + label +  '" >' + label + '</div>')));
   }
 
-  function addLabelSuggestion(label){
-    $('#suggestedLabels').prepend($(('<div class="ui big label button" onclick="createLabelFromLabelSuggestion(this)">' + label + '</div>')));
+  function addLabel(label){
+    var added = false;
+    var baseLabelExists = labelExists(label); 
+    var subLabels = labelMap[label]["labels"];
+    var color = colorMap[label];
+
+    if((subLabels !== null) && (subLabels.length > 0)){
+      for(var j = 0; j < subLabels.length; j++){
+        if(!sublabelExists(label, subLabels[j].name)){
+          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j]["name"] +'" label="' + label + '"' + '>' + subLabels[j]["name"] + '/' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+          added = true;
+
+          if(label in newlyAddedLabels){
+            var alreadyAvailableSubLabels = newlyAddedLabels[label];
+            alreadyAvailableSubLabels.push(subLabels[j].name)
+            newlyAddedLabels[label] = alreadyAvailableSubLabels;
+          }
+          else{
+            newlyAddedLabels[label] = [subLabels[j].name];
+          }
+        }
+      }    
+    }
+    else{ 
+      if(!baseLabelExists)
+        newlyAddedLabels[label] = [];
+    }
+
+    if(!baseLabelExists){
+      added = true;
+      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + label +  '" >' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+    }
+
+    if(!added)
+      $('#labelAlreadyExistsMessage').show(200).delay(1500).hide(200);
+
+    showHideNoLabelsDefined();
+  }
+
+  function addPopularLabel(label){
+    $('#mostPopularLabels').prepend($(('<div class="ui big label button" onclick="createLabelFromMostPopularLabel(this)">' + label + '</div>')));
+  }
+
+  function getSelectedLabel(){
+    return $('#labelDropdown').dropdown('get text');
+  }
+
+  function clearSelectedLabel(){
+    $('#labelDropdown').dropdown('restore placeholder text');
   }
 
   $(document).ready(function(){
-    $('#suggestedLabelsContainer').hide();
+    $('#labelAlreadyExistsMessage').hide();
+    $('#mostPopularLabelsContainer').hide();
     var browserFingerprint = null;
+    var oldLabels = {{ .image.AllLabels }};
+    addOldLabels(oldLabels);
 
-    var labelStr = "";
-    {{range .image.AllLabels}}
-    oldLabels[{{.}}] = true;
-    labelStr += ( {{.}} + "," );
-    {{ end }}
-
-    getSuggestedLabels(labelStr);
+    getMostPopularLabels();
 
     $('#addLabelButton').click(function(e){
-      if($('#newLabel').val() !== ""){
-        addLabel($('#newLabel').val());
-          $('#newLabel').val(''); //clear label after add
-        }
-      });
+      var selectedLabel = getSelectedLabel();
+      if(selectedLabel !== ""){
+        addLabel(selectedLabel);
+        clearSelectedLabel(); //clear label after add
+      }
+    });
 
-
-      //when enter gets pressed in input, add label
-      $("#newLabel").on('keyup', function (e){
-        if (e.keyCode == 13){
-          if($('#newLabel').val() !== ""){
-            addLabel($('#newLabel').val());
-              $('#newLabel').val(''); //clear label after add
-            }
-          }
-        });
-
-
-
-      $('#doneButton').click(function(e) {
-        var labelsLst = [];
+  $('#doneButton').click(function(e) {
+    var labelsLst = [];
 
         //dict to list
         for (var key in newlyAddedLabels){
           if (newlyAddedLabels.hasOwnProperty(key)){
-            labelsLst.push(key);
+            labelsLst.push({label: key, sublabels: newlyAddedLabels[key]});
           }
         }
 
@@ -173,7 +288,7 @@
             url: url,
             dataType: 'json',
             type: 'POST',
-            data: JSON.stringify({labels: labelsLst}),
+            data: JSON.stringify(labelsLst),
             headers: headers,
             complete: function(data){
             },
@@ -185,26 +300,63 @@
         
       });
 
-      $('.ui.search')
+      /*$('.ui.search')
       .search({
+        type: 'category',
         debug: true,
         apiSettings: {
+          onResponse: function(imageMonkeyResponse) {
+            var
+              response = {
+                results : {}
+              }
+            ;
+            // translate GitHub API response to work with search
+            $.each(imageMonkeyResponse.items, function(index, item) {
+              var
+                parent_label   = item.parent_label,
+                maxResults = 8
+              ;
+
+              if(index >= maxResults) {
+                return false;
+              }
+
+              // create new language category
+              if(response.results[parent_label] === undefined) {
+                response.results[parent_label] = {
+                  name    : parent_label,
+                  results : []
+                };
+              }
+              // add result to category
+              response.results[parent_label].results.push({
+                title       : item.label,
+                description : item.description
+              });
+            });
+            return response;
+          },
           url: '{{ .apiBaseUrl}}/v1/label/search?q={query}'
-        },
-        fields: {
-          results : 'items',
-          title   : 'label'
-        },
+        }//,
+        //fields: {
+        //  results : 'items',
+        //  title   : 'label'
+        //},
         minCharacters : 2,
         searchOnFocus: false,
         showNoResults: false,
-      });
+      });*/
 
-      new Fingerprint2().get(function(result, components){
-        browserFingerprint = result;
-      });
+  $('.ui.dropdown')
+  .dropdown()
+  ;
 
-    });
+  new Fingerprint2().get(function(result, components){
+    browserFingerprint = result;
+  });
+
+});
 </script>
 </head>
 <body>
@@ -225,20 +377,17 @@
     </div>
     <div class="three wide center aligned column">
       <p><h2>Labels:</h2></p>
+      <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
-      <div id="labels">
-        {{range .image.AllLabels}}
-        <div class="ui big label">{{.}}
-        </div>
-        {{ end }}
+      <div class="ui labels" id="labels">
       </div>
 
       <h1></h1>
       <h1></h1>
-      <div id="suggestedLabelsContainer">
-        <h2 style="margin-bottom:0px;">Suggested Labels:</h2>
-        <p style="font-size:12px; margin-bottom:20px;">Similar images have the following labels</p>
-        <div id="suggestedLabels">
+      <div id="mostPopularLabelsContainer" hidden>
+        <h2 style="margin-bottom:0px;">Most Popular Labels:</h2>
+        <p style="font-size:12px; margin-bottom:20px;">These are the most popular labels in the whole dataset</p>
+        <div class="ui labels" id="mostPopularLabels">
         </div>
       </div>
 
@@ -253,7 +402,17 @@
         <div class="row">
           <div class="ui search">
             <div class="ui center aligned action input">
-              <input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">
+              <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
+              <div class="ui search selection dropdown" id="labelDropdown">
+                <div class="default text">Select Label</div>
+                <div class="menu">
+                  {{ range $key, $value := .labels }}
+                  <div class="item" data-value="{{ $key }}"><i class="tag icon"></i>{{ $key }}</div>
+                  {{ end }}
+                </div>
+              </div>
+
+
               <button class="ui button" id="addLabelButton">Add</button>
             </div>
           </div>
@@ -266,6 +425,13 @@
           <div class="four wide center aligned column">
             <button class="ui fluid positive button" id="doneButton">Done</button>
           </div>
+        </div>
+      </div>
+
+      <div class="ui warning message" hidden id="labelAlreadyExistsMessage">
+        <i class="close icon"></i>
+        <div class="header">
+          Label already exists
         </div>
       </div>
 

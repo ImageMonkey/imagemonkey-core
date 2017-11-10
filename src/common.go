@@ -14,6 +14,7 @@ import (
     "net"
     "bytes"
     "net/http"
+    "encoding/json"
 )
 
 type Report struct {
@@ -24,14 +25,33 @@ type Label struct {
     Name string `json:"name"`
 }
 
-type Labels struct {
-    Names []string `json:"labels"`
+type LabelMeEntry struct {
+    Label string `json:"label"` 
+    Sublabels []string `json:"sublabels"`
 }
 
 
 type ContributionsPerCountryRequest struct {
     CountryCode string `json:"country_code"`
     Type string `json:"type"`
+}
+
+
+type MetaLabelMapEntry struct {
+    Description string  `json:"description"`
+    Name string `json:"name"`
+}
+
+type LabelMapEntry struct {
+    Description string  `json:"description"`
+    Name string `json:"name"`
+    LabelMapEntries []LabelMapEntry  `json:"labels"`
+}
+
+type LabelMap struct {
+    LabelMapEntries []LabelMapEntry  `json:"labels"`
+    MetaLabelMapEntries []MetaLabelMapEntry  `json:"metalabels"`
+
 }
 
 func use(vals ...interface{}) {
@@ -177,8 +197,24 @@ func getIPAddress(r *http.Request) string {
     return ""
 }
 
-/*func prettyPrintJSON(b []byte) ([]byte, error) {
-    var out bytes.Buffer
-    err := JSON.Indent(&out, b, "", "    ")
-    return out.Bytes(), err
-}*/
+func getLabelMap(path string) (map[string]LabelMapEntry, error) {
+    m := make(map[string]LabelMapEntry)
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return m, err
+    }
+
+    var labelMap LabelMap
+    err = json.Unmarshal(data, &labelMap)
+    if err != nil {
+        return m, err
+    }
+
+    
+    for _, value := range labelMap.LabelMapEntries {
+        m[value.Name] = value
+    }
+
+    return m, nil
+}

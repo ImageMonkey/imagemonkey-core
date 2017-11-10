@@ -5,7 +5,7 @@ import (
 	"github.com/getsentry/raven-go"
 	log "github.com/Sirupsen/logrus"
     "encoding/json"
-    "strings"
+    "database/sql"
     //"errors"
     //"database/sql/driver"
 )
@@ -30,7 +30,7 @@ type Image struct {
     NumOfValid int32 `json:"num_yes"`
     NumOfInvalid int32 `json:"num_no"`
     Annotations []Annotation `json:"annotations"`
-    AllLabels []string `json:"all_labels"`
+    AllLabels []LabelMeEntry `json:"all_labels"`
 }
 
 type ImageValidation struct {
@@ -81,13 +81,14 @@ type Statistics struct {
 
 type LabelSearchItem struct {
     Label string `json:"label"`
+    ParentLabel string `json:"parent_label"`
 }
 
 type LabelSearchResult struct {
     Labels []LabelSearchItem `json:"items"`
 }
 
-func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, label string) error{
+func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, labels []LabelMeEntry ) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -107,8 +108,14 @@ func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, lab
 		return err
 	}
 
-    if label != "" { //only create a image validation entry, if a label is provided
-    	labelId := 0
+    if labels[0].Label != "" { //only create a image validation entry, if a label is provided
+        err = _addLabelsToImage(clientFingerprint, filename, labels, tx)
+        if err != nil {
+            return err //tx already rolled back in case of error, so we can just return here
+        }
+
+
+    	/*labelId := 0
     	err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
                             SELECT $1, $2, $3, $5, l.id FROM label l WHERE l.name = $4 RETURNING id`, 
     					  imageId, 0, 0, label, clientFingerprint).Scan(&labelId)
@@ -118,6 +125,12 @@ func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, lab
     		raven.CaptureError(err, nil)
     		return err
     	}
+
+
+        if addSublabels {
+            TODO: add sublabels (image_validionn_entry)
+        }*/
+
     }
 
 	return tx.Commit()
@@ -811,8 +824,7 @@ func updateContributionsPerCountry(contributionType string, countryCode string) 
 
 func getImageToLabel() (Image, error) {
     var image Image
-
-    image.Label = ""
+    var labelMeEntries []LabelMeEntry
     image.Provider = "donation"
 
     tx, err := db.Begin()
@@ -833,10 +845,22 @@ func getImageToLabel() (Image, error) {
     defer unlabeledRows.Close()
 
     if !unlabeledRows.Next() {
-        var labels string
-        err := tx.QueryRow(`SELECT q.key, string_agg(l.name::text, ',') as labels FROM image_validation v 
+        /*rows, err := tx.Query(`SELECT q.key, l.name as label, 
+                               CASE WHEN length((array_agg(pl.name))[1]) > 0
+                               THEN array_agg(pl.name::text) 
+                               ELSE ARRAY[]::text[] END as sublabels 
+
+                               FROM image_validation v 
                                JOIN (SELECT i.id as id, i.key as key FROM image i OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
-                               JOIN label l on v.label_id = l.id group by q.key`).Scan(&image.Id, &labels)
+                               JOIN label l on v.label_id = l.id 
+                               LEFT JOIN label pl on l.parent_id = pl.id GROUP BY l.name, q.key`)*/
+        rows, err := tx.Query(`SELECT q.key, l.name as label, COALESCE(pl.name, '') as parentLabel
+                               FROM image_validation v 
+                               JOIN (SELECT i.id as id, i.key as key FROM image i OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
+                               JOIN label l on v.label_id = l.id 
+                               LEFT JOIN label pl on l.parent_id = pl.id`)
+
+
         if err != nil {
             tx.Rollback()
             raven.CaptureError(err, nil)
@@ -844,10 +868,59 @@ func getImageToLabel() (Image, error) {
             return image, err
         }
 
-        labelElements := strings.Split(labels, ",")
-        for _, elem := range labelElements {
-            image.AllLabels = append(image.AllLabels, elem)
+        defer rows.Close()
+
+        //store in temporary map for faster access
+        var label string
+        var parentLabel string
+        var baseLabel string
+        temp := make(map[string]LabelMeEntry) 
+        for rows.Next() {
+            err = rows.Scan(&image.Id, &label, &parentLabel)
+            if err != nil {
+                tx.Rollback()
+                raven.CaptureError(err, nil)
+                log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
+                return image, err
+            }
+
+            baseLabel = parentLabel
+            if parentLabel == "" {
+                baseLabel = label
+            }
+
+            if val, ok := temp[baseLabel]; ok {
+                if parentLabel != "" {
+                    val.Sublabels = append(val.Sublabels, label)
+                }
+                temp[baseLabel] = val
+            } else {
+                var labelMeEntry LabelMeEntry
+                labelMeEntry.Label = baseLabel
+                if parentLabel != "" {
+                    labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, label)
+                }
+                temp[baseLabel] = labelMeEntry 
+            }
+
+            /*var labelMeEntry LabelMeEntry
+            err = rows.Scan(&image.Id, &labelMeEntry.Label, pq.Array(&labelMeEntry.Sublabels))
+            if err != nil {
+                tx.Rollback()
+                raven.CaptureError(err, nil)
+                log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
+                return image, err
+            }
+            labelMeEntries = append(labelMeEntries, labelMeEntry)*/
         }
+
+        rows.Close()
+
+        //map -> list
+        for  _, value := range temp {
+            labelMeEntries = append(labelMeEntries, value)
+        }
+
     } else {
         err = unlabeledRows.Scan(&image.Id)
         if err != nil {
@@ -858,6 +931,8 @@ func getImageToLabel() (Image, error) {
         }
         unlabeledRows.Close()
     }
+
+    image.AllLabels = labelMeEntries
 
     err = tx.Commit()
     if err != nil {
@@ -870,7 +945,7 @@ func getImageToLabel() (Image, error) {
     return image, nil
 }
 
-func addLabelsToImage(clientFingerprint string, imageId string, labels []string) error {
+func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry) error {
     tx, err := db.Begin()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
@@ -878,48 +953,9 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []string)
         return err
     }
 
-    for _, label := range labels {
-        var labelId int64
-        rows, err := tx.Query(`SELECT l.id FROM label l WHERE l.name = $1`, label)
-        if err != nil {
-            tx.Rollback()
-            log.Debug("[Adding image labels] Couldn't get label ", err.Error())
-            raven.CaptureError(err, nil)
-            return err
-        }
-
-        if rows.Next() {
-            err = rows.Scan(&labelId)
-            if err != nil {
-                tx.Rollback()
-                log.Debug("[Adding image labels] Couldn't scan image label entry: ", err.Error())
-                raven.CaptureError(err, nil)
-                return err
-            }
-        } else {
-            err = tx.QueryRow(`INSERT INTO label(name) VALUES($1) RETURNING id`, label).Scan(&labelId)
-            if err != nil {
-                tx.Rollback()
-                log.Debug("[Adding image labels] Couldn't insert label entry: ", err.Error())
-                raven.CaptureError(err, nil)
-                return err 
-            }
-        }
-
-        rows.Close()
-
-        _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                        SELECT i.id, $2, $3, $4, $5 FROM image i WHERE i.key = $1`, 
-                        imageId, 0, 0, clientFingerprint, labelId)
-        if err != nil {
-            pqErr := err.(*pq.Error)
-            if pqErr.Code.Name() != "unique_violation" { //handle the case that a validation entry for the given label already exists properly; i.e: do not abort here
-                tx.Rollback()
-                log.Debug("[Adding image labels] Couldn't insert image validation entry: ", err.Error())
-                raven.CaptureError(err, nil)
-                return err
-            }
-        }
+    err = _addLabelsToImage(clientFingerprint, imageId, labels, tx)
+    if err != nil { 
+        return err //tx already rolled back in case of error, so we can just return here 
     }
 
     err = tx.Commit()
@@ -929,6 +965,65 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []string)
         return err 
     }
     return err
+}
+
+
+func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, tx *sql.Tx) error {
+    for _, item := range labels {
+        rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Adding image labels] Couldn't get image ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+
+        defer rows.Close()
+
+        var imageId int64
+        if rows.Next() {
+            err = rows.Scan(&imageId)
+            if err != nil {
+                tx.Rollback()
+                log.Debug("[Adding image labels] Couldn't scan image image entry: ", err.Error())
+                raven.CaptureError(err, nil)
+                return err
+            }
+        }
+
+        rows.Close()
+
+        //add sublabels
+        if len(item.Sublabels) > 0 {
+            _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
+                            SELECT $1, $2, $3, $4, l.id FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))`,
+                            imageId, 0, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
+            if err != nil {
+                tx.Rollback()
+                log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
+                raven.CaptureError(err, nil)
+                return err
+            }
+        }
+
+        //add base label
+        _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
+                            SELECT $1, $2, $3, $4, id from label l WHERE id NOT IN (
+                                SELECT label_id from image_validation v where image_id = $1
+                            ) AND l.name = $5 AND l.parent_id IS NULL`,
+                            imageId, 0, 0, clientFingerprint, item.Label)
+        if err != nil {
+            pqErr := err.(*pq.Error)
+            if pqErr.Code.Name() != "unique_violation" {
+                tx.Rollback()
+                log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
+                raven.CaptureError(err, nil)
+                return err
+            }
+        }
+    }
+
+    return nil
 }
 
 func getAllImageLabels() ([]string, error) {
@@ -958,7 +1053,7 @@ func getAllImageLabels() ([]string, error) {
     return labels, nil
 }
 
-func getLabelSuggestions(labelsStr string) ([]string, error) {
+/*func getLabelSuggestions(labelsStr string) ([]string, error) {
     var labelSuggestions []string
     similarity := 0.3
 
@@ -997,12 +1092,100 @@ func getLabelSuggestions(labelsStr string) ([]string, error) {
     }
 
     return labelSuggestions, nil
+}*/
+
+func getMostPopularLabels(limit int32) ([]string, error) {
+    var labels []string
+
+    rows, err := db.Query(`SELECT l.name FROM image_validation v 
+                            JOIN label l ON v.label_id = l.id 
+                            WHERE l.parent_id is NULL
+                            GROUP BY l.id
+                            ORDER BY count(l.id) DESC LIMIT $1`, limit)
+    if err != nil {
+        log.Debug("[Most Popular Labels] Couldn't fetch results: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labels, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var label string
+        err = rows.Scan(&label)
+        if err != nil {
+           log.Debug("[Most Popular Labels] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labels, err 
+        }
+
+        labels = append(labels, label)
+    }
+
+    return labels, nil
 }
 
-func autocompleteLabel(text string) (LabelSearchResult, error) {
+/*func autocompleteLabel(text string) (LabelSearchResult, error) {
     var labelSearchResult LabelSearchResult
 
-    rows, err := db.Query(`SELECT name
+    rows, err := db.Query(`SELECT l.name as label, COALESCE(pl.name, '') as parent_label
+                           FROM label l
+                           LEFT JOIN label pl ON pl.id = l.parent_id
+                           WHERE l.name % $1
+                           ORDER BY similarity(l.name, $1) DESC`, text)
+
+    if err != nil {
+        log.Debug("[Autocomplete Label] Couldn't fetch results: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelSearchResult, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var labelSearchItem LabelSearchItem
+        err = rows.Scan(&labelSearchItem.Label, &labelSearchItem.ParentLabel)
+        if err != nil {
+            log.Debug("[Autocomplete Label] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelSearchResult, err
+        }
+        labelSearchResult.Labels = append(labelSearchResult.Labels, labelSearchItem)
+    }
+    return labelSearchResult, nil*/
+
+    /*var labelSearchResult LabelSearchResult
+
+    rows, err := db.Query(`SELECT COALESCE(l.name, '') as parent_label, q.name as label from label l 
+                           RIGHT JOIN ( 
+                                SELECT name, parent_id
+                                FROM label l
+                                WHERE name % $1
+                                ORDER BY similarity(name, $1) DESC
+                           ) q
+                           ON q.parent_id = l.id`, text)
+
+    if err != nil {
+        log.Debug("[Autocomplete Label] Couldn't fetch results: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelSearchResult, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var labelSearchItem LabelSearchItem
+        err = rows.Scan(&labelSearchItem.ParentLabel, &labelSearchItem.Label)
+        if err != nil {
+            log.Debug("[Autocomplete Label] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelSearchResult, err
+        }
+        labelSearchResult.Labels = append(labelSearchResult.Labels, labelSearchItem)
+    }
+    return labelSearchResult, nil*/
+
+    /*rows, err := db.Query(`SELECT name
                            FROM label l
                            WHERE name % $1
                            ORDER BY similarity(name, $1) DESC`, text)
@@ -1024,5 +1207,5 @@ func autocompleteLabel(text string) (LabelSearchResult, error) {
         }
         labelSearchResult.Labels = append(labelSearchResult.Labels, labelSearchItem)
     }
-    return labelSearchResult, nil
-}
+    return labelSearchResult, nil*/
+//}

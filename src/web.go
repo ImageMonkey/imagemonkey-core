@@ -53,6 +53,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	labelMap, err := getLabelMap("../wordlists/en/labels.json")
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label map...terminating!")
+		log.Fatal(err)
+	}
+
 	//open database and make sure that we can ping it
 	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
@@ -98,6 +104,7 @@ func main() {
 			"image": pick(getImageToLabel())[0],
 			"activeMenuNr": 3,
 			"apiBaseUrl": apiBaseUrl,
+			"labels": labelMap,
 		})
 	})
 

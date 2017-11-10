@@ -101,6 +101,30 @@ func getBrowserFingerprint(c *gin.Context) string {
 	return browserFingerprint
 }
 
+func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+	if val, ok := labelsMap[label]; ok {
+		if len(sublabels) > 0 {
+			for _, value := range sublabels {
+				eq := false
+				for _, otherValue := range val.LabelMapEntries  {
+					if value == otherValue.Name {
+						eq = true
+						break
+					}
+				}
+
+				if !eq {
+					return false
+				}
+			}
+			return true
+		}
+		return true
+	}
+
+	return false
+}
+
 
 func main(){
 	fmt.Printf("Starting API Service...\n")
@@ -125,6 +149,12 @@ func main(){
 	words, err := getWordLists(*wordlistDir)
 	if(err != nil){
 		fmt.Printf("[Main] Couldn't read wordlists...terminating!")
+		log.Fatal(err)
+	}
+
+	labelMap, err := getLabelMap("../wordlists/en/labels.json")
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
 	}
 
@@ -269,7 +299,7 @@ func main(){
 	router.POST("/v1/donation/:imageid/labelme", func(c *gin.Context) {
 		imageId := c.Param("imageid")
 
-		var labels Labels
+		var labels []LabelMeEntry
 		if c.BindJSON(&labels) != nil {
 			c.JSON(400, gin.H{"error": "Couldn't process request - labels missing"})
 			return
@@ -277,16 +307,16 @@ func main(){
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-
-		//convert labels to lower to avoid possibility of duplicates
-		var lowerCasedLabels []string
-		for _, label := range labels.Names {
-			lowerCasedLabels = append(lowerCasedLabels, strings.ToLower(label))
+		for _, item := range labels {
+			if !isLabelValid(labelMap, item.Label, item.Sublabels) {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid label(s)"})
+				return
+			}
 		}
 
-		err := addLabelsToImage(browserFingerprint, imageId, lowerCasedLabels)
+		err := addLabelsToImage(browserFingerprint, imageId, labels)
 		if err != nil {
-			c.JSON(400, gin.H{"error": "Couldn't process request - please try again later"})
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return
 		}
 		c.JSON(http.StatusOK, nil)
@@ -406,10 +436,17 @@ func main(){
 	})
 
 	router.GET("/v1/label", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		if temp, ok := params["detailed"]; ok {
+			if temp[0] == "true" {
+				c.JSON(http.StatusOK, labelMap)
+				return
+			}
+		}
 		c.JSON(http.StatusOK, words)
 	})
 
-	router.GET("/v1/label/search", func(c *gin.Context) {
+	/*router.GET("/v1/label/search", func(c *gin.Context) {
 		params := c.Request.URL.Query()
 		if temp, ok := params["q"]; ok {
 			res, err := autocompleteLabel(temp[0])
@@ -422,7 +459,7 @@ func main(){
 		}
 
 		c.JSON(422, gin.H{"error": "please provide a search query"})
-	})
+	})*/
 
 
 	router.GET("/v1/label/random", func(c *gin.Context) {
@@ -430,7 +467,7 @@ func main(){
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
 
-	router.GET("/v1/label/suggest", func(c *gin.Context) {
+	/*router.GET("/v1/label/suggest", func(c *gin.Context) {
 		tags := ""
 		params := c.Request.URL.Query()
 		temp, ok := params["tags"] 
@@ -445,7 +482,18 @@ func main(){
 			return
 		}
 		c.JSON(http.StatusOK, suggestedTags)
+	})*/
+
+	router.GET("/v1/label/popular", func(c *gin.Context) {
+		popularLabels, err := getMostPopularLabels(10) //limit to 10
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, popularLabels)
 	})
+
+
 
 	router.POST("/v1/donate", func(c *gin.Context) {
 		label := c.PostForm("label")
@@ -493,13 +541,39 @@ func main(){
         	return
         }
 
+        if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
+        	if !isLabelValid(labelMap, label, []string{}) {
+        		c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
+        		return
+        	}
+        }
+
+        addSublabels := false
+        temp := c.PostForm("add_sublabels")
+        if temp == "true" {
+        	addSublabels = true
+        }
+
+
+		labelMapEntry := labelMap[label]
+		if !addSublabels {
+			labelMapEntry.LabelMapEntries = nil
+		}
+		var labelMeEntry LabelMeEntry
+		var labelMeEntries []LabelMeEntry
+		labelMeEntry.Label = labelMapEntry.Name
+		for _, val := range labelMapEntry.LabelMapEntries {
+			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, val.Name)
+		}
+		labelMeEntries = append(labelMeEntries, labelMeEntry)
+
         //image doesn't already exist, so save it and add it to the database
 		uuid := uuid.NewV4().String()
 		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err = addDonatedPhoto(browserFingerprint, uuid, hash, label)
+		err = addDonatedPhoto(browserFingerprint, uuid, hash, labelMeEntries)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return

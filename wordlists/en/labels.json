@@ -1,0 +1,74 @@
+{
+	"metalabels": [{
+			"description": "optional",
+			"name": "animal"
+
+		},
+		{
+			"description": "optional",
+			"name": "vehicle"
+		},
+		{
+			"description": "optional",
+			"name": "food"
+		}
+	],
+
+
+	"labels": [{
+			"description": "optional",
+			"name": "dog",
+			"metalabels": ["animal"],
+			"labels": [{
+					"description": "optional",
+					"name": "ear"
+				},
+				{
+					"description": "optional",
+					"name": "eye"
+				},
+				{
+					"description": "optional",
+					"name": "mouth"
+				}
+			]
+		},
+		{
+			"description": "optional",
+			"name": "cat",
+			"metalabels": ["animal"],
+			"labels": [{
+					"description": "optional",
+					"name": "ear"
+				},
+				{
+					"description": "optional",
+					"name": "eye"
+				},
+				{
+					"description": "optional",
+					"name": "mouth"
+				}
+			]
+		},
+		{
+			"description": "optional",
+			"name": "pizza",
+			"metalabels": ["food"]
+		},
+		{
+			"description": "optional",
+			"name": "banana",
+			"metalabels": ["food"]
+
+		},
+		{
+			"description": "optional",
+			"name": "car",
+			"metalabels": ["vehicle"]
+		}
+
+
+	]
+
+}
