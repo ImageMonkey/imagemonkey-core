@@ -86,7 +86,15 @@
       },
       success: function(data){
         $("#image").attr("imageId", data.uuid);
-        $("#image").attr("src", ("donations/"+data.uuid));
+        
+        //$("#image").attr("src", ("donations/"+data.uuid));
+
+        var downloadingImage = new Image();
+        downloadingImage.onload = function(){
+          $("#image").attr("src", this.src);
+          showHideControls(true);
+        }
+        downloadingImage.src = "donations/"+data.uuid;
 
         addOldLabels(data["all_labels"]);
 
@@ -102,6 +110,25 @@
     }
     else{
       $("#noLabelsDefined").hide();
+    }
+  }
+
+  function showHideControls(show){
+    if(show){
+      $('#image').show();
+      $('#doneButton').show();
+      $('#labels').show();
+      $('#loadingIndicator').addClass('active');
+      $('#loadingIndicator').hide();
+      $('#labelForm').show();
+    }
+    else{
+      $('#image').hide();
+      $('#doneButton').hide();
+      $('#labels').hide();
+      $('#loadingIndicator').removeClass('active');
+      $('#loadingIndicator').show();
+      $('#labelForm').hide();
     }
   }
 
@@ -280,9 +307,11 @@
           headers['X-Browser-Fingerprint'] = browserFingerprint;
 
         if(newlyAddedLabels.length === 0){ //if no label was added, just load next image
+          showHideControls(false);
           getNextImage();
         }
         else {
+          showHideControls(false);
           e.preventDefault();
           $.ajax({
             url: url,
@@ -381,7 +410,7 @@
     </div>-->
 
     <div class="three wide center aligned column">
-      <p><h2>Labels:</h2></p>
+      <p><h2 id="labelsHeader">Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
       <div class="ui labels" id="labels">
@@ -406,7 +435,7 @@
       <div class="ui centered grid">
         <div class="row">
           <div class="ui search">
-            <div class="ui center aligned action input">
+            <div class="ui center aligned action input" id="labelForm">
               <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
               <div class="ui search selection dropdown" id="labelDropdown">
                 <div class="default text">Select Label</div>
@@ -421,6 +450,9 @@
               <button class="ui button" id="addLabelButton">Add</button>
             </div>
           </div>
+
+          <div class="ui large loader" id="loadingIndicator"></div>
+
           <h1></h1>
         </div>
       </div>
