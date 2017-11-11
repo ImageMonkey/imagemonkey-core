@@ -372,9 +372,14 @@
      </div>
    </div>
 
-   <div class="ui stackable grid vertical stripe">
+   <div class="ui stackable grid vertical stripe mobile reversed">
     <div class="one wide column">
     </div>
+
+    <div class="four wide center aligned mobile only column">
+      {{ template "img_info.html" .}}
+    </div>
+
     <div class="three wide center aligned column">
       <p><h2>Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
@@ -440,7 +445,7 @@
     </div>
 
 
-    <div class="four wide center aligned column">
+    <div class="four wide center aligned computer only column">
       {{ template "img_info.html" .}}
     </div>
   </div>
