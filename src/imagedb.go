@@ -957,7 +957,7 @@ func getImageToLabel() (Image, error) {
     if !unlabeledRows.Next() {
         rows, err := tx.Query(`SELECT q.key, l.name as label, COALESCE(pl.name, '') as parentLabel
                                FROM image_validation v 
-                               JOIN (SELECT i.id as id, i.key as key FROM image i OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
+                               JOIN (SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
                                JOIN label l on v.label_id = l.id 
                                LEFT JOIN label pl on l.parent_id = pl.id`)
 
