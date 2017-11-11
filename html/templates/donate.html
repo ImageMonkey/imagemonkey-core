@@ -13,7 +13,6 @@
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
-  <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
@@ -67,7 +66,10 @@
           });
 
           this.on('sending', function(file, xhr, formData) {
-            formData.append("label", getSelectedLabel());
+            var label = getSelectedLabel();
+            if(label !== "")
+              formData.append("label", label);
+              formData.append("add_sublabels", true);
           });
         }
       };
@@ -98,6 +100,7 @@
           {{range .words}}
           <div class="item">{{.}}</div>
           {{ end }}
+          <div class="item"></div> <!--no label -->
         </div>
       </div>
     </div>

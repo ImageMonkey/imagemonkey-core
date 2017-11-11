@@ -101,6 +101,30 @@ func getBrowserFingerprint(c *gin.Context) string {
 	return browserFingerprint
 }
 
+func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+	if val, ok := labelsMap[label]; ok {
+		if len(sublabels) > 0 {
+			for _, value := range sublabels {
+				eq := false
+				for _, otherValue := range val.LabelMapEntries  {
+					if value == otherValue.Name {
+						eq = true
+						break
+					}
+				}
+
+				if !eq {
+					return false
+				}
+			}
+			return true
+		}
+		return true
+	}
+
+	return false
+}
+
 
 func main(){
 	fmt.Printf("Starting API Service...\n")
@@ -108,7 +132,7 @@ func main(){
 	log.SetLevel(log.DebugLevel)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
@@ -121,13 +145,15 @@ func main(){
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	fmt.Printf("Reading wordlists...\n")
-	words, err := getWordLists(*wordlistDir)
-	if(err != nil){
-		fmt.Printf("[Main] Couldn't read wordlists...terminating!")
+	log.Debug("[Main] Reading Label Map")
+	labelMap, words, err := getLabelMap(*wordlistPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
 	}
 
+	//if the mostPopularLabels gets extended with sublabels, 
+	//adapt getRandomGroupedImages() and validateImages() also!
 	mostPopularLabels := []string{"cat", "dog"}
 
 	//open database and make sure that we can ping it
@@ -262,8 +288,34 @@ func main(){
 
 		} else {
 			randomImage := getRandomImage()
-			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
+			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
 		}
+	})
+
+	router.POST("/v1/donation/:imageid/labelme", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+
+		var labels []LabelMeEntry
+		if c.BindJSON(&labels) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - labels missing"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		for _, item := range labels {
+			if !isLabelValid(labelMap, item.Label, item.Sublabels) {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid label(s)"})
+				return
+			}
+		}
+
+		err := addLabelsToImage(browserFingerprint, imageId, labels)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, nil)
 	})
 
 	router.POST("/v1/donation/:imageid/validate/:param", func(c *gin.Context) {
@@ -271,22 +323,32 @@ func main(){
 		param := c.Param("param")
 
 		parameter := false
-		if(param == "yes"){
+		if param == "yes" {
 			parameter = true
-		} else if(param == "no"){
+		} else if param == "no" {
 			parameter = false
 		} else{
 			c.JSON(404, nil)
 			return
 		}
 
+		var labelValidationEntry LabelValidationEntry
+		if c.BindJSON(&labelValidationEntry) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide valid label(s)"})
+			return
+		}
+
+		if ((labelValidationEntry.Label == "") && (labelValidationEntry.Sublabel == "")) {
+			c.JSON(400, gin.H{"error": "Please provide a valid label"})
+			return
+		}
+
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-
-		err := validateDonatedPhoto(browserFingerprint, imageId, parameter)
+		err := validateDonatedPhoto(browserFingerprint, imageId, labelValidationEntry, parameter)
 		if(err != nil){
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 			return
 		} 
 
@@ -309,8 +371,18 @@ func main(){
 		c.JSON(http.StatusOK, nil)
 	})
 
+	router.GET("/v1/labelme", func(c *gin.Context) {
+		image, err := getImageToLabel()
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
+	})
+
 	router.PATCH("/v1/donation/validate", func(c *gin.Context) {
-		var imageValidationBatch []ImageValidation
+		var imageValidationBatch ImageValidationBatch
 		
 		if c.BindJSON(&imageValidationBatch) != nil {
 			c.JSON(400, gin.H{"error": "Couldn't process request - invalid patch"})
@@ -364,14 +436,64 @@ func main(){
 	})
 
 	router.GET("/v1/label", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		if temp, ok := params["detailed"]; ok {
+			if temp[0] == "true" {
+				c.JSON(http.StatusOK, labelMap)
+				return
+			}
+		}
 		c.JSON(http.StatusOK, words)
 	})
 
+	/*router.GET("/v1/label/search", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		if temp, ok := params["q"]; ok {
+			res, err := autocompleteLabel(temp[0])
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Couldn't process request, please try again later."})
+				return
+			}
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		c.JSON(422, gin.H{"error": "please provide a search query"})
+	})*/
+
 
 	router.GET("/v1/label/random", func(c *gin.Context) {
-		label := words[random(0, len(words) - 1)].Name
+		label := words[random(0, len(words) - 1)]
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
+
+	/*router.GET("/v1/label/suggest", func(c *gin.Context) {
+		tags := ""
+		params := c.Request.URL.Query()
+		temp, ok := params["tags"] 
+		if !ok {
+			c.JSON(422, gin.H{"error": "Couldn't process request - no tags specified"})
+			return
+		}
+		tags = temp[0]
+		suggestedTags, err := getLabelSuggestions(tags)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, suggestedTags)
+	})*/
+
+	router.GET("/v1/label/popular", func(c *gin.Context) {
+		popularLabels, err := getMostPopularLabels(10) //limit to 10
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, popularLabels)
+	})
+
+
 
 	router.POST("/v1/donate", func(c *gin.Context) {
 		label := c.PostForm("label")
@@ -419,13 +541,39 @@ func main(){
         	return
         }
 
+        if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
+        	if !isLabelValid(labelMap, label, []string{}) {
+        		c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
+        		return
+        	}
+        }
+
+        addSublabels := false
+        temp := c.PostForm("add_sublabels")
+        if temp == "true" {
+        	addSublabels = true
+        }
+
+
+		labelMapEntry := labelMap[label]
+		if !addSublabels {
+			labelMapEntry.LabelMapEntries = nil
+		}
+		var labelMeEntry LabelMeEntry
+		var labelMeEntries []LabelMeEntry
+		labelMeEntry.Label = labelMapEntry.Name
+		for _, val := range labelMapEntry.LabelMapEntries {
+			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, val.Name)
+		}
+		labelMeEntries = append(labelMeEntries, labelMeEntry)
+
         //image doesn't already exist, so save it and add it to the database
 		uuid := uuid.NewV4().String()
 		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err = addDonatedPhoto(browserFingerprint, uuid, hash, label)
+		err = addDonatedPhoto(browserFingerprint, uuid, hash, labelMeEntries)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return
@@ -471,18 +619,29 @@ func main(){
 		param := c.Param("param")
 
 		parameter := false
-		if(param == "yes"){
+		if param == "yes" {
 			parameter = true
-		} else if(param == "no"){
+		} else if param == "no" {
 			parameter = false
 		} else{
 			c.JSON(404, nil)
 			return
 		}
 
+		var labelValidationEntry LabelValidationEntry
+		if c.BindJSON(&labelValidationEntry) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide valid label(s)"})
+			return
+		}
+
+		if ((labelValidationEntry.Label == "") && (labelValidationEntry.Sublabel == "")) {
+			c.JSON(400, gin.H{"error": "Please provide a valid label"})
+			return
+		}
+
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err := validateAnnotatedImage(browserFingerprint, imageId, parameter)
+		err := validateAnnotatedImage(browserFingerprint, imageId, labelValidationEntry, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
@@ -514,7 +673,7 @@ func main(){
 			return
 		}
 
-		var annotations []Annotation
+		var annotations Annotations
 		err := c.BindJSON(&annotations)
 		if(err != nil){
 			c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
@@ -532,12 +691,13 @@ func main(){
 
 	router.GET("/v1/annotate", func(c *gin.Context) {
 		randomImage := getRandomUnannotatedImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
 	})
 
 	router.GET("/v1/annotation", func(c *gin.Context) {
 		randomImage := getRandomAnnotatedImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "annotations": randomImage.Annotations})
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, 
+									"annotations": randomImage.Annotations, "sublabel": randomImage.Sublabel})
 	})
 
 	router.Run(":8081")

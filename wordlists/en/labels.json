@@ -1,0 +1,140 @@
+{
+	"metalabels": [{
+			"description": "optional",
+			"name": "animal"
+
+		},
+		{
+			"description": "optional",
+			"name": "vehicle"
+		},
+		{
+			"description": "optional",
+			"name": "food"
+		},
+		{
+			"description": "optional",
+			"name": "electronics"
+		},
+		{
+			"description": "optional",
+			"name": "nature"
+		},
+		{
+			"description": "optional",
+			"name": "sports"
+		}
+	],
+
+
+	"labels": [{
+			"description": "optional",
+			"name": "dog",
+			"metalabels": ["animal"],
+			"labels": [{
+					"description": "optional",
+					"name": "ear"
+				},
+				{
+					"description": "optional",
+					"name": "eye"
+				},
+				{
+					"description": "optional",
+					"name": "mouth"
+				}
+			]
+		},
+		{
+			"description": "optional",
+			"name": "cat",
+			"metalabels": ["animal"],
+			"labels": [{
+					"description": "optional",
+					"name": "ear"
+				},
+				{
+					"description": "optional",
+					"name": "eye"
+				},
+				{
+					"description": "optional",
+					"name": "mouth"
+				}
+			]
+		},
+		{
+			"description": "optional",
+			"name": "pizza",
+			"metalabels": ["food"]
+		},
+		{
+			"description": "optional",
+			"name": "orange",
+			"metalabels": ["food"]
+		},
+		{
+			"description": "optional",
+			"name": "apple",
+			"metalabels": ["food"]
+		},
+		{
+			"description": "optional",
+			"name": "banana",
+			"metalabels": ["food"]
+
+		},
+		{
+			"description": "optional",
+			"name": "car",
+			"metalabels": ["vehicle"]
+		},
+		{
+			"description": "optional",
+			"name": "TV",
+			"metalabels": ["electronics"]
+		},
+		{
+			"description": "optional",
+			"name": "smartphone",
+			"metalabels": ["electronics"]
+		},
+		{
+			"description": "optional",
+			"name": "cup",
+			"metalabels": []
+		},
+		{
+			"description": "optional",
+			"name": "glass",
+			"metalabels": []
+		},
+		{
+			"description": "optional",
+			"name": "spoon",
+			"metalabels": []
+		},
+		{
+			"description": "optional",
+			"name": "egg",
+			"metalabels": ["food"]
+		},
+		{
+			"description": "optional",
+			"name": "tennis ball",
+			"metalabels": ["sports"]
+		},
+		{
+			"description": "optional",
+			"name": "bullet",
+			"metalabels": []
+		},
+		{
+			"description": "optional",
+			"name": "tree",
+			"metalabels": ["nature"]
+		}
+
+	]
+
+}

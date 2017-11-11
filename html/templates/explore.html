@@ -36,6 +36,13 @@
       font-size: 15px;
     }
 
+    .num-of-unlabeled-donation { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
   </style>
   <script>
 
@@ -229,6 +236,20 @@
   <div class="one wide column"></div>
 
   <div class="three wide column">
+    <div class="ui pink inverted segment">
+      <h3 class="ui center aligned header">Unlabeled Donations</h3>
+      <div class="ui blue inverted relaxed divided list">
+        <div class="item">
+          <div class="row">
+            <div class="content">
+              <span class="num-of-unlabeled-donation"><p>{{ .statistics.NumOfUnlabeledDonations }}</p></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
     <div class="ui blue inverted segment">
       <h3 class="ui center aligned header">Donations</h3>
       <div class="ui blue inverted relaxed divided list">
@@ -244,6 +265,7 @@
         {{ end }}
       </div>
     </div>
+
   </div>
 
   <div class="three wide column">

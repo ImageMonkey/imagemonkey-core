@@ -13,7 +13,6 @@
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
-  <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
@@ -85,7 +84,7 @@
         else{
           $("#image").attr("imageId", data.uuid);
           $("#image").attr("src", ("donations/"+data.uuid));
-          $("#label").text(data.label);
+          setLabel(data.label, data.sublabel);
         }
       }
     });
@@ -109,14 +108,19 @@
   }
 
   function getMultiValidationRequestData(){
-    data = []
+    data = {}
+    validations = []
     containsOnlyInvalid = true;
     for (var key in imageValidationMapping) {
       if (imageValidationMapping.hasOwnProperty(key)) {
-        data.push({"uuid": key, "valid": ((imageValidationMapping[key]) ? "yes" : "no")})
+        validations.push({"uuid": key, "valid": ((imageValidationMapping[key]) ? "yes" : "no")})
         if(imageValidationMapping[key])  containsOnlyInvalid = false;
       }
     }
+
+    data["validations"] = validations;
+    data["label"] = $("#label").attr("label");
+    data["sublabel"] = $("#label").attr("sublabel");
     return {
       data : data,
       containsOnlyInvalid: containsOnlyInvalid
@@ -135,8 +139,20 @@
     }
   }
 
+  function setLabel(label, sublabel){
+    $("#label").attr("label", label)
+    $("#label").attr("sublabel", sublabel)
+    if(sublabel === ""){
+      $("#label").text(label)
+    } 
+    else {
+      $("#label").text((sublabel + "/" + label))
+    }
+  }
+
   $(document).ready(function(){
     var browserFingerprint = null;
+    setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
     $("#multiValidationContainer").hide();
 
@@ -176,6 +192,8 @@
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
+      var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
+
       var headers = {}
       if(browserFingerprint !== null)
         headers['X-Browser-Fingerprint'] = browserFingerprint;
@@ -186,6 +204,7 @@
         url: url,
         dataType: 'json',
         type: 'POST',
+        data: JSON.stringify(data),
         headers: headers, 
         success: function(data){
           getRandomImages();
@@ -243,10 +262,11 @@
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
       <div class="ui center aligned basic segment">
-        <h1 class="ui header" id="label">{{ .randomImage.Label }}</h1>
+        <h1 class="ui header" id="label" label="" sublabel=""></h1>
         <button class="negative ui button center aligned" id="noButton">NO</button>
         <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
+      {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
     </div>
 

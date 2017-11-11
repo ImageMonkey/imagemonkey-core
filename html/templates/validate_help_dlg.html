@@ -1,0 +1,28 @@
+<script type='text/javascript'>
+$(document).ready(function(){
+
+  $("#helpMeButton").click(function(e) {
+    $('#helpMeDlg').modal('setting', { detachable:false }).modal('show');
+  });
+});
+</script>
+
+<div class="ui longer modal" id="helpMeDlg">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Validating Labels
+  </div>
+  <div class="scrolling content">
+    Validate if you see the mentioned object in the image.<br><br>
+
+    <b>Demo</b>
+    <p></p>
+    <img src="img/validate_help.gif" class="ui large bordered rounded image">
+
+  </div>
+  <div class="actions">
+    <div class="ui positive button">
+      Got it
+    </div>
+  </div>
+</div>

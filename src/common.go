@@ -14,6 +14,7 @@ import (
     "net"
     "bytes"
     "net/http"
+    "encoding/json"
 )
 
 type Report struct {
@@ -24,9 +25,37 @@ type Label struct {
     Name string `json:"name"`
 }
 
+type LabelMeEntry struct {
+    Label string `json:"label"` 
+    Sublabels []string `json:"sublabels"`
+}
+
+
 type ContributionsPerCountryRequest struct {
     CountryCode string `json:"country_code"`
     Type string `json:"type"`
+}
+
+
+type MetaLabelMapEntry struct {
+    Description string  `json:"description"`
+    Name string `json:"name"`
+}
+
+type LabelMapEntry struct {
+    Description string  `json:"description"`
+    Name string `json:"name"`
+    LabelMapEntries []LabelMapEntry  `json:"labels"`
+}
+
+type LabelMap struct {
+    LabelMapEntries []LabelMapEntry  `json:"labels"`
+    MetaLabelMapEntries []MetaLabelMapEntry  `json:"metalabels"`
+}
+
+type LabelValidationEntry struct {
+    Label string  `json:"label"`
+    Sublabel string `json:"sublabel"`
 }
 
 func use(vals ...interface{}) {
@@ -48,37 +77,6 @@ func random(min, max int) int {
 
 func pick(args ...interface{}) []interface{} {
     return args
-}
-
-/*
- * Loads all data in memory.
- * If file gets too big, refactor it!
- */
-func getWordLists(path string) ([]Label, error) {
-    var lines []string
-    var labels []Label
-	data, err := ioutil.ReadFile(path)
-    if(err != nil){
-        return labels, err
-    }
-    lines = strings.Split(string(data), "\r\n")
-    for _, v := range lines {
-        var label Label
-        label.Name = v
-        labels = append(labels, label)
-    }
-
-    return labels, nil
-}
-
-func getStrWordLists(path string) ([]string, error) {
-    var lines []string
-    data, err := ioutil.ReadFile(path)
-    if(err != nil){
-        return lines, err
-    }
-    lines = strings.Split(string(data), "\r\n")
-    return lines, nil
 }
 
 func hashImage(file io.Reader) (uint64, error){
@@ -172,8 +170,26 @@ func getIPAddress(r *http.Request) string {
     return ""
 }
 
-/*func prettyPrintJSON(b []byte) ([]byte, error) {
-    var out bytes.Buffer
-    err := JSON.Indent(&out, b, "", "    ")
-    return out.Bytes(), err
-}*/
+func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
+    var words []string
+    m := make(map[string]LabelMapEntry)
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return m, words, err
+    }
+
+    var labelMap LabelMap
+    err = json.Unmarshal(data, &labelMap)
+    if err != nil {
+        return m, words, err
+    }
+
+    
+    for _, value := range labelMap.LabelMapEntries {
+        m[value.Name] = value
+        words = append(words, value.Name)
+    }
+
+    return m, words, nil
+}
