@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>We made some progress</title>
+  <meta name="description" content="It’s now almost 30 days since the last blog post and we made some really good progress. If you haven’t kept up with us, then here’s a quick summary:" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="" />
+    <meta name="twitter:title" content="We made some progress" />
+    <meta name="twitter:image" content="http://myblog.***.***/blog" />
+    
+    <meta name="twitter:description"  content="It’s now almost 30 days since the last blog post and we made some really good progress. If you haven’t kept up with us, then here’s a quick summary:" />
+    
+  
+  
+  <meta property="og:site_name" content="ImageMonkey - Blog" />
+  <meta property="og:title" content="We made some progress"/>
+  
+  <meta property="og:description" content="It’s now almost 30 days since the last blog post and we made some really good progress. If you haven’t kept up with us, then here’s a quick summary:" />
+  
+  <meta property="og:image" content="http://myblog.***.***/blog/assets/article_images/2017-10-06-ImageMonkey-Introduction/taking_photo2.jpg" />
+  <meta property="og:url" content="http://myblog.***.***/blog/general/2017/10/28/ImageMonkey-v0.2.html" >
+  <meta property="og:type" content="blog" />
+  <meta property="article:published_time" content="2017-10-28T14:34:25+02:00">
+
+  <link rel="canonical" href="http://myblog.***.***/blog/general/2017/10/28/ImageMonkey-v0.2.html"/>
+  <!--<link rel="shortcut icon" href="/blog/assets/images/favicon.png" type="image/png"/>-->
+  <link rel="stylesheet" href="//brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/blog/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/blog/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/blog/assets/article_images/2017-10-06-ImageMonkey-Introduction/taking_photo2.jpg)">
+            Article Image
+          </div>
+          <div class="post-image-image2" style="background-image: url()">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">We made some progress</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/blog)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Bernhard</h4>
+              on
+              <time datetime="2017-10-28 12:34">28 Oct 2017</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <p>It’s now almost 30 days since the <a href="https://imagemonkey.io/blog/general/2017/10/06/ImageMonkey-Introduction.html">last blog post</a> and we made some really good progress. If you haven’t kept up with us, then here’s a quick summary:</p>
+
+<h1 id="content-moderation">Content Moderation</h1>
+<p>One of the core principles of ImageMonkey is: Keep it open and accessible for <strong>everybody</strong> - without the need to sign up. While this is great from the user experience point of view, it brings some serious problems with it:</p>
+
+<blockquote>
+  <p>How can we make sure the uploaded content doesn’t contain any sensitive material?</p>
+</blockquote>
+
+<p>Manual content moderation is possible, but doesn’t scale. That’s why we are investing some time and energy into mechanisms which (hopefully) can assist us with content moderation. One of those mechanisms is a NSFW detection engine, which pre-classifies each uploaded image with a NSFW score. This for sure can’t replace manual content moderation entirely, but definitely could help us to identify problematic images early in the process.</p>
+
+<p>We started our experiment with a handful <a href="https://github.com/bbernhard/imagemonkey-playground/blob/master/conf/nsfw/nsfw.json">more or less randomly selected</a> P**rnhub and Youtube videos, which were split up in frames and fed to a neural net. With now 10k frames in each category (NSFW/SFW) we already get some pretty decent results. Of course it is still far away from being perfect and produces some false positives, but as an initial attempt I am pretty satisfied with the result. The whole thing is still in an alpha phase and was only trained on nudity, but if you want to give it a try: It’s available <a href="https://imagemonkey.io/playground">here</a>.</p>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/nsfw-experiment.png" alt="NSFW detection" /></p>
+
+<h1 id="dataset-statistics">Dataset Statistics</h1>
+
+<p>The dataset statistics tab was completely reworked and now provides more detailed statistical insight into the dataset.</p>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/statistics.png" alt="Dataset Statistics" /></p>
+
+<p><strong>Important Info</strong> At ImageMonkey we are taking your privacy seriously, that means we do <strong>not</strong> store any personal information (like your IP address) in our database. Neither do we send your IP address to some external service to determine your geolocation. Instead, ImageMonkey uses a local geolocation database for the geolocation lookup.</p>
+
+<h1 id="multi-validation-mode">Multi Validation Mode</h1>
+
+<p>Another feature that’s still in beta mode, but already available for try out, is the <strong>Multivalidation Mode</strong>. The Multivalidation Mode is inspired by that <a href="https://www.reddit.com/r/MachineLearning/comments/75gqit/p_imagemonkey_whats_next/do6fm1p/">reddit comment</a> and allows users to validate multiple images in one go. You can enable it in the <em>validation tab</em> by clicking ‘m’ on your keyboard.</p>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/multi-validation.gif" alt="Multivalidation Mode" /></p>
+
+<h1 id="detecting-malicious-behavior">Detecting malicious behavior</h1>
+
+<p>While a completely open and publicly modifiable dataset has it’s benefits, it also gives users the possibility to destroy the dataset’s quality by maliciously voting for the wrong label on purpose.We for sure can’t prevent that, but we can try to make it harder. For that reason a history table was introduced, which now keeps track of every single action that’s performed on the dataset and in which way it affected the dataset.</p>
+
+<p>Together with a browser fingerprint we get some pretty good information about the image’s state and how it changes over time (e.q if an image transitions from being classified as an ‘apple’ to being ‘not an apple’ in a very short time, it could be an malicious attempt).</p>
+
+<p><strong>Important info</strong> We do <strong>not</strong> store any personal information (like your IP address or your browser version) of you. The only thing we are storing is an anonymized hash.</p>
+
+<h1 id="possibility-to-choose-a-label-on-upload">Possibility to choose a label on upload</h1>
+
+<p>Up to now it wasn’t possible to select a label other than the one that was randomly chosen by the system. As this was quite inflexible and resulted in users pressing the refresh button of their browsers until the desired label would eventually show up, we decided to change that behavior.</p>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/label-selection.png" alt="Choose a label" /></p>
+
+<h1 id="experiments">Experiments</h1>
+
+<p>There are also some ongoing experiments and proof of concepts, which haven’t made it into an ImageMonkey release yet.</p>
+
+<ul>
+  <li>Pre-annotation of video frames (based on background subtraction):</li>
+</ul>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/background-subtraction.gif" alt="" /></p>
+
+<ul>
+  <li>Using the grabcut algorithm to select objects</li>
+</ul>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/grabcut.gif" alt="" /></p>
+
+<ul>
+  <li>Gamification</li>
+</ul>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/game.gif" alt="" /></p>
+
+<ul>
+  <li>Validate an image each time you open a new browser tab</li>
+</ul>
+
+<p><img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/google-chrome-extension.gif" alt="" /></p>
+
+<h1 id="want-to-contribute">Want to contribute?</h1>
+<p>Once again, I would like to thank <a href="https://github.com/dobkeratops">@dobkeratops</a> for all the awesome ideas, the feedback and technical advice. Many thanks for your contribution!</p>
+
+<p>As ImageMonkey and all it’s parts are completely OpenSource, every contribution is highly appreciated. In case you want to check it out, here are some links:</p>
+
+<p><a href="https://github.com/bbernhard/imagemonkey-core">https://github.com/bbernhard/imagemonkey-core</a></p>
+
+<p><a href="https://github.com/bbernhard/imagemonkey-client">https://github.com/bbernhard/imagemonkey-client</a></p>
+
+<p><a href="https://github.com/bbernhard/imagemonkey-playground">https://github.com/bbernhard/imagemonkey-playground</a></p>
+
+<p><a href="https://github.com/bbernhard/imagemonkey-chrome-extension">https://github.com/bbernhard/imagemonkey-chrome-extension</a></p>
+
+<p><a href="https://github.com/bbernhard/imagemonkey-admin">https://github.com/bbernhard/imagemonkey-admin</a></p>
+
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/blog)">Blog Logo</div>
+              <h4>Bernhard</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2017-10-28 12:34">28 Oct 2017</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Copyright</span></h5>
+            <footer class="site-footer">
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Bernhard</a> &copy; 2017<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+        
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/blog/assets/images/header.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">ImageMonkey - Blog</h1>
+        <h2 class="blog-description">ImageMonkey - a public, open source image dataset
+</h2>
+        <a href=/blog/ class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/blog/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/blog/assets/js/index.js"></script>
+<script type="text/javascript" src="/blog/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

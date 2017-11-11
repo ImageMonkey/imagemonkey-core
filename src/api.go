@@ -12,9 +12,14 @@ import (
 	"database/sql"
 	"os"
 	"strconv"
+	"github.com/oschwald/geoip2-golang"
+	"github.com/garyburd/redigo/redis"
+	"encoding/json"
+	"net"
 )
 
 var db *sql.DB
+var geoipDb *geoip2.Reader
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
 func ClientAuthMiddleware() gin.HandlerFunc {
@@ -46,7 +51,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -70,15 +75,69 @@ func RequestId() gin.HandlerFunc {
 }
 
 
+func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCountryRequest ContributionsPerCountryRequest) {
+	serialized, err := json.Marshal(contributionsPerCountryRequest)
+	if err != nil { 
+		log.Debug("[Donate] Couldn't create contributions-per-country request: ", err.Error())
+		return
+	}
+
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+
+	_, err = redisConn.Do("RPUSH", "contributions-per-country", serialized)
+	if err != nil { //just log error, but not abort (it's just some statistical information)
+		log.Debug("[Donate] Couldn't update contributions-per-country: ", err.Error())
+		return
+	}
+}
+
+func getBrowserFingerprint(c *gin.Context) string {
+	browserFingerprint := ""
+	if values, _ := c.Request.Header["X-Browser-Fingerprint"]; len(values) > 0 {
+		browserFingerprint = values[0]
+	}
+
+	return browserFingerprint
+}
+
+func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+	if val, ok := labelsMap[label]; ok {
+		if len(sublabels) > 0 {
+			for _, value := range sublabels {
+				eq := false
+				for _, otherValue := range val.LabelMapEntries  {
+					if value == otherValue.Name {
+						eq = true
+						break
+					}
+				}
+
+				if !eq {
+					return false
+				}
+			}
+			return true
+		}
+		return true
+	}
+
+	return false
+}
+
+
 func main(){
 	fmt.Printf("Starting API Service...\n")
 
 	log.SetLevel(log.DebugLevel)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistDir := flag.String("wordlist", "../wordlists/en/misc.txt", "Path to wordlist")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
+	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
+	redisMaxConnections := flag.Int("redis_max_connections", 500, "Max connections to Redis")
+	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
 
 	flag.Parse()
 	if(*releaseMode){
@@ -86,13 +145,15 @@ func main(){
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	fmt.Printf("Reading wordlists...\n")
-	words, err := getWordLists(*wordlistDir)
-	if(err != nil){
-		fmt.Printf("[Main] Couldn't read wordlists...terminating!")
+	log.Debug("[Main] Reading Label Map")
+	labelMap, words, err := getLabelMap(*wordlistPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
 	}
 
+	//if the mostPopularLabels gets extended with sublabels, 
+	//adapt getRandomGroupedImages() and validateImages() also!
 	mostPopularLabels := []string{"cat", "dog"}
 
 	//open database and make sure that we can ping it
@@ -105,6 +166,26 @@ func main(){
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
+
+
+	//open geoip database
+	geoipDb, err := geoip2.Open(*geoIpDbPath)
+	if err != nil {
+		log.Fatal("[Main] Couldn't read geoip database: ", err.Error())
+	}
+	defer geoipDb.Close()
+
+	//create redis pool
+	redisPool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", *redisAddress)
+
+		if err != nil {
+			log.Fatal("[Main] Couldn't dial redis: ", err.Error())
+		}
+
+		return c, err
+	}, *redisMaxConnections)
+	defer redisPool.Close()
 
 
 	router := gin.Default()
@@ -207,8 +288,34 @@ func main(){
 
 		} else {
 			randomImage := getRandomImage()
-			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider})
+			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
 		}
+	})
+
+	router.POST("/v1/donation/:imageid/labelme", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+
+		var labels []LabelMeEntry
+		if c.BindJSON(&labels) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - labels missing"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		for _, item := range labels {
+			if !isLabelValid(labelMap, item.Label, item.Sublabels) {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid label(s)"})
+				return
+			}
+		}
+
+		err := addLabelsToImage(browserFingerprint, imageId, labels)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, nil)
 	})
 
 	router.POST("/v1/donation/:imageid/validate/:param", func(c *gin.Context) {
@@ -216,38 +323,95 @@ func main(){
 		param := c.Param("param")
 
 		parameter := false
-		if(param == "yes"){
+		if param == "yes" {
 			parameter = true
-		} else if(param == "no"){
+		} else if param == "no" {
 			parameter = false
 		} else{
 			c.JSON(404, nil)
 			return
 		}
 
-		err := validateDonatedPhoto(imageId, parameter)
-		if(err != nil){
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
-			return
-		} else{
-			c.JSON(http.StatusOK, nil)
+		var labelValidationEntry LabelValidationEntry
+		if c.BindJSON(&labelValidationEntry) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide valid label(s)"})
 			return
 		}
+
+		if ((labelValidationEntry.Label == "") && (labelValidationEntry.Sublabel == "")) {
+			c.JSON(400, gin.H{"error": "Please provide a valid label"})
+			return
+		}
+
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := validateDonatedPhoto(browserFingerprint, imageId, labelValidationEntry, parameter)
+		if(err != nil){
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		} 
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "validation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Validation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+
+		c.JSON(http.StatusOK, nil)
+	})
+
+	router.GET("/v1/labelme", func(c *gin.Context) {
+		image, err := getImageToLabel()
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
 	})
 
 	router.PATCH("/v1/donation/validate", func(c *gin.Context) {
-		var imageValidationBatch []ImageValidation
+		var imageValidationBatch ImageValidationBatch
 		
 		if c.BindJSON(&imageValidationBatch) != nil {
 			c.JSON(400, gin.H{"error": "Couldn't process request - invalid patch"})
 			return
 		}
 
-		err := validateImages(imageValidationBatch)
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := validateImages(browserFingerprint, imageValidationBatch)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return
 		}
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "validation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Validation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
 		c.JSON(200, nil)
 	})
@@ -272,14 +436,64 @@ func main(){
 	})
 
 	router.GET("/v1/label", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		if temp, ok := params["detailed"]; ok {
+			if temp[0] == "true" {
+				c.JSON(http.StatusOK, labelMap)
+				return
+			}
+		}
 		c.JSON(http.StatusOK, words)
 	})
 
+	/*router.GET("/v1/label/search", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		if temp, ok := params["q"]; ok {
+			res, err := autocompleteLabel(temp[0])
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Couldn't process request, please try again later."})
+				return
+			}
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		c.JSON(422, gin.H{"error": "please provide a search query"})
+	})*/
+
 
 	router.GET("/v1/label/random", func(c *gin.Context) {
-		label := words[random(0, len(words) - 1)].Name
+		label := words[random(0, len(words) - 1)]
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
+
+	/*router.GET("/v1/label/suggest", func(c *gin.Context) {
+		tags := ""
+		params := c.Request.URL.Query()
+		temp, ok := params["tags"] 
+		if !ok {
+			c.JSON(422, gin.H{"error": "Couldn't process request - no tags specified"})
+			return
+		}
+		tags = temp[0]
+		suggestedTags, err := getLabelSuggestions(tags)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, suggestedTags)
+	})*/
+
+	router.GET("/v1/label/popular", func(c *gin.Context) {
+		popularLabels, err := getMostPopularLabels(10) //limit to 10
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, popularLabels)
+	})
+
+
 
 	router.POST("/v1/donate", func(c *gin.Context) {
 		label := c.PostForm("label")
@@ -296,13 +510,13 @@ func main(){
 
         // Copy the file header into the buffer
         if _, err := file.Read(fileHeader); err != nil {
-        	c.JSON(422, gin.H{"error": "Unable detect MIME type"})
+        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
         	return
         }
 
         // set position back to start.
         if _, err := file.Seek(0, 0); err != nil {
-        	c.JSON(422, gin.H{"error": "Unable detect MIME type"})
+        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
         	return
         }
 
@@ -327,16 +541,59 @@ func main(){
         	return
         }
 
+        if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
+        	if !isLabelValid(labelMap, label, []string{}) {
+        		c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
+        		return
+        	}
+        }
+
+        addSublabels := false
+        temp := c.PostForm("add_sublabels")
+        if temp == "true" {
+        	addSublabels = true
+        }
+
+
+		labelMapEntry := labelMap[label]
+		if !addSublabels {
+			labelMapEntry.LabelMapEntries = nil
+		}
+		var labelMeEntry LabelMeEntry
+		var labelMeEntries []LabelMeEntry
+		labelMeEntry.Label = labelMapEntry.Name
+		for _, val := range labelMapEntry.LabelMapEntries {
+			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, val.Name)
+		}
+		labelMeEntries = append(labelMeEntries, labelMeEntry)
 
         //image doesn't already exist, so save it and add it to the database
 		uuid := uuid.NewV4().String()
 		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
 
-		err = addDonatedPhoto(uuid, hash, label)
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err = addDonatedPhoto(browserFingerprint, uuid, hash, labelMeEntries)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return
 		}
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "donation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -355,6 +612,92 @@ func main(){
 			return
 		}
 		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/v1/annotation/:imageid/validate/:param", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+		param := c.Param("param")
+
+		parameter := false
+		if param == "yes" {
+			parameter = true
+		} else if param == "no" {
+			parameter = false
+		} else{
+			c.JSON(404, nil)
+			return
+		}
+
+		var labelValidationEntry LabelValidationEntry
+		if c.BindJSON(&labelValidationEntry) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide valid label(s)"})
+			return
+		}
+
+		if ((labelValidationEntry.Label == "") && (labelValidationEntry.Sublabel == "")) {
+			c.JSON(400, gin.H{"error": "Please provide a valid label"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := validateAnnotatedImage(browserFingerprint, imageId, labelValidationEntry, parameter)
+		if(err != nil){
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
+			return
+		} 
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "annotation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Annotation] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+
+		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/v1/annotate/:imageid", func(c *gin.Context) {
+		imageId := c.Param("imageid")
+		if(imageId == ""){
+			c.JSON(422, gin.H{"error": "invalid request - image id missing"})
+			return
+		}
+
+		var annotations Annotations
+		err := c.BindJSON(&annotations)
+		if(err != nil){
+			c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err = addAnnotations(browserFingerprint, imageId, annotations)
+		if(err != nil){
+			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
+			return
+		}
+	})
+
+	router.GET("/v1/annotate", func(c *gin.Context) {
+		randomImage := getRandomUnannotatedImage()
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
+	})
+
+	router.GET("/v1/annotation", func(c *gin.Context) {
+		randomImage := getRandomAnnotatedImage()
+		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, 
+									"annotations": randomImage.Annotations, "sublabel": randomImage.Sublabel})
 	})
 
 	router.Run(":8081")

@@ -19,62 +19,300 @@
   <script src="js/common.js"></script> 
   <script src="js/dropzone.js"></script>
   <link rel="stylesheet" href="css/dropzone.css">
-  <script src="js/d3.v3.min.js"></script>
 
-  <script type="text/javascript">
-    $(document).ready(function(){
-      $("#yesButton").add('#noButton').click(function(e) {
-        var action = (e.target.id === "yesButton") ? "yes" : "no";
-        alert(action)
+  <script src="js/chart.bundle.min.js"></script>
+  <script src="js/countries.js"></script>
 
-        e.preventDefault();
-        var url = '/validate/' + $("#image").attr("imageId") + '/' + action;
-          $.ajax({
-              url: url,
-              dataType: 'json',
-              type: 'POST',
-              success: function(data){
-                $.ajax({
-                  url: '/validate',
-                  dataType: 'json',
-                  type: 'GET',
-                  success: function(data){
-                    $("#image").attr("imageId", data.id);
-                    $("#image").attr("src", data.url);
-                    $("#label").text(data.label);
-                  }
-                });
-              }
-          });
-      });
-    });
-  </script>
+  <style type="text/css">
+    .label {
+      float: left;
+      color: ghostwhite;
+      font-size: 15px;
+    }
 
-</head>
-<body>
+    .num-of-donation { 
+      float: right;
+      color: white;
+      font-size: 15px;
+    }
 
-{{ template "menu.html" .}}
+    .num-of-unlabeled-donation { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
-  	{{ template "pointing_menu.html" .}}  
-  	<div class="ui text container">
-  	  <h2 class="ui inverted header">
-        Explore
-      </h2>
-      <h2>Visual representation of the dataset</h2>
-    </div>
-</div>
-      <div class="ui basic segment" id="graph">
-      </div>
-  </div>
+  </style>
   <script>
-  var graphData = {{ .graphData }};
+
+    function getRandomColor() {
+      var letters = '0123456789ABCDEF'.split('');
+      var color = '#';
+      for (var i = 0; i < 6; i++ ) {
+          color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
+
+    var numOfValidations = []
+    var labels = []
+    var validationsColorPalette = []
+
+    {{ range .statistics.Validations }}
+      {{ if (ne .Count 0) }}
+        numOfValidations.push({{ .Count }});
+        labels.push({{ .Label }});
+        validationsColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+
+    var donationsPerCountryColorPalette = []
+    var donationsPerCountry = []
+    var donationPerCountryCCodes = []
+
+    {{ range .statistics.DonationsPerCountry }}
+      {{ if (ne .Count 0) }}
+        donationsPerCountry.push({{ .Count }});
+        donationPerCountryCCodes.push(getCountryName({{ .CountryCode }}));
+        donationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+
+
+    var validationsPerCountry = []
+    var validationsPerCountryCCode = []
+    var validationsPerCountryColorPalette = []
+
+    {{ range .statistics.ValidationsPerCountry }}
+      {{ if (ne .Count 0) }}
+        validationsPerCountry.push({{ .Count }});
+        validationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        validationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+
+
+    var annotationsPerCountry = []
+    var annotationsPerCountryCCode = []
+    var annotationsPerCountryColorPalette = []
+
+    {{ range .statistics.AnnotationsPerCountry }}
+      {{ if (ne .Count 0) }}
+        annotationsPerCountry.push({{ .Count }});
+        annotationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        annotationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var validationsChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  numOfValidations,
+                backgroundColor: validationsColorPalette,
+                label: 'Validations per Label'
+            }],
+            labels: labels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Validations per Label'
+            }
+        }
+    };
+
+
+    var donationsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  donationsPerCountry,
+                backgroundColor: donationsPerCountryColorPalette,
+                label: 'Donations per Country'
+            }],
+            labels: donationPerCountryCCodes
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Donations per Country'
+            }
+        }
+    };
+
+    var validationsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  validationsPerCountry,
+                backgroundColor: validationsPerCountryColorPalette,
+                label: 'Validations per Country'
+            }],
+            labels: validationsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Validations per Country'
+            }
+        }
+    };
+
+    var annotationsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  annotationsPerCountry,
+                backgroundColor: annotationsPerCountryColorPalette,
+                label: 'Annotations per Country'
+            }],
+            labels: annotationsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Annotations per Country'
+            }
+        }
+    };
+
+
+
+
+    window.onload = function() {
+        var validationsChartCtx = document.getElementById("validations-chart").getContext("2d");
+        window.validations = new Chart(validationsChartCtx, validationsChartConfig);
+
+        var donationsPerCountryChartCtx = document.getElementById("donations-per-country-chart").getContext("2d");
+        window.donationsPerCountry = new Chart(donationsPerCountryChartCtx, donationsPerCountryChartConfig);
+
+        var validationsPerCountryChartCtx = document.getElementById("validations-per-country-chart").getContext("2d");
+        window.validationsPerCountry = new Chart(validationsPerCountryChartCtx, validationsPerCountryChartConfig);
+
+        var annotationsPerCountryChartCtx = document.getElementById("annotations-per-country-chart").getContext("2d");
+        window.annotationsPerCountry = new Chart(annotationsPerCountryChartCtx, annotationsPerCountryChartConfig);
+
+
+    };
   </script>
-  <script src="js/graph.js"></script>
-  {{ template "footer.html" .}}
+
+
+  </head>
+  <body>
+
+    {{ template "menu.html" .}}
+
+    <!-- Page Contents -->
+    <div class="pusher">
+      <div class="ui inverted vertical masthead center aligned segment">
+       {{ template "pointing_menu.html" .}}  
+       <div class="ui text container">
+         <h2 class="ui inverted header">
+          Explore
+        </h2>
+        <h2>Visual representation of the dataset</h2>
+      </div>
+    </div>
+
+
+  <!--<div class="ui basic segment" id="graph">
+</div>-->
+
+<div class="ui stackable grid vertical stripe">
+  <div class="one wide column"></div>
+
+  <div class="three wide column">
+    <div class="ui pink inverted segment">
+      <h3 class="ui center aligned header">Unlabeled Donations</h3>
+      <div class="ui blue inverted relaxed divided list">
+        <div class="item">
+          <div class="row">
+            <div class="content">
+              <span class="num-of-unlabeled-donation"><p>{{ .statistics.NumOfUnlabeledDonations }}</p></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="ui blue inverted segment">
+      <h3 class="ui center aligned header">Donations</h3>
+      <div class="ui blue inverted relaxed divided list">
+        {{ range .statistics.Validations }}
+        <div class="item">
+          <div class="row">
+            <div class="content">
+              <span class="label"><p>{{ .Label }}</p></span>
+              <span class="num-of-donation"><p>{{ .Count }}</p></span>
+            </div>
+          </div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="three wide column">
+    <div class="ui orange inverted segment">
+      <h3 class="ui center aligned header">Error Rate</h3>
+      <div class="ui orange inverted relaxed divided list">
+        {{ range .statistics.Validations }}
+          {{if (ne .Count 0)}}
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="label"><p>{{ .Label }}</p></span>
+                <span class="num-of-donation"><p>{{ round .ErrorRate 3 }}</p></span>
+              </div>
+            </div>
+          </div>
+          {{ end }}
+        {{ end }}
+      </div>
+    </div>
+  </div>
+
+
+  <div class="six wide column">
+    <div class="row">
+      <canvas id="validations-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="donations-per-country-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="validations-per-country-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="annotations-per-country-chart"/>
+    </div>
+  </div>
+
 </div>
+
+</div>
+
+{{ template "footer.html" .}}
+
 
 </body>
 

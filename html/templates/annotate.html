@@ -18,6 +18,7 @@
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js"></script>
+  <script src="js/fingerprint2.min.js"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -173,8 +174,21 @@ function changeControl(rect){
   }
 }
 
+function setLabel(label, sublabel){
+  $("#label").attr("label", label)
+  $("#label").attr("sublabel", sublabel)
+  if(sublabel === ""){
+    $("#label").text(label)
+  } 
+  else {
+    $("#label").text((sublabel + "/" + label))
+  }
+}
+
 $(document).ready(function(){
+  setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
   $('#warningMsg').hide();
+  var browserFingerprint = null;
 
   $('#doneButton').click(function(e) {
     var data = canvas.toJSON();
@@ -197,20 +211,30 @@ $(document).ready(function(){
       return;
     }
 
+    var postData = {}
+    postData["annotations"] = res;
+    postData["label"] = $('#label').attr('label');
+    postData["sublabel"] = $('#label').attr('sublabel');
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers["X-Browser-Fingerprint"] = browserFingerprint;
+
     e.preventDefault();
-    var url = '/annotate/' + $("#annotationArea").attr("imageId");
+    var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
     $.ajax({
       url: url,
       type: 'POST',
-      data: JSON.stringify(res),
+      data: JSON.stringify(postData),
+      headers: headers,
       success: function(data){
         $.ajax({
-          url: '/annotate/data',
+          url: '{{ .apiBaseUrl }}/v1/annotate',
           dataType: 'json',
           type: 'GET',
           success: function(data){
             $("#annotationArea").attr("imageId", data.uuid);
-            $("#label").text(data.label);
+            setLabel(data.label, data.sublabel);
             canvas.clear();
             setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
             changeControl(rect);
@@ -218,6 +242,12 @@ $(document).ready(function(){
         });
       }
     });
+
+
+    new Fingerprint2().get(function(result, components){
+      browserFingerprint = result;
+    });
+
   });
 
 
@@ -238,9 +268,7 @@ changeControl(rect);
     <div class="ui inverted vertical masthead center aligned segment">
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer">
-      <h2 class="ui inverted header" id="label">
-        {{ .randomImage.Label }}
-      </h2>
+      <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
       <h2>Annotate all occurences of the above.</h2>
     </div>
   </div>

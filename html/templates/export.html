@@ -78,7 +78,7 @@
 			    <p>Select one or more tags you are interested in</p>
 			    <select name="states" class="ui selection dropdown" multiple="" id="tagsSelector">
 			      	<option value="">Tags</option>
-						{{range .words}}
+						{{range .labels}}
 							<option value="{{.}}">{{.}}</option>
 						{{ end }}
 			    </select>
