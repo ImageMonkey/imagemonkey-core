@@ -104,16 +104,11 @@ func getBrowserFingerprint(c *gin.Context) string {
 func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
 	if val, ok := labelsMap[label]; ok {
 		if len(sublabels) > 0 {
-			for _, value := range sublabels {
-				eq := false
-				for _, otherValue := range val.LabelMapEntries  {
-					if value == otherValue.Name {
-						eq = true
-						break
-					}
-				}
+			availableSublabels := val.LabelMapEntries
 
-				if !eq {
+			for _, value := range sublabels {
+				_, ok := availableSublabels[value]
+				if !ok {
 					return false
 				}
 			}
@@ -561,9 +556,9 @@ func main(){
 		}
 		var labelMeEntry LabelMeEntry
 		var labelMeEntries []LabelMeEntry
-		labelMeEntry.Label = labelMapEntry.Name
-		for _, val := range labelMapEntry.LabelMapEntries {
-			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, val.Name)
+		labelMeEntry.Label = label
+		for key, _ := range labelMapEntry.LabelMapEntries {
+			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, key)
 		}
 		labelMeEntries = append(labelMeEntries, labelMeEntry)
 

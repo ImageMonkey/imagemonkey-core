@@ -121,6 +121,7 @@
       $('#loadingIndicator').addClass('active');
       $('#loadingIndicator').hide();
       $('#labelForm').show();
+      $('#objectsWithoutLabelText').show();
     }
     else{
       $('#image').hide();
@@ -129,6 +130,7 @@
       $('#loadingIndicator').removeClass('active');
       $('#loadingIndicator').show();
       $('#labelForm').hide();
+      $('#objectsWithoutLabelText').hide();
     }
   }
 
@@ -225,23 +227,30 @@
 
   function addLabel(label){
     var added = false;
-    var baseLabelExists = labelExists(label); 
-    var subLabels = labelMap[label]["labels"];
+    var baseLabelExists = labelExists(label);
+    var subLabels = []; 
+    var subLabelsDict = labelMap[label]["has"];
+    for (key in subLabelsDict) {
+      if (subLabelsDict.hasOwnProperty(key))
+        subLabels.push(key);
+    }
+
+
     var color = colorMap[label];
 
     if((subLabels !== null) && (subLabels.length > 0)){
       for(var j = 0; j < subLabels.length; j++){
-        if(!sublabelExists(label, subLabels[j].name)){
-          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j]["name"] +'" label="' + label + '"' + '>' + subLabels[j]["name"] + '/' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+        if(!sublabelExists(label, subLabels[j])){
+          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j] +'" label="' + label + '"' + '>' + subLabels[j] + '/' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
           added = true;
 
           if(label in newlyAddedLabels){
             var alreadyAvailableSubLabels = newlyAddedLabels[label];
-            alreadyAvailableSubLabels.push(subLabels[j].name)
+            alreadyAvailableSubLabels.push(subLabels[j])
             newlyAddedLabels[label] = alreadyAvailableSubLabels;
           }
           else{
-            newlyAddedLabels[label] = [subLabels[j].name];
+            newlyAddedLabels[label] = [subLabels[j]];
           }
         }
       }    
@@ -431,7 +440,7 @@
       
 
       <h2></h2>
-      <p>Do you see any objects without a label? Add them here</p>
+      <p id="objectsWithoutLabelText">Do you see any objects without a label? Add them here</p>
       <div class="ui centered grid">
         <div class="row">
           <div class="ui search">
