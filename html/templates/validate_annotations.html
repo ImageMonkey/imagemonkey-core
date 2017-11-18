@@ -16,8 +16,8 @@
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
-  <script src="js/fabric_helper.js"></script>
   <script src="js/fabric.min.js"></script>
+  <script src="js/fabric_helper.js?v=1"></script>
   <script src="js/fingerprint2.min.js"></script>
 
   <style>
@@ -25,34 +25,6 @@
   </style>
 
   <script type="text/javascript">
-    function drawAnnotations(canvas, annotations, scaleFactor){
-      for(var i = 0; i < annotations.length; i++){
-        var top = (annotations[i]["top"] * scaleFactor);
-        var left = (annotations[i]["left"] * scaleFactor);
-        var height = (annotations[i]["height"] * scaleFactor);
-        var width = (annotations[i]["width"] * scaleFactor);
-
-        var rect = new fabric.Rect({
-            left: left,
-            top: top,
-            originX: 'left',
-            originY: 'top',
-            width: width,
-            height: height,
-            angle: 0,
-            stroke: 'red',
-            strokeWidth: 5,
-            fill: "transparent",
-            transparentCorners: false,
-            hasBorders: false,
-            hasControls: false,
-            selectable: false
-        });
-        canvas.add(rect);
-        canvas.renderAll();
-      }
-    }
-
     function setLabel(label, sublabel){
       $("#label").attr("label", label)
       $("#label").attr("sublabel", sublabel)
@@ -69,7 +41,7 @@
       var browserFingerprint = null;
 
       var canvas = new fabric.Canvas('canvas');
-      setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.Id }}', function() {
+      setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.ImageId }}', function() {
         drawAnnotations(canvas, {{ .randomImage.Annotations }}, canvas.backgroundImage.scaleX);
       });
       
@@ -84,7 +56,7 @@
           headers["X-Browser-Fingerprint"] = browserFingerprint;
 
         e.preventDefault();
-        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + action;
+        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("annotationId") + '/validate/' + action;
           $.ajax({
               url: url,
               dataType: 'json',
@@ -97,9 +69,10 @@
                   dataType: 'json',
                   type: 'GET',
                   success: function(data){
-                    $("#canvas").attr("imageId", data.uuid);
+                    $("#canvas").attr("imageId", data.image_uuid);
+                    $("#canvas").attr("annotationId", data.annotation_uuid);
                     canvas.clear();
-                    setCanvasBackgroundImageUrl(canvas, ('donations/' + data.uuid), function() {
+                    setCanvasBackgroundImageUrl(canvas, ('donations/' + data.image_uuid), function() {
                       drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
                     });
                     setLabel(data.label, data.sublabel);
@@ -134,7 +107,7 @@
     <div class="ui text container">
       <div class="row">
         <div class="ui center aligned basic segment">
-          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.Id }}"></canvas> 
+          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.ImageId }}" annotationId="{{ .randomImage.AnnotationId }}"></canvas> 
             <p></p>
             <button class="negative ui button center aligned" id="noButton">NO</button>
             <button class="positive ui button center aligned" id="yesButton">YES</button>

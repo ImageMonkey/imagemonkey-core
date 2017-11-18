@@ -40,3 +40,31 @@ function calcScaleFactor(img){
 
     return scaleFactor;
 }
+
+function drawAnnotations(canvas, annotations, scaleFactor){
+      for(var i = 0; i < annotations.length; i++){
+        var top = (annotations[i]["top"] * scaleFactor);
+        var left = (annotations[i]["left"] * scaleFactor);
+        var height = (annotations[i]["height"] * scaleFactor);
+        var width = (annotations[i]["width"] * scaleFactor);
+
+        var rect = new fabric.Rect({
+            left: left,
+            top: top,
+            originX: 'left',
+            originY: 'top',
+            width: width,
+            height: height,
+            angle: 0,
+            stroke: 'red',
+            strokeWidth: 5,
+            fill: "transparent",
+            transparentCorners: false,
+            hasBorders: false,
+            hasControls: false,
+            selectable: false
+        });
+        canvas.add(rect);
+        canvas.renderAll();
+      }
+    }

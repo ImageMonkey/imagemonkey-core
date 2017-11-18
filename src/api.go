@@ -609,8 +609,8 @@ func main(){
 		c.JSON(http.StatusOK, nil)
 	})
 
-	router.POST("/v1/annotation/:imageid/validate/:param", func(c *gin.Context) {
-		imageId := c.Param("imageid")
+	router.POST("/v1/annotation/:annotationid/validate/:param", func(c *gin.Context) {
+		annotationId := c.Param("annotationid")
 		param := c.Param("param")
 
 		parameter := false
@@ -636,7 +636,7 @@ func main(){
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err := validateAnnotatedImage(browserFingerprint, imageId, labelValidationEntry, parameter)
+		err := validateAnnotatedImage(browserFingerprint, annotationId, labelValidationEntry, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
@@ -690,9 +690,60 @@ func main(){
 	})
 
 	router.GET("/v1/annotation", func(c *gin.Context) {
-		randomImage := getRandomAnnotatedImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, 
-									"annotations": randomImage.Annotations, "sublabel": randomImage.Sublabel})
+		randomAnnotatedImage, err := getRandomAnnotatedImage()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"image_uuid": randomAnnotatedImage.ImageId, "label": randomAnnotatedImage.Label, "provider": randomAnnotatedImage.Provider, 
+									"annotations": randomAnnotatedImage.Annotations, "sublabel": randomAnnotatedImage.Sublabel, "annotation_uuid": randomAnnotatedImage.AnnotationId})
+	})
+
+	router.GET("/v1/annotation/refine", func(c *gin.Context) {
+		randomImage,_ := getRandomAnnotationForRefinement()
+		c.JSON(200, randomImage)
+	})
+
+	router.POST("/v1/annotation/:annotationid/refine/:annotationdataid", func(c *gin.Context) {
+		type AnnotationRefinementEntry struct {
+		    LabelId int64 `json:"label_id"`
+		}
+
+		annotationId := c.Param("annotationid")
+		if(annotationId == ""){
+			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation id"})
+			return
+		}
+
+		temp := c.Param("annotationdataid")
+		if(temp == ""){
+			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation data id"})
+			return
+		}
+
+		var annotationDataId int64
+		annotationDataId, err = strconv.ParseInt(temp, 10, 64)
+		if err != nil {
+			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation data id"})
+			return
+		}
+
+
+		var annotationRefinementEntry AnnotationRefinementEntry
+		if c.BindJSON(&annotationRefinementEntry) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid label id"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := addOrUpdateRefinement(annotationId, annotationDataId, annotationRefinementEntry.LabelId, browserFingerprint)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
 	})
 
 	router.Run(":8081")
