@@ -25,6 +25,24 @@
   </style>
 
   <script type="text/javascript">
+    function showHideControls(show){
+      if(show){
+        $('#canvas').show();
+        $('#doneButton').show();
+        $('#quizArea').show();
+        $('#loadingIndicator').addClass('active');
+        $('#loadingIndicator').hide();
+      }
+      else{
+        $('#canvas').hide();
+        $('#doneButton').hide();
+        $('#quizArea').hide();
+        $('#loadingIndicator').removeClass('active');
+        $('#loadingIndicator').show();
+      }
+    }
+
+
     function setIds(imageId, annotationId, annotationDataId){
       $('#canvas').attr('imageId', imageId);
       $('#canvas').attr('annotationId', annotationId);
@@ -40,6 +58,7 @@
       canvas.clear();
       setCanvasBackgroundImageUrl(canvas, ('donations/' + imageUuid), function() {
         drawAnnotations(canvas, [annotation], canvas.backgroundImage.scaleX);
+        showHideControls(true);
       });
     }
 
@@ -78,8 +97,8 @@
     function populate(canvas, data) {
       setIds(data["image"]["uuid"], data["annotation"]["uuid"], data["annotation"]["annotation"]["id"]);
       removeAllAnswers(data["question"]["recommended_control"]);
-      setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
       addAnswers(data["answers"], data["question"]["recommended_control"]);
+      setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
     }
 
 
@@ -99,25 +118,33 @@
       });
 
       $('#doneButton').click(function(e) {
-        var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
-        var data = {"label_id" : getSelectedLabelId()};
-        var headers = {}
-        if(browserFingerprint !== null)
-          headers['X-Browser-Fingerprint'] = browserFingerprint;
+        var labelId = getSelectedLabelId();
+        if(isNaN(labelId)){
+          $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
+        }
+        else{
+          var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
+          var data = {"label_id" : labelId};
+          var headers = {}
+          if(browserFingerprint !== null)
+            headers['X-Browser-Fingerprint'] = browserFingerprint;
 
-        e.preventDefault();
-        $.ajax({
-          url: url,
-          dataType: 'json',
-          type: 'POST',
-          data: JSON.stringify(data),
-          headers: headers,
-          complete: function(data){
-          },
-          success: function(data){
-            getNextQuiz(canvas);
-          }
-        });
+          showHideControls(false);
+
+          e.preventDefault();
+          $.ajax({
+            url: url,
+            dataType: 'json',
+            type: 'POST',
+            data: JSON.stringify(data),
+            headers: headers,
+            complete: function(data){
+            },
+            success: function(data){
+              getNextQuiz(canvas);
+            }
+          });
+        }
       });
 
     });
@@ -140,7 +167,7 @@
 
     <div class="one wide center aligned column">
     </div>
-    <div class="three wide center aligned column">
+    <div class="three wide center aligned column" id="quizArea">
       <h1></h1>
         
       <div class="ui left aligned segment">
@@ -165,17 +192,24 @@
           </div>
         </div>
         {{ end }}
+
+        <div class="ui warning message" hidden id="nothingSelectedMessage">
+          <i class="close icon"></i>
+          <div class="header">
+            Please answer the question first.
+          </div>
+        </div>
+        <h2></h2>
+        <button class="ui positive button" id="doneButton">Done</button>
+
       </div>
-
-      <h1></h1>
-      <button class="ui positive button" id="doneButton">Done</button>
-
 
 
     </div>
 
     <div class="eight wide center aligned column">
       <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomAnnotatedImage.Image.Uuid }}" annotationId="" annotationDataId=""></canvas> 
+      <div class="ui large loader" id="loadingIndicator"></div>
     </div>
 
     <div class="four wide computer only center aligned column">
