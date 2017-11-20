@@ -128,12 +128,22 @@ func main() {
 				showFooter = false
 			}
 		}
+
+		onlyOnce := false
+		if temp, ok := params["only_once"]; ok {
+			if temp[0] == "true" {
+				onlyOnce = true
+			}
+		}
+
+
 		c.HTML(http.StatusOK, "validate.html", gin.H{
 			"title": "Validate Label",
 			"randomImage": getRandomImage(),
 			"activeMenuNr": 5,
 			"showHeader": showHeader,
 			"showFooter": showFooter,
+			"onlyOnce": onlyOnce,
 			"apiBaseUrl": apiBaseUrl,
 		})
 	})

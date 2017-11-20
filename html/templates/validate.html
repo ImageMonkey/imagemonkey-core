@@ -70,24 +70,37 @@
   }
 
   function getRandomImages(){
-    var multiValidationMode = isMultiValidationMode();
-    var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+    var onlyOnce = {{ .onlyOnce }};
+    if(onlyOnce){
+      $("#multiValidationContainer").hide();
+      $("#yesButton").hide();
+      $("#noButton").hide();
+      $("#image").attr("src", "");
+      $("#label").hide();
+      $("#singleValidationContainer").show();
+      $("#thankYouMessage").fadeIn("slow");
 
-    $.ajax({
-      url: url,
-      dataType: 'json',
-      type: 'GET',
-      success: function(data){
-        if(multiValidationMode){
-          populateImageGrid(data);
+    }
+    else{
+      var multiValidationMode = isMultiValidationMode();
+      var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+
+      $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'GET',
+        success: function(data){
+          if(multiValidationMode){
+            populateImageGrid(data);
+          }
+          else{
+            $("#image").attr("imageId", data.uuid);
+            $("#image").attr("src", ("donations/"+data.uuid));
+            setLabel(data.label, data.sublabel);
+          }
         }
-        else{
-          $("#image").attr("imageId", data.uuid);
-          $("#image").attr("src", ("donations/"+data.uuid));
-          setLabel(data.label, data.sublabel);
-        }
-      }
-    });
+      });
+    }
   }
 
   function multiValidate(data, browserFingerprint){
@@ -266,6 +279,12 @@
         <button class="negative ui button center aligned" id="noButton">NO</button>
         <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
+
+      <div hidden id="thankYouMessage">
+        <i class="massive check circle outline icon"></i>
+        <h1 class="ui header">Thank you!</h1>
+      </div>
+
       {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
     </div>
