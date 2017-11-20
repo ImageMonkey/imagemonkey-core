@@ -71,6 +71,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
 
 * build `temporal_table` extension, as described here: https://github.com/arkhipov/temporal_tables
 * connect to imagemonkey database and execute `CREATE EXTENSION temporal_tables;`
+* connect to imagemonkey database and execute `CREATE EXTENSION uuid-ossp;`
+* apply `defaults.sql`
 
 ## Webserver & SSL ##
 

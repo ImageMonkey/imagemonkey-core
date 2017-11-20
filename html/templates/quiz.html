@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="js/common.js"></script> 
+  <script src="js/fabric.min.js"></script>
+  <script src="js/fabric_helper.js?v=1"></script>
+  <script src="js/fingerprint2.min.js"></script>
+
+  <style>
+    .canvas-container{margin: 0 auto;}
+  </style>
+
+  <script type="text/javascript">
+    function showHideControls(show){
+      if(show){
+        $('#canvas').show();
+        $('#doneButton').show();
+        $('#quizArea').show();
+        $('#loadingIndicator').addClass('active');
+        $('#loadingIndicator').hide();
+      }
+      else{
+        $('#canvas').hide();
+        $('#doneButton').hide();
+        $('#quizArea').hide();
+        $('#loadingIndicator').removeClass('active');
+        $('#loadingIndicator').show();
+      }
+    }
+
+
+    function setIds(imageId, annotationId, annotationDataId){
+      $('#canvas').attr('imageId', imageId);
+      $('#canvas').attr('annotationId', annotationId);
+      $('#canvas').attr('annotationDataId', annotationDataId);
+    }
+
+    function getSelectedLabelId(){
+      var labelId = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
+      return parseInt(labelId, 10);
+    }
+
+    function setImageAnnotation(canvas, imageUuid, annotation){
+      canvas.clear();
+      setCanvasBackgroundImageUrl(canvas, ('donations/' + imageUuid), function() {
+        drawAnnotations(canvas, [annotation], canvas.backgroundImage.scaleX);
+        showHideControls(true);
+      });
+    }
+
+    function getNextQuiz(canvas){
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/annotation/refine',
+        dataType: 'json',
+        type: 'GET',
+        complete: function(data){
+        },
+        success: function(data){
+          populate(canvas, data);
+        }
+      });
+    }
+
+    var removeAllAnswers = function(controlsType){
+      if(controlsType == "radio"){
+        $('#answersRadioButtonGroup').children().each(function (){
+          $(this).remove();
+        })
+      }
+    }
+
+    var addAnswers = function(answers, controlsType){
+      if(controlsType == "radio"){
+        for(var i = 0; i < answers.length; i++){
+          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
+          $('#answersRadioButtonGroup').append($(d));
+        }
+        
+      }
+    }
+
+
+    function populate(canvas, data) {
+      setIds(data["image"]["uuid"], data["annotation"]["uuid"], data["annotation"]["annotation"]["id"]);
+      removeAllAnswers(data["question"]["recommended_control"]);
+      addAnswers(data["answers"], data["question"]["recommended_control"]);
+      setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
+    }
+
+
+    $(document).ready(function(){
+      $('.ui.dropdown')
+        .dropdown()
+      ;
+
+      var browserFingerprint = null;
+
+      var canvas = new fabric.Canvas('canvas');
+      populate(canvas, {{ .randomAnnotatedImage }})
+      
+
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
+      });
+
+      $('#doneButton').click(function(e) {
+        var labelId = getSelectedLabelId();
+        if(isNaN(labelId)){
+          $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
+        }
+        else{
+          var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
+          var data = {"label_id" : labelId};
+          var headers = {}
+          if(browserFingerprint !== null)
+            headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+          showHideControls(false);
+
+          e.preventDefault();
+          $.ajax({
+            url: url,
+            dataType: 'json',
+            type: 'POST',
+            data: JSON.stringify(data),
+            headers: headers,
+            complete: function(data){
+            },
+            success: function(data){
+              getNextQuiz(canvas);
+            }
+          });
+        }
+      });
+
+    });
+  </script>
+</head>
+<body>
+
+  {{ template "menu.html" .}}
+
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+      {{ template "pointing_menu.html" .}}
+      <div class="ui text container">
+       <h2 class="ui inverted header">Quiz</h2>
+     </div>
+   </div>
+
+   <div class="ui stackable grid vertical stripe mobile reversed">
+
+    <div class="one wide center aligned column">
+    </div>
+    <div class="three wide center aligned column" id="quizArea">
+      <h1></h1>
+        
+      <div class="ui left aligned segment">
+        <h2 class="ui header">{{ .randomAnnotatedImage.Question.Question }}</h2>
+      
+      
+        {{ if eq .randomAnnotatedImage.Question.RecommendedControl "dropdown" }}
+        <div class="ui search selection dropdown" id="labelDropdown">
+          <div class="default text">Select Label</div>
+          <div class="menu">
+            {{ range .randomAnnotatedImage.Answers }}
+            <div class="item" data-value="{{ .Label }}">{{ .Label }}</div>
+            {{ end }}
+          </div>
+        </div>
+        {{ end }}
+
+
+        {{ if eq .randomAnnotatedImage.Question.RecommendedControl "radio" }}
+        <div class="ui form">
+          <div class="grouped fields" id="answersRadioButtonGroup">
+          </div>
+        </div>
+        {{ end }}
+
+        <div class="ui warning message" hidden id="nothingSelectedMessage">
+          <i class="close icon"></i>
+          <div class="header">
+            Please answer the question first.
+          </div>
+        </div>
+        <h2></h2>
+        <button class="ui positive button" id="doneButton">Done</button>
+
+      </div>
+
+
+    </div>
+
+    <div class="eight wide center aligned column">
+      <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomAnnotatedImage.Image.Uuid }}" annotationId="" annotationDataId=""></canvas> 
+      <div class="ui large loader" id="loadingIndicator"></div>
+    </div>
+
+    <div class="four wide computer only center aligned column">
+      {{ template "img_info.html" .}}
+    </div>
+  </div>
+
+
+</div>
+{{ template "footer.html" .}}
+
+</body>
+
+</html>
