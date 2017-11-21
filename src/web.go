@@ -179,9 +179,9 @@ func main() {
 			"activeMenuNr": 9,
 		})
 	})
-	router.GET("/mobile", func(c *gin.Context) {
+	router.GET("/apps", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "mobile.html", gin.H{
-			"title": "Mobile App",
+			"title": "Mobile Apps & Extensions",
 			"activeMenuNr": 10,
 		})
 	})
