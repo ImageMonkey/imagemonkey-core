@@ -20,6 +20,7 @@
   <script src="js/fabric_helper.js?v=1"></script>
   <script src="js/fingerprint2.min.js"></script>
   <script src="js/chart.bundle.min.js"></script>
+  <script src="js/poll.js"></script>
 
   <style>
     .canvas-container{margin: 0 auto;}
@@ -37,55 +38,16 @@
       }
     }
 
-    var pollChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  [5, 10],
-                backgroundColor: ["#f40006", "#03bd4d"]
-            }],
-            labels: ["no", "yes"]
-        },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'What other people are thinking'
-            },
-            legend: {
-              display: true,
-              position: 'bottom'
-            }
-        }
-    };
-
-    function setPollData(numOfYes, numOfNo){
-      pollChartConfig["data"]["datasets"][0]["data"] = [numOfNo, numOfYes];
-    }
-
-    function createPoll(){
-      var pollChartCtx = $("#poll-chart")[0].getContext("2d");
-      window.pollChart = new Chart(pollChartCtx, pollChartConfig);
-      //window.pollChart.update();
-    }
-
-    function showHidePoll(show){
-      if(show){
-        $('#poll-chart').show();
-      }
-      else{
-        $('#poll-chart').hide();
-      }
-
-    }
-
     function showHideControls(show){
       if(show){
-        //$('#poll-chart').show();
         $('#validationContainer').show();
         $('#loadingIndicator').addClass('active');
         $('#loadingIndicator').hide();
-        $('#showMePollButton').show();
+
+        if(isPollDataEmpty()) //only show poll button if there is actual data available
+          $('#showMePollButton').hide();
+        else
+          $('#showMePollButton').show();
       }
       else {
         $('#poll-chart').hide();
@@ -106,6 +68,7 @@
       });
 
       setPollData({{ .randomImage.NumOfValid }}, {{ .randomImage.NumOfInvalid }});
+      showHideControls(true);
 
 
       $("#showMePollButton").click(function(e) {
@@ -143,7 +106,7 @@
                     $("#canvas").attr("annotationId", data.annotation_uuid);
                     canvas.clear();
                     setLabel(data.label, data.sublabel);
-                    setPollData(data.num_yes, data.num_no);
+                    setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
 
                     setCanvasBackgroundImageUrl(canvas, ('donations/' + data.image_uuid), function() {
                       drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
@@ -190,7 +153,7 @@
           <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
 
-      <div class="ui large loader" id="loadingIndicator"></div>
+      <div hidden class="ui large loader" id="loadingIndicator"></div>
 
       {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
@@ -199,7 +162,7 @@
     <div class="four wide center aligned column">
       {{ template "img_info.html" .}}
       <h3></h3>
-      <button class="ui button center aligned" id="showMePollButton">
+      <button class="ui button center aligned" id="showMePollButton" hidden>
         <i class="pie chart icon"></i>
         What other people are thinking
       </button>

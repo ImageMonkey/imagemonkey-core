@@ -283,7 +283,8 @@ func main(){
 
 		} else {
 			randomImage := getRandomImage()
-			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
+			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel, 
+										"validations": gin.H{ "num_yes": randomImage.NumOfValid, "num_no": randomImage.NumOfInvalid} })
 		}
 	})
 
@@ -697,7 +698,7 @@ func main(){
 		}
 		c.JSON(http.StatusOK, gin.H{"image_uuid": randomAnnotatedImage.ImageId, "label": randomAnnotatedImage.Label, "provider": randomAnnotatedImage.Provider, 
 									"annotations": randomAnnotatedImage.Annotations, "sublabel": randomAnnotatedImage.Sublabel, "annotation_uuid": randomAnnotatedImage.AnnotationId,
-									"num_yes": randomAnnotatedImage.NumOfValid, "num_no": randomAnnotatedImage.NumOfInvalid})
+									"validations": gin.H{ "num_yes": randomAnnotatedImage.NumOfValid, "num_no": randomAnnotatedImage.NumOfInvalid}})
 	})
 
 	router.GET("/v1/annotation/refine", func(c *gin.Context) {

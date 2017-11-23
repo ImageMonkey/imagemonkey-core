@@ -504,7 +504,8 @@ func getRandomImage() Image{
 	image.Label = ""
 	image.Provider = "donation"
 
-	rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
+	rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid 
+                           FROM image i 
 						   JOIN image_provider p ON i.image_provider_id = p.id 
 						   JOIN image_validation v ON v.image_id = i.id
 						   JOIN label l ON v.label_id = l.id
@@ -521,7 +522,8 @@ func getRandomImage() Image{
     var label1 string
     var label2 string
 	if(!rows.Next()){
-        otherRows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
+        otherRows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid
+                                    FROM image i 
                                     JOIN image_provider p ON i.image_provider_id = p.id 
                                     JOIN image_validation v ON v.image_id = i.id
                                     JOIN label l ON v.label_id = l.id
@@ -541,14 +543,14 @@ func getRandomImage() Image{
         }
         defer otherRows.Close()
 
-        err = otherRows.Scan(&image.Id, &label1, &label2)
+        err = otherRows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
         if(err != nil){
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
         }
 	} else{
-        err = rows.Scan(&image.Id, &label1, &label2)
+        err = rows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
         if(err != nil){
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
