@@ -696,7 +696,8 @@ func main(){
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"image_uuid": randomAnnotatedImage.ImageId, "label": randomAnnotatedImage.Label, "provider": randomAnnotatedImage.Provider, 
-									"annotations": randomAnnotatedImage.Annotations, "sublabel": randomAnnotatedImage.Sublabel, "annotation_uuid": randomAnnotatedImage.AnnotationId})
+									"annotations": randomAnnotatedImage.Annotations, "sublabel": randomAnnotatedImage.Sublabel, "annotation_uuid": randomAnnotatedImage.AnnotationId,
+									"num_yes": randomAnnotatedImage.NumOfValid, "num_no": randomAnnotatedImage.NumOfInvalid})
 	})
 
 	router.GET("/v1/annotation/refine", func(c *gin.Context) {

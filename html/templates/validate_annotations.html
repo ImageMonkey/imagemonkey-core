@@ -19,6 +19,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=1"></script>
   <script src="js/fingerprint2.min.js"></script>
+  <script src="js/chart.bundle.min.js"></script>
 
   <style>
     .canvas-container{margin: 0 auto;}
@@ -36,6 +37,65 @@
       }
     }
 
+    var pollChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  [5, 10],
+                backgroundColor: ["#f40006", "#03bd4d"]
+            }],
+            labels: ["no", "yes"]
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'What other people are thinking'
+            },
+            legend: {
+              display: true,
+              position: 'bottom'
+            }
+        }
+    };
+
+    function setPollData(numOfYes, numOfNo){
+      pollChartConfig["data"]["datasets"][0]["data"] = [numOfNo, numOfYes];
+    }
+
+    function createPoll(){
+      var pollChartCtx = $("#poll-chart")[0].getContext("2d");
+      window.pollChart = new Chart(pollChartCtx, pollChartConfig);
+      //window.pollChart.update();
+    }
+
+    function showHidePoll(show){
+      if(show){
+        $('#poll-chart').show();
+      }
+      else{
+        $('#poll-chart').hide();
+      }
+
+    }
+
+    function showHideControls(show){
+      if(show){
+        //$('#poll-chart').show();
+        $('#validationContainer').show();
+        $('#loadingIndicator').addClass('active');
+        $('#loadingIndicator').hide();
+        $('#showMePollButton').show();
+      }
+      else {
+        $('#poll-chart').hide();
+        $('#validationContainer').hide();
+        $('#loadingIndicator').removeClass('active');
+        $('#loadingIndicator').show();
+        $('#showMePollButton').hide();
+      }
+    }
+
     $(document).ready(function(){
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
       var browserFingerprint = null;
@@ -44,8 +104,15 @@
       setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.ImageId }}', function() {
         drawAnnotations(canvas, {{ .randomImage.Annotations }}, canvas.backgroundImage.scaleX);
       });
-      
 
+      setPollData({{ .randomImage.NumOfValid }}, {{ .randomImage.NumOfInvalid }});
+
+
+      $("#showMePollButton").click(function(e) {
+        createPoll();
+        showHidePoll(true);
+        $("#showMePollButton").hide();
+      });
 
       $("#yesButton").add('#noButton').click(function(e) {
         var action = (e.target.id === "yesButton") ? "yes" : "no";
@@ -54,6 +121,9 @@
         var headers = {}
         if(browserFingerprint !== null)
           headers["X-Browser-Fingerprint"] = browserFingerprint;
+
+        showHideControls(false);
+        showHidePoll(false);
 
         e.preventDefault();
         var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("annotationId") + '/validate/' + action;
@@ -72,10 +142,13 @@
                     $("#canvas").attr("imageId", data.image_uuid);
                     $("#canvas").attr("annotationId", data.annotation_uuid);
                     canvas.clear();
+                    setLabel(data.label, data.sublabel);
+                    setPollData(data.num_yes, data.num_no);
+
                     setCanvasBackgroundImageUrl(canvas, ('donations/' + data.image_uuid), function() {
                       drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
+                      showHideControls(true);
                     });
-                    setLabel(data.label, data.sublabel);
                   }
                 });
               }
@@ -103,18 +176,42 @@
       <h2>All occurrences annotated?</h2>
     </div>
   </div>
-  <div class="ui vertical stripe segment">
-    <div class="ui text container">
-      <div class="row">
-        <div class="ui center aligned basic segment">
-          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.ImageId }}" annotationId="{{ .randomImage.AnnotationId }}"></canvas> 
-            <p></p>
-            <button class="negative ui button center aligned" id="noButton">NO</button>
-            <button class="positive ui button center aligned" id="yesButton">YES</button>
-        </div>
-      </div>
+
+
+  <div class="ui stackable grid vertical stripe">
+    <div class="four wide center aligned column">
     </div>
+
+    <div class="eight wide center aligned column">
+      <div class="ui center aligned basic segment" id="validationContainer">
+          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.ImageId }}" annotationId="{{ .randomImage.AnnotationId }}"></canvas> 
+          <p></p>
+          <button class="negative ui button center aligned" id="noButton">NO</button>
+          <button class="positive ui button center aligned" id="yesButton">YES</button>
+      </div>
+
+      <div class="ui large loader" id="loadingIndicator"></div>
+
+      {{ template "validate_help_dlg.html" .}}
+      {{ template "report_dlg.html" .}}
+    </div>
+
+    <div class="four wide center aligned column">
+      {{ template "img_info.html" .}}
+      <h3></h3>
+      <button class="ui button center aligned" id="showMePollButton">
+        <i class="pie chart icon"></i>
+        What other people are thinking
+      </button>
+      <!--<button class="positive ui button center aligned" id="showMePollButton">Additional Information</button>-->
+      <canvas id="poll-chart" hidden/>
+
+    </div>
+
   </div>
+
+
+
 </div>
 {{ template "footer.html" .}}
 

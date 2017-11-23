@@ -41,6 +41,8 @@ type AnnotatedImage struct {
     Sublabel string `json:"sublabel"`
     Provider string `json:"provider"`
     Annotations []Annotation `json:"annotations"`
+    NumOfValid int32 `json:"num_yes"`
+    NumOfInvalid int32 `json:"num_no"`
 }
 
 type ImageValidation struct {
@@ -774,7 +776,7 @@ func getRandomUnannotatedImage() Image{
 func getRandomAnnotatedImage() (AnnotatedImage, error) {
     var annotatedImage AnnotatedImage
 
-    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), a.uuid, json_agg(d.annotation) as annotations 
+    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), a.uuid, json_agg(d.annotation) as annotations, a.num_of_valid, a.num_of_invalid 
                                FROM image i 
                                JOIN image_provider p ON i.image_provider_id = p.id 
                                JOIN image_annotation a ON a.image_id = i.id
@@ -782,7 +784,7 @@ func getRandomAnnotatedImage() (AnnotatedImage, error) {
                                JOIN label l ON a.label_id = l.id
                                LEFT JOIN label pl ON l.parent_id = pl.id
                                WHERE i.unlocked = true AND p.name = 'donation'
-                               GROUP BY i.key, a.uuid, l.name, pl.name
+                               GROUP BY i.key, a.uuid, l.name, pl.name, a.num_of_valid, a.num_of_invalid
                                OFFSET floor(random() * 
                                (
                                 SELECT count(*) FROM image i 
@@ -805,7 +807,7 @@ func getRandomAnnotatedImage() (AnnotatedImage, error) {
         var annotations []byte
         annotatedImage.Provider = "donation"
 
-        err = rows.Scan(&annotatedImage.ImageId, &label1, &label2, &annotatedImage.AnnotationId, &annotations)
+        err = rows.Scan(&annotatedImage.ImageId, &label1, &label2, &annotatedImage.AnnotationId, &annotations, &annotatedImage.NumOfValid, &annotatedImage.NumOfInvalid)
         if err != nil {
             log.Debug("[Get Random Annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
