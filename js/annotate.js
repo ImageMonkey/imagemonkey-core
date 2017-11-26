@@ -22,13 +22,14 @@ var Polygon = (function () {
   Polygon.prototype.addPoint = function (options) {
     var random = Math.floor(Math.random() * (this.max - this.min + 1)) + this.min;
     var id = new Date().getTime() + random;
+    var pointer = this.canvas.getPointer(options.e);
     var circle = new fabric.Circle({
       radius: 5,
       fill: '#ffffff',
       stroke: '#333333',
       strokeWidth: 0.5,
-      left: (options.e.layerX/this.canvas.getZoom()),
-      top: (options.e.layerY/this.canvas.getZoom()),
+      left: pointer.x, //(options.e.layerX/this.canvas.getZoom()),
+      top: pointer.y, //(options.e.layerY/this.canvas.getZoom()),
       selectable: false,
       hasBorders: false,
       hasControls: false,
@@ -41,7 +42,8 @@ var Polygon = (function () {
         fill:'red'
       })
     }
-    var points = [(options.e.layerX/this.canvas.getZoom()),(options.e.layerY/this.canvas.getZoom()),(options.e.layerX/this.canvas.getZoom()),(options.e.layerY/this.canvas.getZoom())];
+    //var points = [(options.e.layerX/this.canvas.getZoom()),(options.e.layerY/this.canvas.getZoom()),(options.e.layerX/this.canvas.getZoom()),(options.e.layerY/this.canvas.getZoom())];
+    var points = [pointer.x, pointer.y, pointer.x, pointer.y];
     line = new fabric.Line(points, {
       strokeWidth: 2,
       fill: '#999999',
@@ -77,7 +79,8 @@ var Polygon = (function () {
       this.canvas.renderAll();
     }
     else{
-      var polyPoint = [{x:(options.e.layerX/this.canvas.getZoom()),y:(options.e.layerY/this.canvas.getZoom())}];
+      //var polyPoint = [{x:(options.e.layerX/this.canvas.getZoom()),y:(options.e.layerY/this.canvas.getZoom())}];
+      var polyPoint = [{x: pointer.x, y: pointer.y}];
       var polygon = new fabric.Polygon(polyPoint,{
         stroke: 'red',
         strokeWidth: 5,

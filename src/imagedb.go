@@ -40,13 +40,13 @@ type PolygonAnnotation struct {
     Angle float32 `json:"angle"`
 }
 
-type Annotation struct {
+/*type Annotation struct {
     Id int64 `json:"id"`
     Left float32 `json:"left"`
     Top float32 `json:"top"`
     Width float32 `json:"width"`
     Height float32 `json:"height"`
-}
+}*/
 
 /*type Annotations struct {
     Annotations []Annotation `json:"annotations"`
@@ -160,7 +160,7 @@ type AnnotationRefinement struct {
 
     Annotation struct{
         Uuid string `json:"uuid"`
-        Annotation Annotation `json:"annotation"`
+        Annotation json.RawMessage `json:"annotation"`
     } `json:"annotation"`
 }
 
@@ -1297,7 +1297,7 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
     var bytes []byte
     var annotationBytes []byte
     var refinement AnnotationRefinement
-    var annotations []Annotation
+    var annotations []json.RawMessage
     err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
@@ -1330,8 +1330,6 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         raven.CaptureError(err, nil)
         return refinement, err
     }
-
-    log.Debug("", refinement.Image.Uuid)
 
     err = json.Unmarshal(annotationBytes, &annotations)
     if err != nil {

@@ -30,6 +30,10 @@
       return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
     }
 
+    function isTrashMenuButtonEnabled(){
+      return !$("#trashMenuItem").hasClass("disabled");
+    }
+
     function changeMenuItem(type){
       if(type === 'Rectangle'){
         $("#rectMenuItem").addClass("active");
@@ -73,7 +77,7 @@
     }
 
     function onObjectSelected(){
-      $("#trashMenuItem").show();
+      $("#trashMenuItem").removeClass("disabled");
     }
 
     function prepareData(data){
@@ -144,7 +148,8 @@
       });
 
       $("#trashMenuItem").click(function(e) {
-        $('#deleteObjectsPopup').modal('show');
+        if(isTrashMenuButtonEnabled())
+          $('#deleteObjectsPopup').modal('show');
       });
 
       $("#redoMenuItem").click(function(e) {
@@ -253,18 +258,18 @@
               Circle
             </a>
             <a class="item" id="polygonMenuItem">
-              <i class="circle thin icon"></i>
+              <i class="ellipsis horizontal icon"></i>
               Polygon
             </a>
-            <a class="right aligned item" id="redoMenuItem">
+            <!--<a class="right aligned item" id="redoMenuItem">
               <i class="undo icon"></i>
               Redo
             </a>
             <a class="item" id="undoMenuItem">
               <i class="undo icon"></i>
               Undo
-            </a>
-            <a class="item" id="trashMenuItem">
+            </a>-->
+            <a class="right aligned disabled item" id="trashMenuItem">
               <i class="trash icon"></i>
               Delete
             </a>
