@@ -16,6 +16,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"encoding/json"
 	"net"
+	"errors"
 )
 
 var db *sql.DB
@@ -90,6 +91,41 @@ func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCount
 		log.Debug("[Donate] Couldn't update contributions-per-country: ", err.Error())
 		return
 	}
+}
+
+func annotationsValid(annotations []json.RawMessage) error{
+	for _, r := range annotations {
+		var obj map[string]interface{}
+        err := json.Unmarshal(r, &obj)
+        if err != nil {
+            return err
+        }
+
+        shapeType := obj["type"]
+        if shapeType == "rect" {
+        	var rectangleAnnotation RectangleAnnotation 
+			err = json.Unmarshal(r, &rectangleAnnotation)
+			if err != nil {
+				return err
+			}
+        } else if shapeType == "ellipse" {
+        	var ellipsisAnnotation EllipsisAnnotation 
+			err = json.Unmarshal(r, &ellipsisAnnotation)
+			if err != nil {
+				return err
+			}
+        } else if shapeType == "polygon" {
+        	var polygonAnnotation PolygonAnnotation 
+			err = json.Unmarshal(r, &polygonAnnotation)
+			if err != nil {
+				return err
+			}
+        } else {
+        	return errors.New("Invalid type")
+        }
+	}
+
+	return nil
 }
 
 func getBrowserFingerprint(c *gin.Context) string {
@@ -664,15 +700,21 @@ func main(){
 
 	router.POST("/v1/annotate/:imageid", func(c *gin.Context) {
 		imageId := c.Param("imageid")
-		if(imageId == ""){
+		if imageId == "" {
 			c.JSON(422, gin.H{"error": "invalid request - image id missing"})
 			return
 		}
 
 		var annotations Annotations
 		err := c.BindJSON(&annotations)
-		if(err != nil){
+		if err != nil {
 			c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
+			return
+		}
+
+		err = annotationsValid(annotations.Annotations)
+		if err != nil {
+			c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 			return
 		}
 

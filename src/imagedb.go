@@ -8,7 +8,39 @@ import (
     "database/sql"
 )
 
-type Annotation struct{
+type RectangleAnnotation struct {
+    Id int64 `json:"id"`
+    Left float32 `json:"left"`
+    Top float32 `json:"top"`
+    Width float32 `json:"width"`
+    Height float32 `json:"height"`
+    Angle float32 `json:"angle"`
+}
+
+type EllipsisAnnotation struct {
+    Id int64 `json:"id"`
+    Left float32 `json:"left"`
+    Top float32 `json:"top"`
+    Rx float32 `json:"rx"`
+    Ry float32 `json:"ry"`
+    Angle float32 `json:"angle"`
+}
+
+
+type PolygonPoint struct {
+    X float32 `json:"x"`
+    Y float32 `json:"y"`
+}
+
+type PolygonAnnotation struct {
+    Id int64 `json:"id"`
+    Left float32 `json:"left"`
+    Top float32 `json:"top"`
+    Points []PolygonPoint `json:"points"`
+    Angle float32 `json:"angle"`
+}
+
+type Annotation struct {
     Id int64 `json:"id"`
     Left float32 `json:"left"`
     Top float32 `json:"top"`
@@ -16,8 +48,14 @@ type Annotation struct{
     Height float32 `json:"height"`
 }
 
-type Annotations struct{
+/*type Annotations struct {
     Annotations []Annotation `json:"annotations"`
+    Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
+}*/
+
+type Annotations struct {
+    Annotations []json.RawMessage `json:"annotations"`
     Label string `json:"label"`
     Sublabel string `json:"sublabel"`
 }
@@ -30,7 +68,7 @@ type Image struct {
     Probability float32 `json:"probability"`
     NumOfValid int32 `json:"num_yes"`
     NumOfInvalid int32 `json:"num_no"`
-    Annotations []Annotation `json:"annotations"`
+    Annotations []json.RawMessage `json:"annotations"`
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
 
@@ -40,7 +78,7 @@ type AnnotatedImage struct {
     Label string `json:"label"`
     Sublabel string `json:"sublabel"`
     Provider string `json:"provider"`
-    Annotations []Annotation `json:"annotations"`
+    Annotations []json.RawMessage `json:"annotations"`
     NumOfValid int32 `json:"num_yes"`
     NumOfInvalid int32 `json:"num_no"`
 }
@@ -313,13 +351,14 @@ func validateImages(clientFingerprint string, imageValidationBatch ImageValidati
 
 func export(labels []string) ([]Image, error){
     rows, err := db.Query(`SELECT i.key, l.name, CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END, 
-                           v.num_of_valid, v.num_of_invalid, json_agg(d.annotation)
+                           v.num_of_valid, v.num_of_invalid, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations
                            FROM image_validation v 
                            JOIN image i ON v.image_id = i.id 
                            JOIN label l ON v.label_id = l.id 
                            JOIN image_provider p ON i.image_provider_id = p.id 
                            LEFT JOIN image_annotation a ON a.image_id = i.id AND a.label_id = l.id
                            JOIN annotation_data d ON d.image_annotation_id = a.id
+                           JOIN annotation_type t ON d.annotation_type_id = t.id
                            WHERE i.unlocked = true and p.name = 'donation' AND l.name = ANY($1)
                            GROUP BY i.key, l.name, v.num_of_valid, v.num_of_invalid`, pq.Array(labels))
     if err != nil {
@@ -695,8 +734,9 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
         return err
     }
 
+    //insertes annotation data; 'type' gets removed before inserting data
     _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, annotation, annotation_type_id)
-                            SELECT $1, q.*, (SELECT id FROM annotation_type where name = $3) FROM json_array_elements($2) q`, insertedId, byt, "rect")
+                            SELECT $1, ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, insertedId, byt)
     if err != nil {
         tx.Rollback()
         log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
@@ -778,15 +818,25 @@ func getRandomUnannotatedImage() Image{
 func getRandomAnnotatedImage() (AnnotatedImage, error) {
     var annotatedImage AnnotatedImage
 
-    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), a.uuid, json_agg(d.annotation) as annotations, a.num_of_valid, a.num_of_invalid 
+    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), a.uuid, q.annotations as annotations, a.num_of_valid, a.num_of_invalid 
                                FROM image i 
                                JOIN image_provider p ON i.image_provider_id = p.id 
                                JOIN image_annotation a ON a.image_id = i.id
-                               JOIN annotation_data d ON d.image_annotation_id = a.id
+
+                               JOIN
+                               (
+                                 SELECT json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations, 
+                                 d.image_annotation_id as image_annotation_id
+                                 FROM annotation_data d 
+                                 JOIN annotation_type t on d.annotation_type_id = t.id
+                                 GROUP BY d.image_annotation_id
+                               ) q ON q.image_annotation_id = a.id
+
+
                                JOIN label l ON a.label_id = l.id
                                LEFT JOIN label pl ON l.parent_id = pl.id
                                WHERE i.unlocked = true AND p.name = 'donation'
-                               GROUP BY i.key, a.uuid, l.name, pl.name, a.num_of_valid, a.num_of_invalid
+                               GROUP BY i.key, a.uuid, l.name, pl.name, a.num_of_valid, a.num_of_invalid, q.annotations
                                OFFSET floor(random() * 
                                (
                                 SELECT count(*) FROM image i 

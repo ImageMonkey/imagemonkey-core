@@ -17,246 +17,211 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js"></script>
+  <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
+  <script src="js/annotate.js"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
   </style>
 
   <script>
-  var Rectangle = (function () {
-    function Rectangle(canvas) {
-      var inst=this;
-      this.canvas = canvas;
-      this.className= 'Rectangle';
-      this.isDrawing = false;
-      this.overObject = false;
-      this.blocked = false; 
-      this.bindEvents();
+    function getUrlFromImageId(imageId){
+      return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
     }
 
-    Rectangle.prototype.bindEvents = function() {
-      var inst = this;
-      inst.canvas.on('mouse:down', function(o) {
-        inst.onMouseDown(o);
-      });
-      inst.canvas.on('mouse:move', function(o) {
-        inst.onMouseMove(o);
-      });
-      inst.canvas.on('mouse:up', function(o) {
-        inst.onMouseUp(o);
-      });
-      inst.canvas.on('object:moving', function(o) {
-        inst.disable();
-      })
-      inst.canvas.on('mouse:over', function(o) {
-        if(o.target)
-          inst.over();
-      })
-      inst.canvas.on('mouse:out', function(o) {
-        if(o.target)
-          inst.out();
-      })
-    }
-    Rectangle.prototype.onMouseUp = function (o) {
-      var inst = this;
-      inst.disable();
-    };
-
-    Rectangle.prototype.onMouseMove = function (o) {
-      var inst = this;
-      
-
-      if(!inst.isEnable()){ return; }
-      var pointer = inst.canvas.getPointer(o.e);
-      var activeObj = inst.canvas.getActiveObject();
-
-      activeObj.stroke= 'red',
-      activeObj.strokeWidth= 5;
-      activeObj.fill = 'transparent';
-
-      if(origX > pointer.x){
-        activeObj.set({ left: Math.abs(pointer.x) }); 
+    function changeMenuItem(type){
+      if(type === 'Rectangle'){
+        $("#rectMenuItem").addClass("active");
+        $("#circleMenuItem").removeClass("active");
+        $("#polygonMenuItem").removeClass("active");
       }
-      if(origY > pointer.y){
-        activeObj.set({ top: Math.abs(pointer.y) });
+      else if(type === "Circle"){
+        $("#circleMenuItem").addClass("active");
+        $("#rectMenuItem").removeClass("active");
+        $("#polygonMenuItem").removeClass("active");
+      }
+      else if(type === "Polygon"){
+        $("#polygonMenuItem").addClass("active");
+        $("#rectMenuItem").removeClass("active");
+        $("#circleMenuItem").removeClass("active");
+      }
+    }
+
+    function changeControl(shape){
+      if($("#annotationArea").attr("imageId") === ""){
+        $("#labelContainer").hide();
+        $("#doneButton").hide();
+        shape.block();
+      }
+      else{
+        $("#labelContainer").show();
+        $("#doneButton").show();
+        shape.unblock();
+      }
+    }
+
+    function setLabel(label, sublabel){
+      $("#label").attr("label", label)
+      $("#label").attr("sublabel", sublabel)
+      if(sublabel === ""){
+        $("#label").text(label)
+      } 
+      else {
+        $("#label").text((sublabel + "/" + label))
+      }
+    }
+
+    function onObjectSelected(){
+      $("#trashMenuItem").show();
+    }
+
+    function prepareData(data){
+      var imgScaleX = data["backgroundImage"]["scaleX"];
+      var imgScaleY = data["backgroundImage"]["scaleY"];
+      var objs = data["objects"];
+      var res = [];
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle;
+
+      for(var i = 0; i < objs.length; i++){
+        angle = objs[i]["angle"];
+        type = objs[i]["type"];
+        if(type === "rect"){
+          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+          width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
+          height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
+            
+          if((width != 0) && (height != 0))
+            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
+        }
+        else if(type === "ellipse"){
+          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+          rx = Math.round(((objs[i]["rx"] / imgScaleX)), 0);
+          ry = Math.round(((objs[i]["ry"] / imgScaleY)), 0);
+
+          if((rx != 0) && (ry != 0))
+            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
+        }
+        else if(type === "polygon"){
+          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+          
+          points = objs[i]["points"];
+          var scaledPoints = [];
+          for(var j = 0; j < points.length; j++){
+            scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX)), 0), "y": Math.round(((points[j]["y"] / imgScaleY)), 0)});
+          }
+
+          res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
+        }
       }
 
-      activeObj.set({ width: Math.abs(origX - pointer.x) });
-      activeObj.set({ height: Math.abs(origY - pointer.y) });
-
-      activeObj.setCoords();
-      inst.canvas.renderAll();
-
-    };
-
-    Rectangle.prototype.onMouseDown = function (o) {
-      var inst = this;
-      if(!inst.isOver() && !inst.isBlocked()){
-        inst.enable();
-
-        var pointer = inst.canvas.getPointer(o.e);
-        origX = pointer.x;
-        origY = pointer.y;
-
-        var rect = new fabric.Rect({
-          left: origX,
-          top: origY,
-          originX: 'left',
-          originY: 'top',
-          width: pointer.x-origX,
-          height: pointer.y-origY,
-          angle: 0,
-          transparentCorners: false,
-          hasBorders: true,
-          hasControls: true
-        });
-
-        inst.canvas.add(rect).setActiveObject(rect);
-      }
-    };
-
-    Rectangle.prototype.isEnable = function(){
-      return this.isDrawing;
+      return res;
     }
 
-    Rectangle.prototype.isBlocked = function(){
-      return this.blocked;
-    }
+    $(document).ready(function(){
+      //$("#trashMenuItem").hide();
 
-    Rectangle.prototype.enable = function(){
-      this.isDrawing = true;
-    }
+      setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
+      $('#warningMsg').hide();
+      var browserFingerprint = null;
 
-    Rectangle.prototype.disable = function(){
-      this.isDrawing = false;
-    }
+      $("#rectMenuItem").click(function(e) {
+        shape.setShape("Rectangle");
+        changeMenuItem("Rectangle");
+      });
 
-    Rectangle.prototype.isOver = function(){
-      return this.overObject;
-    }
+      $("#circleMenuItem").click(function(e) {
+        shape.setShape("Circle");
+        changeMenuItem("Circle");
+      });
 
-    Rectangle.prototype.over = function(){
-      this.overObject = true;
-    }
+      $("#polygonMenuItem").click(function(e) {
+        shape.setShape("Polygon");
+        changeMenuItem("Polygon");
+      });
 
-    Rectangle.prototype.out = function(){
-      this.overObject = false;
-    }
+      $("#trashMenuItem").click(function(e) {
+        $('#deleteObjectsPopup').modal('show');
+      });
 
-    Rectangle.prototype.block = function(){
-      this.blocked = true;
-    }
+      $("#redoMenuItem").click(function(e) {
+        shape.redo();
+      });
 
-    Rectangle.prototype.unblock = function(){
-      this.blocked = false;
-    }
+      $("#undoMenuItem").click(function(e) {
+        shape.undo();
+      });
+
+      $("#deletedObjectsYesButton").click(function(e) {
+        shape.deleteSelected();
+        if(shape.objectsSelected())
+          $("#trashMenuItem").show();
+        else
+          $("#trashMenuItem").hide();
+      });
 
 
-    return Rectangle;
-  }());
 
-function getUrlFromImageId(imageId){
-  return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
-}
+      $('#doneButton').click(function(e) {
+        var res = prepareData(canvas.toJSON());
 
-function changeControl(rect){
-  if($("#annotationArea").attr("imageId") === ""){
-    $("#labelContainer").hide();
-    $("#doneButton").hide();
-    rect.block();
-  }
-  else{
-    $("#labelContainer").show();
-    $("#doneButton").show();
-    rect.unblock();
-  }
-}
+        if(res.length === 0){ //at least one annotation needs to be there
+          $('#warningMsg').show(200).delay(1500).hide(200);
+          return;
+        }
 
-function setLabel(label, sublabel){
-  $("#label").attr("label", label)
-  $("#label").attr("sublabel", sublabel)
-  if(sublabel === ""){
-    $("#label").text(label)
-  } 
-  else {
-    $("#label").text((sublabel + "/" + label))
-  }
-}
+        var postData = {}
+        postData["annotations"] = res;
+        postData["label"] = $('#label').attr('label');
+        postData["sublabel"] = $('#label').attr('sublabel');
 
-$(document).ready(function(){
-  setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
-  $('#warningMsg').hide();
-  var browserFingerprint = null;
+        var headers = {}
+        if(browserFingerprint !== null)
+          headers["X-Browser-Fingerprint"] = browserFingerprint;
 
-  $('#doneButton').click(function(e) {
-    var data = canvas.toJSON();
-    var imgScaleX = data["backgroundImage"]["scaleX"];
-    var imgScaleY = data["backgroundImage"]["scaleY"];
-    var objs = data["objects"];
-    var res = [];
-    for(var i = 0; i < objs.length; i++){
-      var left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-      var top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-      var width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
-      var height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
-      
-      if((width != 0) && (height != 0))
-        res.push({"left" : left, "top": top, "width": width, "height": height});
-    }
-
-    if(res.length === 0){ //at least one annotation needs to be there
-      $('#warningMsg').show(200).delay(1500).hide(200);
-      return;
-    }
-
-    var postData = {}
-    postData["annotations"] = res;
-    postData["label"] = $('#label').attr('label');
-    postData["sublabel"] = $('#label').attr('sublabel');
-
-    var headers = {}
-    if(browserFingerprint !== null)
-      headers["X-Browser-Fingerprint"] = browserFingerprint;
-
-    e.preventDefault();
-    var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
-    $.ajax({
-      url: url,
-      type: 'POST',
-      data: JSON.stringify(postData),
-      headers: headers,
-      success: function(data){
+        e.preventDefault();
+        var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
         $.ajax({
-          url: '{{ .apiBaseUrl }}/v1/annotate',
-          dataType: 'json',
-          type: 'GET',
+          url: url,
+          type: 'POST',
+          data: JSON.stringify(postData),
+          headers: headers,
           success: function(data){
-            $("#annotationArea").attr("imageId", data.uuid);
-            setLabel(data.label, data.sublabel);
-            canvas.clear();
-            setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
-            changeControl(rect);
+            $.ajax({
+              url: '{{ .apiBaseUrl }}/v1/annotate',
+              dataType: 'json',
+              type: 'GET',
+              success: function(data){
+                $("#annotationArea").attr("imageId", data.uuid);
+                setLabel(data.label, data.sublabel);
+                canvas.clear();
+                setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
+                changeControl(shape);
+              }
+            });
           }
         });
-      }
+
+
+        new Fingerprint2().get(function(result, components){
+          browserFingerprint = result;
+        });
+
+      });
+
+
+    var canvas = new fabric.Canvas('annotationArea');
+    //var rect = new Shape(canvas, 'Rectangle');
+    var shape = new Shape(canvas, onObjectSelected);
+    var randomImgId = {{ .randomImage.Id }};
+    setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId), function() {
+      shape.initHistory();
     });
-
-
-    new Fingerprint2().get(function(result, components){
-      browserFingerprint = result;
+    changeControl(shape);
     });
-
-  });
-
-
-var canvas = new fabric.Canvas('annotationArea');
-var rect = new Rectangle(canvas);
-var randomImgId = {{ .randomImage.Id }};
-setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId));
-changeControl(rect);
-});
 </script>
 </head>
 <body>
@@ -276,6 +241,35 @@ changeControl(rect);
     <div class="ui text container">
       <div class="row">
         <div class="ui center aligned basic segment">
+
+
+          <div class="ui labeled icon menu">
+            <a class="active item" id="rectMenuItem">
+              <i class="square outline icon"></i>
+              Rectangle
+            </a>
+            <a class="item" id="circleMenuItem">
+              <i class="circle thin icon"></i>
+              Circle
+            </a>
+            <a class="item" id="polygonMenuItem">
+              <i class="circle thin icon"></i>
+              Polygon
+            </a>
+            <a class="right aligned item" id="redoMenuItem">
+              <i class="undo icon"></i>
+              Redo
+            </a>
+            <a class="item" id="undoMenuItem">
+              <i class="undo icon"></i>
+              Undo
+            </a>
+            <a class="item" id="trashMenuItem">
+              <i class="trash icon"></i>
+              Delete
+            </a>
+          </div>
+
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
           <p></p>
           <button class="positive ui button center aligned" id="doneButton">DONE</button>
@@ -287,6 +281,25 @@ changeControl(rect);
             Please annotate the image first.
           </div>
         </div>
+
+        <div class="ui small modal" id="deleteObjectsPopup">
+          <div class="header">
+            Delete Object
+          </div>
+          <div class="content">
+            <p>Are you sure you want to delete the selected objects?</p>
+          </div>
+          <div class="actions">
+            <div class="ui negative button">
+              No
+            </div>
+            <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
+              Yes
+              <i class="checkmark icon"></i>
+            </div>
+          </div>
+        </div>
+
 
       </div>
     </div>
