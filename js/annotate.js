@@ -227,7 +227,7 @@ var Shape = (function () {
   };
 
   Shape.prototype.redo = function (o) {
-    if (this.currentHistoryPosition > 0) {
+    /*if (this.currentHistoryPosition > 0) {
         this.isRedoing = true;
         this.currentHistoryPosition -= 1;
         this.canvas.clear().renderAll();
@@ -237,11 +237,11 @@ var Shape = (function () {
         this.canvas.renderAll();
         
         
-    }
+    }*/
   };
 
   Shape.prototype.undo = function (o) {
-    if (this.currentHistoryPosition < this.history.length) {
+    /*if (this.currentHistoryPosition < this.history.length) {
         this.isRedoing = true;
         this.canvas.clear().renderAll();
         this.canvas.loadFromJSON(this.history[this.history.length - 1 - this.currentHistoryPosition], function() {
@@ -249,7 +249,7 @@ var Shape = (function () {
         });
         this.canvas.renderAll();
         this.currentHistoryPosition += 1;
-    }
+    }*/
   };
 
   Shape.prototype.initHistory = function (o) {
@@ -258,10 +258,10 @@ var Shape = (function () {
 
 
   Shape.prototype.saveState = function (o) {
-    if(!this.isRedoing){
+    /*if(!this.isRedoing){
       j = JSON.stringify(this.canvas.toObject());
       this.history.push(j);
-    }
+    }*/
   };
   
 
