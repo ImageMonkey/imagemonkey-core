@@ -44,7 +44,7 @@
         paramName: "image",
         resizeWidth: 1000,
         resizeQuality: 0.8, 
-        headers: { 'X-Browser-Fingerprint' : browserFingerprint },
+        headers: { 'X-Browser-Fingerprint' : browserFingerprint, 'X-App-Identifier': '{{ .appIdentifier }}' },
         init: function() {
           this.on("maxfilesexceeded", function(file){
             alert("No more files please!");

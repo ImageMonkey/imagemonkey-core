@@ -69,7 +69,6 @@
     {{ end }}
 
 
-
     var donationsPerCountryColorPalette = []
     var donationsPerCountry = []
     var donationPerCountryCCodes = []
@@ -81,8 +80,6 @@
         donationsPerCountryColorPalette.push(getRandomColor());
       {{ end }}
     {{ end }}
-
-
 
 
     var validationsPerCountry = []
@@ -98,8 +95,6 @@
     {{ end }}
 
 
-
-
     var annotationsPerCountry = []
     var annotationsPerCountryCCode = []
     var annotationsPerCountryColorPalette = []
@@ -109,6 +104,45 @@
         annotationsPerCountry.push({{ .Count }});
         annotationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
         annotationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var validationsPerApp = []
+    var validationsPerAppLabels = []
+    var validationsPerAppColorPalette = []
+
+    {{ range .statistics.ValidationsPerApp }}
+      {{ if (ne .Count 0) }}
+        validationsPerApp.push({{ .Count }});
+        validationsPerAppLabels.push({{ .AppIdentifier }});
+        validationsPerAppColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var donationsPerApp = []
+    var donationsPerAppLabels = []
+    var donationsPerAppColorPalette = []
+
+    {{ range .statistics.DonationsPerApp }}
+      {{ if (ne .Count 0) }}
+        donationsPerApp.push({{ .Count }});
+        donationsPerAppLabels.push({{ .AppIdentifier }});
+        donationsPerAppColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var annotationsPerApp = []
+    var annotationsPerAppLabels = []
+    var annotationsPerAppColorPalette = []
+
+    {{ range .statistics.AnnotationsPerApp }}
+      {{ if (ne .Count 0) }}
+        annotationsPerApp.push({{ .Count }});
+        annotationsPerAppLabels.push({{ .AppIdentifier }});
+        annotationsPerAppColorPalette.push(getRandomColor());
       {{ end }}
     {{ end }}
 
@@ -171,6 +205,63 @@
         }
     };
 
+    var validationsPerAppChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  validationsPerApp,
+                backgroundColor: validationsPerAppColorPalette,
+                label: 'Validations per Application'
+            }],
+            labels: validationsPerAppLabels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Validations per Application'
+            }
+        }
+    };
+
+    var donationsPerAppChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  donationsPerApp,
+                backgroundColor: donationsPerAppColorPalette,
+                label: 'Donations per Application'
+            }],
+            labels: donationsPerAppLabels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Donations per Application'
+            }
+        }
+    };
+
+    var annotationsPerAppChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  annotationsPerApp,
+                backgroundColor: annotationsPerAppColorPalette,
+                label: 'Annotations per Application'
+            }],
+            labels: annotationsPerAppLabels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Annotations per Application'
+            }
+        }
+    };
+
     var annotationsPerCountryChartConfig = {
         type: 'pie',
         data: {
@@ -206,7 +297,14 @@
         var annotationsPerCountryChartCtx = document.getElementById("annotations-per-country-chart").getContext("2d");
         window.annotationsPerCountry = new Chart(annotationsPerCountryChartCtx, annotationsPerCountryChartConfig);
 
+        var validationsPerAppChartCtx = document.getElementById("validations-per-app-chart").getContext("2d");
+        window.validationsPerApp = new Chart(validationsPerAppChartCtx, validationsPerAppChartConfig);
 
+        var donationsPerAppChartCtx = document.getElementById("donations-per-app-chart").getContext("2d");
+        window.donationsPerApp = new Chart(donationsPerAppChartCtx, donationsPerAppChartConfig);
+
+        var annotationsPerAppChartCtx = document.getElementById("annotations-per-app-chart").getContext("2d");
+        window.annotationsPerApp = new Chart(annotationsPerAppChartCtx, annotationsPerAppChartConfig);
     };
   </script>
 
@@ -289,7 +387,7 @@
   </div>
 
 
-  <div class="six wide column">
+  <div class="five wide column">
     <div class="row">
       <canvas id="validations-chart"/>
     </div>
@@ -304,6 +402,20 @@
     <br><br><br>
     <div class="row">
       <canvas id="annotations-per-country-chart"/>
+    </div>
+  </div>
+
+  <div class="four wide column">
+    <div class="row">
+      <canvas id="validations-per-app-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="donations-per-app-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="annotations-per-app-chart"/>
     </div>
   </div>
 

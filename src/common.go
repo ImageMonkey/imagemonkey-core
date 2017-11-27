@@ -15,6 +15,8 @@ import (
     "bytes"
     "net/http"
     "encoding/json"
+    "github.com/garyburd/redigo/redis"
+    log "github.com/Sirupsen/logrus"
 )
 
 type Report struct {
@@ -33,6 +35,11 @@ type LabelMeEntry struct {
 
 type ContributionsPerCountryRequest struct {
     CountryCode string `json:"country_code"`
+    Type string `json:"type"`
+}
+
+type ContributionsPerAppRequest struct {
+    AppIdentifier string `json:"app_identifier"`
     Type string `json:"type"`
 }
 
@@ -191,4 +198,80 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     }
 
     return labelMap.LabelMapEntries, words, nil
+}
+
+
+type RegisteredAppIdentifiersInterface interface {
+    Load() error
+    IsValid(key string) bool
+    Get() (string, bool)
+}
+
+type RegisteredAppIdentifiers struct {
+    identifiers map[string]string
+}
+
+func NewRegisteredAppIdentifiers() *RegisteredAppIdentifiers {
+    return &RegisteredAppIdentifiers{} 
+}
+
+func (p *RegisteredAppIdentifiers) Load() error {
+    p.identifiers = make(map[string]string)
+    p.identifiers["edd77e5fb6fc0775a00d2499b59b75d"] = "ImageMonkey Website"
+    return nil
+}
+
+func (p *RegisteredAppIdentifiers) IsValid(key string) bool {
+    _, ok := p.identifiers[key]
+    return ok
+}
+
+func (p *RegisteredAppIdentifiers) Get(key string) (string, bool) {
+    val, ok := p.identifiers[key]
+    return val, ok
+}
+
+
+type StatisticsPusherInterface interface {
+    PushAppAction(appIdentifier string, actionType string)
+    Load() error
+}
+
+type StatisticsPusher struct {
+    registeredAppIdentifiers *RegisteredAppIdentifiers
+    redisPool *redis.Pool
+}
+
+func NewStatisticsPusher(redisPool *redis.Pool) *StatisticsPusher {
+    return &StatisticsPusher{
+        redisPool: redisPool,
+        registeredAppIdentifiers: NewRegisteredAppIdentifiers(),
+    } 
+}
+
+func (p *StatisticsPusher) Load() error {
+    return p.registeredAppIdentifiers.Load()
+}
+
+func (p *StatisticsPusher) PushAppAction(appIdentifier string, actionType string) {
+    var contributionsPerAppRequest ContributionsPerAppRequest
+    contributionsPerAppRequest.Type = actionType
+    val, ok := p.registeredAppIdentifiers.Get(appIdentifier)
+    if ok {
+        contributionsPerAppRequest.AppIdentifier = val
+        serialized, err := json.Marshal(contributionsPerAppRequest)
+        if err != nil {
+            log.Debug("[Push Contributions per App to Redis] Couldn't create contributions-per-app request: ", err.Error())
+            return
+        }
+
+        redisConn := p.redisPool.Get()
+        defer redisConn.Close()
+
+        _, err = redisConn.Do("RPUSH", "contributions-per-app", serialized)
+        if err != nil { //just log error, but not abort (it's just some statistical information)
+            log.Debug("[Push Contributions per App to Redis] Couldn't update contributions-per-app: ", err.Error())
+            return
+        }
+    }
 }

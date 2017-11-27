@@ -52,7 +52,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -79,7 +79,7 @@ func RequestId() gin.HandlerFunc {
 func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCountryRequest ContributionsPerCountryRequest) {
 	serialized, err := json.Marshal(contributionsPerCountryRequest)
 	if err != nil { 
-		log.Debug("[Donate] Couldn't create contributions-per-country request: ", err.Error())
+		log.Debug("[Push Contributions per Country to Redis] Couldn't create contributions-per-country request: ", err.Error())
 		return
 	}
 
@@ -88,7 +88,7 @@ func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCount
 
 	_, err = redisConn.Do("RPUSH", "contributions-per-country", serialized)
 	if err != nil { //just log error, but not abort (it's just some statistical information)
-		log.Debug("[Donate] Couldn't update contributions-per-country: ", err.Error())
+		log.Debug("[Push Contributions per Country to Redis] Couldn't update contributions-per-country: ", err.Error())
 		return
 	}
 }
@@ -135,6 +135,15 @@ func getBrowserFingerprint(c *gin.Context) string {
 	}
 
 	return browserFingerprint
+}
+
+func getAppIdentifier(c *gin.Context) string {
+	appIdentifier := ""
+	if values, _ := c.Request.Header["X-App-Identifier"]; len(values) > 0 {
+		appIdentifier = values[0]
+	}
+
+	return appIdentifier
 }
 
 func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
@@ -217,6 +226,12 @@ func main(){
 		return c, err
 	}, *redisMaxConnections)
 	defer redisPool.Close()
+
+	statisticsPusher := NewStatisticsPusher(redisPool)
+	err = statisticsPusher.Load()
+	if err != nil {
+		log.Fatal("[Main] Couldn't load statistics pusher: ", err.Error())
+	}
 
 
 	router := gin.Default()
@@ -399,6 +414,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -444,6 +460,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
 		c.JSON(200, nil)
 	})
@@ -626,6 +643,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "donation")
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -681,7 +699,7 @@ func main(){
 
 		//get client IP address and try to determine country
 		var contributionsPerCountryRequest ContributionsPerCountryRequest
-		contributionsPerCountryRequest.Type = "annotation"
+		contributionsPerCountryRequest.Type = "validation"
 		contributionsPerCountryRequest.CountryCode = "--"
 		ip := net.ParseIP(getIPAddress(c.Request))
 		if ip != nil {
@@ -694,6 +712,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -725,6 +744,24 @@ func main(){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 			return
 		}
+
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "annotation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Annotate] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "annotation")
 	})
 
 	router.GET("/v1/annotate", func(c *gin.Context) {

@@ -49,32 +49,51 @@ func main(){
 
 	for {
 		var data []byte
+		retryImmediately := false
 
 		redisConn := redisPool.Get()
-
 		data, err := redis.Bytes(redisConn.Do("LPOP", "contributions-per-country"))
-    	if err != nil {
-    		redisConn.Close()
-    		time.Sleep((time.Second * 2)) //nothing in queue, sleep for two seconds
-    		continue
-    	}
+    	if err == nil {
+    		retryImmediately = true
+	    	var contributionsPerCountryRequest ContributionsPerCountryRequest
+	    	err = json.Unmarshal(data, &contributionsPerCountryRequest)
+	    	if err != nil{
+	    		retryImmediately = false
+	    		log.Debug("[Main] Couldn't unmarshal contributions_per_country request: ", err.Error())
+	    		
+	    	} else {
+		    	err = updateContributionsPerCountry(contributionsPerCountryRequest.Type, 
+		    									 	contributionsPerCountryRequest.CountryCode)
+		    	if err != nil {
+		    		retryImmediately = false
+		    	}
+			}
+		}
 
-    	var contributionsPerCountryRequest ContributionsPerCountryRequest
-    	err = json.Unmarshal(data, &contributionsPerCountryRequest)
-    	if err != nil{
-    		log.Debug("[Main] Couldn't unmarshal: ", err.Error())
-    		redisConn.Close()
-			continue
-    	}
-
-    	err = updateContributionsPerCountry(contributionsPerCountryRequest.Type, 
-    									 	contributionsPerCountryRequest.CountryCode)
-    	if err != nil {
-    		redisConn.Close()
-    		continue
-    	}
+		data, err = redis.Bytes(redisConn.Do("LPOP", "contributions-per-app"))
+		if err == nil {
+			retryImmediately = true
+	    	var contributionsPerAppRequest ContributionsPerAppRequest
+	    	err = json.Unmarshal(data, &contributionsPerAppRequest)
+	    	if err != nil{
+	    		retryImmediately = false
+	    		log.Debug("[Main] Couldn't unmarshal contributions_per_app request: ", err.Error())
+	    		
+	    	} else {
+		    	err = updateContributionsPerApp(contributionsPerAppRequest.Type, 
+		    									 	contributionsPerAppRequest.AppIdentifier)
+		    	if err != nil {
+		    		retryImmediately = false
+		    	}
+			}
+		}
 
 		redisConn.Close()
+
+		if !retryImmediately {
+			time.Sleep((time.Second * 2)) //sleep for two seconds
+		}
+
 	}
 
 }
