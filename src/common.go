@@ -217,10 +217,6 @@ func NewRegisteredAppIdentifiers() *RegisteredAppIdentifiers {
 
 func (p *RegisteredAppIdentifiers) Load() error {
     p.identifiers = make(map[string]string)
-    //p.identifiers[""] = "ImageMonkey Firefox Extension"
-    //p.identifiers[""] = "ImageMonkey Chrome Extension"
-    //p.identifiers[""] = "ImageMonkey Android App"
-    //p.identifiers[""] = "ImageMonkey iOs App"
     p.identifiers["edd77e5fb6fc0775a00d2499b59b75d"] = "ImageMonkey Website"
     return nil
 }
