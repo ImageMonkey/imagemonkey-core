@@ -40,20 +40,6 @@ type PolygonAnnotation struct {
     Angle float32 `json:"angle"`
 }
 
-/*type Annotation struct {
-    Id int64 `json:"id"`
-    Left float32 `json:"left"`
-    Top float32 `json:"top"`
-    Width float32 `json:"width"`
-    Height float32 `json:"height"`
-}*/
-
-/*type Annotations struct {
-    Annotations []Annotation `json:"annotations"`
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
-}*/
-
 type Annotations struct {
     Annotations []json.RawMessage `json:"annotations"`
     Label string `json:"label"`
@@ -122,11 +108,29 @@ type AnnotationsPerCountryStat struct {
     Count int64 `json:"num"`
 }
 
+type DonationsPerAppStat struct {
+    AppIdentifier string `json:"app_identifier"`
+    Count int64 `json:"num"`
+}
+
+type ValidationsPerAppStat struct {
+    AppIdentifier string `json:"app_identifier"`
+    Count int64 `json:"num"`
+}
+
+type AnnotationsPerAppStat struct {
+    AppIdentifier string `json:"app_identifier"`
+    Count int64 `json:"num"`
+}
+
 type Statistics struct {
     Validations []ValidationStat `json:"validations"`
     DonationsPerCountry []DonationsPerCountryStat `json:"donations_per_country"`
     ValidationsPerCountry []ValidationsPerCountryStat `json:"validations_per_country"`
     AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
+    DonationsPerApp []DonationsPerAppStat `json:"donations_per_app"`
+    ValidationsPerApp []ValidationsPerAppStat `json:"validations_per_app"`
+    AnnotationsPerApp []AnnotationsPerAppStat `json:"annotations_per_app"`
     NumOfUnlabeledDonations int64 `json:"num_of_unlabeled_donations"`
 }
 
@@ -241,7 +245,6 @@ func imageExists(hash uint64) (bool, error){
 
 func validateDonatedPhoto(clientFingerprint string, imageId string, labelValidationEntry LabelValidationEntry, valid bool) error {
 	if valid {
-        log.Debug("HERE " +labelValidationEntry.Label)
         var err error
         if labelValidationEntry.Sublabel == "" {
     		_, err = db.Exec(`UPDATE image_validation AS v 
@@ -530,9 +533,100 @@ func explore(words []string) (Statistics, error) {
         return statistics, err
     }
 
+    statistics.AnnotationsPerApp, err = _exploreAnnotationsPerApp(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore annotations per app: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
 
+    statistics.DonationsPerApp, err = _exploreDonationsPerApp(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore donations per app: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
+    statistics.ValidationsPerApp, err = _exploreValidationsPerApp(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore validations per app: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
 
     return statistics, tx.Commit()
+}
+
+func _exploreAnnotationsPerApp(tx *sql.Tx) ([]AnnotationsPerAppStat, error) {
+    var annotationsPerApp []AnnotationsPerAppStat
+
+    //get annotations grouped by app
+    annotationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM annotations_per_app ORDER BY count DESC`)
+    if err != nil {
+        return annotationsPerApp, err
+    }
+    defer annotationsPerAppRows.Close()
+
+    for annotationsPerAppRows.Next() {
+        var annotationsPerAppStat AnnotationsPerAppStat
+        err = annotationsPerAppRows.Scan(&annotationsPerAppStat.AppIdentifier, &annotationsPerAppStat.Count)
+        if err != nil {
+            return annotationsPerApp, err
+        }
+
+        annotationsPerApp = append(annotationsPerApp, annotationsPerAppStat)
+    }
+
+    return annotationsPerApp, nil
+}
+
+func _exploreDonationsPerApp(tx *sql.Tx) ([]DonationsPerAppStat, error) {
+    var donationsPerApp []DonationsPerAppStat
+
+    //get donations grouped by app
+    donationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM donations_per_app ORDER BY count DESC`)
+    if err != nil {
+        return donationsPerApp, err
+    }
+    defer donationsPerAppRows.Close()
+
+    for donationsPerAppRows.Next() {
+        var donationsPerAppStat DonationsPerAppStat
+        err = donationsPerAppRows.Scan(&donationsPerAppStat.AppIdentifier, &donationsPerAppStat.Count)
+        if err != nil {
+            return donationsPerApp, err
+        }
+
+        donationsPerApp = append(donationsPerApp, donationsPerAppStat)
+    }
+
+    return donationsPerApp, nil
+}
+
+func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
+    var validationsPerApp []ValidationsPerAppStat
+
+    //get validations grouped by app
+    validationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM validations_per_app ORDER BY count DESC`)
+    if err != nil {
+        return validationsPerApp, err
+    }
+    defer validationsPerAppRows.Close()
+
+    for validationsPerAppRows.Next() {
+        var validationsPerAppStat ValidationsPerAppStat
+        err = validationsPerAppRows.Scan(&validationsPerAppStat.AppIdentifier, &validationsPerAppStat.Count)
+        if err != nil {
+            return validationsPerApp, err
+        }
+
+        validationsPerApp = append(validationsPerApp, validationsPerAppStat)
+    }
+
+    return validationsPerApp, nil
 }
 
 
@@ -1049,6 +1143,38 @@ func updateContributionsPerCountry(contributionType string, countryCode string) 
 
     return nil
 }
+
+func updateContributionsPerApp(contributionType string, appIdentifier string) error {
+    if contributionType == "donation" {
+        _, err := db.Exec(`INSERT INTO donations_per_app (app_identifier, count)
+                            VALUES ($1, $2) ON CONFLICT (app_identifier)
+                            DO UPDATE SET count = donations_per_app.count + 1`, appIdentifier, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per App] Couldn't insert into/update donations_per_app: ", err.Error())
+            return err
+        }
+    } else if contributionType == "validation" {
+        _, err := db.Exec(`INSERT INTO validations_per_app (app_identifier, count)
+                            VALUES ($1, $2) ON CONFLICT (app_identifier)
+                            DO UPDATE SET count = validations_per_app.count + 1`, appIdentifier, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per App] Couldn't insert into/update validations_per_app: ", err.Error())
+            return err
+        }
+    } else if contributionType == "annotation" {
+        _, err := db.Exec(`INSERT INTO annotations_per_app (app_identifier, count)
+                            VALUES ($1, $2) ON CONFLICT (app_identifier)
+                            DO UPDATE SET count = annotations_per_app.count + 1`, appIdentifier, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per App] Couldn't insert into/update annotations_per_app: ", err.Error())
+            return err
+        }
+    }
+
+    return nil
+}
+
+
 
 func getImageToLabel() (Image, error) {
     var image Image

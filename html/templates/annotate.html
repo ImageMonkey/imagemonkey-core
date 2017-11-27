@@ -187,6 +187,8 @@
         if(browserFingerprint !== null)
           headers["X-Browser-Fingerprint"] = browserFingerprint;
 
+        headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
         e.preventDefault();
         var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
         $.ajax({

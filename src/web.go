@@ -31,6 +31,8 @@ func main() {
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8081", "Playground Base URL")
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 
+	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
+
 	flag.Parse()
 	if(*releaseMode){
 		fmt.Printf("Starting gin in release mode!\n")
@@ -89,6 +91,7 @@ func main() {
 			"activeMenuNr": 2,
 			"apiBaseUrl": apiBaseUrl,
 			"words": words,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 
@@ -109,6 +112,7 @@ func main() {
 			"randomImage": getRandomUnannotatedImage(),
 			"activeMenuNr": 4,
 			"apiBaseUrl": apiBaseUrl,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 
@@ -145,6 +149,7 @@ func main() {
 			"showFooter": showFooter,
 			"onlyOnce": onlyOnce,
 			"apiBaseUrl": apiBaseUrl,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {
@@ -153,6 +158,7 @@ func main() {
 			"randomImage": pick(getRandomAnnotatedImage())[0],
 			"activeMenuNr": 6,
 			"apiBaseUrl": apiBaseUrl,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 	router.GET("/quiz", func(c *gin.Context) {

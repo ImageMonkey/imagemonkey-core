@@ -117,6 +117,8 @@
     if(browserFingerprint !== null)
       headers['X-Browser-Fingerprint'] = browserFingerprint;
 
+    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
     $.ajax({
       url: '{{ .apiBaseUrl }}/v1/donation/validate',
       dataType: 'json',
@@ -261,6 +263,8 @@
       var headers = {}
       if(browserFingerprint !== null)
         headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+      headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
       if(!isMultiValidationMode()){
         showHideControls(false);
