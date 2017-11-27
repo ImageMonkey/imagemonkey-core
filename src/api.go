@@ -16,6 +16,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"encoding/json"
 	"net"
+	"errors"
 )
 
 var db *sql.DB
@@ -51,7 +52,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -78,7 +79,7 @@ func RequestId() gin.HandlerFunc {
 func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCountryRequest ContributionsPerCountryRequest) {
 	serialized, err := json.Marshal(contributionsPerCountryRequest)
 	if err != nil { 
-		log.Debug("[Donate] Couldn't create contributions-per-country request: ", err.Error())
+		log.Debug("[Push Contributions per Country to Redis] Couldn't create contributions-per-country request: ", err.Error())
 		return
 	}
 
@@ -87,9 +88,44 @@ func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCount
 
 	_, err = redisConn.Do("RPUSH", "contributions-per-country", serialized)
 	if err != nil { //just log error, but not abort (it's just some statistical information)
-		log.Debug("[Donate] Couldn't update contributions-per-country: ", err.Error())
+		log.Debug("[Push Contributions per Country to Redis] Couldn't update contributions-per-country: ", err.Error())
 		return
 	}
+}
+
+func annotationsValid(annotations []json.RawMessage) error{
+	for _, r := range annotations {
+		var obj map[string]interface{}
+        err := json.Unmarshal(r, &obj)
+        if err != nil {
+            return err
+        }
+
+        shapeType := obj["type"]
+        if shapeType == "rect" {
+        	var rectangleAnnotation RectangleAnnotation 
+			err = json.Unmarshal(r, &rectangleAnnotation)
+			if err != nil {
+				return err
+			}
+        } else if shapeType == "ellipse" {
+        	var ellipsisAnnotation EllipsisAnnotation 
+			err = json.Unmarshal(r, &ellipsisAnnotation)
+			if err != nil {
+				return err
+			}
+        } else if shapeType == "polygon" {
+        	var polygonAnnotation PolygonAnnotation 
+			err = json.Unmarshal(r, &polygonAnnotation)
+			if err != nil {
+				return err
+			}
+        } else {
+        	return errors.New("Invalid type")
+        }
+	}
+
+	return nil
 }
 
 func getBrowserFingerprint(c *gin.Context) string {
@@ -101,19 +137,23 @@ func getBrowserFingerprint(c *gin.Context) string {
 	return browserFingerprint
 }
 
+func getAppIdentifier(c *gin.Context) string {
+	appIdentifier := ""
+	if values, _ := c.Request.Header["X-App-Identifier"]; len(values) > 0 {
+		appIdentifier = values[0]
+	}
+
+	return appIdentifier
+}
+
 func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
 	if val, ok := labelsMap[label]; ok {
 		if len(sublabels) > 0 {
-			for _, value := range sublabels {
-				eq := false
-				for _, otherValue := range val.LabelMapEntries  {
-					if value == otherValue.Name {
-						eq = true
-						break
-					}
-				}
+			availableSublabels := val.LabelMapEntries
 
-				if !eq {
+			for _, value := range sublabels {
+				_, ok := availableSublabels[value]
+				if !ok {
 					return false
 				}
 			}
@@ -186,6 +226,12 @@ func main(){
 		return c, err
 	}, *redisMaxConnections)
 	defer redisPool.Close()
+
+	statisticsPusher := NewStatisticsPusher(redisPool)
+	err = statisticsPusher.Load()
+	if err != nil {
+		log.Fatal("[Main] Couldn't load statistics pusher: ", err.Error())
+	}
 
 
 	router := gin.Default()
@@ -288,7 +334,8 @@ func main(){
 
 		} else {
 			randomImage := getRandomImage()
-			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
+			c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel, 
+										"validations": gin.H{ "num_yes": randomImage.NumOfValid, "num_no": randomImage.NumOfInvalid} })
 		}
 	})
 
@@ -367,6 +414,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -412,6 +460,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
 		c.JSON(200, nil)
 	})
@@ -561,9 +610,9 @@ func main(){
 		}
 		var labelMeEntry LabelMeEntry
 		var labelMeEntries []LabelMeEntry
-		labelMeEntry.Label = labelMapEntry.Name
-		for _, val := range labelMapEntry.LabelMapEntries {
-			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, val.Name)
+		labelMeEntry.Label = label
+		for key, _ := range labelMapEntry.LabelMapEntries {
+			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, key)
 		}
 		labelMeEntries = append(labelMeEntries, labelMeEntry)
 
@@ -594,6 +643,7 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "donation")
 
 		c.JSON(http.StatusOK, nil)
 	})
@@ -614,8 +664,8 @@ func main(){
 		c.JSON(http.StatusOK, nil)
 	})
 
-	router.POST("/v1/annotation/:imageid/validate/:param", func(c *gin.Context) {
-		imageId := c.Param("imageid")
+	router.POST("/v1/annotation/:annotationid/validate/:param", func(c *gin.Context) {
+		annotationId := c.Param("annotationid")
 		param := c.Param("param")
 
 		parameter := false
@@ -641,7 +691,7 @@ func main(){
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err := validateAnnotatedImage(browserFingerprint, imageId, labelValidationEntry, parameter)
+		err := validateAnnotatedImage(browserFingerprint, annotationId, labelValidationEntry, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 			return
@@ -649,7 +699,7 @@ func main(){
 
 		//get client IP address and try to determine country
 		var contributionsPerCountryRequest ContributionsPerCountryRequest
-		contributionsPerCountryRequest.Type = "annotation"
+		contributionsPerCountryRequest.Type = "validation"
 		contributionsPerCountryRequest.CountryCode = "--"
 		ip := net.ParseIP(getIPAddress(c.Request))
 		if ip != nil {
@@ -662,21 +712,28 @@ func main(){
 			}
 		}
 		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
 		c.JSON(http.StatusOK, nil)
 	})
 
 	router.POST("/v1/annotate/:imageid", func(c *gin.Context) {
 		imageId := c.Param("imageid")
-		if(imageId == ""){
+		if imageId == "" {
 			c.JSON(422, gin.H{"error": "invalid request - image id missing"})
 			return
 		}
 
 		var annotations Annotations
 		err := c.BindJSON(&annotations)
-		if(err != nil){
+		if err != nil {
 			c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
+			return
+		}
+
+		err = annotationsValid(annotations.Annotations)
+		if err != nil {
+			c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 			return
 		}
 
@@ -687,6 +744,24 @@ func main(){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 			return
 		}
+
+
+		//get client IP address and try to determine country
+		var contributionsPerCountryRequest ContributionsPerCountryRequest
+		contributionsPerCountryRequest.Type = "annotation"
+		contributionsPerCountryRequest.CountryCode = "--"
+		ip := net.ParseIP(getIPAddress(c.Request))
+		if ip != nil {
+			record, err := geoipDb.Country(ip)
+			if err != nil { //just log, but don't abort...it's just for statistics
+				log.Debug("[Annotate] Couldn't determine geolocation from ", err.Error())
+				
+			} else {
+				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+			}
+		}
+		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+		statisticsPusher.PushAppAction(getAppIdentifier(c), "annotation")
 	})
 
 	router.GET("/v1/annotate", func(c *gin.Context) {
@@ -695,9 +770,61 @@ func main(){
 	})
 
 	router.GET("/v1/annotation", func(c *gin.Context) {
-		randomImage := getRandomAnnotatedImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, 
-									"annotations": randomImage.Annotations, "sublabel": randomImage.Sublabel})
+		randomAnnotatedImage, err := getRandomAnnotatedImage()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"image_uuid": randomAnnotatedImage.ImageId, "label": randomAnnotatedImage.Label, "provider": randomAnnotatedImage.Provider, 
+									"annotations": randomAnnotatedImage.Annotations, "sublabel": randomAnnotatedImage.Sublabel, "annotation_uuid": randomAnnotatedImage.AnnotationId,
+									"validations": gin.H{ "num_yes": randomAnnotatedImage.NumOfValid, "num_no": randomAnnotatedImage.NumOfInvalid}})
+	})
+
+	router.GET("/v1/annotation/refine", func(c *gin.Context) {
+		randomImage,_ := getRandomAnnotationForRefinement()
+		c.JSON(200, randomImage)
+	})
+
+	router.POST("/v1/annotation/:annotationid/refine/:annotationdataid", func(c *gin.Context) {
+		type AnnotationRefinementEntry struct {
+		    LabelId int64 `json:"label_id"`
+		}
+
+		annotationId := c.Param("annotationid")
+		if(annotationId == ""){
+			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation id"})
+			return
+		}
+
+		temp := c.Param("annotationdataid")
+		if(temp == ""){
+			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation data id"})
+			return
+		}
+
+		var annotationDataId int64
+		annotationDataId, err = strconv.ParseInt(temp, 10, 64)
+		if err != nil {
+			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation data id"})
+			return
+		}
+
+
+		var annotationRefinementEntry AnnotationRefinementEntry
+		if c.BindJSON(&annotationRefinementEntry) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid label id"})
+			return
+		}
+
+		browserFingerprint := getBrowserFingerprint(c)
+
+		err := addOrUpdateRefinement(annotationId, annotationDataId, annotationRefinementEntry.LabelId, browserFingerprint)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
 	})
 
 	router.Run(":8081")

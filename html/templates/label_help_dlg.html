@@ -2,6 +2,7 @@
 $(document).ready(function(){
 
   $("#helpMeButton").click(function(e) {
+    $('#helpMeGif').attr('src', 'img/labelme_help.gif');
     $('#helpMeDlg').modal('setting', { detachable:false }).modal('show');
   });
 });
@@ -16,13 +17,13 @@ $(document).ready(function(){
     <b>Best Practice</b>
     <ul>
       <li><p>Only label objects that are visible in the image</p></li>
-      <li><p>Use common english names to describe objects, avoid using abbreviations.</p></li>
-      <li><p>If possible use the singular form (i.e 'eye' instead of 'eyes')</p></li>
+      <li><p>If you can't find a label, please create a <a href="https://github.com/bbernhard/imagemonkey-core/blob/master/wordlists/en/labels.json">pull request</a></p></li>
+      <li><p>Some labels (e.q 'dog') pull in some sublabels (e.q 'eye') which can be de-selected if not needed</p></li>
     </ul>
 
     <b>Demo</b>
     <p></p>
-    <img src="img/labelme_help.gif" class="ui large bordered rounded image">
+    <img src="" class="ui large bordered rounded image" id="helpMeGif">
 
   </div>
   <div class="actions">

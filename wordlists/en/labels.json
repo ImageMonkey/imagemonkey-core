@@ -1,140 +1,112 @@
 {
-	"metalabels": [{
-			"description": "optional",
-			"name": "animal"
-
+	"metalabels": {
+		"animal": {
+			"description": "optional"
 		},
-		{
-			"description": "optional",
-			"name": "vehicle"
+		"vehicle": {
+			"description": "optional"
 		},
-		{
-			"description": "optional",
-			"name": "food"
+		"food": {
+			"description": "optional"
 		},
-		{
-			"description": "optional",
-			"name": "electronics"
+		"electronics": {
+			"description": "optional"
 		},
-		{
-			"description": "optional",
-			"name": "nature"
+		"nature": {
+			"description": "optional"
 		},
-		{
-			"description": "optional",
-			"name": "sports"
+		"sports": {
+			"description": "optional"
 		}
-	],
+	},
 
 
-	"labels": [{
+	"labels": {
+		"dog": {
 			"description": "optional",
-			"name": "dog",
-			"metalabels": ["animal"],
-			"labels": [{
-					"description": "optional",
-					"name": "ear"
+			"isa": ["animal"],
+			"has": {
+				"eye": {
+					"description": "optional"
 				},
-				{
-					"description": "optional",
-					"name": "eye"
+				"ear": {
+					"description": "optional"
 				},
-				{
-					"description": "optional",
-					"name": "mouth"
+				"mouth": {
+					"description": "optional"
 				}
-			]
+			}
 		},
-		{
+		"cat": {
 			"description": "optional",
-			"name": "cat",
-			"metalabels": ["animal"],
-			"labels": [{
-					"description": "optional",
-					"name": "ear"
+			"isa": ["animal"],
+			"has": {
+				"eye": {
+					"description": "optional"
 				},
-				{
-					"description": "optional",
-					"name": "eye"
+				"ear": {
+					"description": "optional"
 				},
-				{
-					"description": "optional",
-					"name": "mouth"
+				"mouth": {
+					"description": "optional"
 				}
-			]
+			}
 		},
-		{
+		"pizza": {
 			"description": "optional",
-			"name": "pizza",
-			"metalabels": ["food"]
+			"isa": ["food"]
 		},
-		{
+		"orange": {
 			"description": "optional",
-			"name": "orange",
-			"metalabels": ["food"]
+			"isa": ["food"]
 		},
-		{
+		"apple": {
 			"description": "optional",
-			"name": "apple",
-			"metalabels": ["food"]
+			"isa": ["food"]
 		},
-		{
+		"banana": {
 			"description": "optional",
-			"name": "banana",
-			"metalabels": ["food"]
-
+			"isa": ["food"]
 		},
-		{
+		"car": {
 			"description": "optional",
-			"name": "car",
-			"metalabels": ["vehicle"]
+			"isa": ["vehicle"]
 		},
-		{
+		"TV": {
 			"description": "optional",
-			"name": "TV",
-			"metalabels": ["electronics"]
+			"isa": ["electronics"]
 		},
-		{
+		"smartphone": {
 			"description": "optional",
-			"name": "smartphone",
-			"metalabels": ["electronics"]
+			"isa": ["electronics"]
 		},
-		{
+		"cup": {
 			"description": "optional",
-			"name": "cup",
-			"metalabels": []
+			"isa": []
 		},
-		{
+		"glass": {
 			"description": "optional",
-			"name": "glass",
-			"metalabels": []
+			"isa": []
 		},
-		{
+		"spoon": {
 			"description": "optional",
-			"name": "spoon",
-			"metalabels": []
+			"isa": []
 		},
-		{
+		"egg": {
 			"description": "optional",
-			"name": "egg",
-			"metalabels": ["food"]
+			"isa": ["food"]
 		},
-		{
+		"tennis ball": {
 			"description": "optional",
-			"name": "tennis ball",
-			"metalabels": ["sports"]
+			"isa": ["sports"]
 		},
-		{
+		"bullet": {
 			"description": "optional",
-			"name": "bullet",
-			"metalabels": []
+			"isa": []
 		},
-		{
+		"tree": {
 			"description": "optional",
-			"name": "tree",
-			"metalabels": ["nature"]
+			"isa": []
 		}
-
-	]
-
+	}
 }

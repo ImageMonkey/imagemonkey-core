@@ -40,3 +40,88 @@ function calcScaleFactor(img){
 
     return scaleFactor;
 }
+
+function drawAnnotations(canvas, annotations, scaleFactor){
+  for(var i = 0; i < annotations.length; i++){
+    var type = annotations[i]["type"];
+    if(type === "rect"){
+        var top = (annotations[i]["top"] * scaleFactor);
+        var left = (annotations[i]["left"] * scaleFactor);
+        var height = (annotations[i]["height"] * scaleFactor);
+        var width = (annotations[i]["width"] * scaleFactor);
+        var angle = annotations[i]["angle"];
+
+        var rect = new fabric.Rect({
+            left: left,
+            top: top,
+            originX: 'left',
+            originY: 'top',
+            width: width,
+            height: height,
+            angle: angle,
+            stroke: 'red',
+            strokeWidth: 5,
+            fill: "transparent",
+            transparentCorners: false,
+            hasBorders: false,
+            hasControls: false,
+            selectable: false
+        });
+        canvas.add(rect);           
+    }
+    else if(type === "ellipse"){
+        var top = (annotations[i]["top"] * scaleFactor);
+        var left = (annotations[i]["left"] * scaleFactor);
+        var rx = (annotations[i]["rx"] * scaleFactor);
+        var ry = (annotations[i]["ry"] * scaleFactor);
+        var angle = annotations[i]["angle"];
+
+        var ellipsis = new fabric.Ellipse({
+            left: left,
+            top: top,
+            originX: 'left',
+            originY: 'top',
+            rx: rx,
+            ry: ry,
+            angle: angle,
+            stroke: 'red',
+            strokeWidth: 5,
+            fill: "transparent",
+            transparentCorners: false,
+            hasBorders: false,
+            hasControls: false,
+            selectable: false
+        });
+        canvas.add(ellipsis);
+    }
+    else if(type === "polygon"){
+        var top = (annotations[i]["top"] * scaleFactor);
+        var left = (annotations[i]["left"] * scaleFactor);
+        var angle = annotations[i]["angle"];
+        var points = annotations[i]["points"];
+        var scaledPoints = [];
+
+        for(var j = 0; j < points.length; j++){
+            scaledPoints.push({"x": (points[j]["x"] * scaleFactor), "y": (points[j]["y"] * scaleFactor)});
+        }
+
+        var polygon = new fabric.Polygon(scaledPoints, {
+            left: left,
+            top: top,
+            originX: 'left',
+            originY: 'top',
+            angle: angle,
+            stroke: 'red',
+            strokeWidth: 5,
+            fill: "transparent",
+            transparentCorners: false,
+            hasBorders: false,
+            hasControls: false,
+            selectable: false
+        });
+        canvas.add(polygon);
+    }
+}
+
+canvas.renderAll();
+}

@@ -16,43 +16,17 @@
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
-  <script src="js/fabric_helper.js"></script>
   <script src="js/fabric.min.js"></script>
+  <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
+  <script src="js/chart.bundle.min.js"></script>
+  <script src="js/poll.js"></script>
 
   <style>
     .canvas-container{margin: 0 auto;}
   </style>
 
   <script type="text/javascript">
-    function drawAnnotations(canvas, annotations, scaleFactor){
-      for(var i = 0; i < annotations.length; i++){
-        var top = (annotations[i]["top"] * scaleFactor);
-        var left = (annotations[i]["left"] * scaleFactor);
-        var height = (annotations[i]["height"] * scaleFactor);
-        var width = (annotations[i]["width"] * scaleFactor);
-
-        var rect = new fabric.Rect({
-            left: left,
-            top: top,
-            originX: 'left',
-            originY: 'top',
-            width: width,
-            height: height,
-            angle: 0,
-            stroke: 'red',
-            strokeWidth: 5,
-            fill: "transparent",
-            transparentCorners: false,
-            hasBorders: false,
-            hasControls: false,
-            selectable: false
-        });
-        canvas.add(rect);
-        canvas.renderAll();
-      }
-    }
-
     function setLabel(label, sublabel){
       $("#label").attr("label", label)
       $("#label").attr("sublabel", sublabel)
@@ -64,16 +38,44 @@
       }
     }
 
+    function showHideControls(show){
+      if(show){
+        $('#validationContainer').show();
+        $('#loadingIndicator').addClass('active');
+        $('#loadingIndicator').hide();
+
+        if(isPollDataEmpty()) //only show poll button if there is actual data available
+          $('#showMePollButton').hide();
+        else
+          $('#showMePollButton').show();
+      }
+      else {
+        $('#poll-chart').hide();
+        $('#validationContainer').hide();
+        $('#loadingIndicator').removeClass('active');
+        $('#loadingIndicator').show();
+        $('#showMePollButton').hide();
+      }
+    }
+
     $(document).ready(function(){
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
       var browserFingerprint = null;
 
       var canvas = new fabric.Canvas('canvas');
-      setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.Id }}', function() {
+      setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.ImageId }}', function() {
         drawAnnotations(canvas, {{ .randomImage.Annotations }}, canvas.backgroundImage.scaleX);
       });
-      
 
+      setPollData({{ .randomImage.NumOfValid }}, {{ .randomImage.NumOfInvalid }});
+      showHideControls(true);
+
+
+      $("#showMePollButton").click(function(e) {
+        createPoll();
+        showHidePoll(true);
+        $("#showMePollButton").hide();
+      });
 
       $("#yesButton").add('#noButton').click(function(e) {
         var action = (e.target.id === "yesButton") ? "yes" : "no";
@@ -83,8 +85,13 @@
         if(browserFingerprint !== null)
           headers["X-Browser-Fingerprint"] = browserFingerprint;
 
+        headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
+        showHideControls(false);
+        showHidePoll(false);
+
         e.preventDefault();
-        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("imageId") + '/validate/' + action;
+        var url = '{{ .apiBaseUrl}}/v1/annotation/' + $("#canvas").attr("annotationId") + '/validate/' + action;
           $.ajax({
               url: url,
               dataType: 'json',
@@ -97,12 +104,16 @@
                   dataType: 'json',
                   type: 'GET',
                   success: function(data){
-                    $("#canvas").attr("imageId", data.uuid);
+                    $("#canvas").attr("imageId", data.image_uuid);
+                    $("#canvas").attr("annotationId", data.annotation_uuid);
                     canvas.clear();
-                    setCanvasBackgroundImageUrl(canvas, ('donations/' + data.uuid), function() {
-                      drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
-                    });
                     setLabel(data.label, data.sublabel);
+                    setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
+
+                    setCanvasBackgroundImageUrl(canvas, ('donations/' + data.image_uuid), function() {
+                      drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
+                      showHideControls(true);
+                    });
                   }
                 });
               }
@@ -130,18 +141,42 @@
       <h2>All occurrences annotated?</h2>
     </div>
   </div>
-  <div class="ui vertical stripe segment">
-    <div class="ui text container">
-      <div class="row">
-        <div class="ui center aligned basic segment">
-          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.Id }}"></canvas> 
-            <p></p>
-            <button class="negative ui button center aligned" id="noButton">NO</button>
-            <button class="positive ui button center aligned" id="yesButton">YES</button>
-        </div>
-      </div>
+
+
+  <div class="ui stackable grid vertical stripe">
+    <div class="four wide center aligned column">
     </div>
+
+    <div class="eight wide center aligned column">
+      <div class="ui center aligned basic segment" id="validationContainer">
+          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.ImageId }}" annotationId="{{ .randomImage.AnnotationId }}"></canvas> 
+          <p></p>
+          <button class="negative ui button center aligned" id="noButton">NO</button>
+          <button class="positive ui button center aligned" id="yesButton">YES</button>
+      </div>
+
+      <div hidden class="ui large loader" id="loadingIndicator"></div>
+
+      {{ template "validate_help_dlg.html" .}}
+      {{ template "report_dlg.html" .}}
+    </div>
+
+    <div class="four wide center aligned column">
+      {{ template "img_info.html" .}}
+      <h3></h3>
+      <button class="ui button center aligned" id="showMePollButton" hidden>
+        <i class="pie chart icon"></i>
+        What other people are thinking
+      </button>
+      <!--<button class="positive ui button center aligned" id="showMePollButton">Additional Information</button>-->
+      <canvas id="poll-chart" hidden/>
+
+    </div>
+
   </div>
+
+
+
 </div>
 {{ template "footer.html" .}}
 

@@ -31,6 +31,8 @@ func main() {
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8081", "Playground Base URL")
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 
+	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
+
 	flag.Parse()
 	if(*releaseMode){
 		fmt.Printf("Starting gin in release mode!\n")
@@ -89,6 +91,7 @@ func main() {
 			"activeMenuNr": 2,
 			"apiBaseUrl": apiBaseUrl,
 			"words": words,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 
@@ -109,6 +112,7 @@ func main() {
 			"randomImage": getRandomUnannotatedImage(),
 			"activeMenuNr": 4,
 			"apiBaseUrl": apiBaseUrl,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 
@@ -128,28 +132,49 @@ func main() {
 				showFooter = false
 			}
 		}
+
+		onlyOnce := false
+		if temp, ok := params["only_once"]; ok {
+			if temp[0] == "true" {
+				onlyOnce = true
+			}
+		}
+
+
 		c.HTML(http.StatusOK, "validate.html", gin.H{
 			"title": "Validate Label",
 			"randomImage": getRandomImage(),
 			"activeMenuNr": 5,
 			"showHeader": showHeader,
 			"showFooter": showFooter,
+			"onlyOnce": onlyOnce,
 			"apiBaseUrl": apiBaseUrl,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "validate_annotations.html", gin.H{
 			"title": "Validate Annotations",
-			"randomImage": getRandomAnnotatedImage(),
+			"randomImage": pick(getRandomAnnotatedImage())[0],
 			"activeMenuNr": 6,
 			"apiBaseUrl": apiBaseUrl,
+			"appIdentifier": webAppIdentifier,
 		})
 	})
+	router.GET("/quiz", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "quiz.html", gin.H{
+			"title": "Quiz",
+			"randomQuiz": "",
+			"randomAnnotatedImage": pick(getRandomAnnotationForRefinement())[0],
+			"activeMenuNr": 7,
+			"apiBaseUrl": apiBaseUrl,
+		})
+	})	
 	router.GET("/explore", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "explore.html", gin.H{
 			"title": "Explore Dataset",
 			"words": words,
-			"activeMenuNr": 7,
+			"activeMenuNr": 8,
 			"statistics": pick(explore(words))[0],
 		})
 	})
@@ -157,19 +182,19 @@ func main() {
 		c.HTML(http.StatusOK, "export.html", gin.H{
 			"title": "Export Dataset",
 			"labels": pick(getAllImageLabels())[0],
-			"activeMenuNr": 8,
+			"activeMenuNr": 9,
 		})
 	})
-	router.GET("/mobile", func(c *gin.Context) {
+	router.GET("/apps", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "mobile.html", gin.H{
-			"title": "Mobile App",
-			"activeMenuNr": 9,
+			"title": "Mobile Apps & Extensions",
+			"activeMenuNr": 10,
 		})
 	})
 	router.GET("/playground", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "playground.html", gin.H{
 			"title": "Playground",
-			"activeMenuNr": 10,
+			"activeMenuNr": 11,
 			"playgroundPredictBaseUrl": playgroundBaseUrl,
 		})
 	})

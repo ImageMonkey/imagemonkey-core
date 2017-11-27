@@ -24,6 +24,8 @@
   <script src="js/jquery-ui.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
   <script src="js/fingerprint2.min.js"></script>
+  <script src="js/chart.bundle.min.js"></script>
+  <script src="js/poll.js"></script>
 
 
   <style>
@@ -70,30 +72,52 @@
   }
 
   function getRandomImages(){
-    var multiValidationMode = isMultiValidationMode();
-    var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+    var onlyOnce = {{ .onlyOnce }};
+    if(onlyOnce){
+      $("#multiValidationContainer").hide();
+      $("#yesButton").hide();
+      $("#noButton").hide();
+      $("#image").attr("src", "");
+      $("#label").hide();
+      $("#singleValidationContainer").show();
+      $("#thankYouMessage").fadeIn("slow");
+    }
+    else{
+      var multiValidationMode = isMultiValidationMode();
+      var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
 
-    $.ajax({
-      url: url,
-      dataType: 'json',
-      type: 'GET',
-      success: function(data){
-        if(multiValidationMode){
-          populateImageGrid(data);
+      $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'GET',
+        success: function(data){
+          if(multiValidationMode){
+            populateImageGrid(data);
+          }
+          else{
+            $("#image").attr("imageId", data.uuid);
+            setLabel(data.label, data.sublabel);
+            setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
+
+            var downloadingImage = new Image();
+            downloadingImage.onload = function(){
+            $("#image").attr("src", this.src);
+              showHideControls(true);
+            }
+            downloadingImage.src = "donations/" + data.uuid;
+
+          }
         }
-        else{
-          $("#image").attr("imageId", data.uuid);
-          $("#image").attr("src", ("donations/"+data.uuid));
-          setLabel(data.label, data.sublabel);
-        }
-      }
-    });
+      });
+    }
   }
 
   function multiValidate(data, browserFingerprint){
     var headers = {}
     if(browserFingerprint !== null)
       headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
     $.ajax({
       url: '{{ .apiBaseUrl }}/v1/donation/validate',
@@ -134,6 +158,11 @@
       $("#multiValidationContainer").hide();
     }
     else {
+      //we can't display poll in multi validation mode
+      //as num_yes/num_no might be different for each image 
+      $("#showMePollButton").hide();
+      $("#poll-chart").hide();
+
       $("#singleValidationContainer").hide();
       $("#multiValidationContainer").show();
     }
@@ -150,11 +179,41 @@
     }
   }
 
+  function showHideControls(show){
+    if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
+      if(show){
+        $('#validationContainerSegment').show();
+        $('#loadingIndicator').addClass('active');
+        $('#loadingIndicator').hide();
+
+        if(isPollDataEmpty()){ //only show poll button if there is actual data available
+          $('#showMePollButton').hide();
+        }
+        else
+          $('#showMePollButton').show();
+        
+        $('#image').show();
+      }
+      else {
+        $('#poll-chart').hide();
+        $('#validationContainerSegment').hide();
+        $('#loadingIndicator').removeClass('active');
+        $('#loadingIndicator').show();
+        $('#showMePollButton').hide();
+        $('#image').hide();
+      }
+    }
+  }
+
   $(document).ready(function(){
     var browserFingerprint = null;
-    setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
     $("#multiValidationContainer").hide();
+
+    setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
+
+    setPollData({{ .randomImage.NumOfValid }}, {{ .randomImage.NumOfInvalid }});
+    showHideControls(true);
 
     //switch between multi-validation mode and single-validation mode with 'm'
     Mousetrap.bind('m', function() { 
@@ -188,6 +247,13 @@
       event.originalEvent.ctrlKey = true;
     });
 
+    $("#showMePollButton").click(function(e) {
+      createPoll();
+      showHidePoll(true);
+      $("#showMePollButton").hide();
+    });
+
+
 
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
@@ -197,6 +263,13 @@
       var headers = {}
       if(browserFingerprint !== null)
         headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+      headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
+      if(!isMultiValidationMode()){
+        showHideControls(false);
+        showHidePoll(false);
+      }
 
       e.preventDefault();
       var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
@@ -261,11 +334,19 @@
     </div>
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
-      <div class="ui center aligned basic segment">
+      <div class="ui center aligned basic segment" id="validationContainerSegment">
         <h1 class="ui header" id="label" label="" sublabel=""></h1>
         <button class="negative ui button center aligned" id="noButton">NO</button>
         <button class="positive ui button center aligned" id="yesButton">YES</button>
       </div>
+
+      <div hidden id="thankYouMessage">
+        <i class="massive check circle outline icon"></i>
+        <h1 class="ui header">Thank you!</h1>
+      </div>
+
+      <div hidden class="ui large loader" id="loadingIndicator"></div>
+
       {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
     </div>
@@ -304,6 +385,12 @@
 
     <div class="four wide center aligned column">
       {{ template "img_info.html" .}}
+      <h3></h3>
+      <button class="ui button center aligned" id="showMePollButton" hidden>
+        <i class="pie chart icon"></i>
+        What other people are thinking
+      </button>
+      <canvas id="poll-chart" hidden/>
     </div>
   </div>
 

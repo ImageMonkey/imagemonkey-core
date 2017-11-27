@@ -86,7 +86,15 @@
       },
       success: function(data){
         $("#image").attr("imageId", data.uuid);
-        $("#image").attr("src", ("donations/"+data.uuid));
+        
+        //$("#image").attr("src", ("donations/"+data.uuid));
+
+        var downloadingImage = new Image();
+        downloadingImage.onload = function(){
+          $("#image").attr("src", this.src);
+          showHideControls(true);
+        }
+        downloadingImage.src = "donations/"+data.uuid;
 
         addOldLabels(data["all_labels"]);
 
@@ -102,6 +110,27 @@
     }
     else{
       $("#noLabelsDefined").hide();
+    }
+  }
+
+  function showHideControls(show){
+    if(show){
+      $('#image').show();
+      $('#doneButton').show();
+      $('#labels').show();
+      $('#loadingIndicator').addClass('active');
+      $('#loadingIndicator').hide();
+      $('#labelForm').show();
+      $('#objectsWithoutLabelText').show();
+    }
+    else{
+      $('#image').hide();
+      $('#doneButton').hide();
+      $('#labels').hide();
+      $('#loadingIndicator').removeClass('active');
+      $('#loadingIndicator').show();
+      $('#labelForm').hide();
+      $('#objectsWithoutLabelText').hide();
     }
   }
 
@@ -198,23 +227,30 @@
 
   function addLabel(label){
     var added = false;
-    var baseLabelExists = labelExists(label); 
-    var subLabels = labelMap[label]["labels"];
+    var baseLabelExists = labelExists(label);
+    var subLabels = []; 
+    var subLabelsDict = labelMap[label]["has"];
+    for (key in subLabelsDict) {
+      if (subLabelsDict.hasOwnProperty(key))
+        subLabels.push(key);
+    }
+
+
     var color = colorMap[label];
 
     if((subLabels !== null) && (subLabels.length > 0)){
       for(var j = 0; j < subLabels.length; j++){
-        if(!sublabelExists(label, subLabels[j].name)){
-          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j]["name"] +'" label="' + label + '"' + '>' + subLabels[j]["name"] + '/' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+        if(!sublabelExists(label, subLabels[j])){
+          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j] +'" label="' + label + '"' + '>' + subLabels[j] + '/' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
           added = true;
 
           if(label in newlyAddedLabels){
             var alreadyAvailableSubLabels = newlyAddedLabels[label];
-            alreadyAvailableSubLabels.push(subLabels[j].name)
+            alreadyAvailableSubLabels.push(subLabels[j])
             newlyAddedLabels[label] = alreadyAvailableSubLabels;
           }
           else{
-            newlyAddedLabels[label] = [subLabels[j].name];
+            newlyAddedLabels[label] = [subLabels[j]];
           }
         }
       }    
@@ -280,9 +316,11 @@
           headers['X-Browser-Fingerprint'] = browserFingerprint;
 
         if(newlyAddedLabels.length === 0){ //if no label was added, just load next image
+          showHideControls(false);
           getNextImage();
         }
         else {
+          showHideControls(false);
           e.preventDefault();
           $.ajax({
             url: url,
@@ -376,12 +414,12 @@
     <div class="one wide column">
     </div>
 
-    <div class="four wide center aligned mobile only column">
+    <!--<div class="four wide center aligned mobile only column">
       {{ template "img_info.html" .}}
-    </div>
+    </div>-->
 
     <div class="three wide center aligned column">
-      <p><h2>Labels:</h2></p>
+      <p><h2 id="labelsHeader">Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
       <div class="ui labels" id="labels">
@@ -402,11 +440,11 @@
       
 
       <h2></h2>
-      <p>Do you see any objects without a label? Add them here</p>
+      <p id="objectsWithoutLabelText">Do you see any objects without a label? Add them here</p>
       <div class="ui centered grid">
         <div class="row">
           <div class="ui search">
-            <div class="ui center aligned action input">
+            <div class="ui center aligned action input" id="labelForm">
               <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
               <div class="ui search selection dropdown" id="labelDropdown">
                 <div class="default text">Select Label</div>
@@ -421,6 +459,9 @@
               <button class="ui button" id="addLabelButton">Add</button>
             </div>
           </div>
+
+          <div class="ui large loader" id="loadingIndicator"></div>
+
           <h1></h1>
         </div>
       </div>
