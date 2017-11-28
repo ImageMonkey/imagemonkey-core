@@ -74,6 +74,7 @@
   function getRandomImages(){
     var onlyOnce = {{ .onlyOnce }};
     if(onlyOnce){
+      $("#loadingIndicator").hide();
       $("#multiValidationContainer").hide();
       $("#yesButton").hide();
       $("#noButton").hide();
@@ -281,6 +282,10 @@
         headers: headers, 
         success: function(data){
           getRandomImages();
+
+          {{ if .callback }}
+          parent.postMessage("done button pressed", '*');
+          {{ end }}
         }
       });
     });
