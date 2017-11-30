@@ -84,6 +84,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey;
 * modify `conf/nginx/nginx.conf` and replace `imagemonkey.io` and `api.imagemonkey.io` with your own domain names, copy it to `/etc/nginx/nginx.conf` and reload nginx with `service nginx reload`
 
 ### Build Application ###
+**Minimal** required Go version: v1.9.2
+
 * install git with `apt-get install git`
 * install golang with `apt-get install golang`
 * clone repository
