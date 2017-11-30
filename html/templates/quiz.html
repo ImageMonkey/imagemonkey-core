@@ -32,6 +32,7 @@
         $('#quizArea').show();
         $('#loadingIndicator').addClass('active');
         $('#loadingIndicator').hide();
+        $('#answersOtherContainer').hide();
       }
       else{
         $('#canvas').hide();
@@ -39,6 +40,7 @@
         $('#quizArea').hide();
         $('#loadingIndicator').removeClass('active');
         $('#loadingIndicator').show();
+        $('#answersOtherContainer').hide();
       }
     }
 
@@ -80,14 +82,27 @@
         $('#answersRadioButtonGroup').children().each(function (){
           $(this).remove();
         })
+
+        $('#answersOtherContainer').children().each(function (){
+          $(this).remove();
+        })
       }
     }
 
     var addAnswers = function(answers, controlsType){
+      var allowOther = false;
       if(controlsType == "radio"){
         for(var i = 0; i < answers.length; i++){
-          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
+          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
           $('#answersRadioButtonGroup').append($(d));
+          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
+            allowOther = true;
+          }
+        }
+
+        if(allowOther){
+          var otherInput = '<div class="ui input"><input id="suggestedLabel" placeholder="Label..." type="text"></div>';
+          $('#answersOtherContainer').append($(otherInput));
         }        
       }
     }
@@ -102,9 +117,16 @@
 
 
     $(document).ready(function(){
-      $('.ui.dropdown')
-        .dropdown()
-      ;
+      $('.ui.dropdown').dropdown();
+
+      $('.ui.checkbox').checkbox();
+
+      $('#answersRadioButtonGroup').on("change", function(event){
+        if(event.target.getAttribute("labelId") == -2)
+          $("#answersOtherContainer").show();
+        else
+          $("#answersOtherContainer").hide();
+      });
 
       var browserFingerprint = null;
 
@@ -122,15 +144,37 @@
           $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
         }
         else{
+          var url, data;
+          var headers = {}
+          if(browserFingerprint !== null)
+            headers['X-Browser-Fingerprint'] = browserFingerprint;
+
           if (labelId === -1){ //if "don't know" is selected, just get a new quiz
             getNextQuiz(canvas);
           }
+          else if(labelId == -2){ //if "other is selected"
+            url = '{{ .apiBaseUrl }}/v1/label/suggest';
+            data = {"label" : $("#suggestedLabel").val()};
+
+            showHideControls(false);
+
+            e.preventDefault();
+            $.ajax({
+              url: url,
+              dataType: 'json',
+              type: 'POST',
+              data: JSON.stringify(data),
+              headers: headers,
+              complete: function(data){
+              },
+              success: function(data){
+                getNextQuiz(canvas);
+              }
+            });
+          }
           else{
-            var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
-            var data = {"label_id" : labelId};
-            var headers = {}
-            if(browserFingerprint !== null)
-              headers['X-Browser-Fingerprint'] = browserFingerprint;
+            url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
+            data = {"label_id" : labelId};
 
             showHideControls(false);
 
@@ -193,6 +237,8 @@
         {{ if eq .randomAnnotatedImage.Question.RecommendedControl "radio" }}
         <div class="ui form">
           <div class="grouped fields" id="answersRadioButtonGroup">
+          </div>
+          <div hidden id="answersOtherContainer">
           </div>
         </div>
         {{ end }}

@@ -1425,11 +1425,12 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
     var refinement AnnotationRefinement
     var annotations []json.RawMessage
     var allowUnknown bool
-    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown
+    var allowOther bool
+    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, s.allow_other
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
                                 json_agg(json_build_object('id', l.id, 'label', l.name)) as quiz_answers, 
-                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown
+                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other
     
                                 FROM quiz_question qq 
                                 JOIN quiz_answer q ON q.quiz_question_id = qq.id 
@@ -1452,7 +1453,7 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
                               WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
                             )
                         ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &allowUnknown)
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &allowUnknown, &allowOther)
     if err != nil {
         log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1487,6 +1488,13 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         refinement.Answers = append(refinement.Answers, unknownRefinementAnswer)
     }
 
+    if allowOther {
+        var otherRefinementAnswer AnnotationRefinementAnswer
+        otherRefinementAnswer.Label = "other"
+        otherRefinementAnswer.Id = -2
+        refinement.Answers = append(refinement.Answers, otherRefinementAnswer)
+    }
+
     return refinement, nil
 }
 
@@ -1508,3 +1516,15 @@ func addOrUpdateRefinement(annotationUuid string, annotationDataId int64, labelI
 
     return nil
 }
+
+func addLabelSuggestion(suggestedLabel string) error {
+     _, err := db.Exec(`INSERT INTO label_suggestion(name) VALUES($1)
+                       ON CONFLICT (name) DO NOTHING`, suggestedLabel)
+    if err != nil {
+        log.Debug("[Add label suggestion] Couldn't insert: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+} 

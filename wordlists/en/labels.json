@@ -41,12 +41,14 @@
 				{
 					"question": "What's the size of the dog",
 					"answers": ["big", "medium", "small"],
-					"allow_unknown": true
+					"allow_unknown": true,
+					"allow_other": true
 				},
 				{
 					"question": "It's a...",
 					"answers": ["dog", "puppy"],
-					"allow_unknown": true
+					"allow_unknown": true,
+					"allow_other": true
 				}
 
 			]

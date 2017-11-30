@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"net"
 	"errors"
+	"html"
 )
 
 var db *sql.DB
@@ -475,7 +476,7 @@ func main(){
 				c.JSON(http.StatusOK, jsonData)
 				return
 			} else{
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Couldn't export data, please try again later."})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't export data, please try again later."})
 				return
 			}
 		} else {
@@ -514,6 +515,27 @@ func main(){
 	router.GET("/v1/label/random", func(c *gin.Context) {
 		label := words[random(0, len(words) - 1)]
 		c.JSON(http.StatusOK, gin.H{"label": label})
+	})
+
+	router.POST("/v1/label/suggest", func(c *gin.Context) {
+		type SuggestedLabel struct {
+		    Name string `json:"label"`
+		}
+		var suggestedLabel SuggestedLabel
+
+		if c.BindJSON(&suggestedLabel) != nil {
+			c.JSON(422, gin.H{"error": "Couldn't process request - label missing"})
+			return
+		}
+
+		escapedLabel := html.EscapeString(suggestedLabel.Name)
+		err = addLabelSuggestion(escapedLabel)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		c.JSON(200, nil)
 	})
 
 	/*router.GET("/v1/label/suggest", func(c *gin.Context) {
