@@ -35,7 +35,21 @@
 				"mouth": {
 					"description": "optional"
 				}
-			}
+			},
+
+			"quiz": [
+				{
+					"question": "What's the size of the dog",
+					"answers": ["big", "medium", "small"],
+					"allow_unknown": true
+				},
+				{
+					"question": "It's a...",
+					"answers": ["dog", "puppy"],
+					"allow_unknown": true
+				}
+
+			]
 		},
 		"cat": {
 			"description": "optional",

@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=1"></script>
+  <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
 
   <style>
@@ -88,8 +88,7 @@
         for(var i = 0; i < answers.length; i++){
           var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
           $('#answersRadioButtonGroup').append($(d));
-        }
-        
+        }        
       }
     }
 
@@ -123,27 +122,32 @@
           $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
         }
         else{
-          var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
-          var data = {"label_id" : labelId};
-          var headers = {}
-          if(browserFingerprint !== null)
-            headers['X-Browser-Fingerprint'] = browserFingerprint;
+          if (labelId === -1){ //if "don't know" is selected, just get a new quiz
+            getNextQuiz(canvas);
+          }
+          else{
+            var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
+            var data = {"label_id" : labelId};
+            var headers = {}
+            if(browserFingerprint !== null)
+              headers['X-Browser-Fingerprint'] = browserFingerprint;
 
-          showHideControls(false);
+            showHideControls(false);
 
-          e.preventDefault();
-          $.ajax({
-            url: url,
-            dataType: 'json',
-            type: 'POST',
-            data: JSON.stringify(data),
-            headers: headers,
-            complete: function(data){
-            },
-            success: function(data){
-              getNextQuiz(canvas);
-            }
-          });
+            e.preventDefault();
+            $.ajax({
+              url: url,
+              dataType: 'json',
+              type: 'POST',
+              data: JSON.stringify(data),
+              headers: headers,
+              complete: function(data){
+              },
+              success: function(data){
+                getNextQuiz(canvas);
+              }
+            });
+          }
         }
       });
 
