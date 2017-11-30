@@ -113,6 +113,7 @@
       removeAllAnswers(data["question"]["recommended_control"]);
       addAnswers(data["answers"], data["question"]["recommended_control"]);
       setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
+      $("#question").text(data["question"]["question"]);
     }
 
 
@@ -219,7 +220,7 @@
       <h1></h1>
         
       <div class="ui left aligned segment">
-        <h2 class="ui header">{{ .randomAnnotatedImage.Question.Question }}</h2>
+        <h2 class="ui header" id="question">{{ .randomAnnotatedImage.Question.Question }}</h2>
       
       
         {{ if eq .randomAnnotatedImage.Question.RecommendedControl "dropdown" }}

@@ -1502,11 +1502,11 @@ func addOrUpdateRefinement(annotationUuid string, annotationDataId int64, labelI
     var err error
 
     _, err = db.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
-                        SELECT $1, $2, $3, $4, $5 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $6 AND d.id = $1
+                        SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
                       ON CONFLICT (annotation_data_id, label_id)
                       DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
                       WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
-                           annotationDataId, labelId, 0, clientFingerprint, annotationUuid)
+                           annotationDataId, labelId, 1, clientFingerprint, annotationUuid)
     
     if err != nil {
         log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
