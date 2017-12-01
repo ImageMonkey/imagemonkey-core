@@ -103,12 +103,10 @@
 
     function showControl(controlsType){
       if(controlsType === "radio"){
-        console.log("controls type = " +controlsType)
         $("#labelRadioButtons").show();
         $("#labelDropdown").hide();
       }
       else if(controlsType === "dropdown"){
-        console.log("controls type = " +controlsType)
         $("#labelDropdown").show();
         $("#labelRadioButtons").hide();
       }
@@ -132,7 +130,7 @@
           var d = '<div class="item" data-value="' + answers[i]["id"] + '">' + answers[i]["label"] + '</div>';
           $('#labelMenuItems').append($(d));
           if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
-              allowOther = true;
+            allowOther = true;
           }
         }
       }
@@ -157,7 +155,9 @@
     $(document).ready(function(){
       $('.ui.dropdown').dropdown();
       $('.ui.checkbox').checkbox();
-      showControl('{{ .randomAnnotatedImage.Question.RecommendedControl }}');
+      var recommendedControl = '{{ .randomAnnotatedImage.Question.RecommendedControl }}';
+      showControl(recommendedControl);
+
 
       $('#answersRadioButtonGroup').on("change", function(event){
         if(event.target.getAttribute("labelId") == -2)
