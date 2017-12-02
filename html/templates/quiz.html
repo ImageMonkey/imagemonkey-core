@@ -366,6 +366,8 @@
     <div class="eight wide center aligned column">
       <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomAnnotatedImage.Image.Uuid }}" annotationId="" annotationDataId=""></canvas> 
       <div class="ui large loader" id="loadingIndicator"></div>
+
+      {{ template "report_dlg.html" .}}
     </div>
 
     <div class="four wide computer only center aligned column">
