@@ -68,11 +68,10 @@
         labelId = parseInt(labelIdStr, 10);
       }
       else if(currentControlsType === "color tags"){
-        return currentSelectedColorTag;
+        labelId = currentSelectedColorTag;
       }
 
-
-      return 
+      return labelId;
     }
 
     function setImageAnnotation(canvas, imageUuid, annotation){
@@ -211,7 +210,16 @@
 
 
     $(document).ready(function(){
-      $('.ui.dropdown').dropdown();
+      $('#labelDropdown').dropdown({ 
+        onChange: function(changedValue){ 
+          console.log("changed value = " +typeof(changedValue))
+          if(changedValue === "-2")
+            $("#answersOtherContainer").show();
+          else
+            $("#answersOtherContainer").hide();
+        } 
+      });
+
       $('.ui.checkbox').checkbox();
       var recommendedControl = '{{ .randomAnnotatedImage.Question.RecommendedControl }}';
       showControl(recommendedControl);
@@ -223,6 +231,14 @@
         else
           $("#answersOtherContainer").hide();
       });
+
+      /*$('#labelDropdown').on("change", function(event){
+        console.log("changed")
+        if(event.target.getAttribute("labelId") == -2)
+          $("#answersOtherContainer").show();
+        else
+          $("#answersOtherContainer").hide();
+      });*/
 
       var browserFingerprint = null;
 
@@ -344,6 +360,7 @@
           <div hidden class="ui labels" id="colorTags">
           </div>
 
+          <h2></h2>
           <div hidden id="answersOtherContainer">
           </div>
 
