@@ -140,6 +140,14 @@
 		"tree": {
 			"description": "optional",
 			"isa": []
+		},
+		"person": {
+			"description": "optional",
+			"has": {
+				"head": {
+					"description": "optional"
+				}
+			}
 		}
 	}
 }
