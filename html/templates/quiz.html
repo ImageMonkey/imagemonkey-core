@@ -21,11 +21,14 @@
   <script src="js/fingerprint2.min.js"></script>
 
   <style>
-    .canvas-container{margin: 0 auto;}
+    .canvas-container{
+      margin: 0 auto;
+    }
   </style>
 
   <script type="text/javascript">
     var currentControlsType = null;
+    var currentSelectedColorTag = null;
 
     function showHideControls(show){
       if(show){
@@ -55,12 +58,21 @@
 
     function getSelectedLabelId(){
       var labelId;
-      if(currentControlsType === "radio")
-        labelId = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
-      else if(currentControlsType === "dropdown")
-        labelId = $('#labelDropdown' ).dropdown('get value').toString();
+      var labelIdStr;
+      if(currentControlsType === "radio"){
+        labelIdStr = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
+        labelId = parseInt(labelIdStr, 10);
+      }
+      else if(currentControlsType === "dropdown"){
+        labelIdStr = $('#labelDropdown' ).dropdown('get value').toString();
+        labelId = parseInt(labelIdStr, 10);
+      }
+      else if(currentControlsType === "color tags"){
+        return currentSelectedColorTag;
+      }
 
-      return parseInt(labelId, 10);
+
+      return 
     }
 
     function setImageAnnotation(canvas, imageUuid, annotation){
@@ -95,6 +107,11 @@
           $(this).remove();
         })
       }
+      else if(controlsType === "color tags"){
+        $('#colorTags').children().each(function (){
+          $(this).remove();
+        })
+      }
 
       $('#answersOtherContainer').children().each(function (){
         $(this).remove();
@@ -105,14 +122,40 @@
       if(controlsType === "radio"){
         $("#labelRadioButtons").show();
         $("#labelDropdown").hide();
+        $("#colorTags").hide();
       }
       else if(controlsType === "dropdown"){
         $("#labelDropdown").show();
+        $("#labelRadioButtons").hide();
+        $("#colorTags").hide();
+      }
+      else if(controlsType === "color tags"){
+        $("#colorTags").show();
+        $("#labelDropdown").hide();
         $("#labelRadioButtons").hide();
       }
 
       currentControlsType = controlsType;
     }
+
+    var colorTagSelected = function(e){
+      var selected = $(e).attr("labelId");
+      currentSelectedColorTag = parseInt(selected, 10); 
+
+      $('#colorTags').children().each(function (){
+        if($(this).attr("labelId") !== $(e).attr("labelId"))
+          $(this).removeClass('big');
+        else{
+          $(this).addClass('big');
+        }
+      })
+  
+      if(currentSelectedColorTag === -2){
+        $("#answersOtherContainer").show();
+      }
+      else
+        $("#answersOtherContainer").hide();
+    } 
 
     var addAnswers = function(answers, controlsType){
       var allowOther = false;
@@ -129,6 +172,21 @@
         for(var i = 0; i < answers.length; i++){
           var d = '<div class="item" data-value="' + answers[i]["id"] + '">' + answers[i]["label"] + '</div>';
           $('#labelMenuItems').append($(d));
+          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
+            allowOther = true;
+          }
+        }
+      }
+      else if(controlsType === "color tags"){
+        for(var i = 0; i < answers.length; i++){
+          var color = answers[i]["label"];
+          var isBasic = false;
+
+          if((answers[i]["id"] < 0) || (answers[i]["label"] === "white"))
+            isBasic = true;
+
+          var d = '<a class="ui ' + ((isBasic) ? "basic " : " ") +  answers[i]["label"] + ' label" labelId="' + answers[i]["id"] + '" onclick="colorTagSelected(this)">' + answers[i]["label"] + '</a>';
+          $('#colorTags').append($(d));
           if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
             allowOther = true;
           }
@@ -191,8 +249,13 @@
             getNextQuiz(canvas);
           }
           else if(labelId == -2){ //if "other is selected"
+            var suggestedLabel = $("#suggestedLabel").val();
+            if(suggestedLabel === ""){
+              $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
+              return;
+            }
             url = '{{ .apiBaseUrl }}/v1/label/suggest';
-            data = {"label" : $("#suggestedLabel").val()};
+            data = {"label" : suggestedLabel};
 
             showHideControls(false);
 
@@ -261,8 +324,8 @@
           <h2 class="ui header" id="question">{{ .randomAnnotatedImage.Question.Question }}</h2>
         
         
-
-          <div class="ui search selection dropdown" id="labelDropdown">
+          <!--dropdown buttons-->
+          <div hidden class="ui search selection dropdown" id="labelDropdown">
             <div class="default text">Select Label</div>
             <div class="menu" id="labelMenuItems">
               {{ range .randomAnnotatedImage.Answers }}
@@ -270,15 +333,20 @@
               {{ end }}
             </div>
           </div>
-
-
           
-          <div class="ui form" id="labelRadioButtons">
+          <!--radio buttons-->
+          <div hidden class="ui form" id="labelRadioButtons">
             <div class="grouped fields" id="answersRadioButtonGroup">
             </div>
-            <div hidden id="answersOtherContainer">
-            </div>
           </div>
+
+          <!-- color tags -->
+          <div hidden class="ui labels" id="colorTags">
+          </div>
+
+          <div hidden id="answersOtherContainer">
+          </div>
+
 
           <div class="ui warning message" hidden id="nothingSelectedMessage">
             <i class="close icon"></i>

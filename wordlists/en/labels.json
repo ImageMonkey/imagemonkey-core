@@ -59,6 +59,13 @@
 					"allow_unknown": true,
 					"control_type": "dropdown"
 
+				},
+				{
+					"question": "The color of the car is...",
+					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
+					"allow_other": true,
+					"allow_unknown": true,
+					"control_type": "color tags"
 				}
 
 			]
