@@ -6,8 +6,8 @@
 </description>
     <link>http://myblog.***.***/blog/</link>
     <atom:link href="http://myblog.***.***/blog/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 03 Dec 2017 16:42:32 +0100</pubDate>
-    <lastBuildDate>Sun, 03 Dec 2017 16:42:32 +0100</lastBuildDate>
+    <pubDate>Sun, 03 Dec 2017 20:34:08 +0100</pubDate>
+    <lastBuildDate>Sun, 03 Dec 2017 20:34:08 +0100</lastBuildDate>
     <generator>Jekyll v3.5.2</generator>
     
       <item>
@@ -108,8 +108,8 @@
 
 &lt;div class=&quot;divider-30&quot;&gt;&lt;/div&gt;
 
-&lt;center&gt;&lt;h5&gt;&lt;/h5&gt;&lt;/center&gt;
-&lt;center&gt;&lt;h5&gt;&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Want to read more about ImageMonkey?&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Subscribe now!&lt;/h5&gt;&lt;/center&gt;
 
 &lt;iframe name=&quot;hiddenFrame&quot; width=&quot;0&quot; height=&quot;0&quot; border=&quot;0&quot; style=&quot;display: none;&quot;&gt;&lt;/iframe&gt;
 &lt;center&gt;&lt;form id=&quot;register-newsletter&quot;&gt;
@@ -309,8 +309,8 @@ function subscribe() {
 
 &lt;div class=&quot;divider-30&quot;&gt;&lt;/div&gt;
 
-&lt;center&gt;&lt;h5&gt;&lt;/h5&gt;&lt;/center&gt;
-&lt;center&gt;&lt;h5&gt;&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Want to read more about ImageMonkey?&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Subscribe now!&lt;/h5&gt;&lt;/center&gt;
 
 &lt;iframe name=&quot;hiddenFrame&quot; width=&quot;0&quot; height=&quot;0&quot; border=&quot;0&quot; style=&quot;display: none;&quot;&gt;&lt;/iframe&gt;
 &lt;center&gt;&lt;form id=&quot;register-newsletter&quot;&gt;

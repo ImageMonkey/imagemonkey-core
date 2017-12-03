@@ -162,10 +162,8 @@
 
       $("#deletedObjectsYesButton").click(function(e) {
         shape.deleteSelected();
-        if(shape.objectsSelected())
-          $("#trashMenuItem").show();
-        else
-          $("#trashMenuItem").hide();
+        if(!shape.objectsSelected())
+          $("#trashMenuItem").addClass("disabled");
       });
 
 
@@ -250,7 +248,7 @@
         <div class="ui center aligned basic segment">
 
 
-          <div class="ui labeled icon menu">
+          <div class="ui stackable labeled icon menu">
             <a class="active item" id="rectMenuItem">
               <i class="square outline icon"></i>
               Rectangle
