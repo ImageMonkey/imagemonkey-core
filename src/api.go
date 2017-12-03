@@ -849,5 +849,34 @@ func main(){
 		c.JSON(http.StatusOK, nil)
 	})
 
+	router.POST("/v1/blog/subscribe", func(c *gin.Context) {
+		var blogSubscribeRequest BlogSubscribeRequest
+		if c.BindJSON(&blogSubscribeRequest) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid email address"})
+			return
+		}
+
+
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+
+		serialized, err := json.Marshal(blogSubscribeRequest)
+		if err != nil { 
+			log.Debug("[Subscribe to blog] Couldn't create subscribe-to-blog request: ", err.Error())
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+
+		_, err = redisConn.Do("RPUSH", "subscribe-to-blog", serialized)
+		if err != nil {
+			log.Debug("[Subscribe to blog] Couldn't subscribe to blog: ", err.Error())
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
+	})
+
 	router.Run(":8081")
 }

@@ -64,6 +64,11 @@ type LabelValidationEntry struct {
     Sublabel string `json:"sublabel"`
 }
 
+type BlogSubscribeRequest struct {
+    Email string `json:"email"`
+}
+
+
 func use(vals ...interface{}) {
     for _, val := range vals {
         _ = val
