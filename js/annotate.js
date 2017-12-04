@@ -165,8 +165,8 @@ var Polygon = (function () {
 
 
 
-var Shape = (function () {
-  function Shape(canvas, objSelected) {
+var Annotator = (function () {
+  function Annotator(canvas, objSelected) {
     var inst=this;
     this.canvas = canvas;
     this.className= "Rectangle";
@@ -179,20 +179,26 @@ var Shape = (function () {
     this.history = new Array();
     this.isRedoing = false;
     this.currentHistoryPosition = 0;
+    this.isPanMode = false;
+    this.panning = false;
 
     this.bindEvents();
   }
 
-  Shape.prototype.bindEvents = function() {
+  Annotator.prototype.bindEvents = function() {
     var inst = this;
     inst.canvas.on('mouse:down', function(o) {
       inst.onMouseDown(o);
+      if(inst.isPanMode)
+        inst.panning = true;
     });
     inst.canvas.on('mouse:move', function(o) {
       inst.onMouseMove(o);
     });
     inst.canvas.on('mouse:up', function(o) {
       inst.onMouseUp(o);
+      if(inst.isPanMode)
+        inst.panning = false;
     });
     inst.canvas.on('object:moving', function(o) {
       inst.disable();
@@ -221,12 +227,12 @@ var Shape = (function () {
         inst.out();
     })
   }
-  Shape.prototype.onMouseUp = function (o) {
+  Annotator.prototype.onMouseUp = function (o) {
     var inst = this;
     inst.disable();
   };
 
-  Shape.prototype.redo = function (o) {
+  Annotator.prototype.redo = function (o) {
     /*if (this.currentHistoryPosition > 0) {
         this.isRedoing = true;
         this.currentHistoryPosition -= 1;
@@ -240,7 +246,7 @@ var Shape = (function () {
     }*/
   };
 
-  Shape.prototype.undo = function (o) {
+  Annotator.prototype.undo = function (o) {
     /*if (this.currentHistoryPosition < this.history.length) {
         this.isRedoing = true;
         this.canvas.clear().renderAll();
@@ -252,12 +258,12 @@ var Shape = (function () {
     }*/
   };
 
-  Shape.prototype.initHistory = function (o) {
+  Annotator.prototype.initHistory = function (o) {
     this.saveState();
   };
 
 
-  Shape.prototype.saveState = function (o) {
+  Annotator.prototype.saveState = function (o) {
     /*if(!this.isRedoing){
       j = JSON.stringify(this.canvas.toObject());
       this.history.push(j);
@@ -266,61 +272,69 @@ var Shape = (function () {
   
 
 
-  Shape.prototype.onMouseMove = function (o) {
+  Annotator.prototype.onMouseMove = function (o) {
     var inst = this;
 
+    if(!inst.isPanMode){
+      if(!inst.isEnable()){ return; }
+      var pointer = inst.canvas.getPointer(o.e);
 
-    if(!inst.isEnable()){ return; }
-    var pointer = inst.canvas.getPointer(o.e);
+      if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
+        var activeObj = inst.canvas.getActiveObject();
+        activeObj.stroke= 'red',
+        activeObj.strokeWidth= 5;
+        activeObj.fill = 'transparent';
 
-    if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
-      var activeObj = inst.canvas.getActiveObject();
-      activeObj.stroke= 'red',
-      activeObj.strokeWidth= 5;
-      activeObj.fill = 'transparent';
-
-      if(origX > pointer.x){
-        activeObj.set({ left: Math.abs(pointer.x) }); 
+        if(origX > pointer.x){
+          activeObj.set({ left: Math.abs(pointer.x) }); 
+        }
+        if(origY > pointer.y){
+          activeObj.set({ top: Math.abs(pointer.y) });
+        }
       }
-      if(origY > pointer.y){
-        activeObj.set({ top: Math.abs(pointer.y) });
+
+      if(inst.type === 'Rectangle'){
+        activeObj.set({ width: Math.abs(origX - pointer.x) });
+        activeObj.set({ height: Math.abs(origY - pointer.y) });
+
+        activeObj.setCoords();
       }
-    }
+      if(inst.type === 'Circle'){   
+        activeObj.set({ rx: Math.abs(origX - pointer.x) / 2 });
+        activeObj.set({ ry: Math.abs(origY - pointer.y) / 2 });
 
-    if(inst.type === 'Rectangle'){
-      activeObj.set({ width: Math.abs(origX - pointer.x) });
-      activeObj.set({ height: Math.abs(origY - pointer.y) });
-
-      activeObj.setCoords();
-    }
-    if(inst.type === 'Circle'){   
-      activeObj.set({ rx: Math.abs(origX - pointer.x) / 2 });
-      activeObj.set({ ry: Math.abs(origY - pointer.y) / 2 });
-
-      activeObj.setCoords();
-    }
-    if(inst.type === 'Polygon'){
-      this.polygon.move(pointer);
-      
+        activeObj.setCoords();
+      }
+      if(inst.type === 'Polygon'){
+        this.polygon.move(pointer);
+        
+        inst.canvas.renderAll();
+      }
+   
       inst.canvas.renderAll();
     }
- 
-    inst.canvas.renderAll();
+    else{
+      if(inst.panning && o && o.e){
+        var units = 10;
+        var delta = new fabric.Point(o.e.movementX, o.e.movementY);
+        inst.canvas.relativePan(delta);
+      }
+    }
   };
 
-  Shape.prototype.deleteSelected = function (o) {
+  Annotator.prototype.deleteSelected = function (o) {
     this.canvas.getActiveObject().remove();
   };
 
-  Shape.prototype.objectsSelected = function (o) {
+  Annotator.prototype.objectsSelected = function (o) {
     var obj = this.canvas.getActiveObject();
     if(!obj) return false;
     return true;
   };
 
-  Shape.prototype.onMouseDown = function (o) {
+  Annotator.prototype.onMouseDown = function (o) {
     var inst = this;
-    if(!inst.isOver() && !inst.isBlocked()){
+    if(!inst.isOver() && !inst.isBlocked() && !inst.isPanMode){
       inst.enable();
 
       var pointer = inst.canvas.getPointer(o.e);
@@ -371,46 +385,62 @@ var Shape = (function () {
     }
   };
 
-  Shape.prototype.isEnable = function(){
+  Annotator.prototype.isEnable = function(){
     return this.isDrawing;
   }
 
-  Shape.prototype.isBlocked = function(){
+  Annotator.prototype.isBlocked = function(){
     return this.blocked;
   }
 
-  Shape.prototype.enable = function(){
+  Annotator.prototype.enable = function(){
     this.isDrawing = true;
   }
 
-  Shape.prototype.disable = function(){
+  Annotator.prototype.disable = function(){
     this.isDrawing = false;
   }
 
-  Shape.prototype.isOver = function(){
+  Annotator.prototype.isOver = function(){
     return this.overObject;
   }
 
-  Shape.prototype.over = function(){
+  Annotator.prototype.over = function(){
     this.overObject = true;
   }
 
-  Shape.prototype.out = function(){
+  Annotator.prototype.out = function(){
     this.overObject = false;
   }
 
-  Shape.prototype.block = function(){
+  Annotator.prototype.block = function(){
     this.blocked = true;
   }
 
-  Shape.prototype.unblock = function(){
+  Annotator.prototype.unblock = function(){
     this.blocked = false;
   }
 
-  Shape.prototype.setShape = function(t){
+  Annotator.prototype.setShape = function(t){
     this.type = t;
   }
 
+  Annotator.prototype.enablePanMode = function(){
+    this.isPanMode = true;
+    this.canvas.selection = false; //disable group selection in pan mode
+    this.canvas.forEachObject(function(o) { //disable object selection in pan mode
+      o.selectable = false;
+    });
+  }
 
-  return Shape;
+  Annotator.prototype.disablePanMode = function(){
+    this.isPanMode = false;
+    this.canvas.selection = true; //enable group selection again when pan mode ends
+    this.canvas.forEachObject(function(o) { //enable object selection again when pan mode ends
+      o.selectable = true;
+    });
+  }
+
+
+  return Annotator;
 }());

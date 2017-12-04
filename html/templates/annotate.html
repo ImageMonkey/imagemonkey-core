@@ -19,7 +19,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js"></script>
+  <script src="js/annotate.js?v=1"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -39,29 +39,38 @@
         $("#rectMenuItem").addClass("active");
         $("#circleMenuItem").removeClass("active");
         $("#polygonMenuItem").removeClass("active");
+        $("#panMenuItem").removeClass("active");
       }
       else if(type === "Circle"){
         $("#circleMenuItem").addClass("active");
         $("#rectMenuItem").removeClass("active");
         $("#polygonMenuItem").removeClass("active");
+        $("#panMenuItem").removeClass("active");
       }
       else if(type === "Polygon"){
         $("#polygonMenuItem").addClass("active");
         $("#rectMenuItem").removeClass("active");
         $("#circleMenuItem").removeClass("active");
+        $("#panMenuItem").removeClass("active");
+      }
+      else if(type === "PanMode"){
+        $("#panMenuItem").addClass("active");
+        $("#polygonMenuItem").removeClass("active");
+        $("#rectMenuItem").removeClass("active");
+        $("#circleMenuItem").removeClass("active");
       }
     }
 
-    function changeControl(shape){
+    function changeControl(annotator){
       if($("#annotationArea").attr("imageId") === ""){
         $("#labelContainer").hide();
         $("#doneButton").hide();
-        shape.block();
+        annotator.block();
       }
       else{
         $("#labelContainer").show();
         $("#doneButton").show();
-        shape.unblock();
+        annotator.unblock();
       }
     }
 
@@ -133,17 +142,21 @@
       var browserFingerprint = null;
 
       $("#rectMenuItem").click(function(e) {
-        shape.setShape("Rectangle");
+        annotator.disablePanMode();
+        annotator.setShape("Rectangle");
         changeMenuItem("Rectangle");
       });
 
       $("#circleMenuItem").click(function(e) {
-        shape.setShape("Circle");
+        annotator.disablePanMode();
+        annotator.setShape("Circle");
         changeMenuItem("Circle");
+
       });
 
       $("#polygonMenuItem").click(function(e) {
-        shape.setShape("Polygon");
+        annotator.disablePanMode();
+        annotator.setShape("Polygon");
         changeMenuItem("Polygon");
       });
 
@@ -153,16 +166,29 @@
       });
 
       $("#redoMenuItem").click(function(e) {
-        shape.redo();
+        annotator.redo();
       });
 
       $("#undoMenuItem").click(function(e) {
-        shape.undo();
+        annotator.undo();
+      });
+
+      $("#zoomInMenuItem").click(function(e) {
+        canvas.setZoom(canvas.getZoom() * 1.1);
+      });
+
+      $("#zoomOutMenuItem").click(function(e) {
+        canvas.setZoom(canvas.getZoom() / 1.1);
+      });
+
+      $("#panMenuItem").click(function(e) {
+        annotator.enablePanMode();
+        changeMenuItem("PanMode");
       });
 
       $("#deletedObjectsYesButton").click(function(e) {
-        shape.deleteSelected();
-        if(!shape.objectsSelected())
+        annotator.deleteSelected();
+        if(!annotator.objectsSelected())
           $("#trashMenuItem").addClass("disabled");
       });
 
@@ -203,8 +229,9 @@
                 $("#annotationArea").attr("imageId", data.uuid);
                 setLabel(data.label, data.sublabel);
                 canvas.clear();
+                canvas.setZoom(1.0);
                 setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
-                changeControl(shape);
+                changeControl(annotator);
               }
             });
           }
@@ -219,13 +246,12 @@
 
 
     var canvas = new fabric.Canvas('annotationArea');
-    //var rect = new Shape(canvas, 'Rectangle');
-    var shape = new Shape(canvas, onObjectSelected);
+    var annotator = new Annotator(canvas, onObjectSelected);
     var randomImgId = {{ .randomImage.Id }};
     setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId), function() {
-      shape.initHistory();
+      annotator.initHistory();
     });
-    changeControl(shape);
+    changeControl(annotator);
     });
 </script>
 </head>
@@ -261,6 +287,18 @@
               <i class="ellipsis horizontal icon"></i>
               Polygon
             </a>
+            <a class="right aligned item" id="zoomInMenuItem">
+              <i class="zoom icon"></i>
+              Zoom In
+            </a>
+            <a class="item" id="zoomOutMenuItem">
+              <i class="zoom out icon"></i>
+              Zoom Out
+            </a>
+            <a class="item" id="panMenuItem">
+              <i class="maximize icon"></i>
+              Pan
+            </a>
             <!--<a class="right aligned item" id="redoMenuItem">
               <i class="undo icon"></i>
               Redo
@@ -269,7 +307,7 @@
               <i class="undo icon"></i>
               Undo
             </a>-->
-            <a class="right aligned disabled item" id="trashMenuItem">
+            <a class="disabled item" id="trashMenuItem">
               <i class="trash icon"></i>
               Delete
             </a>
