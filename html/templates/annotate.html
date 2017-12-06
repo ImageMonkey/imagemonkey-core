@@ -152,6 +152,11 @@
 
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
       $('#warningMsg').hide();
+      $('#annotatorMenu .item').popup({
+        inline: true,
+        hoverable: true
+      });
+
       var browserFingerprint = null;
 
       $("#rectMenuItem").click(function(e) {
@@ -294,8 +299,31 @@
         <div class="ui center aligned basic segment">
 
 
-          <div class="ui stackable labeled icon menu">
-            <a class="active item" id="rectMenuItem">
+          <div class="ui icon menu" id="annotatorMenu">
+            <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
+              <i class="square outline icon"></i>
+            </a>
+            <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
+              <i class="circle thin icon"></i>
+            </a>
+            <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
+              <i class="ellipsis horizontal icon"></i>
+            </a>
+
+            <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
+              <i class="zoom icon"></i>
+            </a>
+            <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
+              <i class="zoom out icon"></i>
+            </a>
+            <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
+              <i class="maximize icon"></i>
+            </a>
+            <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
+              <i class="trash icon"></i>
+            </a>
+
+            <!--<a class="active item" id="rectMenuItem">
               <i class="square outline icon"></i>
               Rectangle
             </a>
@@ -323,18 +351,18 @@
               <i class="grid layout icon"></i>
               Blocks
             </a>
-            <!--<a class="right aligned item" id="redoMenuItem">
+            <a class="right aligned item" id="redoMenuItem">
               <i class="undo icon"></i>
               Redo
             </a>
             <a class="item" id="undoMenuItem">
               <i class="undo icon"></i>
               Undo
-            </a>-->
+            </a>
             <a class="disabled item" id="trashMenuItem">
               <i class="trash icon"></i>
               Delete
-            </a>
+            </a>-->
           </div>
 
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
