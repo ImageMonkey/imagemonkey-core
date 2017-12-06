@@ -20,6 +20,7 @@
   <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
   <script src="js/annotate.js?v=1"></script>
+  <script src="https://rawgit.com/AndriiHeonia/hull/master/dist/hull.js"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -40,24 +41,36 @@
         $("#circleMenuItem").removeClass("active");
         $("#polygonMenuItem").removeClass("active");
         $("#panMenuItem").removeClass("active");
+        $("#blockSelectMenuItem").removeClass("active");
       }
       else if(type === "Circle"){
         $("#circleMenuItem").addClass("active");
         $("#rectMenuItem").removeClass("active");
         $("#polygonMenuItem").removeClass("active");
         $("#panMenuItem").removeClass("active");
+        $("#blockSelectMenuItem").removeClass("active");
       }
       else if(type === "Polygon"){
         $("#polygonMenuItem").addClass("active");
         $("#rectMenuItem").removeClass("active");
         $("#circleMenuItem").removeClass("active");
         $("#panMenuItem").removeClass("active");
+        $("#blockSelectMenuItem").removeClass("active");
       }
       else if(type === "PanMode"){
         $("#panMenuItem").addClass("active");
         $("#polygonMenuItem").removeClass("active");
         $("#rectMenuItem").removeClass("active");
         $("#circleMenuItem").removeClass("active");
+        $("#blockSelectMenuItem").removeClass("active");
+      }
+      else if(type === "BlockSelection"){
+        $("#blockSelectMenuItem").addClass("active");
+        $("#rectMenuItem").removeClass("active");
+        $("#circleMenuItem").removeClass("active");
+        $("#polygonMenuItem").removeClass("active");
+        $("#panMenuItem").removeClass("active");
+        
       }
     }
 
@@ -186,6 +199,13 @@
         changeMenuItem("PanMode");
       });
 
+      $("#blockSelectMenuItem").click(function(e) {
+        annotator.disablePanMode();
+        annotator.setShape("Blocks");
+        changeMenuItem("BlockSelection");
+        annotator.toggleGrid();
+      });
+
       $("#deletedObjectsYesButton").click(function(e) {
         annotator.deleteSelected();
         if(!annotator.objectsSelected())
@@ -298,6 +318,10 @@
             <a class="item" id="panMenuItem">
               <i class="maximize icon"></i>
               Pan
+            </a>
+            <a class="item" id="blockSelectMenuItem">
+              <i class="grid layout icon"></i>
+              Blocks
             </a>
             <!--<a class="right aligned item" id="redoMenuItem">
               <i class="undo icon"></i>
