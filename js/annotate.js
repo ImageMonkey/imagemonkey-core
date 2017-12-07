@@ -459,6 +459,13 @@ var Annotator = (function () {
     }
   };
 
+  Annotator.prototype.reset = function () {
+    this.canvas.clear();
+    this.canvas.setZoom(1.0);
+    this.canvas.viewport.position.x = 0;
+    this.canvas.viewport.position.y = 0;
+  };
+
   Annotator.prototype.deleteSelected = function (o) {
     this.canvas.getActiveObject().remove();
   };
