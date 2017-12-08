@@ -165,6 +165,105 @@
 
 <p><a href="https://github.com/bbernhard/imagemonkey-admin">https://github.com/bbernhard/imagemonkey-admin</a></p>
 
+<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous" />
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<!--<script type="text/javascript" src="/assets/js/toast.js"></script>-->
+
+<div class="divider-30"></div>
+
+<center><h5>Want to read more about ImageMonkey?</h5></center>
+<center><h5>Subscribe now!</h5></center>
+
+<iframe name="hiddenFrame" width="0" height="0" border="0" style="display: none;"></iframe>
+<center><form id="register-newsletter">
+    <input id="email" type="text" name="newsletter" required="" placeholder="Enter your email address" />
+    <input type="submit" class="btn btn-custom-3 submit-button" value="SIGN UP" />
+</form></center>
+<div id="register-successful" class="hide" role="alert">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+</div>
+
+<script>
+$('#register-newsletter').submit(function(e) {
+	subscribe();
+    return false;
+});
+
+function validateEmail(email) {
+    var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+}
+
+function postEmail(email){
+    var url = encodeURI("https://api.imagemonkey.io/v1/blog/subscribe");
+    $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'POST',
+        data: JSON.stringify({email: email}),
+        complete: function(data){
+        },
+        success: function(data){
+            $('#register-successful').html('<center>Successfully signed up</center>');
+            $('#register-successful').removeClass('hide').addClass('alert alert-success').fadeTo(2000, 500).slideUp(500, function(){
+                $("#register-successful").slideUp(500);
+            });
+        },
+        error: function (xhr, status, errorThrown){
+            $('#register-successful').html("<center>Couldn't sign up</center>");
+            $('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+                $("#register-successful").slideUp(500);
+            });
+        }
+    });
+}
+
+
+function subscribe() {
+	var emailAddress = $("#email").val();
+    console.log(emailAddress)
+    $("#register-newsletter").trigger("reset");
+	validateEmail(emailAddress);
+	if (!validateEmail(emailAddress)) {
+		$('#register-successful').html("<center>Please enter a valid email address</center>");
+		$('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+	    	$("#register-successful").slideUp(500);
+		});
+		return;
+	}
+
+	postEmail(emailAddress);
+}
+
+</script>
+
+<style type="text/css">
+.submit-button {
+  	color: #fff;
+  	background-color: #57ad68;
+  	border-color: #4cae4c;
+}
+
+.submit-button:hover {
+	color: #fff;
+	background-color: #449d44;
+	border-color: #398439;
+}
+
+.divider-30{ 
+	width:100%; 
+	min-height:1px; 
+	margin-top:30px; 
+	margin-bottom:30px;  
+	display:inline-block; 
+	position:relative;
+}
+</style>
+
 
         </section>
         <footer class="post-footer">

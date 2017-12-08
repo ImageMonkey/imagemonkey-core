@@ -19,131 +19,162 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js"></script>
+  <script src="js/annotate.js?v=1"></script>
+  <!--<script src="https://rawgit.com/AndriiHeonia/hull/master/dist/hull.js"></script>-->
 
   <style>
   .canvas-container{margin: 0 auto;}
   </style>
 
   <script>
-    function getUrlFromImageId(imageId){
-      return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
+  function getUrlFromImageId(imageId){
+    return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
+  }
+
+  function isTrashMenuButtonEnabled(){
+    return !$("#trashMenuItem").hasClass("disabled");
+  }
+
+  function changeMenuItem(type){
+    if(type === 'Rectangle'){
+      $("#rectMenuItem").addClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
     }
-
-    function isTrashMenuButtonEnabled(){
-      return !$("#trashMenuItem").hasClass("disabled");
+    else if(type === "Circle"){
+      $("#circleMenuItem").addClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
     }
-
-    function changeMenuItem(type){
-      if(type === 'Rectangle'){
-        $("#rectMenuItem").addClass("active");
-        $("#circleMenuItem").removeClass("active");
-        $("#polygonMenuItem").removeClass("active");
-      }
-      else if(type === "Circle"){
-        $("#circleMenuItem").addClass("active");
-        $("#rectMenuItem").removeClass("active");
-        $("#polygonMenuItem").removeClass("active");
-      }
-      else if(type === "Polygon"){
-        $("#polygonMenuItem").addClass("active");
-        $("#rectMenuItem").removeClass("active");
-        $("#circleMenuItem").removeClass("active");
-      }
+    else if(type === "Polygon"){
+      $("#polygonMenuItem").addClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
     }
-
-    function changeControl(shape){
-      if($("#annotationArea").attr("imageId") === ""){
-        $("#labelContainer").hide();
-        $("#doneButton").hide();
-        shape.block();
-      }
-      else{
-        $("#labelContainer").show();
-        $("#doneButton").show();
-        shape.unblock();
-      }
+    else if(type === "PanMode"){
+      $("#panMenuItem").addClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
     }
+    else if(type === "BlockSelection"){
+      $("#blockSelectMenuItem").addClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
 
-    function setLabel(label, sublabel){
-      $("#label").attr("label", label)
-      $("#label").attr("sublabel", sublabel)
-      if(sublabel === ""){
-        $("#label").text(label)
-      } 
-      else {
-        $("#label").text((sublabel + "/" + label))
+    }
+  }
+
+  function changeControl(annotator){
+    if($("#annotationArea").attr("imageId") === ""){
+      $("#labelContainer").hide();
+      $("#doneButton").hide();
+      annotator.block();
+    }
+    else{
+      $("#labelContainer").show();
+      $("#doneButton").show();
+      annotator.unblock();
+    }
+  }
+
+  function setLabel(label, sublabel){
+    $("#label").attr("label", label)
+    $("#label").attr("sublabel", sublabel)
+    if(sublabel === ""){
+      $("#label").text(label)
+    } 
+    else {
+      $("#label").text((sublabel + "/" + label))
+    }
+  }
+
+  function onObjectSelected(){
+    $("#trashMenuItem").removeClass("disabled");
+  }
+
+  function prepareData(data){
+    var imgScaleX = data["backgroundImage"]["scaleX"];
+    var imgScaleY = data["backgroundImage"]["scaleY"];
+    var objs = data["objects"];
+    var res = [];
+    var left, top, width, height, rx, ry, type, points, pointX, pointY, angle;
+
+    for(var i = 0; i < objs.length; i++){
+      angle = objs[i]["angle"];
+      type = objs[i]["type"];
+      if(type === "rect"){
+        left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+        top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+        width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
+        height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
+
+        if((width != 0) && (height != 0))
+          res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
       }
-    }
+      else if(type === "ellipse"){
+        left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+        top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+        rx = Math.round(((objs[i]["rx"] / imgScaleX)), 0);
+        ry = Math.round(((objs[i]["ry"] / imgScaleY)), 0);
 
-    function onObjectSelected(){
-      $("#trashMenuItem").removeClass("disabled");
-    }
+        if((rx != 0) && (ry != 0))
+          res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
+      }
+      else if(type === "polygon"){
+        left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+        top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
 
-    function prepareData(data){
-      var imgScaleX = data["backgroundImage"]["scaleX"];
-      var imgScaleY = data["backgroundImage"]["scaleY"];
-      var objs = data["objects"];
-      var res = [];
-      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle;
-
-      for(var i = 0; i < objs.length; i++){
-        angle = objs[i]["angle"];
-        type = objs[i]["type"];
-        if(type === "rect"){
-          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-          width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
-          height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
-            
-          if((width != 0) && (height != 0))
-            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
+        points = objs[i]["points"];
+        var scaledPoints = [];
+        for(var j = 0; j < points.length; j++){
+          scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX)), 0), "y": Math.round(((points[j]["y"] / imgScaleY)), 0)});
         }
-        else if(type === "ellipse"){
-          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-          rx = Math.round(((objs[i]["rx"] / imgScaleX)), 0);
-          ry = Math.round(((objs[i]["ry"] / imgScaleY)), 0);
 
-          if((rx != 0) && (ry != 0))
-            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
-        }
-        else if(type === "polygon"){
-          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-          
-          points = objs[i]["points"];
-          var scaledPoints = [];
-          for(var j = 0; j < points.length; j++){
-            scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX)), 0), "y": Math.round(((points[j]["y"] / imgScaleY)), 0)});
-          }
-
-          res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
-        }
+        res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
       }
-
-      return res;
     }
 
-    $(document).ready(function(){
+    return res;
+  }
+
+  $(document).ready(function(){
       //$("#trashMenuItem").hide();
 
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
       $('#warningMsg').hide();
+      $('#annotatorMenu .item').popup({
+        inline: true,
+        hoverable: true
+      });
+
       var browserFingerprint = null;
 
       $("#rectMenuItem").click(function(e) {
-        shape.setShape("Rectangle");
+        annotator.disablePanMode();
+        annotator.setShape("Rectangle");
         changeMenuItem("Rectangle");
       });
 
       $("#circleMenuItem").click(function(e) {
-        shape.setShape("Circle");
+        annotator.disablePanMode();
+        annotator.setShape("Circle");
         changeMenuItem("Circle");
+
       });
 
       $("#polygonMenuItem").click(function(e) {
-        shape.setShape("Polygon");
+        annotator.disablePanMode();
+        annotator.setShape("Polygon");
         changeMenuItem("Polygon");
       });
 
@@ -153,19 +184,37 @@
       });
 
       $("#redoMenuItem").click(function(e) {
-        shape.redo();
+        annotator.redo();
       });
 
       $("#undoMenuItem").click(function(e) {
-        shape.undo();
+        annotator.undo();
+      });
+
+      $("#zoomInMenuItem").click(function(e) {
+        canvas.setZoom(canvas.getZoom() * 1.1);
+      });
+
+      $("#zoomOutMenuItem").click(function(e) {
+        canvas.setZoom(canvas.getZoom() / 1.1);
+      });
+
+      $("#panMenuItem").click(function(e) {
+        annotator.enablePanMode();
+        changeMenuItem("PanMode");
+      });
+
+      $("#blockSelectMenuItem").click(function(e) {
+        annotator.disablePanMode();
+        annotator.setShape("Blocks");
+        changeMenuItem("BlockSelection");
+        annotator.toggleGrid();
       });
 
       $("#deletedObjectsYesButton").click(function(e) {
-        shape.deleteSelected();
-        if(shape.objectsSelected())
-          $("#trashMenuItem").show();
-        else
-          $("#trashMenuItem").hide();
+        annotator.deleteSelected();
+        if(!annotator.objectsSelected())
+          $("#trashMenuItem").addClass("disabled");
       });
 
 
@@ -205,8 +254,10 @@
                 $("#annotationArea").attr("imageId", data.uuid);
                 setLabel(data.label, data.sublabel);
                 canvas.clear();
+                canvas.setZoom(1.0);
+                canvas.absolutePan(new fabric.Point(0,0));
                 setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
-                changeControl(shape);
+                changeControl(annotator);
               }
             });
           }
@@ -220,15 +271,14 @@
       });
 
 
-    var canvas = new fabric.Canvas('annotationArea');
-    //var rect = new Shape(canvas, 'Rectangle');
-    var shape = new Shape(canvas, onObjectSelected);
-    var randomImgId = {{ .randomImage.Id }};
-    setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId), function() {
-      shape.initHistory();
-    });
-    changeControl(shape);
-    });
+var canvas = new fabric.Canvas('annotationArea');
+var annotator = new Annotator(canvas, onObjectSelected);
+var randomImgId = {{ .randomImage.Id }};
+setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId), function() {
+  annotator.initHistory();
+});
+changeControl(annotator);
+});
 </script>
 </head>
 <body>
@@ -244,76 +294,68 @@
       <h2>Annotate all occurences of the above.</h2>
     </div>
   </div>
-  <div class="ui vertical stripe segment">
-    <div class="ui text container">
-      <div class="row">
-        <div class="ui center aligned basic segment">
 
 
-          <div class="ui labeled icon menu">
-            <a class="active item" id="rectMenuItem">
-              <i class="square outline icon"></i>
-              Rectangle
-            </a>
-            <a class="item" id="circleMenuItem">
-              <i class="circle thin icon"></i>
-              Circle
-            </a>
-            <a class="item" id="polygonMenuItem">
-              <i class="ellipsis horizontal icon"></i>
-              Polygon
-            </a>
-            <!--<a class="right aligned item" id="redoMenuItem">
-              <i class="undo icon"></i>
-              Redo
-            </a>
-            <a class="item" id="undoMenuItem">
-              <i class="undo icon"></i>
-              Undo
-            </a>-->
-            <a class="right aligned disabled item" id="trashMenuItem">
-              <i class="trash icon"></i>
-              Delete
-            </a>
-          </div>
+  <div class="ui stackable grid vertical stripe">
+    <div class="four wide column">
+    </div>
+    <div class="eight wide center aligned column">
+      <div class="ui compact icon menu" id="annotatorMenu">
+        <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
+          <i class="square outline icon"></i>
+        </a>
+        <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
+          <i class="circle thin icon"></i>
+        </a>
+        <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
+          <i class="ellipsis horizontal icon"></i>
+        </a>
 
-          <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
-          <p></p>
-          <button class="positive ui button center aligned" id="doneButton">DONE</button>
+        <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
+          <i class="zoom icon"></i>
+        </a>
+        <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
+          <i class="zoom out icon"></i>
+        </a>
+        <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
+          <i class="maximize icon"></i>
+        </a>
+        <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
+          <i class="trash icon"></i>
+        </a>
+      </div>
+
+      <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
+      <p></p>
+      <button class="positive ui button center aligned" id="doneButton">DONE</button>
+
+      <div class="ui warning message" id="warningMsg">
+        <i class="close icon"></i>
+        <div class="header">
+          Please annotate the image first.
         </div>
+      </div>
 
-        <div class="ui warning message" id="warningMsg">
-          <i class="close icon"></i>
-          <div class="header">
-            Please annotate the image first.
-          </div>
+      <div class="ui small modal" id="deleteObjectsPopup">
+        <div class="header">
+          Delete Object
         </div>
-
-        <div class="ui small modal" id="deleteObjectsPopup">
-          <div class="header">
-            Delete Object
+        <div class="content">
+          <p>Are you sure you want to delete the selected objects?</p>
+        </div>
+        <div class="actions">
+          <div class="ui negative button">
+            No
           </div>
-          <div class="content">
-            <p>Are you sure you want to delete the selected objects?</p>
-          </div>
-          <div class="actions">
-            <div class="ui negative button">
-              No
-            </div>
-            <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
-              Yes
-              <i class="checkmark icon"></i>
-            </div>
+          <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
+            Yes
+            <i class="checkmark icon"></i>
           </div>
         </div>
-
-
       </div>
     </div>
   </div>
-</div>
-{{ template "footer.html" .}}
-</div>
+  {{ template "footer.html" .}}
 
 </body>
 

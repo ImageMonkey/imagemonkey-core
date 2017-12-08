@@ -17,28 +17,35 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=1"></script>
+  <script src="js/fabric_helper.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
 
   <style>
-    .canvas-container{margin: 0 auto;}
+    .canvas-container{
+      margin: 0 auto;
+    }
   </style>
 
   <script type="text/javascript">
+    var currentControlsType = null;
+    var currentSelectedColorTag = null;
+
     function showHideControls(show){
       if(show){
         $('#canvas').show();
         $('#doneButton').show();
-        $('#quizArea').show();
+        $('#quizAreaContainer').show();
         $('#loadingIndicator').addClass('active');
         $('#loadingIndicator').hide();
+        $('#answersOtherContainer').hide();
       }
       else{
         $('#canvas').hide();
         $('#doneButton').hide();
-        $('#quizArea').hide();
+        $('#quizAreaContainer').hide();
         $('#loadingIndicator').removeClass('active');
         $('#loadingIndicator').show();
+        $('#answersOtherContainer').hide();
       }
     }
 
@@ -50,8 +57,21 @@
     }
 
     function getSelectedLabelId(){
-      var labelId = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
-      return parseInt(labelId, 10);
+      var labelId;
+      var labelIdStr;
+      if(currentControlsType === "radio"){
+        labelIdStr = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
+        labelId = parseInt(labelIdStr, 10);
+      }
+      else if(currentControlsType === "dropdown"){
+        labelIdStr = $('#labelDropdown' ).dropdown('get value').toString();
+        labelId = parseInt(labelIdStr, 10);
+      }
+      else if(currentControlsType === "color tags"){
+        labelId = currentSelectedColorTag;
+      }
+
+      return labelId;
     }
 
     function setImageAnnotation(canvas, imageUuid, annotation){
@@ -81,31 +101,144 @@
           $(this).remove();
         })
       }
+      else if(controlsType === "dropdown"){
+        $('#labelMenuItems').children().each(function (){
+          $(this).remove();
+        })
+      }
+      else if(controlsType === "color tags"){
+        $('#colorTags').children().each(function (){
+          $(this).remove();
+        })
+      }
+
+      $('#answersOtherContainer').children().each(function (){
+        $(this).remove();
+      })
     }
 
-    var addAnswers = function(answers, controlsType){
-      if(controlsType == "radio"){
-        for(var i = 0; i < answers.length; i++){
-          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
-          $('#answersRadioButtonGroup').append($(d));
-        }
-        
+    function showControl(controlsType){
+      if(controlsType === "radio"){
+        $("#labelRadioButtons").show();
+        $("#labelDropdown").hide();
+        $("#colorTags").hide();
       }
+      else if(controlsType === "dropdown"){
+        $("#labelDropdown").show();
+        $("#labelRadioButtons").hide();
+        $("#colorTags").hide();
+      }
+      else if(controlsType === "color tags"){
+        $("#colorTags").show();
+        $("#labelDropdown").hide();
+        $("#labelRadioButtons").hide();
+      }
+
+      currentControlsType = controlsType;
+    }
+
+    var colorTagSelected = function(e){
+      var selected = $(e).attr("labelId");
+      currentSelectedColorTag = parseInt(selected, 10); 
+
+      $('#colorTags').children().each(function (){
+        if($(this).attr("labelId") !== $(e).attr("labelId"))
+          $(this).removeClass('big');
+        else{
+          $(this).addClass('big');
+        }
+      })
+  
+      if(currentSelectedColorTag === -2){
+        $("#answersOtherContainer").show();
+      }
+      else
+        $("#answersOtherContainer").hide();
+    } 
+
+    var addAnswers = function(answers, controlsType){
+      var allowOther = false;
+      if(controlsType === "radio"){
+        for(var i = 0; i < answers.length; i++){
+          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
+          $('#answersRadioButtonGroup').append($(d));
+          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
+            allowOther = true;
+          }
+        }       
+      }
+      else if(controlsType === "dropdown"){
+        for(var i = 0; i < answers.length; i++){
+          var d = '<div class="item" data-value="' + answers[i]["id"] + '">' + answers[i]["label"] + '</div>';
+          $('#labelMenuItems').append($(d));
+          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
+            allowOther = true;
+          }
+        }
+      }
+      else if(controlsType === "color tags"){
+        for(var i = 0; i < answers.length; i++){
+          var color = answers[i]["label"];
+          var isBasic = false;
+
+          if((answers[i]["id"] < 0) || (answers[i]["label"] === "white"))
+            isBasic = true;
+
+          var d = '<a class="ui ' + ((isBasic) ? "basic " : " ") +  answers[i]["label"] + ' label" labelId="' + answers[i]["id"] + '" onclick="colorTagSelected(this)">' + answers[i]["label"] + '</a>';
+          $('#colorTags').append($(d));
+          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
+            allowOther = true;
+          }
+        }
+      }
+
+      if(allowOther){
+          var otherInput = '<div class="ui input"><input id="suggestedLabel" placeholder="Label..." type="text"></div>';
+          $('#answersOtherContainer').append($(otherInput));
+        } 
     }
 
 
     function populate(canvas, data) {
+      showControl(data["question"]["recommended_control"]);
       setIds(data["image"]["uuid"], data["annotation"]["uuid"], data["annotation"]["annotation"]["id"]);
       removeAllAnswers(data["question"]["recommended_control"]);
       addAnswers(data["answers"], data["question"]["recommended_control"]);
       setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
+      $("#question").text(data["question"]["question"]);
     }
 
 
     $(document).ready(function(){
-      $('.ui.dropdown')
-        .dropdown()
-      ;
+      $('#labelDropdown').dropdown({ 
+        onChange: function(changedValue){ 
+          console.log("changed value = " +typeof(changedValue))
+          if(changedValue === "-2")
+            $("#answersOtherContainer").show();
+          else
+            $("#answersOtherContainer").hide();
+        } 
+      });
+
+      $('.ui.checkbox').checkbox();
+      var recommendedControl = '{{ .randomAnnotatedImage.Question.RecommendedControl }}';
+      showControl(recommendedControl);
+
+
+      $('#answersRadioButtonGroup').on("change", function(event){
+        if(event.target.getAttribute("labelId") == -2)
+          $("#answersOtherContainer").show();
+        else
+          $("#answersOtherContainer").hide();
+      });
+
+      /*$('#labelDropdown').on("change", function(event){
+        console.log("changed")
+        if(event.target.getAttribute("labelId") == -2)
+          $("#answersOtherContainer").show();
+        else
+          $("#answersOtherContainer").hide();
+      });*/
 
       var browserFingerprint = null;
 
@@ -123,27 +256,59 @@
           $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
         }
         else{
-          var url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
-          var data = {"label_id" : labelId};
+          var url, data;
           var headers = {}
           if(browserFingerprint !== null)
             headers['X-Browser-Fingerprint'] = browserFingerprint;
 
-          showHideControls(false);
-
-          e.preventDefault();
-          $.ajax({
-            url: url,
-            dataType: 'json',
-            type: 'POST',
-            data: JSON.stringify(data),
-            headers: headers,
-            complete: function(data){
-            },
-            success: function(data){
-              getNextQuiz(canvas);
+          if (labelId === -1){ //if "don't know" is selected, just get a new quiz
+            getNextQuiz(canvas);
+          }
+          else if(labelId == -2){ //if "other is selected"
+            var suggestedLabel = $("#suggestedLabel").val();
+            if(suggestedLabel === ""){
+              $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
+              return;
             }
-          });
+            url = '{{ .apiBaseUrl }}/v1/label/suggest';
+            data = {"label" : suggestedLabel};
+
+            showHideControls(false);
+
+            e.preventDefault();
+            $.ajax({
+              url: url,
+              dataType: 'json',
+              type: 'POST',
+              data: JSON.stringify(data),
+              headers: headers,
+              complete: function(data){
+              },
+              success: function(data){
+                getNextQuiz(canvas);
+              }
+            });
+          }
+          else{
+            url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
+            data = {"label_id" : labelId};
+
+            showHideControls(false);
+
+            e.preventDefault();
+            $.ajax({
+              url: url,
+              dataType: 'json',
+              type: 'POST',
+              data: JSON.stringify(data),
+              headers: headers,
+              complete: function(data){
+              },
+              success: function(data){
+                getNextQuiz(canvas);
+              }
+            });
+          }
         }
       });
 
@@ -168,40 +333,48 @@
     <div class="one wide center aligned column">
     </div>
     <div class="three wide center aligned column" id="quizArea">
-      <h1></h1>
+      <div class="quizAreaContainer">
+        <h1></h1>
+          
+        <div class="ui left aligned segment">
+          <h2 class="ui header" id="question">{{ .randomAnnotatedImage.Question.Question }}</h2>
         
-      <div class="ui left aligned segment">
-        <h2 class="ui header">{{ .randomAnnotatedImage.Question.Question }}</h2>
-      
-      
-        {{ if eq .randomAnnotatedImage.Question.RecommendedControl "dropdown" }}
-        <div class="ui search selection dropdown" id="labelDropdown">
-          <div class="default text">Select Label</div>
-          <div class="menu">
-            {{ range .randomAnnotatedImage.Answers }}
-            <div class="item" data-value="{{ .Label }}">{{ .Label }}</div>
-            {{ end }}
+        
+          <!--dropdown buttons-->
+          <div hidden class="ui search selection dropdown" id="labelDropdown">
+            <div class="default text">Select Label</div>
+            <div class="menu" id="labelMenuItems">
+              {{ range .randomAnnotatedImage.Answers }}
+              <div class="item" data-value="{{ .Id }}">{{ .Label }}</div>
+              {{ end }}
+            </div>
           </div>
-        </div>
-        {{ end }}
-
-
-        {{ if eq .randomAnnotatedImage.Question.RecommendedControl "radio" }}
-        <div class="ui form">
-          <div class="grouped fields" id="answersRadioButtonGroup">
+          
+          <!--radio buttons-->
+          <div hidden class="ui form" id="labelRadioButtons">
+            <div class="grouped fields" id="answersRadioButtonGroup">
+            </div>
           </div>
-        </div>
-        {{ end }}
 
-        <div class="ui warning message" hidden id="nothingSelectedMessage">
-          <i class="close icon"></i>
-          <div class="header">
-            Please answer the question first.
+          <!-- color tags -->
+          <div hidden class="ui labels" id="colorTags">
           </div>
-        </div>
-        <h2></h2>
-        <button class="ui positive button" id="doneButton">Done</button>
 
+          <h2></h2>
+          <div hidden id="answersOtherContainer">
+          </div>
+
+
+          <div class="ui warning message" hidden id="nothingSelectedMessage">
+            <i class="close icon"></i>
+            <div class="header">
+              Please answer the question first.
+            </div>
+          </div>
+          <h2></h2>
+          <button class="ui positive button" id="doneButton">Done</button>
+
+        </div>
       </div>
 
 
@@ -210,6 +383,8 @@
     <div class="eight wide center aligned column">
       <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomAnnotatedImage.Image.Uuid }}" annotationId="" annotationDataId=""></canvas> 
       <div class="ui large loader" id="loadingIndicator"></div>
+
+      {{ template "report_dlg.html" .}}
     </div>
 
     <div class="four wide computer only center aligned column">

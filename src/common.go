@@ -64,6 +64,11 @@ type LabelValidationEntry struct {
     Sublabel string `json:"sublabel"`
 }
 
+type BlogSubscribeRequest struct {
+    Email string `json:"email"`
+}
+
+
 func use(vals ...interface{}) {
     for _, val := range vals {
         _ = val
@@ -218,6 +223,7 @@ func NewRegisteredAppIdentifiers() *RegisteredAppIdentifiers {
 func (p *RegisteredAppIdentifiers) Load() error {
     p.identifiers = make(map[string]string)
     p.identifiers["edd77e5fb6fc0775a00d2499b59b75d"] = "ImageMonkey Website"
+    p.identifiers["adf78e53bd6fc0875a00d2499c59b75"] = "ImageMonkey Browser Extension"
     return nil
 }
 

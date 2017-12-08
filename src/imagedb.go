@@ -1424,26 +1424,36 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
     var annotationBytes []byte
     var refinement AnnotationRefinement
     var annotations []json.RawMessage
-    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid
+    var allowUnknown bool
+    var allowOther bool
+    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, s.allow_other
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
                                 json_agg(json_build_object('id', l.id, 'label', l.name)) as quiz_answers, 
-                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id
+                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other
     
                                 FROM quiz_question qq 
-                                JOIN quiz q ON q.quiz_question_id = qq.id 
+                                JOIN quiz_answer q ON q.quiz_question_id = qq.id 
                                 JOIN label l ON q.label_id = l.id 
                                 GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
                              ) as s
                         JOIN (
-                                SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"id":'||d.id||'}')::jsonb) as annotations 
+                                SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"id":'||d.id||'}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
                                 FROM image_annotation a
                                 JOIN annotation_data d ON d.image_annotation_id = a.id
+                                JOIN annotation_type t ON d.annotation_type_id = t.id
+                                WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
                                 GROUP BY a.label_id, a.image_id, a.uuid
                              ) as s1
                         ON s1.label_id =  s.refines_label_id 
-                        JOIN image i ON i.id = s1.image_id`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid)
+                        JOIN image i ON i.id = s1.image_id
+                        OFFSET floor(random() * 
+                            ( SELECT count(*) FROM image_annotation a 
+                              JOIN quiz_question q ON q.refines_label_id = a.label_id
+                              WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
+                            )
+                        ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &allowUnknown, &allowOther)
     if err != nil {
         log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1471,6 +1481,20 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         refinement.Annotation.Annotation = annotations[randomVal]
     }
 
+    if allowUnknown {
+        var unknownRefinementAnswer AnnotationRefinementAnswer
+        unknownRefinementAnswer.Label = "don't know"
+        unknownRefinementAnswer.Id = -1
+        refinement.Answers = append(refinement.Answers, unknownRefinementAnswer)
+    }
+
+    if allowOther {
+        var otherRefinementAnswer AnnotationRefinementAnswer
+        otherRefinementAnswer.Label = "other"
+        otherRefinementAnswer.Id = -2
+        refinement.Answers = append(refinement.Answers, otherRefinementAnswer)
+    }
+
     return refinement, nil
 }
 
@@ -1478,11 +1502,11 @@ func addOrUpdateRefinement(annotationUuid string, annotationDataId int64, labelI
     var err error
 
     _, err = db.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
-                        SELECT $1, $2, $3, $4, $5 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $6 AND d.id = $1
+                        SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
                       ON CONFLICT (annotation_data_id, label_id)
                       DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
                       WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
-                           annotationDataId, labelId, 0, clientFingerprint, annotationUuid)
+                           annotationDataId, labelId, 1, clientFingerprint, annotationUuid)
     
     if err != nil {
         log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
@@ -1492,3 +1516,15 @@ func addOrUpdateRefinement(annotationUuid string, annotationDataId int64, labelI
 
     return nil
 }
+
+func addLabelSuggestion(suggestedLabel string) error {
+     _, err := db.Exec(`INSERT INTO label_suggestion(name) VALUES($1)
+                       ON CONFLICT (name) DO NOTHING`, suggestedLabel)
+    if err != nil {
+        log.Debug("[Add label suggestion] Couldn't insert: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+} 

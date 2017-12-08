@@ -6,8 +6,8 @@
 </description>
     <link>http://myblog.***.***/blog/</link>
     <atom:link href="http://myblog.***.***/blog/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Mon, 30 Oct 2017 23:24:14 +0100</pubDate>
-    <lastBuildDate>Mon, 30 Oct 2017 23:24:14 +0100</lastBuildDate>
+    <pubDate>Sun, 03 Dec 2017 20:34:08 +0100</pubDate>
+    <lastBuildDate>Sun, 03 Dec 2017 20:34:08 +0100</lastBuildDate>
     <generator>Jekyll v3.5.2</generator>
     
       <item>
@@ -97,6 +97,105 @@
 &lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-chrome-extension&quot;&gt;https://github.com/bbernhard/imagemonkey-chrome-extension&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-admin&quot;&gt;https://github.com/bbernhard/imagemonkey-admin&lt;/a&gt;&lt;/p&gt;
+
+&lt;script src=&quot;https://code.jquery.com/jquery-3.1.1.slim.min.js&quot; integrity=&quot;sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css&quot; integrity=&quot;sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u&quot; crossorigin=&quot;anonymous&quot; /&gt;
+
+&lt;script src=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js&quot; integrity=&quot;sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+
+&lt;!--&lt;script type=&quot;text/javascript&quot; src=&quot;/assets/js/toast.js&quot;&gt;&lt;/script&gt;--&gt;
+
+&lt;div class=&quot;divider-30&quot;&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Want to read more about ImageMonkey?&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Subscribe now!&lt;/h5&gt;&lt;/center&gt;
+
+&lt;iframe name=&quot;hiddenFrame&quot; width=&quot;0&quot; height=&quot;0&quot; border=&quot;0&quot; style=&quot;display: none;&quot;&gt;&lt;/iframe&gt;
+&lt;center&gt;&lt;form id=&quot;register-newsletter&quot;&gt;
+    &lt;input id=&quot;email&quot; type=&quot;text&quot; name=&quot;newsletter&quot; required=&quot;&quot; placeholder=&quot;Enter your email address&quot; /&gt;
+    &lt;input type=&quot;submit&quot; class=&quot;btn btn-custom-3 submit-button&quot; value=&quot;SIGN UP&quot; /&gt;
+&lt;/form&gt;&lt;/center&gt;
+&lt;div id=&quot;register-successful&quot; class=&quot;hide&quot; role=&quot;alert&quot;&gt;
+    &lt;button type=&quot;button&quot; class=&quot;close&quot; data-dismiss=&quot;alert&quot; aria-label=&quot;Close&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&amp;times;&lt;/span&gt;&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+$('#register-newsletter').submit(function(e) {
+	subscribe();
+    return false;
+});
+
+function validateEmail(email) {
+    var re = /^(([^&lt;&gt;()\[\]\\.,;:\s@&quot;]+(\.[^&lt;&gt;()\[\]\\.,;:\s@&quot;]+)*)|(&quot;.+&quot;))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+}
+
+function postEmail(email){
+    var url = encodeURI(&quot;https://api.imagemonkey.io/v1/blog/subscribe&quot;);
+    $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'POST',
+        data: JSON.stringify({email: email}),
+        complete: function(data){
+        },
+        success: function(data){
+            $('#register-successful').html('&lt;center&gt;Successfully signed up&lt;/center&gt;');
+            $('#register-successful').removeClass('hide').addClass('alert alert-success').fadeTo(2000, 500).slideUp(500, function(){
+                $(&quot;#register-successful&quot;).slideUp(500);
+            });
+        },
+        error: function (xhr, status, errorThrown){
+            $('#register-successful').html(&quot;&lt;center&gt;Couldn't sign up&lt;/center&gt;&quot;);
+            $('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+                $(&quot;#register-successful&quot;).slideUp(500);
+            });
+        }
+    });
+}
+
+
+function subscribe() {
+	var emailAddress = $(&quot;#email&quot;).val();
+    console.log(emailAddress)
+    $(&quot;#register-newsletter&quot;).trigger(&quot;reset&quot;);
+	validateEmail(emailAddress);
+	if (!validateEmail(emailAddress)) {
+		$('#register-successful').html(&quot;&lt;center&gt;Please enter a valid email address&lt;/center&gt;&quot;);
+		$('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+	    	$(&quot;#register-successful&quot;).slideUp(500);
+		});
+		return;
+	}
+
+	postEmail(emailAddress);
+}
+
+&lt;/script&gt;
+
+&lt;style type=&quot;text/css&quot;&gt;
+.submit-button {
+  	color: #fff;
+  	background-color: #57ad68;
+  	border-color: #4cae4c;
+}
+
+.submit-button:hover {
+	color: #fff;
+	background-color: #449d44;
+	border-color: #398439;
+}
+
+.divider-30{ 
+	width:100%; 
+	min-height:1px; 
+	margin-top:30px; 
+	margin-bottom:30px;  
+	display:inline-block; 
+	position:relative;
+}
+&lt;/style&gt;
 
 </description>
         <pubDate>Sat, 28 Oct 2017 14:34:25 +0200</pubDate>
@@ -199,6 +298,105 @@
 &lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-chrome-extension&quot;&gt;https://github.com/bbernhard/imagemonkey-chrome-extension&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;a href=&quot;https://github.com/bbernhard/imagemonkey-admin&quot;&gt;https://github.com/bbernhard/imagemonkey-admin&lt;/a&gt;&lt;/p&gt;
+
+&lt;script src=&quot;https://code.jquery.com/jquery-3.1.1.slim.min.js&quot; integrity=&quot;sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css&quot; integrity=&quot;sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u&quot; crossorigin=&quot;anonymous&quot; /&gt;
+
+&lt;script src=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js&quot; integrity=&quot;sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+
+&lt;!--&lt;script type=&quot;text/javascript&quot; src=&quot;/assets/js/toast.js&quot;&gt;&lt;/script&gt;--&gt;
+
+&lt;div class=&quot;divider-30&quot;&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Want to read more about ImageMonkey?&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Subscribe now!&lt;/h5&gt;&lt;/center&gt;
+
+&lt;iframe name=&quot;hiddenFrame&quot; width=&quot;0&quot; height=&quot;0&quot; border=&quot;0&quot; style=&quot;display: none;&quot;&gt;&lt;/iframe&gt;
+&lt;center&gt;&lt;form id=&quot;register-newsletter&quot;&gt;
+    &lt;input id=&quot;email&quot; type=&quot;text&quot; name=&quot;newsletter&quot; required=&quot;&quot; placeholder=&quot;Enter your email address&quot; /&gt;
+    &lt;input type=&quot;submit&quot; class=&quot;btn btn-custom-3 submit-button&quot; value=&quot;SIGN UP&quot; /&gt;
+&lt;/form&gt;&lt;/center&gt;
+&lt;div id=&quot;register-successful&quot; class=&quot;hide&quot; role=&quot;alert&quot;&gt;
+    &lt;button type=&quot;button&quot; class=&quot;close&quot; data-dismiss=&quot;alert&quot; aria-label=&quot;Close&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&amp;times;&lt;/span&gt;&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+$('#register-newsletter').submit(function(e) {
+	subscribe();
+    return false;
+});
+
+function validateEmail(email) {
+    var re = /^(([^&lt;&gt;()\[\]\\.,;:\s@&quot;]+(\.[^&lt;&gt;()\[\]\\.,;:\s@&quot;]+)*)|(&quot;.+&quot;))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+}
+
+function postEmail(email){
+    var url = encodeURI(&quot;https://api.imagemonkey.io/v1/blog/subscribe&quot;);
+    $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'POST',
+        data: JSON.stringify({email: email}),
+        complete: function(data){
+        },
+        success: function(data){
+            $('#register-successful').html('&lt;center&gt;Successfully signed up&lt;/center&gt;');
+            $('#register-successful').removeClass('hide').addClass('alert alert-success').fadeTo(2000, 500).slideUp(500, function(){
+                $(&quot;#register-successful&quot;).slideUp(500);
+            });
+        },
+        error: function (xhr, status, errorThrown){
+            $('#register-successful').html(&quot;&lt;center&gt;Couldn't sign up&lt;/center&gt;&quot;);
+            $('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+                $(&quot;#register-successful&quot;).slideUp(500);
+            });
+        }
+    });
+}
+
+
+function subscribe() {
+	var emailAddress = $(&quot;#email&quot;).val();
+    console.log(emailAddress)
+    $(&quot;#register-newsletter&quot;).trigger(&quot;reset&quot;);
+	validateEmail(emailAddress);
+	if (!validateEmail(emailAddress)) {
+		$('#register-successful').html(&quot;&lt;center&gt;Please enter a valid email address&lt;/center&gt;&quot;);
+		$('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+	    	$(&quot;#register-successful&quot;).slideUp(500);
+		});
+		return;
+	}
+
+	postEmail(emailAddress);
+}
+
+&lt;/script&gt;
+
+&lt;style type=&quot;text/css&quot;&gt;
+.submit-button {
+  	color: #fff;
+  	background-color: #57ad68;
+  	border-color: #4cae4c;
+}
+
+.submit-button:hover {
+	color: #fff;
+	background-color: #449d44;
+	border-color: #398439;
+}
+
+.divider-30{ 
+	width:100%; 
+	min-height:1px; 
+	margin-top:30px; 
+	margin-bottom:30px;  
+	display:inline-block; 
+	position:relative;
+}
+&lt;/style&gt;
 
 </description>
         <pubDate>Fri, 06 Oct 2017 20:34:25 +0200</pubDate>

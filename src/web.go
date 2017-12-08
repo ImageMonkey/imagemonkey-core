@@ -32,6 +32,7 @@ func main() {
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
+	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
 
 	flag.Parse()
 	if(*releaseMode){
@@ -118,6 +119,8 @@ func main() {
 
 	router.GET("/verify", func(c *gin.Context) {
 		params := c.Request.URL.Query()
+
+		appIdentifier := webAppIdentifier
 		
 		showHeader := true
 		if temp, ok := params["show_header"]; ok {
@@ -140,6 +143,19 @@ func main() {
 			}
 		}
 
+		callback := false
+		if temp, ok := params["callback"]; ok {
+			if temp[0] == "true" {
+				callback = true
+			}
+		}
+
+		if temp, ok := params["browser_extension"]; ok {
+			if temp[0] == "true" {
+				appIdentifier = browserExtensionAppIdentifier
+			}
+		}
+
 
 		c.HTML(http.StatusOK, "validate.html", gin.H{
 			"title": "Validate Label",
@@ -149,7 +165,8 @@ func main() {
 			"showFooter": showFooter,
 			"onlyOnce": onlyOnce,
 			"apiBaseUrl": apiBaseUrl,
-			"appIdentifier": webAppIdentifier,
+			"appIdentifier": appIdentifier,
+			"callback": callback,
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {

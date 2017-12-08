@@ -1,3 +1,26 @@
+fabric.Canvas.prototype.getItemByAttr = function(attr, name) {
+    var object = null,
+    objects = this.getObjects();
+    for (var i = 0, len = this.size(); i < len; i++) {
+        if (objects[i][attr] && objects[i][attr] === name) {
+            object = objects[i];
+            break;
+        }
+    }
+    return object;
+};
+
+fabric.Canvas.prototype.removeItemsByAttr = function(attr, name) {
+    var object = null,
+    objects = this.getObjects();
+    var i = this.size();
+    while (i--) {
+      if (objects[i][attr] && objects[i][attr] === name) {
+        objects[i].remove();
+      }
+    }
+};
+
 var Polygon = (function () {
   function Polygon(canvas) {
     var inst=this;
@@ -165,8 +188,8 @@ var Polygon = (function () {
 
 
 
-var Shape = (function () {
-  function Shape(canvas, objSelected) {
+var Annotator = (function () {
+  function Annotator(canvas, objSelected) {
     var inst=this;
     this.canvas = canvas;
     this.className= "Rectangle";
@@ -179,20 +202,33 @@ var Shape = (function () {
     this.history = new Array();
     this.isRedoing = false;
     this.currentHistoryPosition = 0;
+    this.isPanMode = false;
+    this.panning = false;
+    this.gridVisible = false;
+    this.gridSize = 20;
+    this.cellSize = 100;
+    this.selectedBlocks = {};
+    this.selectedBlocksPoints = {};
+    this.recentlyAddedBlocks = {};
+    this.recentlyDeletedBlocks = {};
 
     this.bindEvents();
   }
 
-  Shape.prototype.bindEvents = function() {
+  Annotator.prototype.bindEvents = function() {
     var inst = this;
     inst.canvas.on('mouse:down', function(o) {
       inst.onMouseDown(o);
+      if(inst.isPanMode)
+        inst.panning = true;
     });
     inst.canvas.on('mouse:move', function(o) {
       inst.onMouseMove(o);
     });
     inst.canvas.on('mouse:up', function(o) {
       inst.onMouseUp(o);
+      if(inst.isPanMode)
+        inst.panning = false;
     });
     inst.canvas.on('object:moving', function(o) {
       inst.disable();
@@ -212,8 +248,10 @@ var Shape = (function () {
         inst.canvas.hoverCursor = 'crosshair';
       }
       else if(o.target){
-        inst.over();
-        inst.canvas.hoverCursor = 'move';
+        if(inst.type !== "Blocks"){
+          inst.over();
+          inst.canvas.hoverCursor = 'move';
+        }
       }
     })
     inst.canvas.on('mouse:out', function(o) {
@@ -221,12 +259,17 @@ var Shape = (function () {
         inst.out();
     })
   }
-  Shape.prototype.onMouseUp = function (o) {
+  Annotator.prototype.onMouseUp = function (o) {
     var inst = this;
     inst.disable();
+
+    if(this.type === "Blocks"){
+      this.markBlocks();
+      this.createHull();
+    }
   };
 
-  Shape.prototype.redo = function (o) {
+  Annotator.prototype.redo = function (o) {
     /*if (this.currentHistoryPosition > 0) {
         this.isRedoing = true;
         this.currentHistoryPosition -= 1;
@@ -240,7 +283,7 @@ var Shape = (function () {
     }*/
   };
 
-  Shape.prototype.undo = function (o) {
+  Annotator.prototype.undo = function (o) {
     /*if (this.currentHistoryPosition < this.history.length) {
         this.isRedoing = true;
         this.canvas.clear().renderAll();
@@ -252,75 +295,190 @@ var Shape = (function () {
     }*/
   };
 
-  Shape.prototype.initHistory = function (o) {
+  Annotator.prototype.initHistory = function (o) {
     this.saveState();
   };
 
 
-  Shape.prototype.saveState = function (o) {
+  Annotator.prototype.saveState = function (o) {
     /*if(!this.isRedoing){
       j = JSON.stringify(this.canvas.toObject());
       this.history.push(j);
     }*/
   };
+
+  Annotator.prototype.handleBlocks = function (origX, origY) {
+    var beginX = this.cellSize * Math.floor((origX/this.cellSize), 0);
+    var beginY = this.cellSize * Math.floor((origY/this.cellSize), 0);
+
+    var key = beginX.toString() + beginY.toString();
+
+    if(key in this.selectedBlocks){
+      var persistent = this.selectedBlocks[key];
+      if(persistent){
+        this.canvas.getItemByAttr("id", ("block" + key)).remove();
+        this.selectedBlocks[key] = false;
+        this.recentlyDeletedBlocks[key] = key;
+        //delete this.selectedBlocks[key];
+
+        delete this.selectedBlocksPoints[key];
+      }
+    }
+    else{
+      var block = new fabric.Rect({
+        left: beginX,
+        top: beginY,
+        originX: 'left',
+        originY: 'top',
+        width: this.cellSize,
+        height: this.cellSize,
+        angle: 0,
+        opacity: 0.5,
+        fill: "red",
+        transparentCorners: false,
+        hasBorders: false,
+        hasControls: false,
+        selectable: false,
+        id: ("block" + key)
+      });
+
+      this.selectedBlocks[key] = false;
+      this.canvas.add(block);
+      
+      this.selectedBlocksPoints[key] = [{"x": beginX, "y": beginY}, {"x": (beginX + this.cellSize), "y": beginY}, 
+                                        {"x": beginX, "y": (beginY + this.cellSize)}, {"x": (beginX + this.cellSize), "y": (beginY + this.cellSize)}];
+      this.recentlyAddedBlocks[key] = key;
+    }
+  };
+
+  Annotator.prototype.markBlocks = function () {
+    for (var key in this.recentlyAddedBlocks) {
+      if (this.recentlyAddedBlocks.hasOwnProperty(key)) {
+        this.selectedBlocks[this.recentlyAddedBlocks[key]] = true;
+      }
+    }
+    this.recentlyAddedBlocks = {};
+
+    for (var key in this.recentlyDeletedBlocks) {
+      if (this.recentlyDeletedBlocks.hasOwnProperty(key)) {
+        delete this.selectedBlocks[this.recentlyDeletedBlocks[key]];
+      }
+    }
+    this.recentlyDeletedBlocks = {};
+  };
+
+  Annotator.prototype.createHull = function () {
+    var points = [];
+    for (var key in this.selectedBlocksPoints) {
+      if (this.selectedBlocksPoints.hasOwnProperty(key)) {
+        var p = this.selectedBlocksPoints[key];
+        for(var i = 0; i < p.length; i++){
+          points.push(p[i]);
+        }
+      }
+    }
+    h = hull(points, 50, ['.x', '.y']);
+
+    var existingHull = this.canvas.getItemByAttr("id", "hull");
+    if(existingHull !== null)
+      existingHull.remove();
+
+    var polyline = new fabric.Polyline(h,{
+      stroke: 'blue',
+      strokeWidth: 5,
+      fill: 'transparent',
+      opacity: 0.5,
+      selectable: false,
+      hasBorders: false,
+      hasControls: false,
+      evented: false,
+      "id": "hull"
+    });
+    this.canvas.add(polyline);
+    this.canvas.renderAll();
+  };
+
+
   
 
 
-  Shape.prototype.onMouseMove = function (o) {
+  Annotator.prototype.onMouseMove = function (o) {
     var inst = this;
 
+    if(!inst.isPanMode){
+      if(!inst.isEnable()){ return; }
+      var pointer = inst.canvas.getPointer(o.e);
 
-    if(!inst.isEnable()){ return; }
-    var pointer = inst.canvas.getPointer(o.e);
+      if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
+        var activeObj = inst.canvas.getActiveObject();
+        activeObj.stroke= 'red',
+        activeObj.strokeWidth= 5;
+        activeObj.fill = 'transparent';
 
-    if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
-      var activeObj = inst.canvas.getActiveObject();
-      activeObj.stroke= 'red',
-      activeObj.strokeWidth= 5;
-      activeObj.fill = 'transparent';
+        if(origX > pointer.x){
+          activeObj.set({ left: Math.abs(pointer.x) }); 
+        }
+        if(origY > pointer.y){
+          activeObj.set({ top: Math.abs(pointer.y) });
+        }
 
-      if(origX > pointer.x){
-        activeObj.set({ left: Math.abs(pointer.x) }); 
+        inst.canvas.renderAll();
       }
-      if(origY > pointer.y){
-        activeObj.set({ top: Math.abs(pointer.y) });
+
+      if(inst.type === 'Rectangle'){
+        activeObj.set({ width: Math.abs(origX - pointer.x) });
+        activeObj.set({ height: Math.abs(origY - pointer.y) });
+
+        activeObj.setCoords();
+
+        inst.canvas.renderAll();
+      }
+      if(inst.type === 'Circle'){   
+        activeObj.set({ rx: Math.abs(origX - pointer.x) / 2 });
+        activeObj.set({ ry: Math.abs(origY - pointer.y) / 2 });
+
+        activeObj.setCoords();
+
+        inst.canvas.renderAll();
+      }
+      if(inst.type === 'Polygon'){
+        this.polygon.move(pointer);
+        
+        inst.canvas.renderAll();
+      }
+      if(inst.type === "Blocks"){
+        this.handleBlocks(pointer.x, pointer.y);
       }
     }
-
-    if(inst.type === 'Rectangle'){
-      activeObj.set({ width: Math.abs(origX - pointer.x) });
-      activeObj.set({ height: Math.abs(origY - pointer.y) });
-
-      activeObj.setCoords();
+    else{
+      if(inst.panning && o && o.e){
+        var units = 10;
+        var delta = new fabric.Point(o.e.movementX, o.e.movementY);
+        inst.canvas.relativePan(delta);
+      }
     }
-    if(inst.type === 'Circle'){   
-      activeObj.set({ rx: Math.abs(origX - pointer.x) / 2 });
-      activeObj.set({ ry: Math.abs(origY - pointer.y) / 2 });
-
-      activeObj.setCoords();
-    }
-    if(inst.type === 'Polygon'){
-      this.polygon.move(pointer);
-      
-      inst.canvas.renderAll();
-    }
- 
-    inst.canvas.renderAll();
   };
 
-  Shape.prototype.deleteSelected = function (o) {
+  Annotator.prototype.reset = function () {
+    this.canvas.clear();
+    this.canvas.setZoom(1.0);
+    this.canvas.viewport.position.x = 0;
+    this.canvas.viewport.position.y = 0;
+  };
+
+  Annotator.prototype.deleteSelected = function (o) {
     this.canvas.getActiveObject().remove();
   };
 
-  Shape.prototype.objectsSelected = function (o) {
+  Annotator.prototype.objectsSelected = function (o) {
     var obj = this.canvas.getActiveObject();
     if(!obj) return false;
     return true;
   };
 
-  Shape.prototype.onMouseDown = function (o) {
+  Annotator.prototype.onMouseDown = function (o) {
     var inst = this;
-    if(!inst.isOver() && !inst.isBlocked()){
+    if(!inst.isOver() && !inst.isBlocked() && !inst.isPanMode){
       inst.enable();
 
       var pointer = inst.canvas.getPointer(o.e);
@@ -368,49 +526,107 @@ var Shape = (function () {
         }
       }
 
+      if(inst.type === "Blocks"){
+        this.selectedBlocksPoints = {}; //clear before we start a new drawing
+
+        this.handleBlocks(origX, origY);
+      }
+
     }
   };
 
-  Shape.prototype.isEnable = function(){
+  Annotator.prototype.isEnable = function(){
     return this.isDrawing;
   }
 
-  Shape.prototype.isBlocked = function(){
+  Annotator.prototype.isBlocked = function(){
     return this.blocked;
   }
 
-  Shape.prototype.enable = function(){
+  Annotator.prototype.enable = function(){
     this.isDrawing = true;
   }
 
-  Shape.prototype.disable = function(){
+  Annotator.prototype.disable = function(){
     this.isDrawing = false;
   }
 
-  Shape.prototype.isOver = function(){
+  Annotator.prototype.isOver = function(){
     return this.overObject;
   }
 
-  Shape.prototype.over = function(){
+  Annotator.prototype.over = function(){
     this.overObject = true;
   }
 
-  Shape.prototype.out = function(){
+  Annotator.prototype.out = function(){
     this.overObject = false;
   }
 
-  Shape.prototype.block = function(){
+  Annotator.prototype.block = function(){
     this.blocked = true;
   }
 
-  Shape.prototype.unblock = function(){
+  Annotator.prototype.unblock = function(){
     this.blocked = false;
   }
 
-  Shape.prototype.setShape = function(t){
+  Annotator.prototype.setShape = function(t){
     this.type = t;
   }
 
+  Annotator.prototype.enablePanMode = function(){
+    this.isPanMode = true;
+    this.canvas.selection = false; //disable group selection in pan mode
+    this.canvas.forEachObject(function(o) { //disable object selection in pan mode
+      o.selectable = false;
+    });
+  }
 
-  return Shape;
+  Annotator.prototype.disablePanMode = function(){
+    this.isPanMode = false;
+    this.canvas.selection = true; //enable group selection again when pan mode ends
+    this.canvas.forEachObject(function(o) { //enable object selection again when pan mode ends
+      o.selectable = true;
+    });
+  }
+
+  Annotator.prototype.showGrid = function(){
+    this.gridVisible = true;
+
+    this.canvas.selection = false; //disable group selection when grid is shown
+    this.selectedBlocks = {}; //clear selected blocks array
+    this.recentlyDeletedBlocks = {};
+    this.recentlyAddedBlocks = {};
+    this.selectedBlocksPoints = {};
+
+    if(this.canvas.height > this.canvas.width)
+      this.cellSize = this.canvas.height/this.gridSize;
+    else
+      this.cellSize = this.canvas.width/this.gridSize;
+
+    for(var x = 1; x < (this.canvas.width/this.gridSize); x++){
+      this.canvas.add(new fabric.Line([this.cellSize * x, 0, this.cellSize * x, this.canvas.height],{ stroke: "#000000", strokeWidth: 1, selectable:false, strokeDashArray: [5, 5], id: "grid"}));
+      this.canvas.add(new fabric.Line([0, this.cellSize * x, this.canvas.width, this.cellSize * x],{ stroke: "#000000", strokeWidth: 1, selectable:false, strokeDashArray: [5, 5], id: "grid"}));
+    }
+    this.canvas.renderAll();
+  }
+
+  Annotator.prototype.hideGrid = function(){
+    this.gridVisible = false;
+    this.canvas.removeItemsByAttr("id", "grid");
+    this.canvas.selection = true; //enable group selection when grid is hidden
+  }
+
+  Annotator.prototype.toggleGrid = function(){
+    if(this.gridVisible)
+      this.hideGrid();
+    else
+      this.showGrid();
+  }
+
+
+
+
+  return Annotator;
 }());

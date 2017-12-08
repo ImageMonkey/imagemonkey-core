@@ -35,7 +35,40 @@
 				"mouth": {
 					"description": "optional"
 				}
-			}
+			},
+
+			"quiz": [
+				{
+					"question": "What's the size of the dog",
+					"answers": ["big", "medium", "small"],
+					"allow_unknown": true,
+					"allow_other": true,
+					"control_type": "radio"
+				},
+				{
+					"question": "It's a...",
+					"answers": ["dog", "puppy"],
+					"allow_unknown": true,
+					"allow_other": true,
+					"control_type": "radio"
+				},
+				{
+					"question": "It's a...",
+					"answers": ["Seat", "Renault", "Peugot", "BMW", "Ford", "Opel", "Alfa Romeo", "Chevrolet", "Porsche", "Honda", "Subaru", "Mazda", "Mitsubishi", "Lexus", "Toyota", "Volkswagen", "Suzuki", "Mercedes-Benz", "Saab", "Audi", "Kia", "Land Rover", "Doge", "Chrysler", "Hummer", "Hyundai", "Jaguar", "Jeep", "Nissan", "Volvo", "Daewoo", "Fiat", "MINI", "Smart"],
+					"allow_other": true,
+					"allow_unknown": true,
+					"control_type": "dropdown"
+
+				},
+				{
+					"question": "The color of the car is...",
+					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
+					"allow_other": true,
+					"allow_unknown": true,
+					"control_type": "color tags"
+				}
+
+			]
 		},
 		"cat": {
 			"description": "optional",
@@ -107,6 +140,14 @@
 		"tree": {
 			"description": "optional",
 			"isa": []
+		},
+		"person": {
+			"description": "optional",
+			"has": {
+				"head": {
+					"description": "optional"
+				}
+			}
 		}
 	}
 }
