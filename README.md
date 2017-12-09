@@ -1,13 +1,24 @@
 > # Because training a ML model is easy - finding a good image dataset is hard.
 
 
-ImageMonkey is a free, public open source image validation service. With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources. ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain. 
+ImageMonkey is a free, public open source dataset. With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources. ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain. 
 
 ![Alt Text](https://github.com/bbernhard/imagemonkey-core/raw/master/img/animation.gif)
 
 # Getting started #
 
-## General Information ##
+There are basically two ways to set up your own `ImageMonkey` instance. You can either set up everything by hand, which gives you the flexibility to choose your own linux distribution, monitoring tools and scrips or you could use our `Dockerfile` to spin up a new `ImageMonkey` instance within just a few minutes. 
+
+# Docker # 
+
+* clone the imagemonkey-core repository with: `git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core`
+* `cd imagemonkey-core/env/docker/`
+* build the imagemonkey-core image with: `docker build -t imagemonkey-core .`
+* start instance with: `docker run --rm -P --name imagemonkey-core-instance imagemonkey-core`
+* get the docker host ip with: `docker-machine env`
+* you can now connect from your host system to the docker machine via: <docker_host_ip>:8080 (website) and <docker_host_ip>:8081 (REST API) 
+
+## Manual Setup ##
 
 The following section contains some notes on how to set up your own instance to host ImageMonkey yourself.
 This should only give you an idea how you *could* configure your system. Of course you are totally free in choosing 
@@ -111,29 +122,3 @@ mkdir -p /home/imagemonkey/unverified_donations
 * copy `conf/supervisor/imagemonkey-api.conf` to `/etc/supervisor/conf.d/imagemonkey-api.conf`
 * copy `conf/supervisor/imagemonkey-web.conf` to `/etc/supervisor/conf.d/imagemonkey-web.conf`
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
-
-
-# What's next? #
-
-## General ##
-* **API abuse prevention:** I strongly believe that such a project only works out, if we keep the API as open as possible (i.e ideally accessible without any registration). However, without any kind of registration or API tokens, it's easily possible that malicious bots/people will destroy valid datasets by wrongly classifying a picture. 
-
-Possible attempts to solve that: 
-- implement an alerting mechanism that fires when a image rapidly changes it's validity
-- add a "training phase" where users need to verify a few easy pictures first and only after they completed the "training phase" and have proven that their intentions are good then their votes are counted
-- add an registration mechanism to make abusive voting less attractive (not my prefered option, but yeah...)
-
-* remember already seen images to avoid that users verify a specific image twice
-
-* add client-side/server-side image compression
-
-## Infrastructure ##
-* currently there are a lot of manual steps involved to host your own instance of `imagemonkey`. There should be a script which automates that. What about a dockerizable image? 
-* add a deployment script which makes deploying changes easier and less error prone.
-
-## REST API ##
-* make it possible to export images only when `probability > treshold`
-
-## Sourcecode ##
-* there is some duplicated code in `api.go` and `web.go` -> we should get rid of it
-
