@@ -93,7 +93,7 @@ func main(){
 				if(numOfLabels == 0){
 					fmt.Printf("Adding label %s (parent: %s) \n", sublabel, k)
 					_,err := tx.Exec(`INSERT INTO label(name, parent_id)
-										SELECT $1, FROM label l WHERE l.name = $2 AND l.id is null`,
+										SELECT $1, l.id FROM label l WHERE l.name = $2 AND l.id is null`,
 									sublabel, k)
 					if(err != nil){
 						tx.Rollback()
