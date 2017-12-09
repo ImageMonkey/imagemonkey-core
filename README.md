@@ -9,7 +9,7 @@ ImageMonkey is a free, public open source dataset. With all the great machine le
 
 There are basically two ways to set up your own `ImageMonkey` instance. You can either set up everything by hand, which gives you the flexibility to choose your own linux distribution, monitoring tools and scrips or you could use our `Dockerfile` to spin up a new `ImageMonkey` instance within just a few minutes. 
 
-# Docker # 
+## Docker ## 
 
 * clone the imagemonkey-core repository with: `git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core`
 * `cd imagemonkey-core/env/docker/`
@@ -17,6 +17,8 @@ There are basically two ways to set up your own `ImageMonkey` instance. You can 
 * start instance with: `docker run --rm -P --name imagemonkey-core-instance imagemonkey-core`
 * get the docker host ip with: `docker-machine env`
 * you can now connect from your host system to the docker machine via: <docker_host_ip>:8080 (website) and <docker_host_ip>:8081 (REST API) 
+
+The docker image is for development only - do **NOT** use it in production!
 
 ## Manual Setup ##
 
@@ -26,7 +28,7 @@ a different linux distribution, tools and scripts. If you are only interested in
 
 *Info:* Some commands are distribution (Debian 9.1) specific and may not work on your system. 
 
-## Base System Configuration ##
+### Base System Configuration ###
 
 * create a new user `imagemonkey`  with `adduser imagemonkey` 
 * disable root login via ssh by changing the `PermitRootLogin` line in `/etc/ssh/sshd_config` to `PermitRootLogin no`)
@@ -59,7 +61,7 @@ iptables -A OUTPUT -o lo -j ACCEPT
 * save firewall rules with: `iptables-save > /etc/iptables/rules.v4`
 * verify that rules are loaded with `iptables -L`
 
-## Database ##
+### Database ###
 
 * install PostgreSQL
 * edit `/etc/postgresql/9.6/main/postgresql.conf` and set `listen_addresses = 'localhost'`
@@ -86,7 +88,7 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * connect to imagemonkey database and execute `CREATE EXTENSION uuid-ossp;`
 * apply `defaults.sql`
 
-## Webserver & SSL ##
+### Webserver & SSL ###
 
 * install nginx with `apt-get install nginx`
 * install nginx-extras with `apt-get install nginx-extras`
@@ -107,7 +109,7 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * install API application with `go install api.go api_secrets.go common.go imagedb.go`
 * install API application with `go install web.go web_secrets.go common.go imagedb.go` 
 
-## Miscellaneous ##
+### Miscellaneous ###
 * copy `wordlists/en/misc.txt` to `/home/imagemonkey/wordlists/en/misc.txt`
 * create donation directories with: 
 ```
@@ -115,7 +117,7 @@ mkdir -p /home/imagemonkey/donations
 mkdir -p /home/imagemonkey/unverified_donations
 ```
 
-## Watchdog ##
+### Watchdog ###
 * install supervisor with `apt-get install supervisor`
 * add `imagemonkey` user to supervisor group with `adduser imagemonkey supervisor`
 * create logging directories with `mkdir -p /var/log/imagemonkey-api` and `mkdir -p /var/log/imagemonkey-web`
