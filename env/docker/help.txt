@@ -1,0 +1,4 @@
+docker build -t imagemonkey-core .
+docker run -P -it -d --name test imagemonkey-core
+docker run --rm -P --name test imagemonkey-core
+docker attach test
