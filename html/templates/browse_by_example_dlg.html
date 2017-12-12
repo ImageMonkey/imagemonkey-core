@@ -15,6 +15,8 @@ function exampleSelectButtonClicked(e){
 }
 
 function populateExamples(title, originalImgSrc, data, metainfo){
+  clearExamples(); //clear before populate 
+  
   $("#browseByExampleOriginalImg").attr("src", originalImgSrc);
   for(var i = 0; i < data.length; i++){
     var examples = data[i]["examples"];
@@ -45,6 +47,12 @@ function resetExamples(){
     currentSelectedExample.innerHTML = "Select";
     $("#browseByExampleDlg").attr("currentSelectedLabelId", "");
   }
+}
+
+function clearExamples(){
+  $('#exampleCards').children().each(function (){
+    $(this).remove();
+  })
 }
 
 $(document).ready(function(){
