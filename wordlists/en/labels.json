@@ -43,6 +43,7 @@
 					"answers": ["big", "medium", "small"],
 					"allow_unknown": true,
 					"allow_other": true,
+					"browse_by_example": false,
 					"control_type": "radio"
 				},
 				{
@@ -50,22 +51,149 @@
 					"answers": ["dog", "puppy"],
 					"allow_unknown": true,
 					"allow_other": true,
+					"browse_by_example": false,
 					"control_type": "radio"
 				},
 				{
-					"question": "It's a...",
-					"answers": ["Seat", "Renault", "Peugot", "BMW", "Ford", "Opel", "Alfa Romeo", "Chevrolet", "Porsche", "Honda", "Subaru", "Mazda", "Mitsubishi", "Lexus", "Toyota", "Volkswagen", "Suzuki", "Mercedes-Benz", "Saab", "Audi", "Kia", "Land Rover", "Doge", "Chrysler", "Hummer", "Hyundai", "Jaguar", "Jeep", "Nissan", "Volvo", "Daewoo", "Fiat", "MINI", "Smart"],
-					"allow_other": true,
-					"allow_unknown": true,
-					"control_type": "dropdown"
+					"question": "What am I?",
+					"answers": [
+						{
+							"name": "Labrador Retriever",
+							"examples": [
+								{
+									"filename": "LabradorRetriever.jpg"								
+								}
+							]
+						},
+						{
+							"name": "English Cocker Spaniel",
+							"examples": [
+								{
+									"filename": "EnglishCockerSpaniel.jpg"								
+								}
+							]
+						},
+						{
+							"name": "English Springer Spaniel",
+							"examples": [
+								{
+									"filename": "EnglishSpringerSpaniel.jpg"								
+								}
+							]
+						},
+						{
+							"name": "German Shepherd",
+							"examples": [
+								{
+									"filename": "GermanShepherd.jpg"
+								}
+							]
+						},
+						{
+							"name": "Staffordshire Bull Terrier",
+							"examples": [
+								{
+									"filename": "StaffordshireBullTerrier.jpg"
+								}
+							]
+						},
+						{
+							"name": "Golden Retriever",
+							"examples": [
+								{
+									"filename": "GoldenRetriever.jpg"
+								}
+							]
+						},
+						{
+							"name": "Boxer",
+							"examples": [
+								{
+									"filename": "Boxer.jpg"
+								}
+							]
+						},
+						{
+							"name": "Beagle",
+							"examples": [
+								{
+									"filename": "Beagle.jpg"
+								}
+							]
+						},
+						{
+							"name": "Dachshund",
+							"examples": [
+								{
+									"filename": "Dachshund.jpg"
+								}
+							]
+						},
+						{
+							"name": "Poodle",
+							"examples": [
+								{
+									"filename": "Poodle.jpg"
+								}
+							]
+						},
+						{
+							"name": "Rottweiler",
+							"examples": [
+								{
+									"filename": "Rottweiler.jpg"
+								}
+							]
+						},
+						{
+							"name": "Siberian Husky",
+							"examples": [
+								{
+									"filename": "SiberianHusky.jpg"
+								}
+							]
+						},
+						{
+							"name": "Bulldog",
+							"examples": [
+								{
+									"filename": "Bulldog.jpg"
+								}
+							]
+						},
+						{
+							"name": "Mops",
+							"examples": [
+								{
+									"filename": "Mops.jpg"
+								}
+							]
+						},
+						{
+							"name": "Dalmatiner",
+							"examples": [
+								{
+									"filename": "Dalmatiner.jpg"
+								}
+							]
+						},
+						{
+							"name": "Great Dane",
+							"examples": [
+								{
+									"filename": "GreatDane.jpg"
+								}
+							]
+						}
 
-				},
-				{
-					"question": "The color of the car is...",
-					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
-					"allow_other": true,
+						
+
+						
+					],
 					"allow_unknown": true,
-					"control_type": "color tags"
+					"allow_other": true,
+					"browse_by_example": true,
+					"control_type": "dropdown"
 				}
 
 			]
@@ -103,7 +231,24 @@
 		},
 		"car": {
 			"description": "optional",
-			"isa": ["vehicle"]
+			"isa": ["vehicle"],
+			"quiz": [
+				{
+					"question": "It's a...",
+					"answers": ["Seat", "Renault", "Peugot", "BMW", "Ford", "Opel", "Alfa Romeo", "Chevrolet", "Porsche", "Honda", "Subaru", "Mazda", "Mitsubishi", "Lexus", "Toyota", "Volkswagen", "Suzuki", "Mercedes-Benz", "Saab", "Audi", "Kia", "Land Rover", "Doge", "Chrysler", "Hummer", "Hyundai", "Jaguar", "Jeep", "Nissan", "Volvo", "Daewoo", "Fiat", "MINI", "Smart"],
+					"allow_other": true,
+					"allow_unknown": true,
+					"control_type": "dropdown"
+
+				},
+				{
+					"question": "The color of the car is...",
+					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
+					"allow_other": true,
+					"allow_unknown": true,
+					"control_type": "color tags"
+				}
+			]
 		},
 		"TV": {
 			"description": "optional",

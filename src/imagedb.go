@@ -149,14 +149,27 @@ type AnnotationRefinementQuestion struct {
     RecommendedControl string `json:"recommended_control"`
 }
 
+type AnnotationRefinementAnswerExample struct {
+    Filename string `json:"filename"`
+    Attribution string `json:"attribution"`
+}
+
 type AnnotationRefinementAnswer struct {
     Label string `json:"label"`
     Id int64 `json:"id"`
+    Examples []AnnotationRefinementAnswerExample `json:"examples"`
 }
 
 type AnnotationRefinement struct {
     Question AnnotationRefinementQuestion `json:"question"`
-    Answers []AnnotationRefinementAnswer `json:"answers"`
+    //Answers []AnnotationRefinementAnswer `json:"answers"`
+    Answers []json.RawMessage `json:"answers"`
+
+    Metainfo struct {
+        BrowseByExample bool `json:"browse_by_example"`
+        AllowOther bool `json:"allow_other"`
+        AllowUnknown bool `json:"allow_unknown"`
+    } `json:"metainfo"`
 
     Image struct {
         Uuid string `json:"uuid"`
@@ -1424,17 +1437,22 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
     var annotationBytes []byte
     var refinement AnnotationRefinement
     var annotations []json.RawMessage
-    var allowUnknown bool
-    var allowOther bool
-    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, s.allow_other
+    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, 
+                        s.allow_other, s.browse_by_example
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
-                                json_agg(json_build_object('id', l.id, 'label', l.name)) as quiz_answers, 
-                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other
+                                json_agg(json_build_object('id', l.id, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
+                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
+                                qq.browse_by_example as browse_by_example
     
                                 FROM quiz_question qq 
                                 JOIN quiz_answer q ON q.quiz_question_id = qq.id 
-                                JOIN label l ON q.label_id = l.id 
+                                JOIN label l ON q.label_id = l.id
+                                LEFT JOIN (
+                                    SELECT e.label_id, json_agg(json_build_object('filename', e.filename, 'attribution', e.attribution))::jsonb as examples
+                                    FROM label_example e GROUP BY label_id
+                                ) s2 
+                                ON s2.label_id = l.id 
                                 GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
                              ) as s
                         JOIN (
@@ -1453,7 +1471,8 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
                               WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
                             )
                         ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &allowUnknown, &allowOther)
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, 
+                            &refinement.Metainfo.AllowOther, &refinement.Metainfo.BrowseByExample)
     if err != nil {
         log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1481,7 +1500,7 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         refinement.Annotation.Annotation = annotations[randomVal]
     }
 
-    if allowUnknown {
+    /*if allowUnknown {
         var unknownRefinementAnswer AnnotationRefinementAnswer
         unknownRefinementAnswer.Label = "don't know"
         unknownRefinementAnswer.Id = -1
@@ -1493,7 +1512,7 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         otherRefinementAnswer.Label = "other"
         otherRefinementAnswer.Id = -2
         refinement.Answers = append(refinement.Answers, otherRefinementAnswer)
-    }
+    }*/
 
     return refinement, nil
 }

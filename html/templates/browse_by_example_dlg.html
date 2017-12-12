@@ -1,0 +1,75 @@
+<script type='text/javascript'>
+var currentSelectedExample = null;
+
+function exampleSelectButtonClicked(e){
+    if(currentSelectedExample !== null){
+      $(currentSelectedExample).removeClass("positive disabled");
+      currentSelectedExample.innerHTML = "Select";
+    }
+    currentSelectedExample = e;
+    $(e).addClass("positive disabled");
+    e.innerHTML = "Selected";
+    $("#browseByExampleDlg").attr("currentSelectedLabelId", $(e).attr("labelId"));
+
+    $("#doneBrowseByExampleButton").removeClass("disabled");
+}
+
+function populateExamples(title, originalImgSrc, data, metainfo){
+  $("#browseByExampleOriginalImg").attr("src", originalImgSrc);
+  for(var i = 0; i < data.length; i++){
+    var examples = data[i]["examples"];
+    var d = '';
+    for(var j = 0; j < examples.length; j++){
+      var url = '{{ .apiBaseUrl }}/v1/label/example/' + examples[j]["filename"];
+      d = '<div class="card"><div class="image"><img src="' + url + '"></div><div class="content"><a class="header">' + data[i]["label"] + '</a></div><div class="ui bottom attached button" onclick="exampleSelectButtonClicked(this)" labelId="' + data[i]["id"] + '"><i class="add icon"></i>Select</div></div>';
+      $('#exampleCards').append($(d));
+    }
+  }
+
+  if(metainfo["allow_other"]){
+    d = '<div class="card"><div class="image"><div class="ui center aligned basic segment"><i class="huge help icon"></i></div></div><div class="content"><a class="header">other</a></div><div class="ui bottom attached button" onclick="exampleSelectButtonClicked(this)" labelId="-2"><i class="add icon"></i>Select</div></div>';
+    $('#exampleCards').append($(d));
+  }
+
+  if(metainfo["allow_unknown"]){
+    d = '<div class="card"><div class="image"><div class="ui center aligned basic segment"><i class="huge centered help icon"></i></div></div><div class="content"><a class="header">don\'t know</a></div><div class="ui bottom attached button" onclick="exampleSelectButtonClicked(this)" labelId="-1"><i class="add icon"></i>Select</div></div>';
+    $('#exampleCards').append($(d));
+  }
+
+  $("#browseByExampleTitle").text(title);
+}
+
+function resetExamples(){
+  if(currentSelectedExample !== null){
+    $(currentSelectedExample).removeClass("positive disabled");
+    currentSelectedExample.innerHTML = "Select";
+    $("#browseByExampleDlg").attr("currentSelectedLabelId", "");
+  }
+}
+
+$(document).ready(function(){
+});
+</script>
+
+<div class="ui longer modal" id="browseByExampleDlg" currentSelectedLabelId="">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Browse By Example
+
+    <img class="ui centered medium image" id="browseByExampleOriginalImg">
+    <h2 class="ui center aligned header" id="browseByExampleTitle"></h2>
+  </div>
+  <div class="content">
+    <div class="ui four doubling cards" id="exampleCards">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui black deny button" id="cancelBrowseByExampleButton">
+      Cancel
+    </div>
+    <div class="ui positive right labeled disabled icon button" id="doneBrowseByExampleButton">
+      Done
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>

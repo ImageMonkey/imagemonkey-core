@@ -179,6 +179,7 @@ func main(){
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 500, "Max connections to Redis")
 	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
+	labelExamplesDir := flag.String("examples_dir", "../label_examples/", "Location of the label examples")
 
 	flag.Parse()
 	if(*releaseMode){
@@ -516,6 +517,8 @@ func main(){
 		label := words[random(0, len(words) - 1)]
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
+
+	router.Static("/v1/label/example", *labelExamplesDir)		
 
 	router.POST("/v1/label/suggest", func(c *gin.Context) {
 		type SuggestedLabel struct {

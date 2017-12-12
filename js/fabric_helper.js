@@ -10,6 +10,27 @@ function setCanvasBackgroundImageUrl(canvas, url, callback) {
     }
 }
 
+function colorComponentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + colorComponentToHex(r) + colorComponentToHex(g) + colorComponentToHex(b);
+}
+
+function registerColorPickerOnMove(canvas, ctx, callback){
+    canvas.on('mouse:move', function(o) {
+      var pointer = canvas.getPointer(o.e);
+      var x = parseInt(pointer.x);
+      var y = parseInt(pointer.y);
+
+      // get the color array for the pixel under the mouse
+      var px = ctx.getImageData(x, y, 1, 1).data;
+      callback(rgbToHex(px[0], px[1], px[2]))
+    });
+}
+
 function scaleAndPositionImage(canvas, img, callback) {
     var scaleFactor = calcScaleFactor(img);
     canvas.setBackgroundImage(img,
@@ -67,7 +88,7 @@ function drawAnnotations(canvas, annotations, scaleFactor){
             hasControls: false,
             selectable: false
         });
-        canvas.add(rect);           
+        canvas.add(rect);      
     }
     else if(type === "ellipse"){
         var top = (annotations[i]["top"] * scaleFactor);
