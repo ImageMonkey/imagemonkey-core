@@ -169,6 +169,7 @@ type AnnotationRefinement struct {
         BrowseByExample bool `json:"browse_by_example"`
         AllowOther bool `json:"allow_other"`
         AllowUnknown bool `json:"allow_unknown"`
+        MultiSelect bool `json:"multiselect"`
     } `json:"metainfo"`
 
     Image struct {
@@ -179,6 +180,10 @@ type AnnotationRefinement struct {
         Uuid string `json:"uuid"`
         Annotation json.RawMessage `json:"annotation"`
     } `json:"annotation"`
+}
+
+type AnnotationRefinementEntry struct {
+    LabelId int64 `json:"label_id"`
 }
 
 func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, labels []LabelMeEntry ) error{
@@ -1438,12 +1443,12 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
     var refinement AnnotationRefinement
     var annotations []json.RawMessage
     err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, 
-                        s.allow_other, s.browse_by_example
+                        s.allow_other, s.browse_by_example, s.multiselect
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
                                 json_agg(json_build_object('id', l.id, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
                                 qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
-                                qq.browse_by_example as browse_by_example
+                                qq.browse_by_example as browse_by_example, qq.multiselect
     
                                 FROM quiz_question qq 
                                 JOIN quiz_answer q ON q.quiz_question_id = qq.id 
@@ -1472,7 +1477,7 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
                             )
                         ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
                             &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, 
-                            &refinement.Metainfo.AllowOther, &refinement.Metainfo.BrowseByExample)
+                            &refinement.Metainfo.AllowOther, &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
     if err != nil {
         log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1500,35 +1505,39 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         refinement.Annotation.Annotation = annotations[randomVal]
     }
 
-    /*if allowUnknown {
-        var unknownRefinementAnswer AnnotationRefinementAnswer
-        unknownRefinementAnswer.Label = "don't know"
-        unknownRefinementAnswer.Id = -1
-        refinement.Answers = append(refinement.Answers, unknownRefinementAnswer)
-    }
-
-    if allowOther {
-        var otherRefinementAnswer AnnotationRefinementAnswer
-        otherRefinementAnswer.Label = "other"
-        otherRefinementAnswer.Id = -2
-        refinement.Answers = append(refinement.Answers, otherRefinementAnswer)
-    }*/
-
     return refinement, nil
 }
 
-func addOrUpdateRefinement(annotationUuid string, annotationDataId int64, labelId int64, clientFingerprint string) error {
+func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annotationRefinementEntries []AnnotationRefinementEntry, clientFingerprint string) error {
     var err error
 
-    _, err = db.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
-                        SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
-                      ON CONFLICT (annotation_data_id, label_id)
-                      DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
-                      WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
-                           annotationDataId, labelId, 1, clientFingerprint, annotationUuid)
-    
+    tx, err := db.Begin()
     if err != nil {
-        log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
+        log.Debug("[Add or Update Random Quiz question] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    for _, item := range annotationRefinementEntries {
+
+        _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
+                            SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
+                          ON CONFLICT (annotation_data_id, label_id)
+                          DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
+                          WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
+                               annotationDataId, item.LabelId, 1, clientFingerprint, annotationUuid)
+        
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Add or Update Random Quiz question] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }

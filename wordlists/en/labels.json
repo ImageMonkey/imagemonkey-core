@@ -44,6 +44,7 @@
 					"allow_unknown": true,
 					"allow_other": true,
 					"browse_by_example": false,
+					"multiselect": false,
 					"control_type": "radio"
 				},
 				{
@@ -52,6 +53,7 @@
 					"allow_unknown": true,
 					"allow_other": true,
 					"browse_by_example": false,
+					"multiselect": false,
 					"control_type": "radio"
 				},
 				{
@@ -193,6 +195,7 @@
 					"allow_unknown": true,
 					"allow_other": true,
 					"browse_by_example": true,
+					"multiselect": false,
 					"control_type": "dropdown"
 				}
 
@@ -223,7 +226,18 @@
 		},
 		"apple": {
 			"description": "optional",
-			"isa": ["food"]
+			"isa": ["food"],
+			"quiz": [
+				{
+					"question": "The apple's color is...",
+					"answers": ["red", "green", "yellow"],
+					"allow_unknown": true,
+					"allow_other": true,
+					"browse_by_example": false,
+					"multiselect": true,
+					"control_type": "radio"
+				}
+			]
 		},
 		"banana": {
 			"description": "optional",
@@ -238,6 +252,7 @@
 					"answers": ["Seat", "Renault", "Peugot", "BMW", "Ford", "Opel", "Alfa Romeo", "Chevrolet", "Porsche", "Honda", "Subaru", "Mazda", "Mitsubishi", "Lexus", "Toyota", "Volkswagen", "Suzuki", "Mercedes-Benz", "Saab", "Audi", "Kia", "Land Rover", "Doge", "Chrysler", "Hummer", "Hyundai", "Jaguar", "Jeep", "Nissan", "Volvo", "Daewoo", "Fiat", "MINI", "Smart"],
 					"allow_other": true,
 					"allow_unknown": true,
+					"multiselect": false,
 					"control_type": "dropdown"
 
 				},
@@ -246,6 +261,7 @@
 					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
 					"allow_other": true,
 					"allow_unknown": true,
+					"multiselect": false,
 					"control_type": "color tags"
 				}
 			]

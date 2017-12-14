@@ -811,10 +811,6 @@ func main(){
 	})
 
 	router.POST("/v1/annotation/:annotationid/refine/:annotationdataid", func(c *gin.Context) {
-		type AnnotationRefinementEntry struct {
-		    LabelId int64 `json:"label_id"`
-		}
-
 		annotationId := c.Param("annotationid")
 		if(annotationId == ""){
 			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation id"})
@@ -835,15 +831,15 @@ func main(){
 		}
 
 
-		var annotationRefinementEntry AnnotationRefinementEntry
-		if c.BindJSON(&annotationRefinementEntry) != nil {
+		var annotationRefinementEntries []AnnotationRefinementEntry
+		if c.BindJSON(&annotationRefinementEntries) != nil {
 			c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid label id"})
 			return
 		}
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err := addOrUpdateRefinement(annotationId, annotationDataId, annotationRefinementEntry.LabelId, browserFingerprint)
+		err := addOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
 			return
