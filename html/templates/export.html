@@ -18,15 +18,40 @@
   <script src="js/common.js"></script> 
 
   <style>
-    pre {
-      white-space: pre-wrap;
-    }
+  pre {
+    white-space: pre-wrap;
+  }
   </style>
 
 
   <script type="text/javascript">
+    $(document).ready(function(){
+      $('#dataStructureContainer').hide();
 
-		$(document).ready(function(){
+      $("#exportButton").click(function(e) {
+        $('#exportSyntaxErrorMessage').hide();
+        $.ajax({
+              url: '{{ .apiBaseUrl }}/v1/export',
+              dataType: 'json',
+              //data: {tags: $('#tagsSelector' ).dropdown('get value').toString()},
+              data: {query: encodeURIComponent($("#query").val())},
+              success: function(data){
+                var jsonStr = JSON.stringify(data, null, 2);
+                $('#dataStructure').text(jsonStr);
+                $('#dataStructureContainer').show();
+              },
+              error: function(xhr, status, error) {
+                var err = JSON.parse(xhr.responseText)["error"];
+                var obj = $('#exportSyntaxErrorMessage').text(err);
+                obj.html(obj.html().replace(/\n/g,'<br/>'));
+                $('#exportSyntaxErrorMessage').show(200);
+                $('#dataStructureContainer').hide();
+              }
+          });
+      });
+    });
+
+		/*$(document).ready(function(){
       $('#dataStructureContainer').hide();
 			$('.ui.dropdown').dropdown();
 
@@ -52,55 +77,65 @@
 			        }
 			    });
     		});
-		});
-	</script>
+});*/
+</script>
 </head>
 <body>
 
-{{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
-  	{{ template "pointing_menu.html" .}}  
-  	<div class="ui text container">
-  		<h2 class="ui inverted header">
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container">
+      <h2 class="ui inverted header">
         All data belongs to YOU
       </h2>
       <h2>Data should be easily accessible. For Everybody.</h2>
     </div>
-</div>
-    <div class="ui vertical stripe segment">
+  </div>
+  <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
       	<form class="ui form segment">
-		    <div class="field">
-			    <p>Select one or more tags you are interested in</p>
-			    <select name="states" class="ui selection dropdown" multiple="" id="tagsSelector">
-			      	<option value="">Tags</option>
-						{{range .labels}}
-							<option value="{{.}}">{{.}}</option>
-						{{ end }}
-			    </select>
-		  	</div>
-		  	<div class="ui primary submit button" id="exportButton">Export</div>
-		  	<p class="ui error message"></p>
-		</form>
+          <div class="field">
+           <p>Select one or more tags you are interested in</p>
+
+           <!--<select name="states" class="ui selection dropdown" multiple="" id="tagsSelector">
+            <option value="">Tags</option>
+            {{range .labels}}
+            <option value="{{.}}">{{.}}</option>
+            {{ end }}
+          </select>-->
+          <input placeholder="Query..." type="text" id="query">
+        
+        </div>
+        <div class="ui primary submit button" id="exportButton">Export</div>
+        <p class="ui error message"></p>
+      </form>
+
+      <div class="ui warning message" hidden id="exportSyntaxErrorMessage">
+        <i class="close icon"></i>
+          <div class="header"></div>
       </div>
 
-      <div class="row">
+
+    </div>
+
+    <div class="row">
       <br>
-      </div> 
-      <div class="row">
-      	<div class="ui raised segment" id="dataStructureContainer">
-          <pre class="prettyprint" id="dataStructure">
-          </pre>
-</div>
-      </div>
+    </div> 
+    <div class="row">
+     <div class="ui raised segment" id="dataStructureContainer">
+      <pre class="prettyprint" id="dataStructure">
+      </pre>
+    </div>
   </div>
 </div>
-  </div>
-  {{ template "footer.html" .}}
+</div>
+</div>
+{{ template "footer.html" .}}
 </div>
 
 </body>

@@ -24,23 +24,38 @@
 	"labels": {
 		"dog": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["animal"],
 			"has": {
 				"eye": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"ear": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"mouth": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				}
 			},
 
 			"quiz": [
 				{
 					"question": "What's the size of the dog",
-					"answers": ["big", "medium", "small"],
+					"accessors": [".size"],
+					"answers": [
+						{
+							"name": "big"
+						},
+						{ 
+							"name": "medium"
+						},
+						{
+							"name": "small"
+						}
+					],
 					"allow_unknown": true,
 					"allow_other": true,
 					"browse_by_example": false,
@@ -49,7 +64,15 @@
 				},
 				{
 					"question": "It's a...",
-					"answers": ["dog", "puppy"],
+					"accessors": [".type"],
+					"answers": [
+						{
+							"name": "dog"
+						},
+						{ 
+							"name": "puppy"
+						}
+					],
 					"allow_unknown": true,
 					"allow_other": true,
 					"browse_by_example": false,
@@ -58,6 +81,7 @@
 				},
 				{
 					"question": "What am I?",
+					"accessors": [".breed"],
 					"answers": [
 						{
 							"name": "Labrador Retriever",
@@ -203,34 +227,52 @@
 		},
 		"cat": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["animal"],
 			"has": {
 				"eye": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"ear": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"mouth": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				}
 			}
 		},
 		"pizza": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"orange": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"apple": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"],
 			"quiz": [
 				{
 					"question": "The apple's color is...",
-					"answers": ["red", "green", "yellow"],
+					"accessors": [".color"],
+					"answers": [
+						{
+							"name": "red"
+						},
+						{
+							"name": "green"
+						},
+						{ 
+							"name": "yellow"
+						}
+					],
 					"allow_unknown": true,
 					"allow_other": true,
 					"browse_by_example": false,
@@ -241,15 +283,121 @@
 		},
 		"banana": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"car": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["vehicle"],
 			"quiz": [
 				{
 					"question": "It's a...",
-					"answers": ["Seat", "Renault", "Peugot", "BMW", "Ford", "Opel", "Alfa Romeo", "Chevrolet", "Porsche", "Honda", "Subaru", "Mazda", "Mitsubishi", "Lexus", "Toyota", "Volkswagen", "Suzuki", "Mercedes-Benz", "Saab", "Audi", "Kia", "Land Rover", "Doge", "Chrysler", "Hummer", "Hyundai", "Jaguar", "Jeep", "Nissan", "Volvo", "Daewoo", "Fiat", "MINI", "Smart"],
+					"accessors": [".brand"],
+					"answers": [
+						{
+							"name": "Seat"
+						}, 
+						{
+							"name": "Renault"
+						},
+						{
+							"name": "Peugot"
+						},
+						{
+							"name": "BMW"
+						},
+						{
+							"name": "Ford"
+						},
+						{
+							"name": "Opel"
+						},
+						{
+							"name": "Alfa Romeo"
+						},
+						{
+							"name": "Chevrolet"
+						},
+						{
+							"name": "Porsche"
+						},
+						{
+							"name": "Honda"
+						},
+						{
+							"name": "Subaru"
+						},
+						{
+							"name": "Mazda"
+						}, 
+						{
+							"name": "Mitsubishi"
+						},
+						{
+							"name": "Lexus"
+						}, 
+						{
+							"name": "Toyota"
+						},
+						{
+							"name": "Volkswagen"
+						},
+						{
+							"name": "Suzuki"
+						},
+						{
+							"name": "Mercedes-Benz"
+						},
+						{
+							"name": "Saab"
+						},
+						{
+							"name": "Audi"
+						},
+						{
+							"name": "Kia"
+						},
+						{
+							"name": "Land Rover"
+						},
+						{
+							"name": "Doge"
+						},
+						{
+							"name": "Chrysler"
+						}, 
+						{
+							"name": "Hummer"
+						}, 
+						{
+							"name": "Hyundai"
+						},
+						{
+							"name": "Jaguar"
+						},
+						{
+							"name": "Jeep"
+						},
+						{
+							"name": "Nissan"
+						},
+						{
+							"name": "Volvo"
+						},
+						{
+							"name": "Daewoo"
+						},
+						{
+							"name": "Fiat"
+						}, 
+						{
+							"name": "MINI"
+						},
+						{
+							"name": "Smart"
+						}
+					],
 					"allow_other": true,
 					"allow_unknown": true,
 					"multiselect": false,
@@ -258,7 +406,33 @@
 				},
 				{
 					"question": "The color of the car is...",
-					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
+					"accessors": [".color"],
+					"answers": [
+						{
+							"name": "white"
+						},
+						{
+							"name": "silver"
+						},
+						{
+							"name": "black"
+						},
+						{
+							"name": "grey"
+						},
+						{ 
+							"name": "blue"
+						},
+						{
+							"name": "red"
+						},
+						{
+							"name": "brown"
+						},
+						{
+							"name": "green"
+						}
+					],
 					"allow_other": true,
 					"allow_unknown": true,
 					"multiselect": false,
@@ -268,42 +442,52 @@
 		},
 		"TV": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["electronics"]
 		},
 		"smartphone": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["electronics"]
 		},
 		"cup": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"glass": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"spoon": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"egg": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"tennis ball": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["sports"]
 		},
 		"bullet": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"tree": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"person": {
 			"description": "optional",
+			"accessors": ["."],
 			"has": {
 				"head": {
 					"description": "optional"

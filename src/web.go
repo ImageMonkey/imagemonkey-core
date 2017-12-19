@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"github.com/gin-gonic/gin"
 	"fmt"
-	"strings"
 	"os"
 	log "github.com/Sirupsen/logrus"
 	"flag"
@@ -200,6 +199,7 @@ func main() {
 			"title": "Export Dataset",
 			"labels": pick(getAllImageLabels())[0],
 			"activeMenuNr": 9,
+			"apiBaseUrl": apiBaseUrl,
 		})
 	})
 	router.GET("/apps", func(c *gin.Context) {
@@ -216,7 +216,7 @@ func main() {
 		})
 	})
 
-	router.GET("/data", func(c *gin.Context) {
+	/*router.GET("/data", func(c *gin.Context) {
 		tags := ""
 		params := c.Request.URL.Query()
 		if temp, ok := params["tags"]; ok {
@@ -233,7 +233,7 @@ func main() {
 			c.JSON(422, gin.H{"error": "No tags specified"})
 			return
 		}
-	})
+	})*/
 
 	router.Run(":8080")
 }
