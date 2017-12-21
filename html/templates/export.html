@@ -108,6 +108,7 @@
       $("#randomButton").click(function(e) {
         var pos = randomIntBetweenInterval(0, (sampleExportQueries.length - 1));
         $("#query").val(sampleExportQueries[pos]);
+        $("#exportButton").trigger("click");
       });
 
       
@@ -139,7 +140,7 @@
       <div class="row">
       	<form class="ui form segment">
           <div class="field">
-           <p>Select one or more tags you are interested in</p>
+           <p>Export the data you are interested in</p>
           <input placeholder="Query..." type="text" id="query">
         
         </div>
