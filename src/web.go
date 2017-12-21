@@ -200,6 +200,7 @@ func main() {
 			"labels": pick(getAllImageLabels())[0],
 			"activeMenuNr": 9,
 			"apiBaseUrl": apiBaseUrl,
+			"labelAccessors": pick(getLabelAccessors())[0],
 		})
 	})
 	router.GET("/apps", func(c *gin.Context) {

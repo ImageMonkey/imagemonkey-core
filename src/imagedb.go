@@ -1597,3 +1597,28 @@ func addLabelSuggestion(suggestedLabel string) error {
 
     return nil
 } 
+
+func getLabelAccessors() ([]string, error) {
+    var labels []string
+    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    if err != nil {
+        log.Debug("[Get label accessor] Couldn't insert: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labels, err
+    }
+    defer rows.Close()
+
+    var label string
+    for rows.Next() {
+        err = rows.Scan(&label)
+        if err != nil {
+           log.Debug("[Get label accessor] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labels, err 
+        }
+
+        labels = append(labels, label)
+    }
+
+    return labels, nil
+}

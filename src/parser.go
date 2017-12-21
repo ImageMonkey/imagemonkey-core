@@ -1,7 +1,6 @@
 package main
 
 import(
-	"strings"
 	"unicode"
 	"errors"
 	"strconv"
@@ -29,7 +28,7 @@ func IsLetter(s string) bool {
 }
 
 func IsAssignment(s string) bool {
-	match, _ := regexp.MatchString("^[a-zA-Z]*\\.[a-zA-Z]*='[a-zA-Z]*'$", s)
+	match, _ := regexp.MatchString("^[a-zA-Z]*\\.[a-zA-Z]*='[a-zA-Z\\s]*'$", s)
 	return match
 }
 
@@ -84,18 +83,29 @@ func IsTokenValid(currentToken Token, lastToken Token) bool{
 	return false
 } 
 
-func Tokenize(input string) string {
-	output := ""
-	in := strings.Replace(input, " ", "", -1)
-	for _, ch := range in {
-		if ch == '&' || ch == '|' || ch == '(' || ch == ')' {
-			output += (" " + string(ch) + " ")
-		} else {
-			output += string(ch)
-		}
-	}
-	return output
-}
+func Tokenize(input string) []string {
+    var output []string
+    label := ""
+    in := StripWhitespaces(input)
+    for _, ch := range in {
+        if ch == '&' || ch == '|' || ch == '(' || ch == ')' {
+            if label != "" {
+                output = append(output, label)
+                label = ""
+            }
+            output = append(output, string(ch))
+            
+        } else {
+            label += string(ch)
+        }
+    }
+
+    if label != "" {
+        output = append(output, label)
+    }
+
+    return output
+} 
 
 func GetBaseLabel(s string) string {
 	for i, r := range s {
@@ -104,6 +114,24 @@ func GetBaseLabel(s string) string {
         }
     }
     return s
+}
+
+func StripWhitespaces(s string) string {
+    output := ""
+    insideAssignment := false
+    for _, r := range s {
+        if r == '\'' {
+            insideAssignment = !insideAssignment
+        }
+
+        if !insideAssignment && r != ' ' {
+            output += string(r)
+        } else if (insideAssignment) {
+            output += string(r)
+        }
+    }
+
+    return output 
 }
 
 type Parser interface {
@@ -136,12 +164,12 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 	parseResult.annotationQuery = ""
 	parseResult.validationQuery = ""
 
-	in := Tokenize(p.query)
-    tokens := strings.Split(in, " ")
+    tokens := Tokenize(p.query)
 
     var temp []string
     var validationQueryValues []interface{}
     i := 1
+    numOfLabels := 1
     for _, token := range tokens {
     	if token == "" {
     		continue
@@ -168,6 +196,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     		parseResult.queryValues = append(parseResult.queryValues, token)
     		validationQueryValues = append(validationQueryValues, GetBaseLabel(token)) //for the validation query we need only the base label (i.e label before the '.')
     		i += 1
+    		numOfLabels += 1
     	} else if t == AND {
     		parseResult.annotationQuery += "AND"
     		temp = append(temp, "AND")
@@ -189,6 +218,10 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     	}
 
     	p.lastToken = t
+    }
+
+    if numOfLabels > 10 {
+    	return parseResult, errors.New("Please limit your query to 10 label expressions")
     }
 
     //adapt positional arguments so that they start at startPos
