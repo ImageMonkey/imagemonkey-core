@@ -235,7 +235,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     	}
     }
     
-    parseResult.queryValues = append(parseResult.queryValues, validationQueryValues...)
+    //parseResult.queryValues = append(parseResult.queryValues, validationQueryValues...)
 
 
     if p.brackets != 0 {
