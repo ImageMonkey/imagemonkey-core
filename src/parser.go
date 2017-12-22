@@ -147,8 +147,8 @@ type QueryParser struct {
 
 type ParseResult struct {
 	input string
-	annotationQuery string
-	validationQuery string
+	query string
+	//validationQuery string
 	queryValues []interface{}
 }
 
@@ -161,13 +161,11 @@ func NewQueryParser(query string) *QueryParser {
 
 func (p *QueryParser) Parse() (ParseResult, error) {
 	parseResult := ParseResult{}
-	parseResult.annotationQuery = ""
-	parseResult.validationQuery = ""
+	parseResult.query = ""
 
     tokens := Tokenize(p.query)
 
     var temp []string
-    var validationQueryValues []interface{}
     i := 1
     numOfLabels := 1
     for _, token := range tokens {
@@ -191,23 +189,21 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     	}
 
     	if t == LABEL {
-    		parseResult.annotationQuery += ("a.accessor = $" + strconv.Itoa(i))
-    		temp = append(temp, "$")
+    		parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
     		parseResult.queryValues = append(parseResult.queryValues, token)
-    		validationQueryValues = append(validationQueryValues, GetBaseLabel(token)) //for the validation query we need only the base label (i.e label before the '.')
     		i += 1
     		numOfLabels += 1
     	} else if t == AND {
-    		parseResult.annotationQuery += "AND"
+    		parseResult.query += "AND"
     		temp = append(temp, "AND")
     	} else if t == OR {
-    		parseResult.annotationQuery += "OR"
+    		parseResult.query += "OR"
     		temp = append(temp, "OR")
     	} else {
-    		parseResult.annotationQuery += token
+    		parseResult.query += token
     		temp = append(temp, "token")
     	}
-    	parseResult.annotationQuery += " "
+    	parseResult.query += " "
 
 
     	if t == LPAR {
@@ -223,20 +219,6 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     if numOfLabels > 10 {
     	return parseResult, errors.New("Please limit your query to 10 label expressions")
     }
-
-    //adapt positional arguments so that they start at startPos
-    startPos := i
-    for _, val := range temp {
-    	if val == "$" {
-    		parseResult.validationQuery += ("a.accessor = $" + strconv.Itoa(startPos) + " ")
-    		startPos += 1
-    	} else {
-    		parseResult.validationQuery += (val + " ")
-    	}
-    }
-    
-    //parseResult.queryValues = append(parseResult.queryValues, validationQueryValues...)
-
 
     if p.brackets != 0 {
     	return parseResult, errors.New("brackets mismatch!")

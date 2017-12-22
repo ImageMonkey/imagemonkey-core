@@ -418,7 +418,7 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
                      ON i.id = q3.image_id
                       
                      WHERE i.unlocked = true
-                     GROUP BY i.key, q3.validations`, parseResult.annotationQuery, parseResult.annotationQuery, parseResult.annotationQuery)
+                     GROUP BY i.key, q3.validations`, parseResult.query, parseResult.query, parseResult.query)
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
