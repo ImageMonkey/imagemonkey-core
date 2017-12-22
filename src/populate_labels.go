@@ -125,8 +125,10 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 }
 
 func main(){
-	dryRun := flag.Bool("dry-run", true, "dry run")
+	dryRun := flag.Bool("dryrun", true, "dry run")
 	debug := flag.Bool("debug", false, "debug")
+
+	flag.Parse()
 
 	if *debug {
 		log.SetLevel(log.DebugLevel)

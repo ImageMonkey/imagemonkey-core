@@ -384,23 +384,25 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
                       FROM image i 
                       LEFT JOIN 
                       (
-                        SELECT an.image_id, d.id, a.accessor, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
-                        FROM image_annotation_refinement r 
-                        JOIN annotation_data d ON r.annotation_data_id = d.id
-                        JOIN annotation_type t ON d.annotation_type_id = t.id
-                        JOIN image_annotation an ON d.image_annotation_id = an.id
-                        JOIN label_accessor a ON r.label_id = a.label_id
+                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            FROM image_annotation_refinement r 
+                            JOIN annotation_data d ON r.annotation_data_id = d.id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            JOIN image_annotation an ON d.image_annotation_id = an.id
+                            JOIN label_accessor a ON r.label_id = a.label_id
+                            WHERE (%s)
 
-                        UNION
+                            UNION
 
-                        SELECT n.image_id, d.id, a.accessor, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
-                        FROM image_annotation n
-                        JOIN annotation_data d ON d.image_annotation_id = n.id
-                        JOIN annotation_type t ON d.annotation_type_id = t.id
-                        JOIN label_accessor a ON n.label_id = a.label_id
+                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            FROM image_annotation n
+                            JOIN annotation_data d ON d.image_annotation_id = n.id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            JOIN label_accessor a ON n.label_id = a.label_id
+                            WHERE (%s)
                       ) q
                       ON i.id = q.image_id
-                      JOIN (
+                      RIGHT OUTER JOIN (
                         SELECT i.id as image_id, json_agg(json_build_object('label', accessor, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
                         FROM image i 
                         JOIN image_validation v ON i.id = v.image_id
@@ -409,9 +411,8 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
                         GROUP BY i.id
                       ) q1 
                       ON q1.image_id = i.id
-                      WHERE i.unlocked = true AND (%s)
-                      GROUP BY i.key, q1.validations`, parseResult.validationQuery, parseResult.annotationQuery)
-
+                      WHERE i.unlocked = true
+                      GROUP BY i.key, q1.validations`, parseResult.annotationQuery, parseResult.annotationQuery, parseResult.validationQuery)
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())

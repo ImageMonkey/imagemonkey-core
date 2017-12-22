@@ -191,7 +191,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     	}
 
     	if t == LABEL {
-    		parseResult.annotationQuery += ("q.accessor = $" + strconv.Itoa(i))
+    		parseResult.annotationQuery += ("a.accessor = $" + strconv.Itoa(i))
     		temp = append(temp, "$")
     		parseResult.queryValues = append(parseResult.queryValues, token)
     		validationQueryValues = append(validationQueryValues, GetBaseLabel(token)) //for the validation query we need only the base label (i.e label before the '.')
