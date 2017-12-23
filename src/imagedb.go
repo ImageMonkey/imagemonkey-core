@@ -7,6 +7,7 @@ import (
     "encoding/json"
     "database/sql"
     "fmt"
+    "errors"
 )
 
 type RectangleAnnotation struct {
@@ -1628,4 +1629,64 @@ func getLabelAccessors() ([]string, error) {
     }
 
     return labels, nil
+}
+
+func deleteImage(uuid string) error {
+    var deletedId int64
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Delete image] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+
+    deletedId = -1
+    err = tx.QueryRow(`DELETE FROM image_validation
+                       WHERE image_id IN (
+                        SELECT id FROM image WHERE key = $1 
+                       )
+                       RETURNING id`, uuid).Scan(&deletedId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if deletedId == -1 {
+        tx.Rollback()
+        err = errors.New("nothing deleted")
+        log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    deletedId = -1
+    err = tx.QueryRow(`DELETE FROM image i WHERE key = $1
+                       RETURNING i.id`, uuid).Scan(&deletedId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if deletedId == -1 {
+        tx.Rollback()
+        err = errors.New("nothing deleted")
+        log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Delete image] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
 }

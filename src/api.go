@@ -272,17 +272,8 @@ func main(){
 			}
 
 			param := c.Param("param")
-			isBad := true
-			if param == "bad" {
-				isBad = true
-			} else if param == "good" {
-				isBad = false
-			} else{
-				c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
-				return
-			}
 
-			if !isBad {
+			if param == "good" {
 				src := *unverifiedDonationsDir + imageId
 				dst := *donationsDir + imageId
 				err := os.Rename(src, dst)
@@ -297,6 +288,17 @@ func main(){
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
 				}
+			} else if(param == "bad") { //not handled at the moment, add later if needed
+
+			} else if param == "delete" {
+				err = deleteImage(imageId)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+			} else{
+				c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
+				return
 			}
 
 			c.JSON(http.StatusOK, nil)
