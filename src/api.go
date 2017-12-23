@@ -296,6 +296,15 @@ func main(){
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
 				}
+
+				dst := *unverifiedDonationsDir + imageId
+				err := os.Remove(dst)
+				if err != nil {
+					log.Debug("[Main] Couldn't remove file ", dst)
+					c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
+					return
+				}
+
 			} else{
 				c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
 				return
