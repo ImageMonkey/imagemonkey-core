@@ -16,91 +16,160 @@
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
 
   <style>
-    pre {
-      white-space: pre-wrap;
-    }
+  pre {
+    white-space: pre-wrap;
+  }
   </style>
 
 
   <script type="text/javascript">
+    var availableLabels = [];
+    {{ range $val := .labelAccessors }}
+    availableLabels.push({{ $val }});
+    {{ end }}
 
-		$(document).ready(function(){
+
+
+
+    function randomIntBetweenInterval(min, max) {
+      return Math.floor(Math.random() *(max - min + 1) +min);
+    }
+
+    $(document).ready(function(){
+      var sampleExportQueries = [];
       $('#dataStructureContainer').hide();
-			$('.ui.dropdown').dropdown();
 
-			$('pre code').each(function(i, block) {
-    			hljs.highlightBlock(block);
-  			});
-
-  			$("#exportButton").click(function(e) {
-          //alert(toType($('#tagsSelector' ).dropdown('get value')));
-    			e.preventDefault();
-    			$.ajax({
-			        url: '/data',
-			        dataType: 'json',
-			        data: {tags: $('#tagsSelector' ).dropdown('get value').toString()},
-			        complete: function(data){
-			            
-
-			        },
-			        success: function(data){
+      $("#exportButton").click(function(e) {
+        $('#exportSyntaxErrorMessage').hide();
+        $.ajax({
+              url: '{{ .apiBaseUrl }}/v1/export',
+              dataType: 'json',
+              data: {query: encodeURIComponent($("#query").val())},
+              success: function(data){
                 var jsonStr = JSON.stringify(data, null, 2);
                 $('#dataStructure').text(jsonStr);
                 $('#dataStructureContainer').show();
-			        }
-			    });
-    		});
-		});
-	</script>
+              },
+              error: function(xhr, status, error) {
+                var err = JSON.parse(xhr.responseText)["error"];
+                var obj = $('#exportSyntaxErrorMessage').text(err);
+                obj.html(obj.html().replace(/\n/g,'<br/>'));
+                $('#exportSyntaxErrorMessage').show(200);
+                $('#dataStructureContainer').hide();
+              }
+          });
+      });
+
+
+      function split(val) {
+        return val.split( / \s*/ );
+      }
+      function extractLast(term) {
+        return split(term).pop();
+      }
+
+      $("#query")
+      // don't navigate away from the field on tab when selecting an item
+      .on("keydown", function(event) {
+        if (event.keyCode === $.ui.keyCode.TAB &&
+            $(this).autocomplete("instance").menu.active) {
+          event.preventDefault();
+        }
+      })
+      .autocomplete({
+        minLength: 0,
+        source: function(request, response) {
+          // delegate back to autocomplete, but extract the last term
+          response($.ui.autocomplete.filter(
+            availableLabels, extractLast(request.term)));
+        },
+        focus: function() {
+          // prevent value inserted on focus
+          return false;
+        },
+        select: function(event, ui) {
+          var terms = split(this.value);
+          // remove the current input
+          terms.pop();
+          // add the selected item
+          terms.push(ui.item.value);
+          // add placeholder to get the comma-and-space at the end
+          terms.push("");
+          this.value = terms.join(" ");
+          return false;
+        }
+      });
+
+
+      $("#randomButton").click(function(e) {
+        var pos = randomIntBetweenInterval(0, (sampleExportQueries.length - 1));
+        $("#query").val(sampleExportQueries[pos]);
+        $("#exportButton").trigger("click");
+      });
+
+      
+      sampleExportQueries.push("dog | cat");
+      sampleExportQueries.push("dog.has = 'mouth' | cat");
+      sampleExportQueries.push("dog.size = 'big' | dog.size = 'small'");
+      sampleExportQueries.push("dog.size = 'big' | dog.breed = 'Labrador'");
+
+    });
+</script>
 </head>
 <body>
 
-{{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
-<!-- Page Contents -->
-<div class="pusher">
-  <div class="ui inverted vertical masthead center aligned segment">
-  	{{ template "pointing_menu.html" .}}  
-  	<div class="ui text container">
-  		<h2 class="ui inverted header">
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container">
+      <h2 class="ui inverted header">
         All data belongs to YOU
       </h2>
       <h2>Data should be easily accessible. For Everybody.</h2>
     </div>
-</div>
-    <div class="ui vertical stripe segment">
+  </div>
+  <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
       	<form class="ui form segment">
-		    <div class="field">
-			    <p>Select one or more tags you are interested in</p>
-			    <select name="states" class="ui selection dropdown" multiple="" id="tagsSelector">
-			      	<option value="">Tags</option>
-						{{range .labels}}
-							<option value="{{.}}">{{.}}</option>
-						{{ end }}
-			    </select>
-		  	</div>
-		  	<div class="ui primary submit button" id="exportButton">Export</div>
-		  	<p class="ui error message"></p>
-		</form>
+          <div class="field">
+           <p>Export the data you are interested in</p>
+          <input placeholder="Query..." type="text" id="query">
+        
+        </div>
+        <div class="ui primary submit button" id="exportButton">Export</div>
+        <div class="ui button" id="randomButton">Random</div>
+        <p class="ui error message"></p>
+      </form>
+
+      <div class="ui warning message" hidden id="exportSyntaxErrorMessage">
+        <i class="close icon"></i>
+          <div class="header"></div>
       </div>
 
-      <div class="row">
+
+    </div>
+
+    <div class="row">
       <br>
-      </div> 
-      <div class="row">
-      	<div class="ui raised segment" id="dataStructureContainer">
-          <pre class="prettyprint" id="dataStructure">
-          </pre>
-</div>
-      </div>
+    </div> 
+    <div class="row">
+     <div class="ui raised segment" id="dataStructureContainer">
+      <pre class="prettyprint" id="dataStructure">
+      </pre>
+    </div>
   </div>
 </div>
-  </div>
-  {{ template "footer.html" .}}
+</div>
+</div>
+{{ template "footer.html" .}}
 </div>
 
 </body>

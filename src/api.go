@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"github.com/gin-gonic/gin"
-	"strings"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/h2non/filetype.v1"
@@ -18,6 +17,7 @@ import (
 	"net"
 	"errors"
 	"html"
+	"net/url"
 )
 
 var db *sql.DB
@@ -234,6 +234,8 @@ func main(){
 	if err != nil {
 		log.Fatal("[Main] Couldn't load statistics pusher: ", err.Error())
 	}
+
+	sampleExportQueries := GetSampleExportQueries()
 
 
 	router := gin.Default()
@@ -468,11 +470,28 @@ func main(){
 	})
 
 	router.GET("/v1/export", func(c *gin.Context) {
-		tags := ""
 		params := c.Request.URL.Query()
-		if temp, ok := params["tags"]; ok {
-			tags = temp[0]
-			jsonData, err := export(strings.Split(tags, ","))
+		if temp, ok := params["query"]; ok {
+			if temp[0] == "" {
+				c.JSON(422, gin.H{"error": "no query specified"})
+				return
+			}
+
+
+			query, err := url.QueryUnescape(temp[0])
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid query"})
+				return
+			}
+
+			queryParser := NewQueryParser(query)
+			parseResult, err := queryParser.Parse()
+			if err != nil {
+				c.JSON(422, gin.H{"error": err.Error()})
+				return
+			}
+
+			jsonData, err := export(parseResult)
 			if(err == nil){
 				c.JSON(http.StatusOK, jsonData)
 				return
@@ -481,9 +500,15 @@ func main(){
 				return
 			}
 		} else {
-			c.JSON(422, gin.H{"error": "no tags specified"})
+			c.JSON(422, gin.H{"error": "no query specified"})
 			return
 		}
+	})
+
+
+	router.GET("/v1/export/sample", func(c *gin.Context) {
+		q := sampleExportQueries[random(0, len(sampleExportQueries) - 1)]
+		c.JSON(http.StatusOK, q)
 	})
 
 	router.GET("/v1/label", func(c *gin.Context) {

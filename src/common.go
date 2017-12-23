@@ -49,9 +49,33 @@ type MetaLabelMapEntry struct {
     Name string `json:"name"`
 }
 
+type LabelMapQuizExampleEntry struct {
+    Filename string `json:"filename"`
+    Attribution string `json:"attribution"`
+}
+
+type LabelMapQuizAnswerEntry struct {
+    Name string `json:"name"`
+    Examples []LabelMapQuizExampleEntry `json:"examples"`
+}
+
+
+type LabelMapQuizEntry struct {
+    Question string `json:"question"`
+    Accessors []string `json:accessors"`
+    Answers []LabelMapQuizAnswerEntry `json:answers"`
+    AllowUnknown bool `json:allow_unknown"`
+    AllowOther bool `json:allow_other"`
+    BrowseByExample bool `json:browse_by_example"`
+    Multiselect bool `json:multiselect"`
+    ControlType string `json:control_type"`
+}
+
 type LabelMapEntry struct {
     Description string  `json:"description"`
     LabelMapEntries map[string]LabelMapEntry  `json:"has"`
+    Accessors []string `json:accessors"`
+    Quiz []LabelMapQuizEntry `json:quiz"`
 }
 
 type LabelMap struct {
@@ -205,6 +229,15 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     return labelMap.LabelMapEntries, words, nil
 }
 
+
+func GetSampleExportQueries() []string {
+    var queries []string
+    queries = append(queries, "dog | cat")
+    queries = append(queries, "dog.has = 'mouth' | cat")
+    queries = append(queries, "dog.size = 'big' | dog.size = 'small'")
+
+    return queries
+}
 
 type RegisteredAppIdentifiersInterface interface {
     Load() error

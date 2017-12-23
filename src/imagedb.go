@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
     "encoding/json"
     "database/sql"
+    "fmt"
 )
 
 type RectangleAnnotation struct {
@@ -185,6 +186,14 @@ type AnnotationRefinement struct {
 type AnnotationRefinementEntry struct {
     LabelId int64 `json:"label_id"`
 }
+
+type ExportedImage struct {
+    Id string `json:"uuid"`
+    Provider string `json:"provider"`
+    Annotations []json.RawMessage `json:"annotations"`
+    Validations []json.RawMessage `json:"validations"`
+}
+
 
 func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, labels []LabelMeEntry ) error{
 	tx, err := db.Begin()
@@ -370,18 +379,47 @@ func validateImages(clientFingerprint string, imageValidationBatch ImageValidati
     return tx.Commit()
 }
 
-func export(labels []string) ([]Image, error){
-    rows, err := db.Query(`SELECT i.key, l.name, CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END, 
-                           v.num_of_valid, v.num_of_invalid, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations
-                           FROM image_validation v 
-                           JOIN image i ON v.image_id = i.id 
-                           JOIN label l ON v.label_id = l.id 
-                           JOIN image_provider p ON i.image_provider_id = p.id 
-                           LEFT JOIN image_annotation a ON a.image_id = i.id AND a.label_id = l.id
-                           JOIN annotation_data d ON d.image_annotation_id = a.id
-                           JOIN annotation_type t ON d.annotation_type_id = t.id
-                           WHERE i.unlocked = true and p.name = 'donation' AND l.name = ANY($1)
-                           GROUP BY i.key, l.name, v.num_of_valid, v.num_of_invalid`, pq.Array(labels))
+func export(parseResult ParseResult) ([]ExportedImage, error){
+    q := fmt.Sprintf(`SELECT i.key, json_agg(q3.annotations), q3.validations
+                      FROM image i 
+                      JOIN
+                      (
+                          SELECT COALESCE(q.image_id, q1.image_id) as image_id, q.annotations, q1.validations FROM 
+                          (
+                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            FROM image_annotation_refinement r 
+                            JOIN annotation_data d ON r.annotation_data_id = d.id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            JOIN image_annotation an ON d.image_annotation_id = an.id
+                            JOIN label_accessor a ON r.label_id = a.label_id
+                            WHERE (%s)
+
+                            UNION
+
+                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            FROM image_annotation n
+                            JOIN annotation_data d ON d.image_annotation_id = n.id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            JOIN label_accessor a ON n.label_id = a.label_id
+                            WHERE (%s)
+                          ) q
+                          
+                          FULL OUTER JOIN (
+                            SELECT i.id as image_id, json_agg(json_build_object('label', accessor, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
+                            FROM image i 
+                            JOIN image_validation v ON i.id = v.image_id
+                            JOIN label_accessor a ON a.label_id = v.label_id
+                            WHERE (%s)
+                            GROUP BY i.id
+                          ) q1 
+                          ON q1.image_id = q.image_id
+                      )q3
+                              
+                     ON i.id = q3.image_id
+                      
+                     WHERE i.unlocked = true
+                     GROUP BY i.key, q3.validations`, parseResult.query, parseResult.query, parseResult.query)
+    rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
         raven.CaptureError(err, nil)
@@ -389,14 +427,15 @@ func export(labels []string) ([]Image, error){
     }
     defer rows.Close()
 
-    imageEntries := []Image{}
+    imageEntries := []ExportedImage{}
     for rows.Next() {
-    	var image Image
+        var image ExportedImage
         var annotations []byte
-    	image.Provider = "donation"
+        var validations []byte
+        image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &image.Label, &image.Probability, &image.NumOfValid, &image.NumOfInvalid, &annotations)
-    	if err != nil {
+        err = rows.Scan(&image.Id, &annotations, &validations)
+        if err != nil {
             log.Debug("[Export] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return nil, err
@@ -405,7 +444,16 @@ func export(labels []string) ([]Image, error){
         if len(annotations) > 0 {
             err := json.Unmarshal(annotations, &image.Annotations)
             if err != nil {
-                log.Debug("[Export] Couldn't unmarshal: ", err.Error())
+                log.Debug("[Export] Couldn't unmarshal annotations: ", err.Error())
+                raven.CaptureError(err, nil)
+                return nil, err
+            }
+        }
+
+        if len(validations) > 0 {
+            err := json.Unmarshal(validations, &image.Validations)
+            if err != nil {
+                log.Debug("[Export] Couldn't unmarshal validations: ", err.Error())
                 raven.CaptureError(err, nil)
                 return nil, err
             }
@@ -1556,3 +1604,28 @@ func addLabelSuggestion(suggestedLabel string) error {
 
     return nil
 } 
+
+func getLabelAccessors() ([]string, error) {
+    var labels []string
+    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    if err != nil {
+        log.Debug("[Get label accessor] Couldn't insert: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labels, err
+    }
+    defer rows.Close()
+
+    var label string
+    for rows.Next() {
+        err = rows.Scan(&label)
+        if err != nil {
+           log.Debug("[Get label accessor] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labels, err 
+        }
+
+        labels = append(labels, label)
+    }
+
+    return labels, nil
+}
