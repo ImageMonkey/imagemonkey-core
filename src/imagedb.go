@@ -191,12 +191,14 @@ type AnnotationRefinementEntry struct {
 type ExportedImage struct {
     Id string `json:"uuid"`
     Provider string `json:"provider"`
+    Width int32 `json:"width"`
+    Height int32 `json:"height"`
     Annotations []json.RawMessage `json:"annotations"`
     Validations []json.RawMessage `json:"validations"`
 }
 
 
-func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, labels []LabelMeEntry ) error{
+func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageInfo, labels []LabelMeEntry ) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -207,8 +209,8 @@ func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, lab
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
     //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	imageId := 0
-	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash) SELECT $1, $2, p.id, $3 FROM image_provider p WHERE p.name = $4 RETURNING id", 
-					  filename, false, int64(hash), "donation").Scan(&imageId)
+	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
+					  filename, false, int64(imageInfo.Hash), "donation", imageInfo.Width, imageInfo.Height).Scan(&imageId)
 	if(err != nil){
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -381,7 +383,7 @@ func validateImages(clientFingerprint string, imageValidationBatch ImageValidati
 }
 
 func export(parseResult ParseResult) ([]ExportedImage, error){
-    q := fmt.Sprintf(`SELECT i.key, json_agg(q3.annotations), q3.validations
+    q := fmt.Sprintf(`SELECT i.key, json_agg(q3.annotations), q3.validations, i.width, i.height
                       FROM image i 
                       JOIN
                       (
@@ -419,7 +421,7 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
                      ON i.id = q3.image_id
                       
                      WHERE i.unlocked = true
-                     GROUP BY i.key, q3.validations`, parseResult.query, parseResult.query, parseResult.query)
+                     GROUP BY i.key, q3.validations, i.width, i.height`, parseResult.query, parseResult.query, parseResult.query)
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
@@ -435,7 +437,7 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
         var validations []byte
         image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &annotations, &validations)
+        err = rows.Scan(&image.Id, &annotations, &validations, &image.Width, &image.Height)
         if err != nil {
             log.Debug("[Export] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)

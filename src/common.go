@@ -92,6 +92,12 @@ type BlogSubscribeRequest struct {
     Email string `json:"email"`
 }
 
+type ImageInfo struct {
+    Hash uint64
+    Width int32
+    Height int32
+}
+
 
 func use(vals ...interface{}) {
     for _, val := range vals {
@@ -122,6 +128,27 @@ func hashImage(file io.Reader) (uint64, error){
 
     return imghash.Average(img), nil
 }
+
+func getImageInfo(file io.Reader) (ImageInfo, error){
+    var imageInfo ImageInfo
+    imageInfo.Hash = 0
+    imageInfo.Width = 0
+    imageInfo.Height = 0
+
+    img, _, err := image.Decode(file)
+    if err != nil {
+        return imageInfo, err
+    }
+
+    bounds := img.Bounds()
+
+    imageInfo.Hash = imghash.Average(img)
+    imageInfo.Width = int32(bounds.Dx())
+    imageInfo.Height = int32(bounds.Dy())
+
+    return imageInfo, nil
+}
+
 
 
 

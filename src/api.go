@@ -636,12 +636,12 @@ func main(){
         }
 
         //check if image already exists by using an image hash
-        hash, err := hashImage(file)
+        imageInfo, err := getImageInfo(file)
         if(err != nil){
         	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         	return 
         }
-        exists, err := imageExists(hash)
+        exists, err := imageExists(imageInfo.Hash)
         if(err != nil){
         	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         	return
@@ -683,7 +683,7 @@ func main(){
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err = addDonatedPhoto(browserFingerprint, uuid, hash, labelMeEntries)
+		err = addDonatedPhoto(browserFingerprint, uuid, imageInfo, labelMeEntries)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return

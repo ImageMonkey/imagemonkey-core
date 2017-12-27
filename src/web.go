@@ -216,24 +216,12 @@ func main() {
 			"playgroundPredictBaseUrl": playgroundBaseUrl,
 		})
 	})
-
-	/*router.GET("/data", func(c *gin.Context) {
-		tags := ""
-		params := c.Request.URL.Query()
-		if temp, ok := params["tags"]; ok {
-			tags = temp[0]
-			jsonData, err := export(strings.Split(tags, ","))
-			if(err == nil){
-				c.JSON(http.StatusOK, jsonData)
-				return
-			} else{
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Couldn't export data"})
-				return
-			}
-		} else {
-			c.JSON(422, gin.H{"error": "No tags specified"})
-			return
-		}
+	/*router.GET("/browse", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "browse.html", gin.H{
+			"title": "Browse",
+			"activeMenuNr": 12,
+			"apiBaseUrl": apiBaseUrl,
+		})
 	})*/
 
 	router.Run(":8080")
