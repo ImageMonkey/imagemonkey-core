@@ -5,7 +5,7 @@
 -- Dumped from database version 9.6.5
 -- Dumped by pg_dump version 9.6.5
 
--- Started on 2017-12-21 20:38:48
+-- Started on 2017-12-27 20:03:20
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -349,7 +349,9 @@ CREATE TABLE image (
     image_provider_id bigint,
     key text,
     unlocked boolean,
-    hash bigint
+    hash bigint,
+    width integer NOT NULL,
+    height integer NOT NULL
 );
 
 
@@ -1509,7 +1511,7 @@ GRANT ALL ON SCHEMA public TO monkey;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
--- Completed on 2017-12-21 20:38:49
+-- Completed on 2017-12-27 20:03:21
 
 --
 -- PostgreSQL database dump complete
