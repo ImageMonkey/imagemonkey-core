@@ -18,270 +18,224 @@
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=3"></script>
-  <script src="js/jquery.row-grid.min.js"></script>
-  <link rel="stylesheet" href="css/justifiedGallery.css">
-  <!--<script src="js/justifiedGallery.min.js"></script>-->
     <script src="js/justifiedCanvas.js"></script>
-  <script src="https://www.cssscript.com/demo/creating-flickr-style-justified-layout-javascript/dist/justified-layout.js"></script>
+  <script src="js/justified-layout.min.js"></script>
+  <script src="js/infinitescroll.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
 
   <style>
   .justified {
       position: relative;
-      background: seagreen;
       width: 1060px;
     }
-    /*.box {
-      position: absolute;
-      background: yellowgreen;
-    }*/
     .canvas-wrapper {
       position: absolute;
-      background: yellowgreen;
+    }
+    pre {
+      white-space: pre-wrap;
     }
   </style>
 
   <script>
   $(document).ready(function(){
+    var sampleExportQueries = [];
     var canvas = [];
+    var geometry, data;
+    var numOfLastFetchedImg = 0;
+    var defaultBatchSize = 50;
+    var infiniteScroll = new InfiniteScroll(loadNext, false);
+    var selectDataMode = null;
+
+    var availableLabels = [];
+    {{ range $val := .labelAccessors }}
+    availableLabels.push({{ $val }});
+    {{ end }}
+
+    var clearCanvasContainer = function(){
+      canvas = [];
+      geometry = null;
+      data = null;
+      numOfLastFetchedImg = 0;
+      infiniteScroll.deactivate();
+      $('#canvasContainer').children().each(function (){
+        $(this).remove();
+      })
+    }
+
+    function randomIntBetweenInterval(min, max) {
+      return Math.floor(Math.random() *(max - min + 1) +min);
+    }
 
     function getUrlFromImageId(imageId){
-      return "https://api.imagemonkey.io/v1/donation/" + imageId;
-      //return "donations/" + imageId;
+      return "{{ .apiBaseUrl }}/v1/donation/" + imageId;
+      //return "https://api.imagemonkey.io/v1/donation/" + imageId;
+    }
+
+    function getSelectDataType(){
+      var radioButtonId = $("#selectDataType :radio:checked").attr('id');
+      if(radioButtonId === "browseDataRadioCheckbox"){
+        return "browse";
+      }
+      if(radioButtonId === "exportDataRadioCheckbox"){
+        return "export";
+      }
+      return "";
     }
 
     function drawAnnotationsCallback(canvas, annotations){
-      console.log("call")
       if(annotations !== undefined)
         canvas.drawAnnotations(annotations);
     }
 
+    function loadNext(){
+      var from = numOfLastFetchedImg;
+      var n = defaultBatchSize;
+      if((numOfLastFetchedImg + defaultBatchSize) > data.length){
+        n = data.length - numOfLastFetchedImg;
+      }
+
+      if(n === 0)
+        return;
+
+      for(var i = from; i < (from + n); i++){
+        var canvasId = ("canvas" + i.toString());
+        var d = ('<div class="canvas-wrapper" style="width: ' + geometry.boxes[i].width 
+          +'px; height: ' + geometry.boxes[i].height + 'px; top: ' 
+          + geometry.boxes[i].top  + 'px; left: ' +  geometry.boxes[i].left + 'px"><canvas id="' + canvasId +'"></canvas></div>');
+        $("#canvasContainer").append(d);
+        canvas[i] = new CanvasDrawer(canvasId, geometry.boxes[i].width, geometry.boxes[i].height);
+        canvas[i].setCanvasBackgroundImageUrl(getUrlFromImageId(data[i]["uuid"]), drawAnnotationsCallback.bind(null, canvas[i], data[i]["annotations"]));
+      }
+
+      document.getElementById("canvasContainer").style.height = (geometry.boxes[(from + n - 1)].top + geometry.boxes[(from + n - 1)].height)  + "px";
+
+      numOfLastFetchedImg += n;
+
+      //if(infiniteScroll === null)
+      //  infiniteScroll = new InfiniteScroll(loadNext);
+
+    }
+
+    function split(val) {
+      return val.split( / \s*/ );
+    }
+    function extractLast(term) {
+      return split(term).pop();
+    }
+
+    $("#query")
+      // don't navigate away from the field on tab when selecting an item
+      .on("keydown", function(event) {
+        if (event.keyCode === $.ui.keyCode.TAB &&
+          $(this).autocomplete("instance").menu.active) {
+          event.preventDefault();
+      }
+    })
+      .autocomplete({
+        minLength: 0,
+        source: function(request, response) {
+          // delegate back to autocomplete, but extract the last term
+          response($.ui.autocomplete.filter(
+            availableLabels, extractLast(request.term)));
+        },
+        focus: function() {
+          // prevent value inserted on focus
+          return false;
+        },
+        select: function(event, ui) {
+          var terms = split(this.value);
+          // remove the current input
+          terms.pop();
+          // add the selected item
+          terms.push(ui.item.value);
+          // add placeholder to get the comma-and-space at the end
+          terms.push("");
+          this.value = terms.join(" ");
+          return false;
+        }
+      });
+
+
+      $("#randomButton").click(function(e) {
+        var pos = randomIntBetweenInterval(0, (sampleExportQueries.length - 1));
+        $("#query").val(sampleExportQueries[pos]);
+        $("#goButton").trigger("click");
+      });
+
+      
+      sampleExportQueries.push("dog | cat");
+      sampleExportQueries.push("dog.has = 'mouth' | cat");
+      sampleExportQueries.push("dog.size = 'big' | dog.size = 'small'");
+      sampleExportQueries.push("dog.size = 'big' | dog.breed = 'Labrador'");
+
 
     function loadData(query){
+      $("#dataStructureContainer").hide();
+      $("#canvasContainer").hide();
+      $("#loadingIndicator").show();
+      clearCanvasContainer();
       $.ajax({
-        //url: '{{ .apiBaseUrl }}/v1/export',
-        url: 'https://api.imagemonkey.io/v1/export',
+        url: '{{ .apiBaseUrl }}/v1/export',
+        //url: 'https://api.imagemonkey.io/v1/export',
         dataType: 'json',
         data: {query: encodeURIComponent(query)},
-        success: function(data){
-          var justifiedLayout = require('justified-layout');
-          //var sizes = [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1.5, 1.73, 1.1, 0.5, 1];
-          var sizes = [];
+        success: function(d){
+          clearCanvasContainer();
 
-          for(var i = 0; i < data.length; i++){
-            sizes.push({"width": data[i]["width"], "height": data[i]["height"]});
+          var selectDataMode = getSelectDataType();
+          if(selectDataMode === "export"){
+            $("#canvasContainer").hide();
+            infiniteScroll.deactivate();
+
+
+            var jsonStr = JSON.stringify(d, null, 2);
+            $('#dataStructure').text(jsonStr);
+            $('#dataStructureContainer').show();
+
+            $("#loadingIndicator").hide();
           }
+          else if(selectDataMode === "browse"){
+            $("#dataStructureContainer").hide();
+            $("#canvasContainer").show();
 
-          var geometry = justifiedLayout(sizes, {
-              "fullWidthBreakoutRowCadence": 3,
-              "containerWidth": document.getElementById("canvasContainer").clientWidth
+
+            data = d;
+            sizes = [];
+
+            for(var i = 0; i < data.length; i++){
+              sizes.push({"width": data[i]["width"], "height": data[i]["height"]});
             }
-          );
 
-          console.log("container width =" +document.getElementById("canvasContainer").clientWidth)
+            var justifiedLayout = require('justified-layout');
+            geometry = justifiedLayout(sizes, {
+              "fullWidthBreakoutRowCadence": false,
+                //"fullWidthBreakoutRowCadence": 3,
+                "containerWidth": document.getElementById("canvasContainer").clientWidth
+              }
+              );
 
-          for(var i = 0; i < geometry.boxes.length; i++){
-
-
-            console.log(geometry.boxes[i].height)
-            //console.log(geometry.boxes[i].top)
-            console.log(geometry.boxes[i].width)
-            //console.log(geometry.boxes[i].left)
-            console.log("")
-            var canvasId = ("canvas" + i.toString());
-            var d = ('<div class="canvas-wrapper" style="width: ' + geometry.boxes[i].width 
-                    +'px; height: ' + geometry.boxes[i].height + 'px; top: ' 
-                    + geometry.boxes[i].top  + 'px; left: ' +  geometry.boxes[i].left + 'px"><canvas id="' + canvasId +'"></canvas></div>');
-            $("#canvasContainer").append(d);
-            canvas[i] = new CanvasDrawer(canvasId, geometry.boxes[i].width, geometry.boxes[i].height);
-            canvas[i].setCanvasBackgroundImageUrl(getUrlFromImageId(data[i]["uuid"]), drawAnnotationsCallback.bind(null, canvas[i], data[i]["annotations"]));
-
-            if(i === 10)
-              break;
+            loadNext();
+            infiniteScroll.activate();
+            $("#loadingIndicator").hide();
           }
-          document.getElementById("canvasContainer").style.height = geometry.containerHeight + "px";
 
-
-
-          //$(".container").append('<div class="item"><canvas id="' + 'bla' + '"></canvas>');
-           //for(var i = 0; i < data.length; i++){
-           //   var url = 'https://api.imagemonkey.io/v1/donation/' + data[i]["uuid"];
-
-
-              /*var url = 'https://api.imagemonkey.io/v1/donation/' + data[i]["uuid"];
-              var canvasId = ("canvas" + i.toString());
-              var canvasDivId = ("item" + i.toString()); 
-              
-
-              $("#canvasContainer").append('<div class="column" id="' + canvasDivId + '""><canvas id="' + canvasId + '"></canvas></div>')
-              canvas[i] = new CanvasDrawer(canvasId);
-              canvas[i].maxImageWidth = document.getElementById(canvasDivId).clientWidth;
-              canvas[i].setCanvasBackgroundImageUrl(getUrlFromImageId(data[i]["uuid"]), drawAnnotationsCallback.bind(null, canvas[i], data[i]["annotations"]));
-              //if(i === 2)
-              //  break;
-
-
-
-
-
-
-
-              /*var id = ("item" + i.toString());
-              //$("#canvasContainer").append('<div class="item"><canvas id="' + id + '"></canvas></div>');
-              $("#canvasContainer").append('<canvas id="' + id + '"></canvas>');
-
-              canvas[i] = new CanvasDrawer(id);
-              canvas[i].maxImageWidth = 200;
-
-              var elem = document.getElementById(id);
-              if(i == 0){
-                elem.style.position = "absolute";
-                elem.style.left = '10px';
-                elem.style.top = '10px';
-              }
-              if(i == 1){
-                elem.style.position = "absolute";
-                elem.style.left = '220px';
-                elem.style.top = '10';
-              }
-
-              canvas[i].setCanvasBackgroundImageUrl(getUrlFromImageId(data[i]["uuid"]), drawAnnotationsCallback.bind(null, canvas[i], data[i]["annotations"]));
-              if(i === 2)
-                break;*/
-
-
-
-
-
-
-
-
-              
-
-              /*canvas[i] = new fabric.Canvas(id);
-
-              setCanvasBackgroundImageUrl(canvas[i], getUrlFromImageId(data[i]["uuid"]), drawAnnotationsCallback.bind(null, canvas[i], data[i]["annotations"]));
-              if(i === 2)
-                break;*/
-
-
-
-
-              /*setCanvasBackgroundImageUrl(canvas[i], getUrlFromImageId(data[i]["uuid"]), function() {
-                if("annotations" in data[i])
-                  drawAnnotations(canvas[i], data[i]["annotations"], canvas[i].backgroundImage.scaleX);
-              });*/
-              //setCanvasBackgroundImageUrl(canvas[i], getUrlFromImageId(data[i]["uuid"]));
-              
-            //}
-
-            //$('#canvasContainer').justifiedGallery({
-              //selector: "a, div:not(.spinner)"
-            //});
-
-            //$("#canvasContainer").rowGrid();
-            //$("#canvasContainer").justifiedGallery({selector: 'canvas, div:not(.spinner)'});
-
-            //setTimeout(function(data){ alert("Hello"); }, 3000);
-            //setTimeout(bla, 10000, data);
+          
         },
         error: function(xhr, status, error) {
           var err = JSON.parse(xhr.responseText)["error"];
-          var obj = $('#exportSyntaxErrorMessage').text(err);
-          /*obj.html(obj.html().replace(/\n/g,'<br/>'));
-          $('#exportSyntaxErrorMessage').show(200);
-          $('#dataStructureContainer').hide();*/
+          var obj = $('#browseSyntaxErrorMessage').text(err);
+          obj.html(obj.html().replace(/\n/g,'<br/>'));
+          $('#browseSyntaxErrorMessage').show(200);
+          $('#loadingIndicator').hide();
+          clearCanvasContainer();
         }
       });
     }
 
-    function testJustified(){
-      var justifiedLayout = require('justified-layout');
-
-      var demos = [
-        /*{
-          sizes: [0.5, 1.5, 1, 1.8, 0.4, 0.7, 0.9, 1.1, 1.7, 2, 2.1],
-          className: "various",
-          config: {}
-        },
-        {
-          sizes: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-          className: "squares",
-          config: {}
-        },*/
-        {
-          sizes: [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1.5, 1.73, 1.1, 0.5, 1],
-          className: "breakout",
-          config: {
-            "fullWidthBreakoutRowCadence": 3,
-            "containerWidth": document.getElementById("canvasContainer").clientWidth
-          }
-        }
-      ];
-
-      // Loop through the demos and put them in the page
-      demos.forEach(function (demo) {
-        var geometry = justifiedLayout(demo.sizes, demo.config);
-
-        console.log("geometry", geometry);
-        var boxes = geometry.boxes.map(function (box) {
-          return  `<canvas class="box" style="width: ${box.width}px; height: ${box.height}px; top: ${box.top}px; left: ${box.left}px"></canvas>`;
-        }).join('\n')
-
-        //section.querySelector('.justified').innerHTML = boxes;
-        //section.querySelector('.justified').style.height = geometry.containerHeight + "px";
-        $("#canvasContainer").append(boxes);
-        document.getElementById("canvasContainer").style.height = geometry.containerHeight + "px";
-
-      });
-
-    }
-
-    function testJustified2(){
-      var justifiedLayout = require('justified-layout');
-
-      var demos = [
-        /*{
-          sizes: [0.5, 1.5, 1, 1.8, 0.4, 0.7, 0.9, 1.1, 1.7, 2, 2.1],
-          className: "various",
-          config: {}
-        },
-        {
-          sizes: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-          className: "squares",
-          config: {}
-        },*/
-        {
-          sizes: [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1.5, 1.73, 1.1, 0.5, 1],
-          className: "breakout",
-          config: {
-            "fullWidthBreakoutRowCadence": 3,
-            "containerWidth": document.getElementById("canvasContainer").clientWidth
-          }
-        }
-      ];
-
-      // Loop through the demos and put them in the page
-      demos.forEach(function (demo) {
-        var geometry = justifiedLayout(demo.sizes, demo.config);
-
-        console.log("geometry", geometry);
-        var boxes = geometry.boxes.map(function (box) {
-          return '<div class="column box"></div>';
-          //return  `<canvas class="box" style="width: ${box.width}px; height: ${box.height}px; top: ${box.top}px; left: ${box.left}px"></canvas>`;
-        }).join('\n')
-
-        $("#canvasContainer").append(boxes);
-        //section.querySelector('.justified').style.height = geometry.containerHeight + "px";
-
-      });
-
-    }
-
-    //testJustified();
-
-
-    loadData("dog");
-
+    $("#goButton").click(function(e) {
+      loadData($("#query").val());
+    });
 
   });
   </script>
@@ -304,14 +258,61 @@
       </h2>
     </div>
   </div>
-  <div class="ui four column doubling stackable grid">
-    <div class="justified" id="canvasContainer">
+  <div class="ui eight wide centered stackable grid">
+    <div class="row">
     </div>
-      <!--<div  class="column" id="canvasContainer">
-      </div>-->
-      <!--<div  class="column box">
-      </div>-->
+    <div class="row">
+      <div class="eight wide column">
+        <form class="ui form segment">
+          <div class="field">
+           <p>Export the data you are interested in</p>
+           <input placeholder="Query..." type="text" id="query">
+
+         </div>
+
+         <div class="inline fields" id="selectDataType">
+         <div class="field">
+          <div class="ui radio checkbox">
+                  <input name="type" checked="checked" type="radio" id="browseDataRadioCheckbox">
+                  <label>Browse</label>
+                </div>
+         </div>
+         <div class="field">
+          <div class="ui radio checkbox">
+                  <input name="type" checked="checked" type="radio" id="exportDataRadioCheckbox">
+                  <label>Export</label>
+                </div>
+         </div>
+       </div>
+         <div class="ui primary submit button" id="goButton">Go</div>
+         <div class="ui button" id="randomButton">Random</div>
+         <p class="ui error message"></p>
+
+
+       </form>
+
+       <div class="ui warning message" hidden id="browseSyntaxErrorMessage">
+        <i class="close icon"></i>
+        <div class="header"></div>
+      </div>
+
+    </div>
   </div>
+  <div class="row">
+    <div class="ui large loader" id="loadingIndicator"></div>
+  </div>
+
+  <div hidden class="justified" id="canvasContainer">
+  </div>
+
+  <div class="eight wide column">
+    <div hidden class="ui eight wide column raised segment" id="dataStructureContainer">
+      <pre class="prettyprint" id="dataStructure">
+      </pre>
+    </div>
+  </div>
+
+</div>
 </div>
 {{ template "footer.html" .}}
 </div>
