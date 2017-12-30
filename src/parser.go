@@ -51,7 +51,7 @@ func StrToToken(str string) Token {
 	return UNKNOWN
 }
 
-func IsTokenValid(currentToken Token, lastToken Token) bool{
+func IsTokenValid(currentToken Token, lastToken Token) bool {
 	switch currentToken {
 		case AND:
 			if lastToken == LABEL {
@@ -82,6 +82,15 @@ func IsTokenValid(currentToken Token, lastToken Token) bool{
 
 	return false
 } 
+
+func IsLastTokenValid(lastToken Token) bool {
+    if lastToken == AND {
+        return false
+    } else if lastToken == OR {
+        return false
+    }
+    return true
+}
 
 func Tokenize(input string) []string {
     var output []string
@@ -141,6 +150,7 @@ type Parser interface {
 type QueryParser struct {
 	query string
 	lastToken Token
+    lastStrToken string
 	isFirst bool
 	brackets int32
 }
@@ -214,6 +224,14 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     	}
 
     	p.lastToken = t
+        p.lastStrToken = token
+    }
+
+    if len(tokens) > 0 {
+        if !IsLastTokenValid(p.lastToken) {
+            e := "Error: invalid token\n" + p.lastStrToken + "\n^\nExpecting 'LABEL' (e.q dog)"
+            return parseResult, errors.New(e)
+        }
     }
 
     if numOfLabels > 10 {
