@@ -383,7 +383,8 @@ func validateImages(clientFingerprint string, imageValidationBatch ImageValidati
 }
 
 func export(parseResult ParseResult) ([]ExportedImage, error){
-    q := fmt.Sprintf(`SELECT i.key, json_agg(q3.annotations), q3.validations, i.width, i.height
+    q := fmt.Sprintf(`SELECT i.key, CASE WHEN json_agg(q3.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q3.annotations)::jsonb END as annotations, 
+                      q3.validations, i.width, i.height
                       FROM image i 
                       JOIN
                       (
