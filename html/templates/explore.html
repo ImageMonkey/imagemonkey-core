@@ -16,414 +16,307 @@
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
-  <script src="js/dropzone.js"></script>
-  <link rel="stylesheet" href="css/dropzone.css">
+  <script src="js/fabric.min.js"></script>
+  <script src="js/fabric_helper.js?v=3"></script>
+    <script src="js/justifiedCanvas.js"></script>
+  <script src="js/justified-layout.min.js"></script>
+  <script src="js/infinitescroll.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
 
-  <script src="js/chart.bundle.min.js"></script>
-  <script src="js/countries.js"></script>
-
-  <style type="text/css">
-    .label {
-      float: left;
-      color: ghostwhite;
-      font-size: 15px;
+  <style>
+  .justified {
+      position: relative;
+      width: 1060px;
     }
-
-    .num-of-donation { 
-      float: right;
-      color: white;
-      font-size: 15px;
+    .canvas-wrapper {
+      position: absolute;
     }
-
-    .num-of-unlabeled-donation { 
-      width: 100%;
-      text-align:center;
-      color: white;
-      font-size: 25px;
+    pre {
+      white-space: pre-wrap;
     }
-
   </style>
-  <script>
 
-    function getRandomColor() {
-      var letters = '0123456789ABCDEF'.split('');
-      var color = '#';
-      for (var i = 0; i < 6; i++ ) {
-          color += letters[Math.floor(Math.random() * 16)];
-      }
-      return color;
+  <script>
+  $(document).ready(function(){
+    var sampleExportQueries = [];
+    var canvas = [];
+    var geometry, data;
+    var numOfLastFetchedImg = 0;
+    var defaultBatchSize = 50;
+    var infiniteScroll = new InfiniteScroll(loadNext, false);
+    var selectDataMode = null;
+
+    var availableLabels = [];
+    {{ range $val := .labelAccessors }}
+    availableLabels.push({{ $val }});
+    {{ end }}
+
+    var clearCanvasContainer = function(){
+      canvas = [];
+      geometry = null;
+      data = null;
+      numOfLastFetchedImg = 0;
+      infiniteScroll.deactivate();
+      $('#canvasContainer').children().each(function (){
+        $(this).remove();
+      })
     }
 
+    function randomIntBetweenInterval(min, max) {
+      return Math.floor(Math.random() *(max - min + 1) +min);
+    }
 
-    var numOfValidations = []
-    var labels = []
-    var validationsColorPalette = []
+    function getUrlFromImageId(imageId){
+      return "{{ .apiBaseUrl }}/v1/donation/" + imageId;
+      //return "https://api.imagemonkey.io/v1/donation/" + imageId;
+    }
 
-    {{ range .statistics.Validations }}
-      {{ if (ne .Count 0) }}
-        numOfValidations.push({{ .Count }});
-        labels.push({{ .Label }});
-        validationsColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
+    function getSelectDataType(){
+      var radioButtonId = $("#selectDataType :radio:checked").attr('id');
+      if(radioButtonId === "browseDataRadioCheckbox"){
+        return "browse";
+      }
+      if(radioButtonId === "exportDataRadioCheckbox"){
+        return "export";
+      }
+      return "";
+    }
 
+    function drawAnnotationsCallback(canvas, annotations){
+      if(annotations !== undefined)
+        canvas.drawAnnotations(annotations);
+    }
 
-    var donationsPerCountryColorPalette = []
-    var donationsPerCountry = []
-    var donationPerCountryCCodes = []
+    function loadNext(){
+      var from = numOfLastFetchedImg;
+      var n = defaultBatchSize;
+      if((numOfLastFetchedImg + defaultBatchSize) > data.length){
+        n = data.length - numOfLastFetchedImg;
+      }
 
-    {{ range .statistics.DonationsPerCountry }}
-      {{ if (ne .Count 0) }}
-        donationsPerCountry.push({{ .Count }});
-        donationPerCountryCCodes.push(getCountryName({{ .CountryCode }}));
-        donationsPerCountryColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
+      if(n === 0)
+        return;
 
+      for(var i = from; i < (from + n); i++){
+        var canvasId = ("canvas" + i.toString());
+        var d = ('<div class="canvas-wrapper" style="width: ' + geometry.boxes[i].width 
+          +'px; height: ' + geometry.boxes[i].height + 'px; top: ' 
+          + geometry.boxes[i].top  + 'px; left: ' +  geometry.boxes[i].left + 'px"><canvas id="' + canvasId +'"></canvas></div>');
+        $("#canvasContainer").append(d);
+        canvas[i] = new CanvasDrawer(canvasId, geometry.boxes[i].width, geometry.boxes[i].height);
+        canvas[i].setCanvasBackgroundImageUrl(getUrlFromImageId(data[i]["uuid"]), drawAnnotationsCallback.bind(null, canvas[i], data[i]["annotations"]));
+      }
 
-    var validationsPerCountry = []
-    var validationsPerCountryCCode = []
-    var validationsPerCountryColorPalette = []
+      document.getElementById("canvasContainer").style.height = (geometry.boxes[(from + n - 1)].top + geometry.boxes[(from + n - 1)].height)  + "px";
 
-    {{ range .statistics.ValidationsPerCountry }}
-      {{ if (ne .Count 0) }}
-        validationsPerCountry.push({{ .Count }});
-        validationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
-        validationsPerCountryColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
+      numOfLastFetchedImg += n;
 
+      //if(infiniteScroll === null)
+      //  infiniteScroll = new InfiniteScroll(loadNext);
 
-    var annotationsPerCountry = []
-    var annotationsPerCountryCCode = []
-    var annotationsPerCountryColorPalette = []
+    }
 
-    {{ range .statistics.AnnotationsPerCountry }}
-      {{ if (ne .Count 0) }}
-        annotationsPerCountry.push({{ .Count }});
-        annotationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
-        annotationsPerCountryColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
+    function split(val) {
+      return val.split( / \s*/ );
+    }
+    function extractLast(term) {
+      return split(term).pop();
+    }
 
-
-    var validationsPerApp = []
-    var validationsPerAppLabels = []
-    var validationsPerAppColorPalette = []
-
-    {{ range .statistics.ValidationsPerApp }}
-      {{ if (ne .Count 0) }}
-        validationsPerApp.push({{ .Count }});
-        validationsPerAppLabels.push({{ .AppIdentifier }});
-        validationsPerAppColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
-
-
-    var donationsPerApp = []
-    var donationsPerAppLabels = []
-    var donationsPerAppColorPalette = []
-
-    {{ range .statistics.DonationsPerApp }}
-      {{ if (ne .Count 0) }}
-        donationsPerApp.push({{ .Count }});
-        donationsPerAppLabels.push({{ .AppIdentifier }});
-        donationsPerAppColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
-
-
-    var annotationsPerApp = []
-    var annotationsPerAppLabels = []
-    var annotationsPerAppColorPalette = []
-
-    {{ range .statistics.AnnotationsPerApp }}
-      {{ if (ne .Count 0) }}
-        annotationsPerApp.push({{ .Count }});
-        annotationsPerAppLabels.push({{ .AppIdentifier }});
-        annotationsPerAppColorPalette.push(getRandomColor());
-      {{ end }}
-    {{ end }}
-
-
-    var validationsChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  numOfValidations,
-                backgroundColor: validationsColorPalette,
-                label: 'Validations per Label'
-            }],
-            labels: labels
+    $("#query")
+      // don't navigate away from the field on tab when selecting an item
+      .on("keydown", function(event) {
+        if (event.keyCode === $.ui.keyCode.TAB &&
+          $(this).autocomplete("instance").menu.active) {
+          event.preventDefault();
+      }
+    })
+      .autocomplete({
+        minLength: 0,
+        source: function(request, response) {
+          // delegate back to autocomplete, but extract the last term
+          response($.ui.autocomplete.filter(
+            availableLabels, extractLast(request.term)));
         },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Validations per Label'
-            }
-        }
-    };
-
-
-    var donationsPerCountryChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  donationsPerCountry,
-                backgroundColor: donationsPerCountryColorPalette,
-                label: 'Donations per Country'
-            }],
-            labels: donationPerCountryCCodes
+        focus: function() {
+          // prevent value inserted on focus
+          return false;
         },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Donations per Country'
-            }
+        select: function(event, ui) {
+          var terms = split(this.value);
+          // remove the current input
+          terms.pop();
+          // add the selected item
+          terms.push(ui.item.value);
+          // add placeholder to get the comma-and-space at the end
+          terms.push("");
+          this.value = terms.join(" ");
+          return false;
         }
-    };
+      });
 
-    var validationsPerCountryChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  validationsPerCountry,
-                backgroundColor: validationsPerCountryColorPalette,
-                label: 'Validations per Country'
-            }],
-            labels: validationsPerCountryCCode
+
+      $("#randomButton").click(function(e) {
+        var pos = randomIntBetweenInterval(0, (sampleExportQueries.length - 1));
+        $("#query").val(sampleExportQueries[pos]);
+        $("#goButton").trigger("click");
+      });
+
+      
+      sampleExportQueries.push("dog | cat");
+      sampleExportQueries.push("dog.has = 'mouth' | cat");
+      sampleExportQueries.push("dog.size = 'big' | dog.size = 'small'");
+      sampleExportQueries.push("dog.size = 'big' | dog.breed = 'Labrador'");
+
+
+    function loadData(query){
+      $("#dataStructureContainer").hide();
+      $("#canvasContainer").hide();
+      $("#loadingIndicator").show();
+      clearCanvasContainer();
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/export',
+        //url: 'https://api.imagemonkey.io/v1/export',
+        dataType: 'json',
+        data: {query: encodeURIComponent(query)},
+        success: function(d){
+          clearCanvasContainer();
+
+          var selectDataMode = getSelectDataType();
+          if(selectDataMode === "export"){
+            $("#canvasContainer").hide();
+            infiniteScroll.deactivate();
+
+
+            var jsonStr = JSON.stringify(d, null, 2);
+            $('#dataStructure').text(jsonStr);
+            $('#dataStructureContainer').show();
+
+            $("#loadingIndicator").hide();
+          }
+          else if(selectDataMode === "browse"){
+            $("#dataStructureContainer").hide();
+            $("#canvasContainer").show();
+
+
+            data = d;
+            sizes = [];
+
+            for(var i = 0; i < data.length; i++){
+              sizes.push({"width": data[i]["width"], "height": data[i]["height"]});
+            }
+
+            var justifiedLayout = require('justified-layout');
+            geometry = justifiedLayout(sizes, {
+              "fullWidthBreakoutRowCadence": false,
+                //"fullWidthBreakoutRowCadence": 3,
+                "containerWidth": document.getElementById("canvasContainer").clientWidth
+              }
+              );
+
+            loadNext();
+            infiniteScroll.activate();
+            $("#loadingIndicator").hide();
+          }
+
+          
         },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Validations per Country'
-            }
+        error: function(xhr, status, error) {
+          var err = JSON.parse(xhr.responseText)["error"];
+          var obj = $('#browseSyntaxErrorMessage').text(err);
+          obj.html(obj.html().replace(/\n/g,'<br/>'));
+          $('#browseSyntaxErrorMessage').show(200);
+          $('#loadingIndicator').hide();
+          clearCanvasContainer();
         }
-    };
+      });
+    }
 
-    var validationsPerAppChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  validationsPerApp,
-                backgroundColor: validationsPerAppColorPalette,
-                label: 'Validations per Application'
-            }],
-            labels: validationsPerAppLabels
-        },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Validations per Application'
-            }
-        }
-    };
+    $("#goButton").click(function(e) {
+      loadData($("#query").val());
+    });
 
-    var donationsPerAppChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  donationsPerApp,
-                backgroundColor: donationsPerAppColorPalette,
-                label: 'Donations per Application'
-            }],
-            labels: donationsPerAppLabels
-        },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Donations per Application'
-            }
-        }
-    };
-
-    var annotationsPerAppChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  annotationsPerApp,
-                backgroundColor: annotationsPerAppColorPalette,
-                label: 'Annotations per Application'
-            }],
-            labels: annotationsPerAppLabels
-        },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Annotations per Application'
-            }
-        }
-    };
-
-    var annotationsPerCountryChartConfig = {
-        type: 'pie',
-        data: {
-            datasets: [{
-                data:  annotationsPerCountry,
-                backgroundColor: annotationsPerCountryColorPalette,
-                label: 'Annotations per Country'
-            }],
-            labels: annotationsPerCountryCCode
-        },
-        options: {
-            responsive: true,
-            title: {
-              display: true,
-              text: 'Annotations per Country'
-            }
-        }
-    };
-
-
-
-
-    window.onload = function() {
-        var validationsChartCtx = document.getElementById("validations-chart").getContext("2d");
-        window.validations = new Chart(validationsChartCtx, validationsChartConfig);
-
-        var donationsPerCountryChartCtx = document.getElementById("donations-per-country-chart").getContext("2d");
-        window.donationsPerCountry = new Chart(donationsPerCountryChartCtx, donationsPerCountryChartConfig);
-
-        var validationsPerCountryChartCtx = document.getElementById("validations-per-country-chart").getContext("2d");
-        window.validationsPerCountry = new Chart(validationsPerCountryChartCtx, validationsPerCountryChartConfig);
-
-        var annotationsPerCountryChartCtx = document.getElementById("annotations-per-country-chart").getContext("2d");
-        window.annotationsPerCountry = new Chart(annotationsPerCountryChartCtx, annotationsPerCountryChartConfig);
-
-        var validationsPerAppChartCtx = document.getElementById("validations-per-app-chart").getContext("2d");
-        window.validationsPerApp = new Chart(validationsPerAppChartCtx, validationsPerAppChartConfig);
-
-        var donationsPerAppChartCtx = document.getElementById("donations-per-app-chart").getContext("2d");
-        window.donationsPerApp = new Chart(donationsPerAppChartCtx, donationsPerAppChartConfig);
-
-        var annotationsPerAppChartCtx = document.getElementById("annotations-per-app-chart").getContext("2d");
-        window.annotationsPerApp = new Chart(annotationsPerAppChartCtx, annotationsPerAppChartConfig);
-    };
+  });
   </script>
 
 
-  </head>
-  <body>
+  <script type="text/javascript">
+  </script>
+</head>
+<body>
 
-    {{ template "menu.html" .}}
+  {{ template "menu.html" .}}
 
-    <!-- Page Contents -->
-    <div class="pusher">
-      <div class="ui inverted vertical masthead center aligned segment">
-       {{ template "pointing_menu.html" .}}  
-       <div class="ui text container">
-         <h2 class="ui inverted header">
-          Explore
-        </h2>
-        <h2>Visual representation of the dataset</h2>
-      </div>
-    </div>
-
-
-  <!--<div class="ui basic segment" id="graph">
-</div>-->
-
-<div class="ui stackable grid vertical stripe">
-  <div class="one wide column"></div>
-
-  <div class="three wide column">
-    <div class="ui pink inverted segment">
-      <h3 class="ui center aligned header">Unlabeled Donations</h3>
-      <div class="ui blue inverted relaxed divided list">
-        <div class="item">
-          <div class="row">
-            <div class="content">
-              <span class="num-of-unlabeled-donation"><p>{{ .statistics.NumOfUnlabeledDonations }}</p></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-    <div class="ui blue inverted segment">
-      <h3 class="ui center aligned header">Donations</h3>
-      <div class="ui blue inverted relaxed divided list">
-        {{ range .statistics.Validations }}
-        <div class="item">
-          <div class="row">
-            <div class="content">
-              <span class="label"><p>{{ .Label }}</p></span>
-              <span class="num-of-donation"><p>{{ .Count }}</p></span>
-            </div>
-          </div>
-        </div>
-        {{ end }}
-      </div>
-    </div>
-
-  </div>
-
-  <div class="three wide column">
-    <div class="ui orange inverted segment">
-      <h3 class="ui center aligned header">Error Rate</h3>
-      <div class="ui orange inverted relaxed divided list">
-        {{ range .statistics.Validations }}
-          {{if (ne .Count 0)}}
-          <div class="item">
-            <div class="row">
-              <div class="content">
-                <span class="label"><p>{{ .Label }}</p></span>
-                <span class="num-of-donation"><p>{{ round .ErrorRate 3 }}</p></span>
-              </div>
-            </div>
-          </div>
-          {{ end }}
-        {{ end }}
-      </div>
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Explore 
+      </h2>
+      <h2>Data should be easily accessible. For Everybody.</h2>
     </div>
   </div>
+  <div class="ui eight wide centered stackable grid">
+    <div class="row">
+    </div>
+    <div class="row">
+      <div class="eight wide column">
+        <form class="ui form segment">
+          <div class="field">
+           <p>Select the data you are interested in</p>
+           <input placeholder="Query..." type="text" id="query">
+
+         </div>
+
+         <div class="inline fields" id="selectDataType">
+         <div class="field">
+          <div class="ui radio checkbox">
+                  <input name="type" checked="checked" type="radio" id="browseDataRadioCheckbox">
+                  <label>Browse</label>
+                </div>
+         </div>
+         <div class="field">
+          <div class="ui radio checkbox">
+                  <input name="type" checked="checked" type="radio" id="exportDataRadioCheckbox">
+                  <label>Export</label>
+                </div>
+         </div>
+       </div>
+         <div class="ui primary submit button" id="goButton">Go</div>
+         <div class="ui button" id="randomButton">Random</div>
+         <p class="ui error message"></p>
 
 
-  <div class="five wide column">
-    <div class="row">
-      <canvas id="validations-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="donations-per-country-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="validations-per-country-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="annotations-per-country-chart"/>
+       </form>
+
+       <div class="ui warning message" hidden id="browseSyntaxErrorMessage">
+        <i class="close icon"></i>
+        <div class="header"></div>
+      </div>
+
     </div>
   </div>
+  <div class="row">
+    <div class="ui large loader" id="loadingIndicator"></div>
+  </div>
 
-  <div class="four wide column">
-    <div class="row">
-      <canvas id="validations-per-app-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="donations-per-app-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="annotations-per-app-chart"/>
+  <div hidden class="justified" id="canvasContainer">
+  </div>
+
+  <div class="eight wide column">
+    <div hidden class="ui eight wide column raised segment" id="dataStructureContainer">
+      <pre class="prettyprint" id="dataStructure">
+      </pre>
     </div>
   </div>
 
 </div>
-
 </div>
-
 {{ template "footer.html" .}}
-
+</div>
 
 </body>
 
