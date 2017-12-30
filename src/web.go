@@ -186,18 +186,17 @@ func main() {
 			"apiBaseUrl": apiBaseUrl,
 		})
 	})	
-	router.GET("/explore", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "explore.html", gin.H{
-			"title": "Explore Dataset",
+	router.GET("/statistics", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "statistics.html", gin.H{
+			"title": "Statistics",
 			"words": words,
 			"activeMenuNr": 8,
 			"statistics": pick(explore(words))[0],
 		})
 	})
-	router.GET("/export", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "export.html", gin.H{
-			"title": "Export Dataset",
-			"labels": pick(getAllImageLabels())[0],
+	router.GET("/explore", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "explore.html", gin.H{
+			"title": "Explore Dataset",
 			"activeMenuNr": 9,
 			"apiBaseUrl": apiBaseUrl,
 			"labelAccessors": pick(getLabelAccessors())[0],
@@ -221,6 +220,7 @@ func main() {
 			"title": "Browse",
 			"activeMenuNr": 12,
 			"apiBaseUrl": apiBaseUrl,
+			"labelAccessors": pick(getLabelAccessors())[0],
 		})
 	})*/
 
