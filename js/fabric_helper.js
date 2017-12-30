@@ -32,7 +32,7 @@ function registerColorPickerOnMove(canvas, ctx, callback){
 }
 
 function scaleAndPositionImage(canvas, img, callback) {
-    var scaleFactor = calcScaleFactor(img);
+    var scaleFactor = calcScaleFactor(img, 600.0);
     canvas.setBackgroundImage(img,
         canvas.renderAll.bind(canvas), {
             scaleX: scaleFactor,
@@ -47,9 +47,7 @@ function scaleAndPositionImage(canvas, img, callback) {
     typeof callback === 'function' && callback();
 }
 
-function calcScaleFactor(img){
-    var maxImageWidth = 600.0;
-    
+function calcScaleFactor(img, maxImageWidth){
     //on mobile, make image full width
     var isMobile = window.matchMedia("only screen and (max-width: 760px)");
     if (isMobile.matches) {
@@ -146,3 +144,77 @@ function drawAnnotations(canvas, annotations, scaleFactor){
 
 canvas.renderAll();
 }
+
+
+
+
+
+var CanvasDrawer = (function () {
+    function CanvasDrawer(id, width, height){
+        this.canvas = new fabric.Canvas(id);
+        this.backgroundImageUrl = null;
+        this.callback = null;
+        this.img = null;
+        this.maxImageWidth = 600;
+        this.canvasId = id;
+        this.canvasWidth = width;
+        this.canvasHeight = height;  
+    }
+
+    /*function calculateScaleFactor(canvasId, img) {
+        var scaleFactor = canvas.width/img.width;
+        return scaleFactor;
+    }*/
+
+
+    function scaleAndPositionImg(canvas, img, canvasWidth, canvasHeight, callback) {
+        var scaleFactor = canvasWidth/img.width;
+        if(scaleFactor > 1.0)
+            scaleFactor = 1.0;
+
+
+        canvas.setBackgroundImage(img,
+            canvas.renderAll.bind(canvas), {
+                scaleX: scaleFactor,
+                scaleY: scaleFactor
+            }
+        );
+        canvas.setHeight(canvasHeight);
+        canvas.setWidth(canvasWidth);
+
+        canvas.calcOffset();
+
+        canvas.renderAll();
+        typeof callback === 'function' && callback();
+    }
+    
+
+    CanvasDrawer.prototype.setCanvasBackgroundImageUrl = function(url, callback) {
+        var inst = this;
+        this.backgroundImageUrl = url;
+        this.callback = callback;
+
+        if (url && url.length > 0) {
+        fabric.Image.fromURL(url, function (img) {
+            this.img = img;
+            scaleAndPositionImg(inst.canvas, img, inst.canvasWidth, inst.canvasHeight, callback);
+        });
+        } else {
+            this.canvas.backgroundImage = 0;
+            this.canvas.setBackgroundImage('', this.canvas.renderAll.bind(this.canvas));
+
+        }
+    }
+
+
+    CanvasDrawer.prototype.drawAnnotations = function(annotations){
+        drawAnnotations(this.canvas, annotations, this.canvas.backgroundImage.scaleX);
+    }
+
+    CanvasDrawer.prototype.maxImageWidth = function(maxImageWidth){
+        this.maxImageWidth = maxImageWidth;
+    }
+
+
+    return CanvasDrawer;
+}());

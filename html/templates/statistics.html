@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="js/common.js"></script> 
+  <script src="js/dropzone.js"></script>
+  <link rel="stylesheet" href="css/dropzone.css">
+
+  <script src="js/chart.bundle.min.js"></script>
+  <script src="js/countries.js"></script>
+
+  <style type="text/css">
+    .label {
+      float: left;
+      color: ghostwhite;
+      font-size: 15px;
+    }
+
+    .num-of-donation { 
+      float: right;
+      color: white;
+      font-size: 15px;
+    }
+
+    .num-of-unlabeled-donation { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
+  </style>
+  <script>
+
+    function getRandomColor() {
+      var letters = '0123456789ABCDEF'.split('');
+      var color = '#';
+      for (var i = 0; i < 6; i++ ) {
+          color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
+
+    var numOfValidations = []
+    var labels = []
+    var validationsColorPalette = []
+
+    {{ range .statistics.Validations }}
+      {{ if (ne .Count 0) }}
+        numOfValidations.push({{ .Count }});
+        labels.push({{ .Label }});
+        validationsColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var donationsPerCountryColorPalette = []
+    var donationsPerCountry = []
+    var donationPerCountryCCodes = []
+
+    {{ range .statistics.DonationsPerCountry }}
+      {{ if (ne .Count 0) }}
+        donationsPerCountry.push({{ .Count }});
+        donationPerCountryCCodes.push(getCountryName({{ .CountryCode }}));
+        donationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var validationsPerCountry = []
+    var validationsPerCountryCCode = []
+    var validationsPerCountryColorPalette = []
+
+    {{ range .statistics.ValidationsPerCountry }}
+      {{ if (ne .Count 0) }}
+        validationsPerCountry.push({{ .Count }});
+        validationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        validationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var annotationsPerCountry = []
+    var annotationsPerCountryCCode = []
+    var annotationsPerCountryColorPalette = []
+
+    {{ range .statistics.AnnotationsPerCountry }}
+      {{ if (ne .Count 0) }}
+        annotationsPerCountry.push({{ .Count }});
+        annotationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        annotationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var validationsPerApp = []
+    var validationsPerAppLabels = []
+    var validationsPerAppColorPalette = []
+
+    {{ range .statistics.ValidationsPerApp }}
+      {{ if (ne .Count 0) }}
+        validationsPerApp.push({{ .Count }});
+        validationsPerAppLabels.push({{ .AppIdentifier }});
+        validationsPerAppColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var donationsPerApp = []
+    var donationsPerAppLabels = []
+    var donationsPerAppColorPalette = []
+
+    {{ range .statistics.DonationsPerApp }}
+      {{ if (ne .Count 0) }}
+        donationsPerApp.push({{ .Count }});
+        donationsPerAppLabels.push({{ .AppIdentifier }});
+        donationsPerAppColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var annotationsPerApp = []
+    var annotationsPerAppLabels = []
+    var annotationsPerAppColorPalette = []
+
+    {{ range .statistics.AnnotationsPerApp }}
+      {{ if (ne .Count 0) }}
+        annotationsPerApp.push({{ .Count }});
+        annotationsPerAppLabels.push({{ .AppIdentifier }});
+        annotationsPerAppColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var validationsChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  numOfValidations,
+                backgroundColor: validationsColorPalette,
+                label: 'Validations per Label'
+            }],
+            labels: labels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Validations per Label'
+            }
+        }
+    };
+
+
+    var donationsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  donationsPerCountry,
+                backgroundColor: donationsPerCountryColorPalette,
+                label: 'Donations per Country'
+            }],
+            labels: donationPerCountryCCodes
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Donations per Country'
+            }
+        }
+    };
+
+    var validationsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  validationsPerCountry,
+                backgroundColor: validationsPerCountryColorPalette,
+                label: 'Validations per Country'
+            }],
+            labels: validationsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Validations per Country'
+            }
+        }
+    };
+
+    var validationsPerAppChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  validationsPerApp,
+                backgroundColor: validationsPerAppColorPalette,
+                label: 'Validations per Application'
+            }],
+            labels: validationsPerAppLabels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Validations per Application'
+            }
+        }
+    };
+
+    var donationsPerAppChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  donationsPerApp,
+                backgroundColor: donationsPerAppColorPalette,
+                label: 'Donations per Application'
+            }],
+            labels: donationsPerAppLabels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Donations per Application'
+            }
+        }
+    };
+
+    var annotationsPerAppChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  annotationsPerApp,
+                backgroundColor: annotationsPerAppColorPalette,
+                label: 'Annotations per Application'
+            }],
+            labels: annotationsPerAppLabels
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Annotations per Application'
+            }
+        }
+    };
+
+    var annotationsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  annotationsPerCountry,
+                backgroundColor: annotationsPerCountryColorPalette,
+                label: 'Annotations per Country'
+            }],
+            labels: annotationsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Annotations per Country'
+            }
+        }
+    };
+
+
+
+
+    window.onload = function() {
+        var validationsChartCtx = document.getElementById("validations-chart").getContext("2d");
+        window.validations = new Chart(validationsChartCtx, validationsChartConfig);
+
+        var donationsPerCountryChartCtx = document.getElementById("donations-per-country-chart").getContext("2d");
+        window.donationsPerCountry = new Chart(donationsPerCountryChartCtx, donationsPerCountryChartConfig);
+
+        var validationsPerCountryChartCtx = document.getElementById("validations-per-country-chart").getContext("2d");
+        window.validationsPerCountry = new Chart(validationsPerCountryChartCtx, validationsPerCountryChartConfig);
+
+        var annotationsPerCountryChartCtx = document.getElementById("annotations-per-country-chart").getContext("2d");
+        window.annotationsPerCountry = new Chart(annotationsPerCountryChartCtx, annotationsPerCountryChartConfig);
+
+        var validationsPerAppChartCtx = document.getElementById("validations-per-app-chart").getContext("2d");
+        window.validationsPerApp = new Chart(validationsPerAppChartCtx, validationsPerAppChartConfig);
+
+        var donationsPerAppChartCtx = document.getElementById("donations-per-app-chart").getContext("2d");
+        window.donationsPerApp = new Chart(donationsPerAppChartCtx, donationsPerAppChartConfig);
+
+        var annotationsPerAppChartCtx = document.getElementById("annotations-per-app-chart").getContext("2d");
+        window.annotationsPerApp = new Chart(annotationsPerAppChartCtx, annotationsPerAppChartConfig);
+    };
+  </script>
+
+
+  </head>
+  <body>
+
+    {{ template "menu.html" .}}
+
+    <!-- Page Contents -->
+    <div class="pusher">
+      <div class="ui inverted vertical masthead center aligned segment">
+       {{ template "pointing_menu.html" .}}  
+       <div class="ui text container">
+         <h2 class="ui inverted header">
+          Statistics
+        </h2>
+        <h2></h2>
+      </div>
+    </div>
+
+
+  <!--<div class="ui basic segment" id="graph">
+</div>-->
+
+<div class="ui stackable grid vertical stripe">
+  <div class="one wide column"></div>
+
+  <div class="three wide column">
+    <div class="ui pink inverted segment">
+      <h3 class="ui center aligned header">Unlabeled Donations</h3>
+      <div class="ui blue inverted relaxed divided list">
+        <div class="item">
+          <div class="row">
+            <div class="content">
+              <span class="num-of-unlabeled-donation"><p>{{ .statistics.NumOfUnlabeledDonations }}</p></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="ui blue inverted segment">
+      <h3 class="ui center aligned header">Donations</h3>
+      <div class="ui blue inverted relaxed divided list">
+        {{ range .statistics.Validations }}
+        <div class="item">
+          <div class="row">
+            <div class="content">
+              <span class="label"><p>{{ .Label }}</p></span>
+              <span class="num-of-donation"><p>{{ .Count }}</p></span>
+            </div>
+          </div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="three wide column">
+    <div class="ui orange inverted segment">
+      <h3 class="ui center aligned header">Error Rate</h3>
+      <div class="ui orange inverted relaxed divided list">
+        {{ range .statistics.Validations }}
+          {{if (ne .Count 0)}}
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="label"><p>{{ .Label }}</p></span>
+                <span class="num-of-donation"><p>{{ round .ErrorRate 3 }}</p></span>
+              </div>
+            </div>
+          </div>
+          {{ end }}
+        {{ end }}
+      </div>
+    </div>
+  </div>
+
+
+  <div class="five wide column">
+    <div class="row">
+      <canvas id="validations-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="donations-per-country-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="validations-per-country-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="annotations-per-country-chart"/>
+    </div>
+  </div>
+
+  <div class="four wide column">
+    <div class="row">
+      <canvas id="validations-per-app-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="donations-per-app-chart"/>
+    </div>
+    <br><br><br>
+    <div class="row">
+      <canvas id="annotations-per-app-chart"/>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+{{ template "footer.html" .}}
+
+
+</body>
+
+</html>
