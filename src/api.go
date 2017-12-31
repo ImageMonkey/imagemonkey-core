@@ -18,10 +18,63 @@ import (
 	"errors"
 	"html"
 	"net/url"
+	"image"
+	"github.com/nfnt/resize"
+	"bytes"
+	"image/gif"
+    "image/jpeg"
+    "image/png"
+	//"gopkg.in/h2non/bimg.v1"
 )
 
 var db *sql.DB
 var geoipDb *geoip2.Reader
+
+
+func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
+	buf := new(bytes.Buffer) 
+	imgFormat := ""
+
+	file, err := os.Open(path)
+	if err != nil {
+		log.Debug("[Resize Image Handler] Couldn't open image: ", err.Error())
+		return buf.Bytes(), imgFormat, err
+	}
+
+	// decode jpeg into image.Image
+	img, format, err := image.Decode(file)
+	if err != nil {
+		log.Debug("[Resize Image Handler] Couldn't decode image: ", err.Error())
+		return buf.Bytes(), imgFormat, err
+	}
+	file.Close()
+
+	resizedImg := resize.Resize(width, height, img, resize.NearestNeighbor)
+
+
+	if format == "png" {
+		err = png.Encode(buf, resizedImg)
+		if err != nil {
+			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+	    	return buf.Bytes(), imgFormat, err
+		}
+	} else if format == "gif" {
+		err = gif.Encode(buf, resizedImg, nil)
+		if err != nil {
+			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+	    	return buf.Bytes(), imgFormat, err
+		}
+	} else {
+		err = jpeg.Encode(buf, resizedImg, nil)
+		if err != nil {
+			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+	    	return buf.Bytes(), imgFormat, err
+		}
+	}
+	imgFormat = format
+
+	return buf.Bytes(), imgFormat, nil
+}
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
 func ClientAuthMiddleware() gin.HandlerFunc {
@@ -166,6 +219,22 @@ func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []
 	return false
 }
 
+func IsFilenameValid(filename string) bool {
+	_, err := uuid.FromString(filename)
+
+	if err != nil {
+		return false
+	}
+	return true
+	/*for _, ch := range filename {
+		if ((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= '0') && (ch <= '9')) || (ch == '-') {
+			continue
+		}
+		return false
+	}
+	return true*/
+}
+
 
 func main(){
 	fmt.Printf("Starting API Service...\n")
@@ -241,7 +310,53 @@ func main(){
 	router := gin.Default()
 	router.Use(CorsMiddleware())
 	router.Use(RequestId())
-	router.Static("./v1/donation", *donationsDir) //serve static images
+
+	//serve images in "donations" directory with the possibility to scale images
+	//before serving them
+	router.GET("/v1/donation/:imageid", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		imageId := c.Param("imageid")
+
+		var width uint
+		width = 0
+		if temp, ok := params["width"]; ok {
+			n, err := strconv.ParseUint(temp[0], 10, 32)
+		    if err == nil {
+		        width = uint(n)
+		    }
+		}
+
+		var height uint
+		height = 0
+		if temp, ok := params["height"]; ok {
+			n, err := strconv.ParseUint(temp[0], 10, 32)
+		    if err == nil {
+            	height = uint(n)
+		    }
+		}
+
+		if !IsFilenameValid(imageId) {
+			c.String(404, "Invalid filename")
+			return
+		} 
+
+		imgBytes, format, err := ResizeImage((*donationsDir + imageId), width, height)
+		if err != nil {
+			log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
+			c.String(500, "Couldn't process request, please try again later")
+			return
+
+		}
+
+		c.Writer.Header().Set("Content-Type", ("image/" + format))
+        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
+        _, err = c.Writer.Write(imgBytes) 
+        if err != nil {
+            log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
+            c.String(500, "Couldn't process request, please try again later")
+            return
+        }
+	})
 
 	//the following endpoints are secured with a client id + client secret. 
 	//that's mostly because currently each donation needs to be unlocked manually. 

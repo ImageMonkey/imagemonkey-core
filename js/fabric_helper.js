@@ -159,19 +159,25 @@ var CanvasDrawer = (function () {
         this.canvasId = id;
         this.canvasWidth = width;
         this.canvasHeight = height;  
+        this.data = null;
     }
 
-    /*function calculateScaleFactor(canvasId, img) {
-        var scaleFactor = canvas.width/img.width;
-        return scaleFactor;
-    }*/
+    CanvasDrawer.prototype.makeClickable = function(callback){
+        var inst = this;
+        inst.canvas.on('mouse:over', function(o) {
+          inst.canvas.hoverCursor = 'pointer';
+        });
 
+        inst.canvas.on('mouse:down', function(o) {
+          typeof callback === 'function' && callback(inst.data);
+          //$(this).trigger("clicked");
+        });
+    }
 
-    function scaleAndPositionImg(canvas, img, canvasWidth, canvasHeight, callback) {
+    function scaleAndPositionImg(canvas, img, canvasWidth, canvasHeight, callback){
         var scaleFactor = canvasWidth/img.width;
         if(scaleFactor > 1.0)
             scaleFactor = 1.0;
-
 
         canvas.setBackgroundImage(img,
             canvas.renderAll.bind(canvas), {
@@ -206,9 +212,13 @@ var CanvasDrawer = (function () {
         }
     }
 
+    CanvasDrawer.prototype.setData = function(data) {
+        this.data = data;
+    }
 
-    CanvasDrawer.prototype.drawAnnotations = function(annotations){
-        drawAnnotations(this.canvas, annotations, this.canvas.backgroundImage.scaleX);
+
+    CanvasDrawer.prototype.drawAnnotations = function(annotations, scaleFactor = 1.0){
+        drawAnnotations(this.canvas, annotations, scaleFactor);
     }
 
     CanvasDrawer.prototype.maxImageWidth = function(maxImageWidth){
