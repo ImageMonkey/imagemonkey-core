@@ -185,6 +185,138 @@ var Polygon = (function () {
 
 
 
+var FreeDrawer = (function () {
+  function FreeDrawer(canvas) {
+    var inst=this;
+    this.canvas = canvas;
+    this.pointArray = new Array();
+  };
+
+  FreeDrawer.prototype.clear = function () {
+  };
+
+  FreeDrawer.prototype.addPoint = function (options) {
+    var pointer = this.canvas.getPointer(options.e);
+    var circle = new fabric.Circle({
+      radius: 5,
+      fill: '#ffffff',
+      stroke: '#333333',
+      strokeWidth: 0.5,
+      left: pointer.x, //(options.e.layerX/this.canvas.getZoom()),
+      top: pointer.y, //(options.e.layerY/this.canvas.getZoom()),
+      selectable: false,
+      hasBorders: false,
+      hasControls: false,
+      originX:'center',
+      originY:'center'
+    });
+    this.pointArray.push(circle);
+  };
+
+
+  FreeDrawer.prototype.move = function(pointer) {
+    var circle = new fabric.Circle({
+      radius: 5,
+      fill: '#ffffff',
+      stroke: '#333333',
+      strokeWidth: 0.5,
+      left: pointer.x, //(options.e.layerX/this.canvas.getZoom()),
+      top: pointer.y, //(options.e.layerY/this.canvas.getZoom()),
+      selectable: false,
+      hasBorders: false,
+      hasControls: false,
+      originX:'center',
+      originY:'center'
+    });
+    this.pointArray.push(circle);
+  };
+
+  FreeDrawer.prototype.generatePolygon = function () {
+    this.canvas.isDrawingMode = false;
+    var simplifiedPoints = simplify(this.canvas.freeDrawingBrush._points, 0.8, false);
+
+
+    this.canvas.freeDrawingBrush._points = simplifiedPoints;
+
+    //var smoothedPoints = simplifiedPoints;
+
+    //var newLine = smoothLine(simplifiedPoints, 46, 10);
+
+
+
+
+    //var p = hull(smoothedPoints, 10, ['.x', '.y']);
+    //this.canvas.freeDrawingBrush._points = p;
+
+    /*var pp = "M " + simplifiedPoints[0].x + " " + simplifiedPoints[0].y + " ";
+    for(var i = 0; i < simplifiedPoints.length-1; i ++)
+    {
+
+      var x_mid = (simplifiedPoints[i].x + simplifiedPoints[i+1].x) / 2;
+      var y_mid = (simplifiedPoints[i].y + simplifiedPoints[i+1].y) / 2;
+      var cp_x1 = (x_mid + simplifiedPoints[i].x) / 2;
+      var cp_y1 = (y_mid + simplifiedPoints[i].y) / 2;
+      var cp_x2 = (x_mid + simplifiedPoints[i+1].x) / 2;
+      var cp_y2 = (y_mid + simplifiedPoints[i+1].y) / 2;
+
+      pp += "Q " + cp_x1 + ", " + smoothedPoints[i].y + ", " + x_mid + ", " + y_mid + " ";
+      pp += "Q " + cp_x2 + ", " + smoothedPoints[i+1].y + ", " + smoothedPoints[i+1].x + ", " + smoothedPoints[i+1].y + " ";
+      //ctx.quadraticCurveTo(cp_x1,points[i].y ,x_mid, y_mid);
+      //ctx.quadraticCurveTo(cp_x2,points[i+1].y ,points[i+1].x,points[i+1].y);
+    }
+
+    var p = new fabric.Path(pp,{
+});
+
+this.canvas.add(p);*/
+
+
+    /*var pp = "M " + smoothedPoints[0].x + " " + smoothedPoints[0].y + " ";
+    for (var i = 1; i < smoothedPoints.length - 2; i ++){
+      var xc = (smoothedPoints[i].x + smoothedPoints[i + 1].x) / 2;
+      var yc = (smoothedPoints[i].y + smoothedPoints[i + 1].y) / 2;
+      pp += "Q " + smoothedPoints[i].x + ", " + smoothedPoints[i].y + ", " + xc + ", " + yc + " ";
+      //ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+   }
+   console.log(pp)
+   var p = new fabric.Path(pp,{
+});
+
+this.canvas.add(p);*/
+
+
+    /*var p = new fabric.Path('C 50 50 100 100 150 50 C 200 100 250 50 300 100',{
+  left: 200,
+  top: 60,
+  strokeWidth:2,
+  scaleY:3
+});
+
+this.canvas.add(p);*/
+
+    this.canvas.freeDrawingBrush.onMouseUp();
+
+  };
+
+  FreeDrawer.prototype.isPathClosed = function (pointer) {
+    var margin = 5;
+    if(this.pointArray.length > 30){
+      //console.log("num points = " +this.pointArray.length)
+      var left = this.pointArray[0].left - margin;
+      var right = this.pointArray[0].left + margin;
+      var top = this.pointArray[0].top + margin;
+      var bottom = this.pointArray[0].top - margin;
+      //console.log("l = " +this.pointArray[0].left + ", t=" +this.pointArray[0].top + ", ll ="+pointer.x + "tt =" +pointer.y)
+      //if((this.pointArray[0].left === pointer.x) && (this.pointArray[0].top === pointer.y))
+      if( ((pointer.x >= left) && (pointer.x <= right)) && ((pointer.y >= bottom) && (pointer.y <= top)) )
+        return true;
+    }
+    return false;
+  };
+
+  return FreeDrawer;
+}());
+
 
 
 
@@ -211,6 +343,10 @@ var Annotator = (function () {
     this.selectedBlocksPoints = {};
     this.recentlyAddedBlocks = {};
     this.recentlyDeletedBlocks = {};
+    this.freeDrawing = new FreeDrawer(this.canvas);
+
+    this.canvas.freeDrawingBrush.color = "red";
+    this.canvas.freeDrawingBrush.width = 1;
 
     this.bindEvents();
   }
@@ -449,6 +585,18 @@ var Annotator = (function () {
       if(inst.type === "Blocks"){
         this.handleBlocks(pointer.x, pointer.y);
       }
+      if(inst.type === "FreeDrawing"){
+
+        if(this.canvas.isDrawingMode){
+          if(this.freeDrawing.isPathClosed(pointer)){
+            this.freeDrawing.generatePolygon();
+          }
+          else{
+            this.freeDrawing.move(pointer);
+          }
+          inst.canvas.renderAll();
+        }
+      }
     }
     else{
       if(inst.panning && o && o.e){
@@ -532,6 +680,16 @@ var Annotator = (function () {
         this.handleBlocks(origX, origY);
       }
 
+      if(inst.type === 'FreeDrawing'){
+        if(this.freeDrawing.isPathClosed(pointer)){
+          this.freeDrawing.generatePolygon();
+          this.freeDrawing.clear();
+        }
+        else{
+          this.freeDrawing.addPoint(o);
+        }
+      }
+
     }
   };
 
@@ -573,6 +731,11 @@ var Annotator = (function () {
 
   Annotator.prototype.setShape = function(t){
     this.type = t;
+
+    if(this.type === "FreeDrawing")
+      this.canvas.isDrawingMode = true;
+    else
+      this.canvas.isDrawingMode = false;
   }
 
   Annotator.prototype.enablePanMode = function(){
