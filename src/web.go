@@ -113,6 +113,7 @@ func main() {
 			"activeMenuNr": 4,
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": webAppIdentifier,
+			"playgroundBaseUrl": playgroundBaseUrl,
 		})
 	})
 

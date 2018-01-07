@@ -114,8 +114,15 @@ function drawAnnotations(canvas, annotations, scaleFactor){
         canvas.add(ellipsis);
     }
     else if(type === "polygon"){
-        var top = (annotations[i]["top"] * scaleFactor);
-        var left = (annotations[i]["left"] * scaleFactor);
+        var top = undefined;
+        var left = undefined;
+        
+        if(annotations[i]["top"] !== undefined)
+            top = (annotations[i]["top"] * scaleFactor);
+        
+        if(annotations[i]["left"] !== undefined)
+            left = (annotations[i]["left"] * scaleFactor);
+        
         var angle = annotations[i]["angle"];
         var points = annotations[i]["points"];
         var scaledPoints = [];
@@ -124,20 +131,37 @@ function drawAnnotations(canvas, annotations, scaleFactor){
             scaledPoints.push({"x": (points[j]["x"] * scaleFactor), "y": (points[j]["y"] * scaleFactor)});
         }
 
-        var polygon = new fabric.Polygon(scaledPoints, {
-            left: left,
-            top: top,
-            originX: 'left',
-            originY: 'top',
-            angle: angle,
-            stroke: 'red',
-            strokeWidth: 5,
-            fill: "transparent",
-            transparentCorners: false,
-            hasBorders: false,
-            hasControls: false,
-            selectable: false
-        });
+        var polygon;
+        if((left === undefined) && (top === undefined)){
+            polygon = new fabric.Polygon(scaledPoints, {
+                originX: 'left',
+                originY: 'top',
+                angle: angle,
+                stroke: 'red',
+                strokeWidth: 5,
+                fill: "transparent",
+                transparentCorners: false,
+                hasBorders: false,
+                hasControls: false,
+                selectable: false
+            });
+        }
+        else{
+            polygon = new fabric.Polygon(scaledPoints, {
+                left: left,
+                top: top,
+                originX: 'left',
+                originY: 'top',
+                angle: angle,
+                stroke: 'red',
+                strokeWidth: 5,
+                fill: "transparent",
+                transparentCorners: false,
+                hasBorders: false,
+                hasControls: false,
+                selectable: false
+            });
+        } 
         canvas.add(polygon);
     }
 }
@@ -212,6 +236,15 @@ var CanvasDrawer = (function () {
         }
     }
 
+    CanvasDrawer.prototype.setCanvasBackgroundImage = function(img, callback) {
+        var inst = this;
+        this.backgroundImageUrl = null;
+        this.callback = callback;
+
+        this.img = fabric.util.object.clone(img);
+        scaleAndPositionImg(inst.canvas, this.img, inst.canvasWidth, inst.canvasHeight, callback);
+    }
+
     CanvasDrawer.prototype.setData = function(data) {
         this.data = data;
     }
@@ -223,6 +256,14 @@ var CanvasDrawer = (function () {
 
     CanvasDrawer.prototype.maxImageWidth = function(maxImageWidth){
         this.maxImageWidth = maxImageWidth;
+    }
+
+    CanvasDrawer.prototype.clearObjects = function(){
+        objects = this.canvas.getObjects();
+        var i = objects.length;
+        while (i--) {
+            objects[i].remove();
+        }
     }
 
 

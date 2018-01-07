@@ -186,13 +186,29 @@ var Polygon = (function () {
 
 
 var FreeDrawer = (function () {
-  function FreeDrawer(canvas) {
+  function FreeDrawer(canvas, closedPathMode = true) {
     var inst=this;
     this.canvas = canvas;
     this.pointArray = new Array();
+    this.closedPathMode = closedPathMode;
   };
 
   FreeDrawer.prototype.clear = function () {
+    this.pointArray.length = 0;
+  };
+
+  FreeDrawer.prototype.isClosedPathMode = function () {
+    return this.closedPathMode;
+  };
+
+  FreeDrawer.prototype.enableClosedPathMode = function () {
+    this.closedPathMode = true;
+    this.clear();
+  };
+
+  FreeDrawer.prototype.disableClosedPathMode = function () {
+    this.closedPathMode = false;
+    this.clear();
   };
 
   FreeDrawer.prototype.addPoint = function (options) {
@@ -202,8 +218,8 @@ var FreeDrawer = (function () {
       fill: '#ffffff',
       stroke: '#333333',
       strokeWidth: 0.5,
-      left: pointer.x, //(options.e.layerX/this.canvas.getZoom()),
-      top: pointer.y, //(options.e.layerY/this.canvas.getZoom()),
+      left: pointer.x,
+      top: pointer.y,
       selectable: false,
       hasBorders: false,
       hasControls: false,
@@ -220,8 +236,8 @@ var FreeDrawer = (function () {
       fill: '#ffffff',
       stroke: '#333333',
       strokeWidth: 0.5,
-      left: pointer.x, //(options.e.layerX/this.canvas.getZoom()),
-      top: pointer.y, //(options.e.layerY/this.canvas.getZoom()),
+      left: pointer.x,
+      top: pointer.y,
       selectable: false,
       hasBorders: false,
       hasControls: false,
@@ -232,82 +248,23 @@ var FreeDrawer = (function () {
   };
 
   FreeDrawer.prototype.generatePolygon = function () {
-    this.canvas.isDrawingMode = false;
     var simplifiedPoints = simplify(this.canvas.freeDrawingBrush._points, 0.8, false);
 
 
     this.canvas.freeDrawingBrush._points = simplifiedPoints;
 
-    //var smoothedPoints = simplifiedPoints;
-
-    //var newLine = smoothLine(simplifiedPoints, 46, 10);
-
-
-
-
-    //var p = hull(smoothedPoints, 10, ['.x', '.y']);
-    //this.canvas.freeDrawingBrush._points = p;
-
-    /*var pp = "M " + simplifiedPoints[0].x + " " + simplifiedPoints[0].y + " ";
-    for(var i = 0; i < simplifiedPoints.length-1; i ++)
-    {
-
-      var x_mid = (simplifiedPoints[i].x + simplifiedPoints[i+1].x) / 2;
-      var y_mid = (simplifiedPoints[i].y + simplifiedPoints[i+1].y) / 2;
-      var cp_x1 = (x_mid + simplifiedPoints[i].x) / 2;
-      var cp_y1 = (y_mid + simplifiedPoints[i].y) / 2;
-      var cp_x2 = (x_mid + simplifiedPoints[i+1].x) / 2;
-      var cp_y2 = (y_mid + simplifiedPoints[i+1].y) / 2;
-
-      pp += "Q " + cp_x1 + ", " + smoothedPoints[i].y + ", " + x_mid + ", " + y_mid + " ";
-      pp += "Q " + cp_x2 + ", " + smoothedPoints[i+1].y + ", " + smoothedPoints[i+1].x + ", " + smoothedPoints[i+1].y + " ";
-      //ctx.quadraticCurveTo(cp_x1,points[i].y ,x_mid, y_mid);
-      //ctx.quadraticCurveTo(cp_x2,points[i+1].y ,points[i+1].x,points[i+1].y);
-    }
-
-    var p = new fabric.Path(pp,{
-});
-
-this.canvas.add(p);*/
-
-
-    /*var pp = "M " + smoothedPoints[0].x + " " + smoothedPoints[0].y + " ";
-    for (var i = 1; i < smoothedPoints.length - 2; i ++){
-      var xc = (smoothedPoints[i].x + smoothedPoints[i + 1].x) / 2;
-      var yc = (smoothedPoints[i].y + smoothedPoints[i + 1].y) / 2;
-      pp += "Q " + smoothedPoints[i].x + ", " + smoothedPoints[i].y + ", " + xc + ", " + yc + " ";
-      //ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-   }
-   console.log(pp)
-   var p = new fabric.Path(pp,{
-});
-
-this.canvas.add(p);*/
-
-
-    /*var p = new fabric.Path('C 50 50 100 100 150 50 C 200 100 250 50 300 100',{
-  left: 200,
-  top: 60,
-  strokeWidth:2,
-  scaleY:3
-});
-
-this.canvas.add(p);*/
-
+    this.canvas.isDrawingMode = false;
     this.canvas.freeDrawingBrush.onMouseUp();
-
+    //console.log("generate")
   };
 
   FreeDrawer.prototype.isPathClosed = function (pointer) {
     var margin = 5;
     if(this.pointArray.length > 30){
-      //console.log("num points = " +this.pointArray.length)
       var left = this.pointArray[0].left - margin;
       var right = this.pointArray[0].left + margin;
       var top = this.pointArray[0].top + margin;
       var bottom = this.pointArray[0].top - margin;
-      //console.log("l = " +this.pointArray[0].left + ", t=" +this.pointArray[0].top + ", ll ="+pointer.x + "tt =" +pointer.y)
-      //if((this.pointArray[0].left === pointer.x) && (this.pointArray[0].top === pointer.y))
       if( ((pointer.x >= left) && (pointer.x <= right)) && ((pointer.y >= bottom) && (pointer.y <= top)) )
         return true;
     }
@@ -321,7 +278,7 @@ this.canvas.add(p);*/
 
 
 var Annotator = (function () {
-  function Annotator(canvas, objSelected) {
+  function Annotator(canvas, objSelected, mouseUp) {
     var inst=this;
     this.canvas = canvas;
     this.className= "Rectangle";
@@ -344,9 +301,16 @@ var Annotator = (function () {
     this.recentlyAddedBlocks = {};
     this.recentlyDeletedBlocks = {};
     this.freeDrawing = new FreeDrawer(this.canvas);
+    this.mouseUpCB = mouseUp;
+    this.smartAnnotation = false;
+    this.brushColor = "red";
+    this.brushWidth = 1;
+    this.brushType = "PencilBrush";
+    this.smartAnnotationData = [];
 
-    this.canvas.freeDrawingBrush.color = "red";
-    this.canvas.freeDrawingBrush.width = 1;
+    this.setBrushType(this.brushType);
+    this.setBrushColor(this.brushColor);
+    this.setBrushWidth(this.brushWidth);
 
     this.bindEvents();
   }
@@ -397,12 +361,19 @@ var Annotator = (function () {
   }
   Annotator.prototype.onMouseUp = function (o) {
     var inst = this;
-    inst.disable();
 
     if(this.type === "Blocks"){
       this.markBlocks();
       this.createHull();
     }
+    /*else if(this.type === "FreeDrawing"){
+      if(this.isDrawing && !this.freeDrawing.isClosedPathMode())
+        this.freeDrawing.generatePolygon();
+    }*/
+
+    inst.disable();
+
+    typeof this.mouseUpCB === 'function' && this.mouseUpCB();
   };
 
   Annotator.prototype.redo = function (o) {
@@ -547,7 +518,7 @@ var Annotator = (function () {
 
       if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
         var activeObj = inst.canvas.getActiveObject();
-        activeObj.stroke= 'red',
+        activeObj.stroke= 'red';
         activeObj.strokeWidth= 5;
         activeObj.fill = 'transparent';
 
@@ -587,7 +558,7 @@ var Annotator = (function () {
       }
       if(inst.type === "FreeDrawing"){
 
-        if(this.canvas.isDrawingMode){
+        if(this.canvas.isDrawingMode && this.freeDrawing.isClosedPathMode()){
           if(this.freeDrawing.isPathClosed(pointer)){
             this.freeDrawing.generatePolygon();
           }
@@ -693,6 +664,18 @@ var Annotator = (function () {
     }
   };
 
+  Annotator.prototype.enableSmartAnnotation = function(){
+    this.freeDrawing.disableClosedPathMode();
+    this.setBrushType("PencilBrush");
+    this.smartAnnotation = true;
+  }
+
+  Annotator.prototype.disableSmartAnnotation = function(){
+    this.freeDrawing.enableClosedPathMode();
+    this.setBrushType("PencilBrush");
+    this.smartAnnotation = false;
+  }
+
   Annotator.prototype.isEnable = function(){
     return this.isDrawing;
   }
@@ -736,6 +719,21 @@ var Annotator = (function () {
       this.canvas.isDrawingMode = true;
     else
       this.canvas.isDrawingMode = false;
+  }
+
+  Annotator.prototype.setBrushColor = function(brushColor){
+    this.brushColor = brushColor;
+    this.canvas.freeDrawingBrush.color = this.brushColor;
+  }
+
+  Annotator.prototype.setBrushWidth = function(brushWidth){
+    this.brushWidth = brushWidth;
+    this.canvas.freeDrawingBrush.width = this.brushWidth;
+  }
+
+  Annotator.prototype.setBrushType = function(brushType){
+    this.brushType = brushType;
+    this.canvas.freeDrawingBrush = new fabric[this.brushType](this.canvas);
   }
 
   Annotator.prototype.enablePanMode = function(){
@@ -788,8 +786,96 @@ var Annotator = (function () {
       this.showGrid();
   }
 
+  Annotator.prototype.setSmartAnnotationData = function(smartAnnotationData){
+    this.smartAnnotationData = smartAnnotationData;
+  }
+
+  Annotator.prototype.toJSON = function(){
+    var data = this.canvas.toJSON();
+    var imgScaleX = data["backgroundImage"]["scaleX"];
+    var imgScaleY = data["backgroundImage"]["scaleY"];
+    var objs = data["objects"];
+    var res = [];
+
+    if(this.smartAnnotation){
+      if(this.smartAnnotationData.length > 0){
+        res = this.smartAnnotationData;
+      }
+
+    }
+    else{
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color;
+
+      for(var i = 0; i < objs.length; i++){
+        angle = objs[i]["angle"];
+        type = objs[i]["type"];
+        if(type === "rect"){
+          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+          width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
+          height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
+
+          if((width != 0) && (height != 0))
+            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
+        }
+        else if(type === "ellipse"){
+          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+          rx = Math.round(((objs[i]["rx"] / imgScaleX)), 0);
+          ry = Math.round(((objs[i]["ry"] / imgScaleY)), 0);
+
+          if((rx != 0) && (ry != 0))
+            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
+        }
+        else if(type === "polygon"){
+          left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
+          top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+
+          points = objs[i]["points"];
+          var scaledPoints = [];
+          for(var j = 0; j < points.length; j++){
+            scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX)), 0), "y": Math.round(((points[j]["y"] / imgScaleY)), 0)});
+          }
+
+          res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
+        }
+      }
+    }
+    return res;
+  }
 
 
+  Annotator.prototype.getMask = function(){
+    var img = this.canvas.backgroundImage;
+    this.canvas.backgroundImage = null;
+    this.canvas.backgroundColor = "black";
+
+    var objects = this.canvas.getObjects();
+    var old = [];
+    var strokeColor;
+    for (var i = 0; i < objects.length; i++) {
+      strokeColor = objects[i].get("stroke");
+      old.push([objects[i].get("fill"), strokeColor]);
+      if(strokeColor === "white"){
+        objects[i].set("fill", "white");
+      }
+      else if(strokeColor !== "black"){
+        objects[i].set("fill", "grey");
+        objects[i].set("stroke", "grey");
+      }
+    }
+
+    var res = this.canvas.toDataURL({format: 'png'});
+
+    for (var i = 0; i < objects.length; i++) {
+      objects[i].set("fill", old[i][0]);
+      objects[i].set("stroke", old[i][1]);
+    }
+
+    this.canvas.backgroundImage = img;
+    this.canvas.renderAll();
+    return res;
+  }
 
   return Annotator;
 }());

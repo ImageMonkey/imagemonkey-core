@@ -60,6 +60,15 @@ type Image struct {
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
 
+type UnannotatedImage struct {
+    Id string `json:"uuid"`
+    Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
+    Provider string `json:"provider"`
+    Width int32 `json:"width"`
+    Height int32 `json:"height"`
+}
+
 type AnnotatedImage struct {
     ImageId string `json:"image_uuid"`
     AnnotationId string `json:"annotation_uuid"`
@@ -919,10 +928,10 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
     return nil
 }
 
-func getRandomUnannotatedImage() Image{
-    var image Image
+func getRandomUnannotatedImage() UnannotatedImage {
+    var unannotatedImage UnannotatedImage
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
-    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
+    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), width, height FROM image i 
                                JOIN image_provider p ON i.image_provider_id = p.id 
                                JOIN image_validation v ON v.image_id = i.id
                                JOIN label l ON v.label_id = l.id
@@ -950,7 +959,7 @@ func getRandomUnannotatedImage() Image{
     if(err != nil) {
         log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
         raven.CaptureError(err, nil)
-        return image
+        return unannotatedImage
     }
 
     defer rows.Close()
@@ -958,25 +967,25 @@ func getRandomUnannotatedImage() Image{
     var label1 string
     var label2 string
     if(rows.Next()){
-        image.Provider = "donation"
+        unannotatedImage.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &label1, &label2)
+        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height)
         if(err != nil){
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
-            return image
+            return unannotatedImage
         }
 
         if label2 == "" {
-            image.Label = label1
-            image.Sublabel = ""
+            unannotatedImage.Label = label1
+            unannotatedImage.Sublabel = ""
         } else {
-            image.Label = label2
-            image.Sublabel = label1
+            unannotatedImage.Label = label2
+            unannotatedImage.Sublabel = label1
         }
     }
 
-    return image
+    return unannotatedImage
 }
 
 func getRandomAnnotatedImage() (AnnotatedImage, error) {
