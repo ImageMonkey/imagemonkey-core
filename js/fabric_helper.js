@@ -266,6 +266,10 @@ var CanvasDrawer = (function () {
         }
     }
 
+    CanvasDrawer.prototype.clear = function(){
+        this.canvas.clear();
+    }
+
 
     return CanvasDrawer;
 }());

@@ -26,7 +26,9 @@
   </style>
 
   <script>
-  var canvas, detailedCanvas, annotator;
+  var canvas, annotator;
+  var detailedCanvas = null;
+
   function getUrlFromImageId(imageId){
     return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
   }
@@ -143,19 +145,39 @@
   }
 
   function pollUntilProcessed(uuid) {
-      var url = "{{ .playgroundBaseUrl }}/v1/grabcut/" + uuid;
-      $.getJSON(url, function (response) {
-        if(jQuery.isEmptyObject(response))
-          setTimeout(pollUntilProcessed(uuid), 1000);
-        else{
-          detailedCanvas.clearObjects();
-          var data = [];
-          data.push(response["result"]);
-          annotator.setSmartAnnotationData(data);
-          detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
-        }
-      });
-    };
+    var url = "{{ .playgroundBaseUrl }}/v1/grabcut/" + uuid;
+    $.getJSON(url, function (response) {
+      if(jQuery.isEmptyObject(response))
+        setTimeout(pollUntilProcessed(uuid), 1000);
+      else{
+        detailedCanvas.clearObjects();
+        var data = [];
+        data.push(response["result"]);
+        annotator.setSmartAnnotationData(data);
+        detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
+      }
+    });
+  }
+
+  function populateDetailedCanvas(){
+    if(detailedCanvas !== null)
+      detailedCanvas.clear();
+
+    var maxWidth = document.getElementById("smartAnnotationContainer").clientWidth - 50; //margin
+    var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+
+    var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
+    var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+
+
+    $("#smartAnnotationCanvasWrapper").attr("width", w);
+    $("#smartAnnotationCanvasWrapper").attr("height", h);
+    $("#smartAnnotationCanvasWrapper").attr("scaleFactor", scaleFactor);
+    detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
+    detailedCanvas.setCanvasBackgroundImage(canvas.backgroundImage, null);
+  }
 
   function dataURItoBlob(dataURI) {
     var byteString = atob(dataURI.split(',')[1]);
@@ -233,23 +255,21 @@
           if(enabled){
             annotator.enableSmartAnnotation();
 
-            var maxWidth = document.getElementById("smartAnnotationContainer").clientWidth/2;
-            var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
-            if(scaleFactor > 1.0)
-              scaleFactor = 1.0;
+            $("#spacer").remove();
+            $("#mainGrid").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
+                                      '<div class="" id="smartAnnotationCanvasWrapper">' +
+                                        '<canvas id="smartAnnotationCanvas"></canvas>' +
+                                      '</div>' +
+                                    '</div>');
 
-            var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
-            var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+            populateDetailedCanvas();
 
-
-            $("#smartAnnotationCanvasWrapper").attr("width", w);
-            $("#smartAnnotationCanvasWrapper").attr("height", h);
-            $("#smartAnnotationCanvasWrapper").attr("scaleFactor", scaleFactor);
-            detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
-            detailedCanvas.setCanvasBackgroundImage(canvas.backgroundImage, null);
           }
           else{
             annotator.disableSmartAnnotation();
+
+            $("#smartAnnotationContainer").remove();
+            $("#mainGrid").prepend('<div class="four wide column" id="spacer"></div>');
           }
 
           showHideSmartAnnotationControls(enabled);
@@ -407,6 +427,9 @@
                 canvas.absolutePan(new fabric.Point(0,0));
                 setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
                 changeControl(annotator);
+
+                if(isSmartAnnotationEnabled())
+                  populateDetailedCanvas();
               }
             });
           }
@@ -448,107 +471,118 @@ changeControl(annotator);
   </div>
 
 
-  <div class="ui stackable grid vertical stripe">
-    <div class="four wide center aligned column">
-      <div id="smartAnnotationContainer">
-        <div class="" id="smartAnnotationCanvasWrapper">
-            <canvas id="smartAnnotationCanvas"></canvas>
-        </div>
+  <div class="ui stackable grid vertical stripe" id="mainGrid">
+    <!--<div class="row">-->
+      <div class="four wide column" id="spacer">
       </div>
-    </div>
-    <div class="eight wide center aligned column">
-      <div class="row">
-        <div class="ui toggle checkbox" id="smartAnnotation">
-          <input type="checkbox">
-          <label>Smart Annotation</label>
+      <!--<div class="eight wide center aligned column" id="smartAnnotationContainer">
+          <div class="" id="smartAnnotationCanvasWrapper">
+              <canvas id="smartAnnotationCanvas"></canvas>
+          </div>
+      </div>-->
+      <div class="eight wide center aligned column">
+        <div class="row">
+          <div class="ui toggle checkbox" id="smartAnnotation">
+            <input type="checkbox">
+            <label>Smart Annotation</label>
+          </div>
+          <p></p>
+        </div>
+
+        <div class="ui compact icon menu" id="annotatorMenu">
+          <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
+            <i class="square outline icon"></i>
+          </a>
+          <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
+            <i class="circle thin icon"></i>
+          </a>
+          <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
+            <i class="ellipsis horizontal icon"></i>
+          </a>
+          <!--<a class="pencil popup icon item" id="freeDrawingMenuItem" data-content="Free Drawing">
+            <i class="pencil icon"></i>
+          </a>-->
+
+          <a hidden class="pencil popup icon item" id="smartAnnotationFgMenuItem" data-content="Foreground Selection">
+            <i class="pencil icon"></i>
+          </a>
+          <a hidden class="pencil popup icon item" id="smartAnnotationBgMenuItem" data-content="Background Selection">
+            <i class="pencil icon"></i>
+          </a>
+
+          <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
+            <i class="zoom icon"></i>
+          </a>
+          <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
+            <i class="zoom out icon"></i>
+          </a>
+          <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
+            <i class="maximize icon"></i>
+          </a>
+          <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
+            <i class="trash icon"></i>
+          </a>
+
+        </div>
+
+        <div id="annotationAreaContainer">
+          <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
         </div>
         <p></p>
-      </div>
+        <button class="positive ui button center aligned" id="doneButton">DONE</button>
 
-      <div class="ui compact icon menu" id="annotatorMenu">
-        <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
-          <i class="square outline icon"></i>
-        </a>
-        <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
-          <i class="circle thin icon"></i>
-        </a>
-        <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
-          <i class="ellipsis horizontal icon"></i>
-        </a>
-        <!--<a class="pencil popup icon item" id="freeDrawingMenuItem" data-content="Free Drawing">
-          <i class="pencil icon"></i>
-        </a>-->
-
-        <a hidden class="pencil popup icon item" id="smartAnnotationFgMenuItem" data-content="Foreground Selection">
-          <i class="pencil icon"></i>
-        </a>
-        <a hidden class="pencil popup icon item" id="smartAnnotationBgMenuItem" data-content="Background Selection">
-          <i class="pencil icon"></i>
-        </a>
-
-        <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
-          <i class="zoom icon"></i>
-        </a>
-        <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
-          <i class="zoom out icon"></i>
-        </a>
-        <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
-          <i class="maximize icon"></i>
-        </a>
-        <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
-          <i class="trash icon"></i>
-        </a>
-
-      </div>
-
-      <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
-      <p></p>
-      <button class="positive ui button center aligned" id="doneButton">DONE</button>
-
-      <div class="ui warning message" id="warningMsg">
-        <i class="close icon"></i>
-        <div class="header">
-          Please annotate the image first.
-        </div>
-      </div>
-
-      <div class="ui small modal" id="deleteObjectsPopup">
-        <div class="header">
-          Delete Object
-        </div>
-        <div class="content">
-          <p>Are you sure you want to delete the selected objects?</p>
-        </div>
-        <div class="actions">
-          <div class="ui negative button">
-            No
+        <div class="ui warning message" id="warningMsg">
+          <i class="close icon"></i>
+          <div class="header">
+            Please annotate the image first.
           </div>
-          <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
-            Yes
-            <i class="checkmark icon"></i>
+        </div>
+
+        <div class="ui small modal" id="deleteObjectsPopup">
+          <div class="header">
+            Delete Object
+          </div>
+          <div class="content">
+            <p>Are you sure you want to delete the selected objects?</p>
+          </div>
+          <div class="actions">
+            <div class="ui negative button">
+              No
+            </div>
+            <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
+              Yes
+              <i class="checkmark icon"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="ui small modal" id="discardChangesPopup">
+          <div class="header">
+            Discard Changes
+          </div>
+          <div class="content">
+            <p>Changing the annotation mode <b>removes</b> all annotations. Do you want to proceed?</p>
+          </div>
+          <div class="actions">
+            <div class="ui negative button">
+              No
+            </div>
+            <div class="ui positive right labeled icon button" id="discardChangesYesButton">
+              Yes
+              <i class="checkmark icon"></i>
+            </div>
           </div>
         </div>
       </div>
+    <!--</div>-->
+    <!--<div class="row">
+      <div class="eight wide column" id="smartAnnotationLeftContainer">
 
-      <div class="ui small modal" id="discardChangesPopup">
-        <div class="header">
-          Discard Changes
-        </div>
-        <div class="content">
-          <p>Changing the annotation mode <b>removes</b> all annotations. Do you want to proceed?</p>
-        </div>
-        <div class="actions">
-          <div class="ui negative button">
-            No
-          </div>
-          <div class="ui positive right labeled icon button" id="discardChangesYesButton">
-            Yes
-            <i class="checkmark icon"></i>
-          </div>
-        </div>
       </div>
+      <div class="eight wide column" id="smartAnnotationRightContainer">
 
-    </div>
+      </div>
+    </div>-->
   </div>
   {{ template "footer.html" .}}
 
