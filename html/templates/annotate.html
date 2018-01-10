@@ -28,6 +28,7 @@
   <script>
   var canvas, annotator;
   var detailedCanvas = null;
+  var numOfPendingRequests = 0;
 
   function getUrlFromImageId(imageId){
     return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
@@ -155,6 +156,12 @@
         data.push(response["result"]);
         annotator.setSmartAnnotationData(data);
         detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
+        
+        numOfPendingRequests -= 1;
+        if(numOfPendingRequests <= 0){
+          $("#smartAnnotationCanvasWrapper").dimmer("hide");
+          numOfPendingRequests = 0;
+        }
       }
     });
   }
@@ -170,7 +177,6 @@
 
     var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
     var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
-
 
     $("#smartAnnotationCanvasWrapper").attr("width", w);
     $("#smartAnnotationCanvasWrapper").attr("height", h);
@@ -190,6 +196,8 @@
   }
 
   function grabCutMe(){
+    numOfPendingRequests += 1;
+    $("#smartAnnotationCanvasWrapper").dimmer("show");
     var blob = dataURItoBlob(annotator.getMask());
     var formData = new FormData()
     formData.append('image', blob);
@@ -258,12 +266,15 @@
             $("#spacer").remove();
             $("#mainGrid").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
                                       '<div class="" id="smartAnnotationCanvasWrapper">' +
+                                        '<div class="ui dimmer">' +
+                                          '<div class="ui loader">' +
+                                          '</div>' +
+                                        '</div>' +
                                         '<canvas id="smartAnnotationCanvas"></canvas>' +
                                       '</div>' +
                                     '</div>');
 
             populateDetailedCanvas();
-
           }
           else{
             annotator.disableSmartAnnotation();
@@ -427,6 +438,7 @@
                 canvas.absolutePan(new fabric.Point(0,0));
                 setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
                 changeControl(annotator);
+                numOfPendingRequests = 0;
 
                 if(isSmartAnnotationEnabled())
                   populateDetailedCanvas();
@@ -531,7 +543,7 @@ changeControl(annotator);
         <p></p>
         <button class="positive ui button center aligned" id="doneButton">DONE</button>
 
-        <div class="ui warning message" id="warningMsg">
+        <div hidden class="ui warning message" id="warningMsg">
           <i class="close icon"></i>
           <div class="header">
             Please annotate the image first.

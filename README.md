@@ -124,3 +124,17 @@ mkdir -p /home/imagemonkey/unverified_donations
 * copy `conf/supervisor/imagemonkey-api.conf` to `/etc/supervisor/conf.d/imagemonkey-api.conf`
 * copy `conf/supervisor/imagemonkey-web.conf` to `/etc/supervisor/conf.d/imagemonkey-web.conf`
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
+
+
+### Datasync ###
+**on imagemonkey-playground instance**
+* install `rsync` with `apt-get install rsync`
+* create a new user `backupuser` with `adduser backupuser` (use a strong password)
+* change to user `backupuser` with `su backupuser` and create a new SSH key with `ssh-keygen -t ed25519 -a 100`
+* copy SSH public key to imagemonkey instance with: `ssh-copy-id -i ~/.ssh/your_generated_id.pub backupuser@imagemonkey-host`
+* give `backupuser` permissions to write to `/home/playground/donations` with: `chgrp backupuser /home/playground/donations && chmod g+rwx /home/playground/donations`
+* add a new cronjob for the user `backupuser` with: `crontab -u backupuser -e` and add the following line (runs rsync every 15min):
+
+```
+*/15 * * * * rsync -a backupuser@imagemonkey.io:/home/imagemonkey/donations/ /home/playground/donations/
+```

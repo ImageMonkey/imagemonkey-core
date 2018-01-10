@@ -27,7 +27,7 @@ func main() {
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
-	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8081", "Playground Base URL")
+	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8082", "Playground Base URL")
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
