@@ -17,9 +17,9 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=6"></script>
+  <script src="js/fabric_helper.js?v=7"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=3"></script>
+  <script src="js/annotate.js?v=4"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -186,7 +186,36 @@
     //detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
     detailedCanvas.setWidth(w);
     detailedCanvas.setHeight(h);
-    detailedCanvas.setCanvasBackgroundImage(canvas.backgroundImage, null);
+    detailedCanvas.setCanvasBackgroundImage(canvas.fabric().backgroundImage, null);
+  }
+
+  function populateCanvas(backgroundImageUrl, initAnnotator){
+    canvas.fabric().clear();
+
+    var maxWidth = document.getElementById("annotationAreaContainer").clientWidth - 50; //margin
+    var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+
+    var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
+    var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+
+    $("#annotationAreaContainer").attr("width", w);
+    $("#annotationAreaContainer").attr("height", h);
+    $("#annotationAreaContainer").attr("scaleFactor", scaleFactor);
+    canvas.setWidth(w);
+    canvas.setHeight(h);
+
+    if(initAnnotator){
+      canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
+        annotator.initHistory();
+        if(isSmartAnnotationEnabled())
+          populateDetailedCanvas();
+      });
+    } 
+    else{
+      canvas.setCanvasBackgroundImage(backgroundImageUrl, onCanvasBackgroundImageSet);
+    }
   }
 
   function dataURItoBlob(dataURI) {
@@ -252,7 +281,7 @@
   }
 
   function canvasHasObjects(){
-    if(canvas.getObjects().length > 0)
+    if(canvas.fabric().getObjects().length > 0)
       return true;
     return false;
   }
@@ -355,11 +384,11 @@
       });
 
       $("#zoomInMenuItem").click(function(e) {
-        canvas.setZoom(canvas.getZoom() * 1.1);
+        canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
       });
 
       $("#zoomOutMenuItem").click(function(e) {
-        canvas.setZoom(canvas.getZoom() / 1.1);
+        canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
       });
 
       $("#panMenuItem").click(function(e) {
@@ -396,7 +425,7 @@
 
       $("#discardChangesYesButton").click(function(e) {
         //remove all objects from canvas
-        var objects = canvas.getObjects();
+        var objects = canvas.fabric().getObjects();
         for (var i = 0, len = objects.length; i < len; i++) {
           objects[i].remove();
         }
@@ -442,10 +471,10 @@
                 $("#annotationArea").attr("origImageWidth", data.width);
                 $("#annotationArea").attr("origImageHeight", data.height);
                 setLabel(data.label, data.sublabel);
-                canvas.clear();
-                canvas.setZoom(1.0);
-                canvas.absolutePan(new fabric.Point(0,0));
-                setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid), onCanvasBackgroundImageSet);
+                canvas.fabric().clear();
+                canvas.fabric().setZoom(1.0);
+                canvas.fabric().absolutePan(new fabric.Point(0,0));
+                populateCanvas(getUrlFromImageId(data.uuid), false);
                 changeControl(annotator);
                 numOfPendingRequests = 0;
               }
@@ -461,17 +490,18 @@
       });
 
 
-canvas = new fabric.Canvas("annotationArea");
-annotator = new Annotator(canvas, onAnnotatorObjectSelected, onAnnotatorMouseUp);
+canvas = new CanvasDrawer("annotationArea");
+annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
 
 var randomImageId = {{ .randomImage.Id }};
 $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});
 $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
-setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImageId), function() {
+populateCanvas(getUrlFromImageId(randomImageId), true);
+/*canvas.setCanvasBackgroundImageUrl(getUrlFromImageId(randomImageId), function() {
   annotator.initHistory();
   if(isSmartAnnotationEnabled())
     populateDetailedCanvas();
-});
+});*/
 changeControl(annotator);
 });
 </script>

@@ -186,6 +186,10 @@ var CanvasDrawer = (function () {
         this.data = null;
     }
 
+    CanvasDrawer.prototype.fabric = function(){
+        return this.canvas;
+    }
+
     CanvasDrawer.prototype.setWidth = function(width){
         this.canvasWidth = width;
     }
