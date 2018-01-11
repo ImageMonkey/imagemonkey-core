@@ -186,6 +186,14 @@ var CanvasDrawer = (function () {
         this.data = null;
     }
 
+    CanvasDrawer.prototype.setWidth = function(width){
+        this.canvasWidth = width;
+    }
+
+    CanvasDrawer.prototype.setHeight = function(height){
+        this.canvasHeight = height;
+    }
+
     CanvasDrawer.prototype.makeClickable = function(callback){
         var inst = this;
         inst.canvas.on('mouse:over', function(o) {

@@ -169,6 +169,8 @@
   function populateDetailedCanvas(){
     if(detailedCanvas !== null)
       detailedCanvas.clear();
+    else
+      detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", 0, 0);
 
     var maxWidth = document.getElementById("smartAnnotationContainer").clientWidth - 50; //margin
     var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
@@ -181,7 +183,9 @@
     $("#smartAnnotationCanvasWrapper").attr("width", w);
     $("#smartAnnotationCanvasWrapper").attr("height", h);
     $("#smartAnnotationCanvasWrapper").attr("scaleFactor", scaleFactor);
-    detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
+    //detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
+    detailedCanvas.setWidth(w);
+    detailedCanvas.setHeight(h);
     detailedCanvas.setCanvasBackgroundImage(canvas.backgroundImage, null);
   }
 
@@ -251,6 +255,11 @@
     if(canvas.getObjects().length > 0)
       return true;
     return false;
+  }
+
+  function onCanvasBackgroundImageSet(){
+    if(isSmartAnnotationEnabled())
+      populateDetailedCanvas();
   }
 
   
@@ -436,12 +445,9 @@
                 canvas.clear();
                 canvas.setZoom(1.0);
                 canvas.absolutePan(new fabric.Point(0,0));
-                setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
+                setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid), onCanvasBackgroundImageSet);
                 changeControl(annotator);
                 numOfPendingRequests = 0;
-
-                if(isSmartAnnotationEnabled())
-                  populateDetailedCanvas();
               }
             });
           }
@@ -463,6 +469,8 @@ $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});
 $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
 setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImageId), function() {
   annotator.initHistory();
+  if(isSmartAnnotationEnabled())
+    populateDetailedCanvas();
 });
 changeControl(annotator);
 });
