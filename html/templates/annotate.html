@@ -497,11 +497,6 @@ var randomImageId = {{ .randomImage.Id }};
 $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});
 $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
 populateCanvas(getUrlFromImageId(randomImageId), true);
-/*canvas.setCanvasBackgroundImageUrl(getUrlFromImageId(randomImageId), function() {
-  annotator.initHistory();
-  if(isSmartAnnotationEnabled())
-    populateDetailedCanvas();
-});*/
 changeControl(annotator);
 });
 </script>
@@ -522,14 +517,8 @@ changeControl(annotator);
 
 
   <div class="ui stackable grid vertical stripe" id="mainGrid">
-    <!--<div class="row">-->
       <div class="four wide column" id="spacer">
       </div>
-      <!--<div class="eight wide center aligned column" id="smartAnnotationContainer">
-          <div class="" id="smartAnnotationCanvasWrapper">
-              <canvas id="smartAnnotationCanvas"></canvas>
-          </div>
-      </div>-->
       <div class="eight wide center aligned column">
         <div class="row">
           <div class="ui toggle checkbox" id="smartAnnotation">
@@ -624,15 +613,6 @@ changeControl(annotator);
           </div>
         </div>
       </div>
-    <!--</div>-->
-    <!--<div class="row">
-      <div class="eight wide column" id="smartAnnotationLeftContainer">
-
-      </div>
-      <div class="eight wide column" id="smartAnnotationRightContainer">
-
-      </div>
-    </div>-->
   </div>
   {{ template "footer.html" .}}
 
