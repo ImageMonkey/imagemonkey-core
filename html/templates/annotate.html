@@ -438,6 +438,7 @@
       });
 
       $('#showSmartAnnotationHelpDlg').click(function(){
+        $('#smartAnnotationHelpDlgGif').attr('src', 'img/smart_annotation.gif');
         $('#smartAnnotationHelpDlg').modal('setting', { detachable:false }).modal('show');
       });
 
@@ -580,10 +581,11 @@ changeControl(annotator);
           <i class="close icon"></i>
           <div class="center aligned header">
             What's this?
+          </div>
+          <div class="scrolling content">
+            Smart Annotation allows you to easily annotate complex objects with just a few mousestrokes. Start the annotation process by drawing a bounding box around the main object. Fine tune the annotation by marking incorrectly detect foreground and background areas.<br><br>
 
-            Smart Annotation allows you to easily annotate complex objects with just a few mousestrokes. Start the annotation process by drawing a bounding box around the main object. Fine tune the annotation by marking incorrectly detect foreground and background areas.
-
-
+            <img class="ui huge bordered image" id="smartAnnotationHelpDlgGif">
 
             <!--<ul class="ui list">
               <li>works best when object is clearly separated from background</li>
