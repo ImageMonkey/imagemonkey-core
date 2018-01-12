@@ -166,8 +166,8 @@
     });
   }
 
-  function populateDetailedCanvas(){
-    if(detailedCanvas !== null)
+  function populateDetailedCanvas(force = false){
+    if((detailedCanvas !== null) && !force)
       detailedCanvas.clear();
     else
       detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", 0, 0);
@@ -214,7 +214,7 @@
       });
     } 
     else{
-      canvas.setCanvasBackgroundImage(backgroundImageUrl, onCanvasBackgroundImageSet);
+      canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, onCanvasBackgroundImageSet);
     }
   }
 
@@ -291,6 +291,10 @@
       populateDetailedCanvas();
   }
 
+  function isLoadingIndicatorVisible(){
+    return $("#smartAnnotationDimmer").is(":visible"); 
+  }
+
   
 
   $(document).ready(function(){
@@ -305,7 +309,7 @@
             $("#mainGrid").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
                                       '<br><br><br>' +
                                       '<div class="" id="smartAnnotationCanvasWrapper">' +
-                                        '<div class="ui dimmer">' +
+                                        '<div class="ui dimmer" id="smartAnnotationDimmer">' +
                                           '<div class="ui loader">' +
                                           '</div>' +
                                         '</div>' +
@@ -313,7 +317,7 @@
                                       '</div>' +
                                     '</div>');
 
-            populateDetailedCanvas();
+            populateDetailedCanvas(true);
           }
           else{
             annotator.disableSmartAnnotation();
@@ -433,12 +437,23 @@
         $("#smartAnnotation").checkbox("toggle");
       });
 
+      $('#showSmartAnnotationHelpDlg').click(function(){
+        $('#smartAnnotationHelpDlg').modal('setting', { detachable:false }).modal('show');
+      });
+
 
 
       $('#doneButton').click(function(e) {
         var res = annotator.toJSON();
 
         if(res.length === 0){ //at least one annotation needs to be there
+          $('#warningMsgText').text('Please annotate the image first.');
+          $('#warningMsg').show(200).delay(1500).hide(200);
+          return;
+        }
+
+        if(isLoadingIndicatorVisible()){ //in case smart annotation is currently running
+          $('#warningMsgText').text('Smart Annotation is currently in progress.');
           $('#warningMsg').show(200).delay(1500).hide(200);
           return;
         }
@@ -448,6 +463,8 @@
         postData["annotations"] = res;
         postData["label"] = $('#label').attr('label');
         postData["sublabel"] = $('#label').attr('sublabel');
+
+        console.log(res);
 
         var headers = {}
         if(browserFingerprint !== null)
@@ -482,12 +499,10 @@
             });
           }
         });
+      });
 
-
-        new Fingerprint2().get(function(result, components){
-          browserFingerprint = result;
-        });
-
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
       });
 
 
@@ -526,6 +541,7 @@ changeControl(annotator);
             <input type="checkbox">
             <label>Smart Annotation</label>
           </div>
+          <a href="#" id="showSmartAnnotationHelpDlg">[?]</a>
           <p></p>
         </div>
 
@@ -558,7 +574,28 @@ changeControl(annotator);
           <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
             <i class="trash icon"></i>
           </a>
+        </div>
 
+        <div class="ui longer modal" id="smartAnnotationHelpDlg">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            What's this?
+
+            Smart Annotation allows you to easily annotate complex objects with just a few mousestrokes. Start the annotation process by drawing a bounding box around the main object. Fine tune the annotation by marking incorrectly detect foreground and background areas.
+
+
+
+            <!--<ul class="ui list">
+              <li>works best when object is clearly separated from background</li>
+              <li></li>
+            </ul>-->
+          </div>
+          <p><p>
+          <div class="actions">
+            <div class="ui right labeled cancel button">
+              Close
+            </div>
+          </div>
         </div>
 
         <div id="annotationAreaContainer">
@@ -569,8 +606,7 @@ changeControl(annotator);
 
         <div hidden class="ui warning message" id="warningMsg">
           <i class="close icon"></i>
-          <div class="header">
-            Please annotate the image first.
+          <div class="header" id="warningMsgText">
           </div>
         </div>
 

@@ -179,6 +179,10 @@ func annotationsValid(annotations []json.RawMessage) error{
         }
 	}
 
+	if len(annotations) == 0 {
+		return errors.New("annotations missing")
+	}
+
 	return nil
 }
 
