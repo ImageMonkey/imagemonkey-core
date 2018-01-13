@@ -19,7 +19,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=7"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=4"></script>
+  <script src="js/annotate.js?v=5"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -145,6 +145,19 @@
     });
   }
 
+  function showHideControls(show){
+    if(show){
+      $("#doneButton").show();
+      $("#annotatorMenu").show();
+      $("#smartAnnotation").show();
+    }
+    else{
+      $("#doneButton").hide();
+      $("#annotatorMenu").hide();
+      $("#smartAnnotation").hide();
+    }
+  }
+
   function pollUntilProcessed(uuid) {
     var url = "{{ .playgroundBaseUrl }}/v1/grabcut/" + uuid;
     $.getJSON(url, function (response) {
@@ -190,6 +203,12 @@
     detailedCanvas.setWidth(w);
     detailedCanvas.setHeight(h);
     detailedCanvas.setCanvasBackgroundImage(canvas.fabric().backgroundImage, null);
+  }
+
+  function clearDetailedCanvas(){
+    if(detailedCanvas !== null){
+      detailedCanvas.clear();
+    }
   }
 
   function populateCanvas(backgroundImageUrl, initAnnotator){
@@ -474,6 +493,9 @@
 
         headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
+        showHideControls(false);
+        clearDetailedCanvas();
+
         e.preventDefault();
         var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
         $.ajax({
@@ -497,6 +519,7 @@
                 populateCanvas(getUrlFromImageId(data.uuid), false);
                 changeControl(annotator);
                 numOfPendingRequests = 0;
+                showHideControls(true);
               }
             });
           }
@@ -515,7 +538,8 @@ var randomImageId = {{ .randomImage.Id }};
 $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});
 $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
 populateCanvas(getUrlFromImageId(randomImageId), true);
-changeControl(annotator);
+  changeControl(annotator);
+  showHideControls(true);
 });
 </script>
 </head>
@@ -539,7 +563,7 @@ changeControl(annotator);
       </div>
       <div class="eight wide center aligned column">
         <div class="row">
-          <div class="ui toggle checkbox" id="smartAnnotation">
+          <div hidden class="ui toggle checkbox" id="smartAnnotation">
             <input type="checkbox">
             <label>Smart Annotation</label>
           </div>
@@ -547,7 +571,7 @@ changeControl(annotator);
           <p></p>
         </div>
 
-        <div class="ui compact icon menu" id="annotatorMenu">
+        <div hidden class="ui compact icon menu" id="annotatorMenu">
           <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
             <i class="square outline icon"></i>
           </a>
@@ -605,7 +629,7 @@ changeControl(annotator);
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
         </div>
         <p></p>
-        <button class="positive ui button center aligned" id="doneButton">DONE</button>
+        <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
 
         <div hidden class="ui warning message" id="warningMsg">
           <i class="close icon"></i>

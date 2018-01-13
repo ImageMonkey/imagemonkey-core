@@ -848,6 +848,8 @@ var Annotator = (function () {
   Annotator.prototype.getMask = function(){
     var img = this.canvas.backgroundImage;
     this.canvas.backgroundImage = null;
+
+    var oldBgColor = this.canvas.backgroundColor;
     this.canvas.backgroundColor = "black";
 
     var objects = this.canvas.getObjects();
@@ -872,6 +874,7 @@ var Annotator = (function () {
       objects[i].set("stroke", old[i][1]);
     }
 
+    this.canvas.backgroundColor = oldBgColor;
     this.canvas.backgroundImage = img;
     this.canvas.renderAll();
     return res;
