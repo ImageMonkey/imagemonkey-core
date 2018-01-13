@@ -152,10 +152,13 @@
         setTimeout(pollUntilProcessed(uuid), 1000);
       else{
         detailedCanvas.clearObjects();
-        var data = [];
-        data.push(response["result"]);
-        annotator.setSmartAnnotationData(data);
-        detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
+
+        if(response["result"]["points"].length > 0){
+          var data = [];
+          data.push(response["result"]);
+          annotator.setSmartAnnotationData(data);
+          detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
+        }
         
         numOfPendingRequests -= 1;
         if(numOfPendingRequests <= 0){
@@ -464,8 +467,6 @@
         postData["annotations"] = res;
         postData["label"] = $('#label').attr('label');
         postData["sublabel"] = $('#label').attr('sublabel');
-
-        console.log(res);
 
         var headers = {}
         if(browserFingerprint !== null)
