@@ -601,6 +601,14 @@ func main(){
 
 	router.GET("/v1/export", func(c *gin.Context) {
 		params := c.Request.URL.Query()
+
+		annotationsOnly := false
+		if temp, ok := params["annotations_only"]; ok {
+			if temp[0] == "true" {
+				annotationsOnly = true
+			}
+		}
+
 		if temp, ok := params["query"]; ok {
 			if temp[0] == "" {
 				c.JSON(422, gin.H{"error": "no query specified"})
@@ -621,7 +629,7 @@ func main(){
 				return
 			}
 
-			jsonData, err := export(parseResult)
+			jsonData, err := export(parseResult, annotationsOnly)
 			if(err == nil){
 				c.JSON(http.StatusOK, jsonData)
 				return

@@ -47,6 +47,8 @@
     var selectDataMode = null;
     var detailedCanvas = null;
 
+    $('.ui.checkbox').checkbox();
+
     var availableLabels = [];
     {{ range $val := .labelAccessors }}
     availableLabels.push({{ $val }});
@@ -81,6 +83,10 @@
         return "export";
       }
       return "";
+    }
+
+    function isAnnotationsOnlyChecked(){
+      return $("#annotationsOnlyCheckbox").checkbox("is checked");
     }
 
     function onCanvasClicked(data){
@@ -199,71 +205,71 @@
       sampleExportQueries.push("dog.size = 'big' | dog.breed = 'Labrador'");
 
 
-      function loadData(query){
+      function loadData(query, annotationsOnly){
         $("#dataStructureContainer").hide();
         $("#canvasContainer").hide();
         $("#loadingIndicator").show();
         clearCanvasContainer();
+
         $.ajax({
           url: '{{ .apiBaseUrl }}/v1/export',
-        //url: 'https://api.imagemonkey.io/v1/export',
-        dataType: 'json',
-        data: {query: encodeURIComponent(query)},
-        success: function(d){
-          clearCanvasContainer();
+          dataType: 'json',
+          data: {query: encodeURIComponent(query), annotations_only: ((annotationsOnly) ? true : false)},
+          success: function(d){
+            clearCanvasContainer();
 
-          var selectDataMode = getSelectDataType();
-          if(selectDataMode === "export"){
-            $("#canvasContainer").hide();
-            infiniteScroll.deactivate();
-
-
-            var jsonStr = JSON.stringify(d, null, 2);
-            $('#dataStructure').text(jsonStr);
-            $('#dataStructureContainer').show();
-
-            $("#loadingIndicator").hide();
-          }
-          else if(selectDataMode === "browse"){
-            $("#dataStructureContainer").hide();
-            $("#canvasContainer").show();
+            var selectDataMode = getSelectDataType();
+            if(selectDataMode === "export"){
+              $("#canvasContainer").hide();
+              infiniteScroll.deactivate();
 
 
-            data = d;
-            sizes = [];
+              var jsonStr = JSON.stringify(d, null, 2);
+              $('#dataStructure').text(jsonStr);
+              $('#dataStructureContainer').show();
 
-            for(var i = 0; i < data.length; i++){
-              sizes.push({"width": data[i]["width"], "height": data[i]["height"]});
+              $("#loadingIndicator").hide();
+            }
+            else if(selectDataMode === "browse"){
+              $("#dataStructureContainer").hide();
+              $("#canvasContainer").show();
+
+
+              data = d;
+              sizes = [];
+
+              for(var i = 0; i < data.length; i++){
+                sizes.push({"width": data[i]["width"], "height": data[i]["height"]});
+              }
+
+              var justifiedLayout = require('justified-layout');
+              geometry = justifiedLayout(sizes, {
+                "fullWidthBreakoutRowCadence": false,
+                  //"fullWidthBreakoutRowCadence": 3,
+                  "containerWidth": document.getElementById("canvasContainer").clientWidth
+                }
+                );
+
+              loadNext();
+              infiniteScroll.activate();
+              $("#loadingIndicator").hide();
             }
 
-            var justifiedLayout = require('justified-layout');
-            geometry = justifiedLayout(sizes, {
-              "fullWidthBreakoutRowCadence": false,
-                //"fullWidthBreakoutRowCadence": 3,
-                "containerWidth": document.getElementById("canvasContainer").clientWidth
-              }
-              );
-
-            loadNext();
-            infiniteScroll.activate();
-            $("#loadingIndicator").hide();
+            
+          },
+          error: function(xhr, status, error) {
+            var err = JSON.parse(xhr.responseText)["error"];
+            var obj = $('#browseSyntaxErrorMessage').text(err);
+            obj.html(obj.html().replace(/\n/g,'<br/>'));
+            $('#browseSyntaxErrorMessage').show(200);
+            $('#loadingIndicator').hide();
+            clearCanvasContainer();
           }
-
-          
-        },
-        error: function(xhr, status, error) {
-          var err = JSON.parse(xhr.responseText)["error"];
-          var obj = $('#browseSyntaxErrorMessage').text(err);
-          obj.html(obj.html().replace(/\n/g,'<br/>'));
-          $('#browseSyntaxErrorMessage').show(200);
-          $('#loadingIndicator').hide();
-          clearCanvasContainer();
-        }
       });
 }
 
 $("#goButton").click(function(e) {
-  loadData($("#query").val());
+  loadData($("#query").val(), isAnnotationsOnlyChecked());
 });
 
 });
@@ -297,8 +303,16 @@ $("#goButton").click(function(e) {
           <div class="field">
            <p>Select the data you are interested in</p>
            <input placeholder="Query..." type="text" id="query">
+          </div>
 
-         </div>
+          <div class="inline fields">
+            <div class="field">
+              <div class="ui checkbox" id="annotationsOnlyCheckbox">
+                <input type="checkbox">
+                <label>Annotations only</label>
+              </div>
+            </div>
+          </div>
 
          <div class="inline fields" id="selectDataType">
            <div class="field">
@@ -335,8 +349,8 @@ $("#goButton").click(function(e) {
   <div hidden class="justified" id="canvasContainer">
   </div>
 
-  <div class="eight wide column">
-    <div hidden class="ui eight wide column raised segment" id="dataStructureContainer">
+  <div class="row">
+    <div hidden class="eight wide column raised segment" id="dataStructureContainer">
       <pre class="prettyprint" id="dataStructure">
       </pre>
     </div>

@@ -391,7 +391,13 @@ func validateImages(clientFingerprint string, imageValidationBatch ImageValidati
     return tx.Commit()
 }
 
-func export(parseResult ParseResult) ([]ExportedImage, error){
+func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, error){
+    joinType := "FULL OUTER JOIN"
+    if annotationsOnly {
+        joinType = "JOIN"
+    }
+
+
     q := fmt.Sprintf(`SELECT i.key, CASE WHEN json_agg(q3.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q3.annotations)::jsonb END as annotations, 
                       q3.validations, i.width, i.height
                       FROM image i 
@@ -417,7 +423,7 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
                             WHERE (%s)
                           ) q
                           
-                          FULL OUTER JOIN (
+                          %s (
                             SELECT i.id as image_id, json_agg(json_build_object('label', accessor, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
                             FROM image i 
                             JOIN image_validation v ON i.id = v.image_id
@@ -431,7 +437,7 @@ func export(parseResult ParseResult) ([]ExportedImage, error){
                      ON i.id = q3.image_id
                       
                      WHERE i.unlocked = true
-                     GROUP BY i.key, q3.validations, i.width, i.height`, parseResult.query, parseResult.query, parseResult.query)
+                     GROUP BY i.key, q3.validations, i.width, i.height`, parseResult.query, parseResult.query, joinType, parseResult.query)
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
