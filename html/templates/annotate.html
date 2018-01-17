@@ -19,7 +19,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=7"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=5"></script>
+  <script src="js/annotate.js?v=6"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -150,11 +150,13 @@
       $("#doneButton").show();
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
+      $("#showSmartAnnotationHelpDlg").show();
     }
     else{
       $("#doneButton").hide();
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
+      $("#showSmartAnnotationHelpDlg").hide();
     }
   }
 
@@ -298,7 +300,7 @@
   }
 
   function onAnnotatorMouseUp(){
-    if(isSmartAnnotationEnabled())
+    if(isSmartAnnotationEnabled() && !annotator.isPanModeEnabled())
       grabCutMe();
   }
 
@@ -420,6 +422,7 @@
 
       $("#panMenuItem").click(function(e) {
         annotator.enablePanMode();
+        annotator.setShape("");
         changeMenuItem("PanMode");
       });
 
@@ -438,6 +441,7 @@
 
       $("#smartAnnotationFgMenuItem").click(function(e) {
         changeMenuItem("ForegroundSelection");
+        annotator.disablePanMode();
         annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
         annotator.setBrushWidth(10);
         annotator.setShape("FreeDrawing");
@@ -445,6 +449,7 @@
 
       $("#smartAnnotationBgMenuItem").click(function(e) {
         changeMenuItem("BackgroundSelection");
+        annotator.disablePanMode();
         annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
         annotator.setBrushWidth(10);
         annotator.setShape("FreeDrawing");
@@ -495,6 +500,7 @@
 
         showHideControls(false);
         clearDetailedCanvas();
+        canvas.clear();
 
         e.preventDefault();
         var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");

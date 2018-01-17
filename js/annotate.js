@@ -578,6 +578,15 @@ var Annotator = (function () {
     }
   };
 
+  Annotator.prototype.getAbsoluteCanvasPosition = function() {
+    var p = {x: this.canvas.width/2, y: this.canvas.height};
+    var invertedMatrix = fabric.util.invertTransform(this.canvas.viewportTransform);
+    var transformedP = fabric.util.transformPoint(p, invertedMatrix);
+    transformedP.x = transformedP.x - this.canvas.width/2;
+    transformedP.y = transformedP.y - this.canvas.height;
+    return transformedP;
+  }
+
   Annotator.prototype.reset = function () {
     this.canvas.clear();
     this.canvas.setZoom(1.0);
@@ -752,6 +761,10 @@ var Annotator = (function () {
     });
   }
 
+  Annotator.prototype.isPanModeEnabled = function(){
+    return this.isPanMode;
+  }
+
   Annotator.prototype.showGrid = function(){
     this.gridVisible = true;
 
@@ -852,6 +865,18 @@ var Annotator = (function () {
     var oldBgColor = this.canvas.backgroundColor;
     this.canvas.backgroundColor = "black";
 
+    //remember current canvas pos 
+    var oldPos = this.getAbsoluteCanvasPosition();
+
+    //remember current canvas zoom
+    var oldZoom = this.canvas.getZoom();
+
+    //set canvas pos to (0,0)
+    this.canvas.absolutePan(new fabric.Point(0,0));
+
+    //set canvas zoom to 1.0
+    this.canvas.setZoom(1.0);
+
     var objects = this.canvas.getObjects();
     var old = [];
     var strokeColor;
@@ -873,6 +898,12 @@ var Annotator = (function () {
       objects[i].set("fill", old[i][0]);
       objects[i].set("stroke", old[i][1]);
     }
+
+    //restore old canvas pos
+    this.canvas.absolutePan(oldPos);
+
+    //restore old zoom
+    this.canvas.setZoom(oldZoom);
 
     this.canvas.backgroundColor = oldBgColor;
     this.canvas.backgroundImage = img;
