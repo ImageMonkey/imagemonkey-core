@@ -834,8 +834,8 @@ var Annotator = (function () {
         else if(type === "ellipse"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-          rx = Math.round(((objs[i]["rx"] / imgScaleX)), 0);
-          ry = Math.round(((objs[i]["ry"] / imgScaleY)), 0);
+          rx = Math.round(((objs[i]["rx"] / imgScaleX) * objs[i]["scaleX"]), 0);
+          ry = Math.round(((objs[i]["ry"] / imgScaleY) * objs[i]["scaleY"]), 0);
 
           if((rx != 0) && (ry != 0))
             res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
@@ -847,7 +847,7 @@ var Annotator = (function () {
           points = objs[i]["points"];
           var scaledPoints = [];
           for(var j = 0; j < points.length; j++){
-            scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX)), 0), "y": Math.round(((points[j]["y"] / imgScaleY)), 0)});
+            scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX) * objs[i]["scaleX"]), 0), "y": Math.round(((points[j]["y"] / imgScaleY) * objs[i]["scaleY"]), 0)});
           }
 
           res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
