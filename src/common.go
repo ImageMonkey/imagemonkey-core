@@ -49,9 +49,33 @@ type MetaLabelMapEntry struct {
     Name string `json:"name"`
 }
 
+type LabelMapQuizExampleEntry struct {
+    Filename string `json:"filename"`
+    Attribution string `json:"attribution"`
+}
+
+type LabelMapQuizAnswerEntry struct {
+    Name string `json:"name"`
+    Examples []LabelMapQuizExampleEntry `json:"examples"`
+}
+
+
+type LabelMapQuizEntry struct {
+    Question string `json:"question"`
+    Accessors []string `json:accessors"`
+    Answers []LabelMapQuizAnswerEntry `json:answers"`
+    AllowUnknown bool `json:allow_unknown"`
+    AllowOther bool `json:allow_other"`
+    BrowseByExample bool `json:browse_by_example"`
+    Multiselect bool `json:multiselect"`
+    ControlType string `json:control_type"`
+}
+
 type LabelMapEntry struct {
     Description string  `json:"description"`
     LabelMapEntries map[string]LabelMapEntry  `json:"has"`
+    Accessors []string `json:accessors"`
+    Quiz []LabelMapQuizEntry `json:quiz"`
 }
 
 type LabelMap struct {
@@ -66,6 +90,12 @@ type LabelValidationEntry struct {
 
 type BlogSubscribeRequest struct {
     Email string `json:"email"`
+}
+
+type ImageInfo struct {
+    Hash uint64
+    Width int32
+    Height int32
 }
 
 
@@ -98,6 +128,27 @@ func hashImage(file io.Reader) (uint64, error){
 
     return imghash.Average(img), nil
 }
+
+func getImageInfo(file io.Reader) (ImageInfo, error){
+    var imageInfo ImageInfo
+    imageInfo.Hash = 0
+    imageInfo.Width = 0
+    imageInfo.Height = 0
+
+    img, _, err := image.Decode(file)
+    if err != nil {
+        return imageInfo, err
+    }
+
+    bounds := img.Bounds()
+
+    imageInfo.Hash = imghash.Average(img)
+    imageInfo.Width = int32(bounds.Dx())
+    imageInfo.Height = int32(bounds.Dy())
+
+    return imageInfo, nil
+}
+
 
 
 
@@ -205,6 +256,15 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     return labelMap.LabelMapEntries, words, nil
 }
 
+
+func GetSampleExportQueries() []string {
+    var queries []string
+    queries = append(queries, "dog | cat")
+    queries = append(queries, "dog.has = 'mouth' | cat")
+    queries = append(queries, "dog.size = 'big' | dog.size = 'small'")
+
+    return queries
+}
 
 type RegisteredAppIdentifiersInterface interface {
     Load() error

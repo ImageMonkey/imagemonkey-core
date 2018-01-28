@@ -28,7 +28,8 @@
 
   <script type="text/javascript">
     var currentControlsType = null;
-    var currentSelectedColorTag = null;
+    var currentSelectedColorTags = [];
+    var multiselect = false;
 
     function showHideControls(show){
       if(show){
@@ -56,19 +57,19 @@
       $('#canvas').attr('annotationDataId', annotationDataId);
     }
 
-    function getSelectedLabelId(){
+    function getSelectedLabelIds(){
       var labelId;
       var labelIdStr;
       if(currentControlsType === "radio"){
         labelIdStr = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
-        labelId = parseInt(labelIdStr, 10);
+        labelId = [parseInt(labelIdStr, 10)];
       }
       else if(currentControlsType === "dropdown"){
         labelIdStr = $('#labelDropdown' ).dropdown('get value').toString();
-        labelId = parseInt(labelIdStr, 10);
+        labelId = [parseInt(labelIdStr, 10)];
       }
       else if(currentControlsType === "color tags"){
-        labelId = currentSelectedColorTag;
+        labelId = currentSelectedColorTags;
       }
 
       return labelId;
@@ -137,17 +138,68 @@
       currentControlsType = controlsType;
     }
 
+    function showHideBrowseByExample(browseByExample){
+      if(browseByExample){
+        $("#browseByExampleContainer").show();
+      }
+      else{
+        $("#browseByExampleContainer").hide();
+      }
+    }
+
+    function showHideMultiSelectInfo(){
+      if(multiselect){
+        $("#multiSelectInfo").show();
+      }
+      else{
+        $("#multiSelectInfo").hide();
+      }
+    }
+
     var colorTagSelected = function(e){
       var selected = $(e).attr("labelId");
-      currentSelectedColorTag = parseInt(selected, 10); 
+      var currentSelectedColorTag = parseInt(selected, 10); 
 
-      $('#colorTags').children().each(function (){
-        if($(this).attr("labelId") !== $(e).attr("labelId"))
-          $(this).removeClass('big');
-        else{
-          $(this).addClass('big');
+      //check if we already have 'don't know' or 'other' selected;
+      //if so, clear all selected
+      var clearMe = false;
+      for(var j = 0; j < currentSelectedColorTags.length; j++){
+        if(currentSelectedColorTags[j] < 0){
+          clearMe = true;
+          break;
         }
-      })
+      }
+
+
+      //clear other labels when not in multiselect mode 
+      //or when 'don't know' or 'other' is selected 
+      if(!multiselect || (currentSelectedColorTag < 0) || clearMe){
+        currentSelectedColorTags = [];
+        $('#colorTags').children().each(function (){
+          if($(this).attr("labelId") !== $(e).attr("labelId"))
+            $(this).removeClass('big');
+          else{
+            $(this).addClass('big');
+          }
+        })
+        currentSelectedColorTags.push(currentSelectedColorTag);
+      }
+      else{
+        var addMe = true;
+        for(var i = 0; i < currentSelectedColorTags.length; i++){
+          if(currentSelectedColorTag === currentSelectedColorTags[i]){
+            $(e).removeClass('big');
+            currentSelectedColorTags.splice(i, 1);
+            addMe = false;
+            break;
+          }
+        }
+
+        if(addMe){
+          $(e).addClass('big');
+          currentSelectedColorTags.push(currentSelectedColorTag);
+        }
+      }
   
       if(currentSelectedColorTag === -2){
         $("#answersOtherContainer").show();
@@ -156,24 +208,34 @@
         $("#answersOtherContainer").hide();
     } 
 
-    var addAnswers = function(answers, controlsType){
-      var allowOther = false;
+    var addAnswers = function(allowOther, allowUnknown, answers, controlsType){
       if(controlsType === "radio"){
         for(var i = 0; i < answers.length; i++){
           var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
           $('#answersRadioButtonGroup').append($(d));
-          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
-            allowOther = true;
-          }
-        }       
+        }
+        if(allowOther){
+          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="-2"><label>other</label></div></div>';
+          $('#answersRadioButtonGroup').append($(d));
+        }
+        if(allowUnknown){
+          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="-1"><label>don\'t know</label></div></div>';
+          $('#answersRadioButtonGroup').append($(d));
+        }
+
       }
       else if(controlsType === "dropdown"){
         for(var i = 0; i < answers.length; i++){
           var d = '<div class="item" data-value="' + answers[i]["id"] + '">' + answers[i]["label"] + '</div>';
           $('#labelMenuItems').append($(d));
-          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
-            allowOther = true;
-          }
+        }
+        if(allowOther){
+          var d = '<div class="item" data-value="-2">other</div>';
+          $('#labelMenuItems').append($(d));
+        }
+        if(allowUnknown){
+          var d = '<div class="item" data-value="-1">don\'t know</div>';
+          $('#labelMenuItems').append($(d));
         }
       }
       else if(controlsType === "color tags"){
@@ -181,14 +243,20 @@
           var color = answers[i]["label"];
           var isBasic = false;
 
-          if((answers[i]["id"] < 0) || (answers[i]["label"] === "white"))
+          if(answers[i]["label"] === "white")
             isBasic = true;
 
           var d = '<a class="ui ' + ((isBasic) ? "basic " : " ") +  answers[i]["label"] + ' label" labelId="' + answers[i]["id"] + '" onclick="colorTagSelected(this)">' + answers[i]["label"] + '</a>';
           $('#colorTags').append($(d));
-          if(answers[i]["id"] === -2 ){ //id -2 has a special meaning
-            allowOther = true;
-          }
+        }
+
+        if(allowOther){
+          var d = '<a class="ui basic label" labelId="-2" onclick="colorTagSelected(this)">other</a>';
+          $('#colorTags').append($(d));
+        }
+        if(allowUnknown){
+          var d = '<a class="ui basic label" labelId="-1" onclick="colorTagSelected(this)">don\'t know</a>';
+          $('#colorTags').append($(d));
         }
       }
 
@@ -201,18 +269,35 @@
 
     function populate(canvas, data) {
       showControl(data["question"]["recommended_control"]);
+
+      multiselect = data["metainfo"]["multiselect"];
+      showHideMultiSelectInfo();
+
+      $("#labelDropdown").dropdown('restore defaults');
+      resetExamples();
+      if(data["metainfo"]["browse_by_example"]){
+          showHideBrowseByExample(true);
+          populateExamples(data["question"]["question"], ('donations/' + data["image"]["uuid"]), data["answers"], data["metainfo"]);
+      }
+      else{
+        showHideBrowseByExample(false);
+      }
+
       setIds(data["image"]["uuid"], data["annotation"]["uuid"], data["annotation"]["annotation"]["id"]);
       removeAllAnswers(data["question"]["recommended_control"]);
-      addAnswers(data["answers"], data["question"]["recommended_control"]);
+      addAnswers(data["metainfo"]["allow_other"], data["metainfo"]["allow_unknown"], data["answers"], data["question"]["recommended_control"]);
       setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
       $("#question").text(data["question"]["question"]);
+    }
+
+    function onColorChanged(hexColor){
+      console.log("hex color = " +hexColor)
     }
 
 
     $(document).ready(function(){
       $('#labelDropdown').dropdown({ 
         onChange: function(changedValue){ 
-          console.log("changed value = " +typeof(changedValue))
           if(changedValue === "-2")
             $("#answersOtherContainer").show();
           else
@@ -232,6 +317,18 @@
           $("#answersOtherContainer").hide();
       });
 
+      $("#browseByExampleButton").click(function(e) {
+        $('#browseByExampleDlg').modal('setting', { 
+            detachable:false ,
+            onApprove: function (e) {
+              if($(e).attr("id") === "doneBrowseByExampleButton"){
+                $('#labelDropdown').dropdown('set selected', $("#browseByExampleDlg").attr("currentSelectedLabelId"));
+              }
+            }
+
+          }).modal('show');
+      });
+
       /*$('#labelDropdown').on("change", function(event){
         console.log("changed")
         if(event.target.getAttribute("labelId") == -2)
@@ -244,6 +341,10 @@
 
       var canvas = new fabric.Canvas('canvas');
       populate(canvas, {{ .randomAnnotatedImage }})
+
+      //var canvasElement = document.getElementById('canvas');
+      //var canvasContext = canvasElement.getContext("2d");
+      //registerColorPickerOnMove(canvas, canvasContext, onColorChanged);
       
 
       new Fingerprint2().get(function(result, components){
@@ -251,27 +352,28 @@
       });
 
       $('#doneButton').click(function(e) {
-        var labelId = getSelectedLabelId();
-        if(isNaN(labelId)){
+        var labelIds = getSelectedLabelIds();
+        if(labelIds.length === 0){
           $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
         }
         else{
-          var url, data;
+          var url;
+          var data = [];
           var headers = {}
           if(browserFingerprint !== null)
             headers['X-Browser-Fingerprint'] = browserFingerprint;
 
-          if (labelId === -1){ //if "don't know" is selected, just get a new quiz
+          if(labelIds[0] === -1){ //if "don't know" is selected, just get a new quiz
             getNextQuiz(canvas);
           }
-          else if(labelId == -2){ //if "other is selected"
+          else if(labelIds[0] == -2){ //if "other is selected"
             var suggestedLabel = $("#suggestedLabel").val();
             if(suggestedLabel === ""){
               $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
               return;
             }
             url = '{{ .apiBaseUrl }}/v1/label/suggest';
-            data = {"label" : suggestedLabel};
+            data.push({"label" : suggestedLabel});
 
             showHideControls(false);
 
@@ -291,7 +393,9 @@
           }
           else{
             url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
-            data = {"label_id" : labelId};
+            
+            for(var i = 0; i < labelIds.length; i++)
+              data.push({"label_id" : labelIds[i]});
 
             showHideControls(false);
 
@@ -341,12 +445,14 @@
         
         
           <!--dropdown buttons-->
-          <div hidden class="ui search selection dropdown" id="labelDropdown">
-            <div class="default text">Select Label</div>
-            <div class="menu" id="labelMenuItems">
-              {{ range .randomAnnotatedImage.Answers }}
-              <div class="item" data-value="{{ .Id }}">{{ .Label }}</div>
-              {{ end }}
+          <div class="ui action input">
+            <div hidden class="ui search selection dropdown" id="labelDropdown">
+              <div class="default text">Select Label</div>
+              <div class="menu" id="labelMenuItems">
+              </div>
+            </div>
+            <div hidden id="browseByExampleContainer">
+              <button class="ui icon button" id="browseByExampleButton"><i class="pointing up icon"></i></button>
             </div>
           </div>
           
@@ -364,6 +470,10 @@
           <div hidden id="answersOtherContainer">
           </div>
 
+          
+
+          {{ template "browse_by_example_dlg.html" .}}
+
 
           <div class="ui warning message" hidden id="nothingSelectedMessage">
             <i class="close icon"></i>
@@ -371,6 +481,7 @@
               Please answer the question first.
             </div>
           </div>
+          <p hidden id="multiSelectInfo" style="font-size:12px">multiple selection possible</p>
           <h2></h2>
           <button class="ui positive button" id="doneButton">Done</button>
 

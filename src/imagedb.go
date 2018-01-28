@@ -6,6 +6,8 @@ import (
 	log "github.com/Sirupsen/logrus"
     "encoding/json"
     "database/sql"
+    "fmt"
+    "errors"
 )
 
 type RectangleAnnotation struct {
@@ -56,6 +58,16 @@ type Image struct {
     NumOfInvalid int32 `json:"num_no"`
     Annotations []json.RawMessage `json:"annotations"`
     AllLabels []LabelMeEntry `json:"all_labels"`
+}
+
+type UnannotatedImage struct {
+    Id string `json:"uuid"`
+    Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
+    Provider string `json:"provider"`
+    Width int32 `json:"width"`
+    Height int32 `json:"height"`
+    AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
 }
 
 type AnnotatedImage struct {
@@ -149,14 +161,28 @@ type AnnotationRefinementQuestion struct {
     RecommendedControl string `json:"recommended_control"`
 }
 
+type AnnotationRefinementAnswerExample struct {
+    Filename string `json:"filename"`
+    Attribution string `json:"attribution"`
+}
+
 type AnnotationRefinementAnswer struct {
     Label string `json:"label"`
     Id int64 `json:"id"`
+    Examples []AnnotationRefinementAnswerExample `json:"examples"`
 }
 
 type AnnotationRefinement struct {
     Question AnnotationRefinementQuestion `json:"question"`
-    Answers []AnnotationRefinementAnswer `json:"answers"`
+    //Answers []AnnotationRefinementAnswer `json:"answers"`
+    Answers []json.RawMessage `json:"answers"`
+
+    Metainfo struct {
+        BrowseByExample bool `json:"browse_by_example"`
+        AllowOther bool `json:"allow_other"`
+        AllowUnknown bool `json:"allow_unknown"`
+        MultiSelect bool `json:"multiselect"`
+    } `json:"metainfo"`
 
     Image struct {
         Uuid string `json:"uuid"`
@@ -168,7 +194,32 @@ type AnnotationRefinement struct {
     } `json:"annotation"`
 }
 
-func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, labels []LabelMeEntry ) error{
+type AnnotationRefinementEntry struct {
+    LabelId int64 `json:"label_id"`
+}
+
+type ExportedImage struct {
+    Id string `json:"uuid"`
+    Provider string `json:"provider"`
+    Width int32 `json:"width"`
+    Height int32 `json:"height"`
+    Annotations []json.RawMessage `json:"annotations"`
+    Validations []json.RawMessage `json:"validations"`
+}
+
+type AutoAnnotationImage struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Provider string `json:"provider"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+    } `json:"image"`
+
+    Labels []string `json:"labels"`
+}
+
+
+func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageInfo, labels []LabelMeEntry ) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -179,8 +230,8 @@ func addDonatedPhoto(clientFingerprint string, filename string, hash uint64, lab
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
     //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	imageId := 0
-	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash) SELECT $1, $2, p.id, $3 FROM image_provider p WHERE p.name = $4 RETURNING id", 
-					  filename, false, int64(hash), "donation").Scan(&imageId)
+	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
+					  filename, false, int64(imageInfo.Hash), "donation", imageInfo.Width, imageInfo.Height).Scan(&imageId)
 	if(err != nil){
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -352,18 +403,54 @@ func validateImages(clientFingerprint string, imageValidationBatch ImageValidati
     return tx.Commit()
 }
 
-func export(labels []string) ([]Image, error){
-    rows, err := db.Query(`SELECT i.key, l.name, CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END, 
-                           v.num_of_valid, v.num_of_invalid, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations
-                           FROM image_validation v 
-                           JOIN image i ON v.image_id = i.id 
-                           JOIN label l ON v.label_id = l.id 
-                           JOIN image_provider p ON i.image_provider_id = p.id 
-                           LEFT JOIN image_annotation a ON a.image_id = i.id AND a.label_id = l.id
-                           JOIN annotation_data d ON d.image_annotation_id = a.id
-                           JOIN annotation_type t ON d.annotation_type_id = t.id
-                           WHERE i.unlocked = true and p.name = 'donation' AND l.name = ANY($1)
-                           GROUP BY i.key, l.name, v.num_of_valid, v.num_of_invalid`, pq.Array(labels))
+func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, error){
+    joinType := "FULL OUTER JOIN"
+    if annotationsOnly {
+        joinType = "JOIN"
+    }
+
+
+    q := fmt.Sprintf(`SELECT i.key, CASE WHEN json_agg(q3.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q3.annotations)::jsonb END as annotations, 
+                      q3.validations, i.width, i.height
+                      FROM image i 
+                      JOIN
+                      (
+                          SELECT COALESCE(q.image_id, q1.image_id) as image_id, q.annotations, q1.validations FROM 
+                          (
+                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            FROM image_annotation_refinement r 
+                            JOIN annotation_data d ON r.annotation_data_id = d.id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            JOIN image_annotation an ON d.image_annotation_id = an.id
+                            JOIN label_accessor a ON r.label_id = a.label_id
+                            WHERE ((%s) AND an.auto_generated = false)
+
+                            UNION
+
+                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            FROM image_annotation n
+                            JOIN annotation_data d ON d.image_annotation_id = n.id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            JOIN label_accessor a ON n.label_id = a.label_id
+                            WHERE ((%s) AND n.auto_generated = false)
+                          ) q
+                          
+                          %s (
+                            SELECT i.id as image_id, json_agg(json_build_object('label', accessor, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
+                            FROM image i 
+                            JOIN image_validation v ON i.id = v.image_id
+                            JOIN label_accessor a ON a.label_id = v.label_id
+                            WHERE (%s)
+                            GROUP BY i.id
+                          ) q1 
+                          ON q1.image_id = q.image_id
+                      )q3
+                              
+                     ON i.id = q3.image_id
+                      
+                     WHERE i.unlocked = true
+                     GROUP BY i.key, q3.validations, i.width, i.height`, parseResult.query, parseResult.query, joinType, parseResult.query)
+    rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
         raven.CaptureError(err, nil)
@@ -371,14 +458,15 @@ func export(labels []string) ([]Image, error){
     }
     defer rows.Close()
 
-    imageEntries := []Image{}
+    imageEntries := []ExportedImage{}
     for rows.Next() {
-    	var image Image
+        var image ExportedImage
         var annotations []byte
-    	image.Provider = "donation"
+        var validations []byte
+        image.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &image.Label, &image.Probability, &image.NumOfValid, &image.NumOfInvalid, &annotations)
-    	if err != nil {
+        err = rows.Scan(&image.Id, &annotations, &validations, &image.Width, &image.Height)
+        if err != nil {
             log.Debug("[Export] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return nil, err
@@ -387,7 +475,16 @@ func export(labels []string) ([]Image, error){
         if len(annotations) > 0 {
             err := json.Unmarshal(annotations, &image.Annotations)
             if err != nil {
-                log.Debug("[Export] Couldn't unmarshal: ", err.Error())
+                log.Debug("[Export] Couldn't unmarshal annotations: ", err.Error())
+                raven.CaptureError(err, nil)
+                return nil, err
+            }
+        }
+
+        if len(validations) > 0 {
+            err := json.Unmarshal(validations, &image.Validations)
+            if err != nil {
+                log.Debug("[Export] Couldn't unmarshal validations: ", err.Error())
                 raven.CaptureError(err, nil)
                 return nil, err
             }
@@ -788,7 +885,7 @@ func getRandomGroupedImages(label string, limit int) ([]Image, error) {
     return images, tx.Commit()
 }
 
-func addAnnotations(clientFingerprint string, imageId string, annotations Annotations) error{
+func addAnnotations(clientFingerprint string, imageId string, annotations Annotations, autoGenerated bool) error{
     //currently there is a uniqueness constraint on the image_id column to ensure that we only have
     //one image annotation per image. That means that the below query can fail with a unique constraint error. 
     //we might want to change that in the future to support multiple annotations per image (if there is a use case for it),
@@ -809,15 +906,15 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
 
     insertedId := 0
     if annotations.Sublabel == "" {
-        err = tx.QueryRow(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id, uuid) 
+        err = tx.QueryRow(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id, uuid, auto_generated) 
                             SELECT (SELECT l.id FROM label l WHERE l.name = $5 AND l.parent_id is null), $2, $3, $4, (SELECT i.id FROM image i WHERE i.key = $1), 
-                            uuid_generate_v4() RETURNING id`, 
-                          imageId, 0, 0, clientFingerprint, annotations.Label).Scan(&insertedId)
+                            uuid_generate_v4(), $6 RETURNING id`, 
+                          imageId, 0, 0, clientFingerprint, annotations.Label, autoGenerated).Scan(&insertedId)
     } else {
-        err = tx.QueryRow(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id, uuid) 
+        err = tx.QueryRow(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id, uuid, auto_generated) 
                             SELECT (SELECT l.id FROM label l JOIN label pl ON l.parent_id = pl.id WHERE l.name = $5 AND pl.name = $6), $2, $3, $4, 
-                            (SELECT i.id FROM image i WHERE i.key = $1), uuid_generate_v4() RETURNING id`, 
-                          imageId, 0, 0, clientFingerprint, annotations.Sublabel, annotations.Label).Scan(&insertedId)
+                            (SELECT i.id FROM image i WHERE i.key = $1), uuid_generate_v4(), $7 RETURNING id`, 
+                          imageId, 0, 0, clientFingerprint, annotations.Sublabel, annotations.Label, autoGenerated).Scan(&insertedId)
     }
 
 
@@ -849,67 +946,93 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
     return nil
 }
 
-func getRandomUnannotatedImage() Image{
-    var image Image
+func getRandomUnannotatedImage(addAutoAnnotations bool) (UnannotatedImage, error) {
+    var unannotatedImage UnannotatedImage
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
-    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') FROM image i 
-                               JOIN image_provider p ON i.image_provider_id = p.id 
-                               JOIN image_validation v ON v.image_id = i.id
-                               JOIN label l ON v.label_id = l.id
-                               LEFT JOIN label pl ON l.parent_id = pl.id
-                               WHERE i.unlocked = true AND p.name = 'donation' AND 
-                               CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
-                               AND NOT EXISTS
-                                (
-                                    SELECT 1 FROM image_annotation a WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                                )
-                               OFFSET floor
-                               ( random() * 
-                                   (
-                                        SELECT count(*) FROM image i
-                                        JOIN image_provider p ON i.image_provider_id = p.id
-                                        JOIN image_validation v ON v.image_id = i.id
-                                        WHERE i.unlocked = true AND p.name = 'donation' AND 
-                                        CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
-                                        AND NOT EXISTS
-                                        (
-                                            SELECT 1 FROM image_annotation a WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                                        )
-                                   ) 
-                               )LIMIT 1`)
+    rows, err := db.Query(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q1.auto_annotations FROM
+                              (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, width as image_width, height as image_height
+                                   FROM image i 
+                                   JOIN image_provider p ON i.image_provider_id = p.id 
+                                   JOIN image_validation v ON v.image_id = i.id
+                                   JOIN label l ON v.label_id = l.id
+                                   LEFT JOIN label pl ON l.parent_id = pl.id
+                                   WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                   CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                   AND NOT EXISTS
+                                    (
+                                        SELECT 1 FROM image_annotation a 
+                                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                                    )
+                                   OFFSET floor
+                                   ( random() * 
+                                       (
+                                            SELECT count(*) FROM image i
+                                            JOIN image_provider p ON i.image_provider_id = p.id
+                                            JOIN image_validation v ON v.image_id = i.id
+                                            WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                            CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                            AND NOT EXISTS
+                                            (
+                                                SELECT 1 FROM image_annotation a 
+                                                WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                                            )
+                                       ) 
+                                   )LIMIT 1
+                              ) q
+                              LEFT JOIN 
+                              (
+                                SELECT a.label_id as label_id, a.image_id as image_id, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as auto_annotations
+                                FROM image_annotation a 
+                                JOIN annotation_data d ON d.image_annotation_id = a.id
+                                JOIN annotation_type t on d.annotation_type_id = t.id
+                                WHERE a.auto_generated = true 
+                                GROUP BY d.image_annotation_id, a.label_id, a.image_id
+                              ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`)
     if(err != nil) {
         log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
         raven.CaptureError(err, nil)
-        return image
+        return unannotatedImage, err
     }
 
     defer rows.Close()
 
     var label1 string
     var label2 string
+    var autoAnnotationBytes []byte
     if(rows.Next()){
-        image.Provider = "donation"
+        unannotatedImage.Provider = "donation"
 
-        err = rows.Scan(&image.Id, &label1, &label2)
+        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, &autoAnnotationBytes)
         if(err != nil){
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
-            return image
+            return unannotatedImage, err
+        }
+
+        if addAutoAnnotations {
+            if len(autoAnnotationBytes) > 0 {
+                err = json.Unmarshal(autoAnnotationBytes, &unannotatedImage.AutoAnnotations)
+                if err != nil {
+                    log.Debug("[Get Random Un-annotated Image] Couldn't unmarshal auto annotations: ", err.Error())
+                    raven.CaptureError(err, nil)
+                    return unannotatedImage, err
+                }
+            }
         }
 
         if label2 == "" {
-            image.Label = label1
-            image.Sublabel = ""
+            unannotatedImage.Label = label1
+            unannotatedImage.Sublabel = ""
         } else {
-            image.Label = label2
-            image.Sublabel = label1
+            unannotatedImage.Label = label2
+            unannotatedImage.Sublabel = label1
         }
     }
 
-    return image
+    return unannotatedImage, nil
 }
 
-func getRandomAnnotatedImage() (AnnotatedImage, error) {
+func getRandomAnnotatedImage(autoGenerated bool) (AnnotatedImage, error) {
     var annotatedImage AnnotatedImage
 
     rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), a.uuid, q.annotations as annotations, a.num_of_valid, a.num_of_invalid 
@@ -929,7 +1052,7 @@ func getRandomAnnotatedImage() (AnnotatedImage, error) {
 
                                JOIN label l ON a.label_id = l.id
                                LEFT JOIN label pl ON l.parent_id = pl.id
-                               WHERE i.unlocked = true AND p.name = 'donation'
+                               WHERE i.unlocked = true AND p.name = 'donation' AND a.auto_generated = $1
                                GROUP BY i.key, a.uuid, l.name, pl.name, a.num_of_valid, a.num_of_invalid, q.annotations
                                OFFSET floor(random() * 
                                (
@@ -937,8 +1060,8 @@ func getRandomAnnotatedImage() (AnnotatedImage, error) {
                                 JOIN image_provider p ON i.image_provider_id = p.id 
                                 JOIN image_annotation a ON a.image_id = i.id
                                 JOIN label l ON a.label_id = l.id
-                                WHERE i.unlocked = true AND p.name = 'donation')
-                               )LIMIT 1`)
+                                WHERE i.unlocked = true AND p.name = 'donation' AND a.auto_generated = $1)
+                               )LIMIT 1`, autoGenerated)
     if err != nil {
         log.Debug("[Get Random Annotated Image] Couldn't get annotated image: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1424,17 +1547,22 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
     var annotationBytes []byte
     var refinement AnnotationRefinement
     var annotations []json.RawMessage
-    var allowUnknown bool
-    var allowOther bool
-    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, s.allow_other
+    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, 
+                        s.allow_other, s.browse_by_example, s.multiselect
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
-                                json_agg(json_build_object('id', l.id, 'label', l.name)) as quiz_answers, 
-                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other
+                                json_agg(json_build_object('id', l.id, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
+                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
+                                qq.browse_by_example as browse_by_example, qq.multiselect
     
                                 FROM quiz_question qq 
                                 JOIN quiz_answer q ON q.quiz_question_id = qq.id 
-                                JOIN label l ON q.label_id = l.id 
+                                JOIN label l ON q.label_id = l.id
+                                LEFT JOIN (
+                                    SELECT e.label_id, json_agg(json_build_object('filename', e.filename, 'attribution', e.attribution))::jsonb as examples
+                                    FROM label_example e GROUP BY label_id
+                                ) s2 
+                                ON s2.label_id = l.id 
                                 GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
                              ) as s
                         JOIN (
@@ -1453,7 +1581,8 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
                               WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
                             )
                         ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &allowUnknown, &allowOther)
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, 
+                            &refinement.Metainfo.AllowOther, &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
     if err != nil {
         log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1481,35 +1610,39 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
         refinement.Annotation.Annotation = annotations[randomVal]
     }
 
-    if allowUnknown {
-        var unknownRefinementAnswer AnnotationRefinementAnswer
-        unknownRefinementAnswer.Label = "don't know"
-        unknownRefinementAnswer.Id = -1
-        refinement.Answers = append(refinement.Answers, unknownRefinementAnswer)
-    }
-
-    if allowOther {
-        var otherRefinementAnswer AnnotationRefinementAnswer
-        otherRefinementAnswer.Label = "other"
-        otherRefinementAnswer.Id = -2
-        refinement.Answers = append(refinement.Answers, otherRefinementAnswer)
-    }
-
     return refinement, nil
 }
 
-func addOrUpdateRefinement(annotationUuid string, annotationDataId int64, labelId int64, clientFingerprint string) error {
+func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annotationRefinementEntries []AnnotationRefinementEntry, clientFingerprint string) error {
     var err error
 
-    _, err = db.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
-                        SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
-                      ON CONFLICT (annotation_data_id, label_id)
-                      DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
-                      WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
-                           annotationDataId, labelId, 1, clientFingerprint, annotationUuid)
-    
+    tx, err := db.Begin()
     if err != nil {
-        log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
+        log.Debug("[Add or Update Random Quiz question] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    for _, item := range annotationRefinementEntries {
+
+        _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
+                            SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
+                          ON CONFLICT (annotation_data_id, label_id)
+                          DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
+                          WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
+                               annotationDataId, item.LabelId, 1, clientFingerprint, annotationUuid)
+        
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Add or Update Random Quiz question] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
@@ -1528,3 +1661,161 @@ func addLabelSuggestion(suggestedLabel string) error {
 
     return nil
 } 
+
+func getLabelAccessors() ([]string, error) {
+    var labels []string
+    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    if err != nil {
+        log.Debug("[Get label accessor] Couldn't insert: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labels, err
+    }
+    defer rows.Close()
+
+    var label string
+    for rows.Next() {
+        err = rows.Scan(&label)
+        if err != nil {
+           log.Debug("[Get label accessor] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labels, err 
+        }
+
+        labels = append(labels, label)
+    }
+
+    return labels, nil
+}
+
+func deleteImage(uuid string) error {
+    var deletedId int64
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Delete image] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+
+    deletedId = -1
+    err = tx.QueryRow(`DELETE FROM image_validation
+                       WHERE image_id IN (
+                        SELECT id FROM image WHERE key = $1 
+                       )
+                       RETURNING id`, uuid).Scan(&deletedId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if deletedId == -1 {
+        tx.Rollback()
+        err = errors.New("nothing deleted")
+        log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    deletedId = -1
+    err = tx.QueryRow(`DELETE FROM image i WHERE key = $1
+                       RETURNING i.id`, uuid).Scan(&deletedId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if deletedId == -1 {
+        tx.Rollback()
+        err = errors.New("nothing deleted")
+        log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Delete image] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
+func getImagesForAutoAnnotation(labels []string) ([]AutoAnnotationImage, error) {
+    var autoAnnotationImages []AutoAnnotationImage
+    rows, err := db.Query(`SELECT i.key, i.width, i.height, json_agg(l.name)  FROM image i 
+                           JOIN image_validation v ON v.image_id = i.id
+                           JOIN label l on v.label_id = l.id
+                           WHERE i.id NOT IN (
+                              SELECT image_id FROM image_annotation WHERE auto_generated = true
+                           ) AND l.parent_id is null AND i.unlocked = true AND l.name = ANY($1)
+                           GROUP BY i.key, i.width, i.height`, 
+                           pq.Array(labels))
+    if err != nil {
+        log.Debug("[Get images for auto annotation] Couldn't get: ", err.Error())
+        raven.CaptureError(err, nil)
+        return autoAnnotationImages, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var autoAnnotationImage AutoAnnotationImage
+        var data []byte
+        err = rows.Scan(&autoAnnotationImage.Image.Id, &autoAnnotationImage.Image.Width, &autoAnnotationImage.Image.Height, &data)
+        if err != nil {
+           log.Debug("[Get images for auto annotation] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return autoAnnotationImages, err 
+        }
+
+        err = json.Unmarshal(data, &autoAnnotationImage.Labels)
+        if err != nil {
+            log.Debug("[Get images for auto annotation] Couldn't unmarshal: ", err.Error())
+            raven.CaptureError(err, nil)
+            return autoAnnotationImages, err
+        }
+
+        autoAnnotationImages = append(autoAnnotationImages, autoAnnotationImage)
+    }
+
+    
+    
+
+    return autoAnnotationImages, nil
+
+
+    /*var images []string
+    rows, err := db.Query(`SELECT i.key FROM image i 
+                           JOIN image_validation v ON v.image_id = i.id
+                           WHERE i.id NOT IN (
+                                SELECT image_id FROM image_annotation WHERE auto_generated = true
+                           )
+                           GROUP BY i.key`)
+    if err != nil {
+        log.Debug("[Get images for auto annotation] Couldn't get: ", err.Error())
+        raven.CaptureError(err, nil)
+        return images, err
+    }
+    defer rows.Close()
+
+    var image string
+    for rows.Next() {
+        err = rows.Scan(&image)
+        if err != nil {
+           log.Debug("[Get images for auto annotation] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return images, err 
+        }
+
+        images = append(images, image)
+    }
+
+    return images, nil*/
+}

@@ -24,125 +24,470 @@
 	"labels": {
 		"dog": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["animal"],
 			"has": {
 				"eye": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"ear": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"mouth": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				}
 			},
 
 			"quiz": [
 				{
 					"question": "What's the size of the dog",
-					"answers": ["big", "medium", "small"],
+					"accessors": [".size"],
+					"answers": [
+						{
+							"name": "big"
+						},
+						{ 
+							"name": "medium"
+						},
+						{
+							"name": "small"
+						}
+					],
 					"allow_unknown": true,
 					"allow_other": true,
+					"browse_by_example": false,
+					"multiselect": false,
 					"control_type": "radio"
 				},
 				{
 					"question": "It's a...",
-					"answers": ["dog", "puppy"],
+					"accessors": [".type"],
+					"answers": [
+						{
+							"name": "dog"
+						},
+						{ 
+							"name": "puppy"
+						}
+					],
 					"allow_unknown": true,
 					"allow_other": true,
+					"browse_by_example": false,
+					"multiselect": false,
 					"control_type": "radio"
 				},
 				{
-					"question": "It's a...",
-					"answers": ["Seat", "Renault", "Peugot", "BMW", "Ford", "Opel", "Alfa Romeo", "Chevrolet", "Porsche", "Honda", "Subaru", "Mazda", "Mitsubishi", "Lexus", "Toyota", "Volkswagen", "Suzuki", "Mercedes-Benz", "Saab", "Audi", "Kia", "Land Rover", "Doge", "Chrysler", "Hummer", "Hyundai", "Jaguar", "Jeep", "Nissan", "Volvo", "Daewoo", "Fiat", "MINI", "Smart"],
-					"allow_other": true,
-					"allow_unknown": true,
-					"control_type": "dropdown"
+					"question": "What am I?",
+					"accessors": [".breed"],
+					"answers": [
+						{
+							"name": "Labrador Retriever",
+							"examples": [
+								{
+									"filename": "LabradorRetriever.jpg"								
+								}
+							]
+						},
+						{
+							"name": "English Cocker Spaniel",
+							"examples": [
+								{
+									"filename": "EnglishCockerSpaniel.jpg"								
+								}
+							]
+						},
+						{
+							"name": "English Springer Spaniel",
+							"examples": [
+								{
+									"filename": "EnglishSpringerSpaniel.jpg"								
+								}
+							]
+						},
+						{
+							"name": "German Shepherd",
+							"examples": [
+								{
+									"filename": "GermanShepherd.jpg"
+								}
+							]
+						},
+						{
+							"name": "Staffordshire Bull Terrier",
+							"examples": [
+								{
+									"filename": "StaffordshireBullTerrier.jpg"
+								}
+							]
+						},
+						{
+							"name": "Golden Retriever",
+							"examples": [
+								{
+									"filename": "GoldenRetriever.jpg"
+								}
+							]
+						},
+						{
+							"name": "Boxer",
+							"examples": [
+								{
+									"filename": "Boxer.jpg"
+								}
+							]
+						},
+						{
+							"name": "Beagle",
+							"examples": [
+								{
+									"filename": "Beagle.jpg"
+								}
+							]
+						},
+						{
+							"name": "Dachshund",
+							"examples": [
+								{
+									"filename": "Dachshund.jpg"
+								}
+							]
+						},
+						{
+							"name": "Poodle",
+							"examples": [
+								{
+									"filename": "Poodle.jpg"
+								}
+							]
+						},
+						{
+							"name": "Rottweiler",
+							"examples": [
+								{
+									"filename": "Rottweiler.jpg"
+								}
+							]
+						},
+						{
+							"name": "Siberian Husky",
+							"examples": [
+								{
+									"filename": "SiberianHusky.jpg"
+								}
+							]
+						},
+						{
+							"name": "Bulldog",
+							"examples": [
+								{
+									"filename": "Bulldog.jpg"
+								}
+							]
+						},
+						{
+							"name": "Mops",
+							"examples": [
+								{
+									"filename": "Mops.jpg"
+								}
+							]
+						},
+						{
+							"name": "Dalmatiner",
+							"examples": [
+								{
+									"filename": "Dalmatiner.jpg"
+								}
+							]
+						},
+						{
+							"name": "Great Dane",
+							"examples": [
+								{
+									"filename": "GreatDane.jpg"
+								}
+							]
+						}
 
-				},
-				{
-					"question": "The color of the car is...",
-					"answers": ["white", "silver", "black", "grey", "blue", "red", "brown", "green"],
-					"allow_other": true,
+						
+
+						
+					],
 					"allow_unknown": true,
-					"control_type": "color tags"
+					"allow_other": true,
+					"browse_by_example": true,
+					"multiselect": false,
+					"control_type": "dropdown"
 				}
 
 			]
 		},
 		"cat": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["animal"],
 			"has": {
 				"eye": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"ear": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				},
 				"mouth": {
-					"description": "optional"
+					"description": "optional",
+					"accessors": [".has"]
 				}
 			}
 		},
 		"pizza": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"orange": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"apple": {
 			"description": "optional",
-			"isa": ["food"]
+			"accessors": ["."],
+			"isa": ["food"],
+			"quiz": [
+				{
+					"question": "The apple's color is...",
+					"accessors": [".color"],
+					"answers": [
+						{
+							"name": "red"
+						},
+						{
+							"name": "green"
+						},
+						{ 
+							"name": "yellow"
+						}
+					],
+					"allow_unknown": true,
+					"allow_other": true,
+					"browse_by_example": false,
+					"multiselect": true,
+					"control_type": "radio"
+				}
+			]
 		},
 		"banana": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"car": {
 			"description": "optional",
-			"isa": ["vehicle"]
+			"accessors": ["."],
+			"isa": ["vehicle"],
+			"quiz": [
+				{
+					"question": "It's a...",
+					"accessors": [".brand"],
+					"answers": [
+						{
+							"name": "Seat"
+						}, 
+						{
+							"name": "Renault"
+						},
+						{
+							"name": "Peugot"
+						},
+						{
+							"name": "BMW"
+						},
+						{
+							"name": "Ford"
+						},
+						{
+							"name": "Opel"
+						},
+						{
+							"name": "Alfa Romeo"
+						},
+						{
+							"name": "Chevrolet"
+						},
+						{
+							"name": "Porsche"
+						},
+						{
+							"name": "Honda"
+						},
+						{
+							"name": "Subaru"
+						},
+						{
+							"name": "Mazda"
+						}, 
+						{
+							"name": "Mitsubishi"
+						},
+						{
+							"name": "Lexus"
+						}, 
+						{
+							"name": "Toyota"
+						},
+						{
+							"name": "Volkswagen"
+						},
+						{
+							"name": "Suzuki"
+						},
+						{
+							"name": "Mercedes-Benz"
+						},
+						{
+							"name": "Saab"
+						},
+						{
+							"name": "Audi"
+						},
+						{
+							"name": "Kia"
+						},
+						{
+							"name": "Land Rover"
+						},
+						{
+							"name": "Doge"
+						},
+						{
+							"name": "Chrysler"
+						}, 
+						{
+							"name": "Hummer"
+						}, 
+						{
+							"name": "Hyundai"
+						},
+						{
+							"name": "Jaguar"
+						},
+						{
+							"name": "Jeep"
+						},
+						{
+							"name": "Nissan"
+						},
+						{
+							"name": "Volvo"
+						},
+						{
+							"name": "Daewoo"
+						},
+						{
+							"name": "Fiat"
+						}, 
+						{
+							"name": "MINI"
+						},
+						{
+							"name": "Smart"
+						}
+					],
+					"allow_other": true,
+					"allow_unknown": true,
+					"multiselect": false,
+					"control_type": "dropdown"
+
+				},
+				{
+					"question": "The color of the car is...",
+					"accessors": [".color"],
+					"answers": [
+						{
+							"name": "white"
+						},
+						{
+							"name": "silver"
+						},
+						{
+							"name": "black"
+						},
+						{
+							"name": "grey"
+						},
+						{ 
+							"name": "blue"
+						},
+						{
+							"name": "red"
+						},
+						{
+							"name": "brown"
+						},
+						{
+							"name": "green"
+						}
+					],
+					"allow_other": true,
+					"allow_unknown": true,
+					"multiselect": false,
+					"control_type": "color tags"
+				}
+			]
 		},
 		"TV": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["electronics"]
 		},
 		"smartphone": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["electronics"]
 		},
 		"cup": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"glass": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"spoon": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"egg": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"tennis ball": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": ["sports"]
 		},
 		"bullet": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"tree": {
 			"description": "optional",
+			"accessors": ["."],
 			"isa": []
 		},
 		"person": {
 			"description": "optional",
+			"accessors": ["."],
 			"has": {
 				"head": {
 					"description": "optional"

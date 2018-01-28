@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"github.com/gin-gonic/gin"
-	"strings"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/h2non/filetype.v1"
@@ -18,10 +17,65 @@ import (
 	"net"
 	"errors"
 	"html"
+	"net/url"
+	"image"
+	"github.com/nfnt/resize"
+	"bytes"
+	"image/gif"
+    "image/jpeg"
+    "image/png"
+    "strings"
+	//"gopkg.in/h2non/bimg.v1"
 )
 
 var db *sql.DB
 var geoipDb *geoip2.Reader
+
+
+func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
+	buf := new(bytes.Buffer) 
+	imgFormat := ""
+
+	file, err := os.Open(path)
+	if err != nil {
+		log.Debug("[Resize Image Handler] Couldn't open image: ", err.Error())
+		return buf.Bytes(), imgFormat, err
+	}
+
+	// decode jpeg into image.Image
+	img, format, err := image.Decode(file)
+	if err != nil {
+		log.Debug("[Resize Image Handler] Couldn't decode image: ", err.Error())
+		return buf.Bytes(), imgFormat, err
+	}
+	file.Close()
+
+	resizedImg := resize.Resize(width, height, img, resize.NearestNeighbor)
+
+
+	if format == "png" {
+		err = png.Encode(buf, resizedImg)
+		if err != nil {
+			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+	    	return buf.Bytes(), imgFormat, err
+		}
+	} else if format == "gif" {
+		err = gif.Encode(buf, resizedImg, nil)
+		if err != nil {
+			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+	    	return buf.Bytes(), imgFormat, err
+		}
+	} else {
+		err = jpeg.Encode(buf, resizedImg, nil)
+		if err != nil {
+			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+	    	return buf.Bytes(), imgFormat, err
+		}
+	}
+	imgFormat = format
+
+	return buf.Bytes(), imgFormat, nil
+}
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
 func ClientAuthMiddleware() gin.HandlerFunc {
@@ -126,6 +180,10 @@ func annotationsValid(annotations []json.RawMessage) error{
         }
 	}
 
+	if len(annotations) == 0 {
+		return errors.New("annotations missing")
+	}
+
 	return nil
 }
 
@@ -166,6 +224,22 @@ func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []
 	return false
 }
 
+func IsFilenameValid(filename string) bool {
+	_, err := uuid.FromString(filename)
+
+	if err != nil {
+		return false
+	}
+	return true
+	/*for _, ch := range filename {
+		if ((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= '0') && (ch <= '9')) || (ch == '-') {
+			continue
+		}
+		return false
+	}
+	return true*/
+}
+
 
 func main(){
 	fmt.Printf("Starting API Service...\n")
@@ -179,6 +253,7 @@ func main(){
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 500, "Max connections to Redis")
 	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
+	labelExamplesDir := flag.String("examples_dir", "../label_examples/", "Location of the label examples")
 
 	flag.Parse()
 	if(*releaseMode){
@@ -234,11 +309,59 @@ func main(){
 		log.Fatal("[Main] Couldn't load statistics pusher: ", err.Error())
 	}
 
+	sampleExportQueries := GetSampleExportQueries()
+
 
 	router := gin.Default()
 	router.Use(CorsMiddleware())
 	router.Use(RequestId())
-	router.Static("./v1/donation", *donationsDir) //serve static images
+
+	//serve images in "donations" directory with the possibility to scale images
+	//before serving them
+	router.GET("/v1/donation/:imageid", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		imageId := c.Param("imageid")
+
+		var width uint
+		width = 0
+		if temp, ok := params["width"]; ok {
+			n, err := strconv.ParseUint(temp[0], 10, 32)
+		    if err == nil {
+		        width = uint(n)
+		    }
+		}
+
+		var height uint
+		height = 0
+		if temp, ok := params["height"]; ok {
+			n, err := strconv.ParseUint(temp[0], 10, 32)
+		    if err == nil {
+            	height = uint(n)
+		    }
+		}
+
+		if !IsFilenameValid(imageId) {
+			c.String(404, "Invalid filename")
+			return
+		} 
+
+		imgBytes, format, err := ResizeImage((*donationsDir + imageId), width, height)
+		if err != nil {
+			log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
+			c.String(500, "Couldn't process request, please try again later")
+			return
+
+		}
+
+		c.Writer.Header().Set("Content-Type", ("image/" + format))
+        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
+        _, err = c.Writer.Write(imgBytes) 
+        if err != nil {
+            log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
+            c.String(500, "Couldn't process request, please try again later")
+            return
+        }
+	})
 
 	//the following endpoints are secured with a client id + client secret. 
 	//that's mostly because currently each donation needs to be unlocked manually. 
@@ -258,6 +381,60 @@ func main(){
 			}
 		})
 
+		clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {
+			imageId := c.Param("imageid")
+			if imageId == "" {
+				c.JSON(422, gin.H{"error": "invalid request - image id missing"})
+				return
+			}
+
+			var annotations Annotations
+			err := c.BindJSON(&annotations)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
+				return
+			}
+
+			err = annotationsValid(annotations.Annotations)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
+				return
+			}
+
+			err = addAnnotations("", imageId, annotations, true)
+			if(err != nil){
+				c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
+				return
+			}
+			c.JSON(201, nil)
+		})
+
+		clientAuth.GET("/v1/internal/auto-annotation",  func(c *gin.Context) {
+			params := c.Request.URL.Query()
+
+			labelsStr := ""
+			if temp, ok := params["label"]; ok {
+				labelsStr = temp[0]
+			}
+
+			if labelsStr == "" {
+				c.JSON(422, gin.H{"error": "Please provide at least one label"})
+				return
+			}
+
+			labels := strings.Split(labelsStr, ",")
+
+			images, err := getImagesForAutoAnnotation(labels)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't get images - please try again later"})
+				return
+			}
+
+			c.JSON(http.StatusOK, images)
+		})
+
+		
+
 		clientAuth.POST("/v1/unverified/donation/:imageid/:param",  func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
@@ -269,17 +446,8 @@ func main(){
 			}
 
 			param := c.Param("param")
-			isBad := true
-			if param == "bad" {
-				isBad = true
-			} else if param == "good" {
-				isBad = false
-			} else{
-				c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
-				return
-			}
 
-			if !isBad {
+			if param == "good" {
 				src := *unverifiedDonationsDir + imageId
 				dst := *donationsDir + imageId
 				err := os.Rename(src, dst)
@@ -294,6 +462,26 @@ func main(){
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
 				}
+			} else if(param == "bad") { //not handled at the moment, add later if needed
+
+			} else if param == "delete" {
+				err = deleteImage(imageId)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+
+				dst := *unverifiedDonationsDir + imageId
+				err := os.Remove(dst)
+				if err != nil {
+					log.Debug("[Main] Couldn't remove file ", dst)
+					c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
+					return
+				}
+
+			} else{
+				c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
+				return
 			}
 
 			c.JSON(http.StatusOK, nil)
@@ -467,11 +655,36 @@ func main(){
 	})
 
 	router.GET("/v1/export", func(c *gin.Context) {
-		tags := ""
 		params := c.Request.URL.Query()
-		if temp, ok := params["tags"]; ok {
-			tags = temp[0]
-			jsonData, err := export(strings.Split(tags, ","))
+
+		annotationsOnly := false
+		if temp, ok := params["annotations_only"]; ok {
+			if temp[0] == "true" {
+				annotationsOnly = true
+			}
+		}
+
+		if temp, ok := params["query"]; ok {
+			if temp[0] == "" {
+				c.JSON(422, gin.H{"error": "no query specified"})
+				return
+			}
+
+
+			query, err := url.QueryUnescape(temp[0])
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid query"})
+				return
+			}
+
+			queryParser := NewQueryParser(query)
+			parseResult, err := queryParser.Parse()
+			if err != nil {
+				c.JSON(422, gin.H{"error": err.Error()})
+				return
+			}
+
+			jsonData, err := export(parseResult, annotationsOnly)
 			if(err == nil){
 				c.JSON(http.StatusOK, jsonData)
 				return
@@ -480,9 +693,15 @@ func main(){
 				return
 			}
 		} else {
-			c.JSON(422, gin.H{"error": "no tags specified"})
+			c.JSON(422, gin.H{"error": "no query specified"})
 			return
 		}
+	})
+
+
+	router.GET("/v1/export/sample", func(c *gin.Context) {
+		q := sampleExportQueries[random(0, len(sampleExportQueries) - 1)]
+		c.JSON(http.StatusOK, q)
 	})
 
 	router.GET("/v1/label", func(c *gin.Context) {
@@ -516,6 +735,8 @@ func main(){
 		label := words[random(0, len(words) - 1)]
 		c.JSON(http.StatusOK, gin.H{"label": label})
 	})
+
+	router.Static("/v1/label/example", *labelExamplesDir)		
 
 	router.POST("/v1/label/suggest", func(c *gin.Context) {
 		type SuggestedLabel struct {
@@ -597,12 +818,12 @@ func main(){
         }
 
         //check if image already exists by using an image hash
-        hash, err := hashImage(file)
+        imageInfo, err := getImageInfo(file)
         if(err != nil){
         	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         	return 
         }
-        exists, err := imageExists(hash)
+        exists, err := imageExists(imageInfo.Hash)
         if(err != nil){
         	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         	return
@@ -644,7 +865,7 @@ func main(){
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err = addDonatedPhoto(browserFingerprint, uuid, hash, labelMeEntries)
+		err = addDonatedPhoto(browserFingerprint, uuid, imageInfo, labelMeEntries)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 			return
@@ -761,7 +982,7 @@ func main(){
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err = addAnnotations(browserFingerprint, imageId, annotations)
+		err = addAnnotations(browserFingerprint, imageId, annotations, false)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 			return
@@ -787,12 +1008,37 @@ func main(){
 	})
 
 	router.GET("/v1/annotate", func(c *gin.Context) {
-		randomImage := getRandomUnannotatedImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
+		params := c.Request.URL.Query()
+		
+
+		addAutoAnnotations := false
+		if temp, ok := params["add_auto_annotations"]; ok {
+			if temp[0] == "true" {
+				addAutoAnnotations = true
+			}
+		}
+
+		randomImage, err := getRandomUnannotatedImage(addAutoAnnotations)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, randomImage)
 	})
 
 	router.GET("/v1/annotation", func(c *gin.Context) {
-		randomAnnotatedImage, err := getRandomAnnotatedImage()
+		params := c.Request.URL.Query()
+		
+
+		autoGenerated := false
+		if temp, ok := params["auto_generated"]; ok {
+			if temp[0] == "true" {
+				autoGenerated = true
+			}
+		}
+
+
+		randomAnnotatedImage, err := getRandomAnnotatedImage(autoGenerated)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 			return
@@ -808,10 +1054,6 @@ func main(){
 	})
 
 	router.POST("/v1/annotation/:annotationid/refine/:annotationdataid", func(c *gin.Context) {
-		type AnnotationRefinementEntry struct {
-		    LabelId int64 `json:"label_id"`
-		}
-
 		annotationId := c.Param("annotationid")
 		if(annotationId == ""){
 			c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation id"})
@@ -832,15 +1074,15 @@ func main(){
 		}
 
 
-		var annotationRefinementEntry AnnotationRefinementEntry
-		if c.BindJSON(&annotationRefinementEntry) != nil {
+		var annotationRefinementEntries []AnnotationRefinementEntry
+		if c.BindJSON(&annotationRefinementEntries) != nil {
 			c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid label id"})
 			return
 		}
 
 		browserFingerprint := getBrowserFingerprint(c)
 
-		err := addOrUpdateRefinement(annotationId, annotationDataId, annotationRefinementEntry.LabelId, browserFingerprint)
+		err := addOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
 			return

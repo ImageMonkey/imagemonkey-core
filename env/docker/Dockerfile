@@ -3,10 +3,13 @@ FROM debian:9
 
 MAINTAINER bbernhard version: 0.1
 
-RUN apt-get update && apt-get install -y postgresql-9.6 nginx nginx-extras redis-server git supervisor wget build-essential postgresql-server-dev-9.6 postgresql-contrib-9.6
+RUN apt-get update && apt-get install -y postgresql-9.6 nginx nginx-extras redis-server git supervisor wget build-essential postgresql-server-dev-9.6 postgresql-contrib-9.6 dos2unix
 RUN mkdir -p /root/imagemonkey-core
 RUN git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core
 RUN cp /root/imagemonkey-core/conf/supervisor/* /etc/supervisor/conf.d/
+
+RUN chmod +x /root/imagemonkey-core/env/docker/start_postgres.sh
+RUN chmod +x /root/imagemonkey-core/env/docker/startup.sh
 
 RUN cd /tmp && wget https://github.com/arkhipov/temporal_tables/archive/v1.2.0.tar.gz
 RUN mkdir -p /tmp/temporal_table
@@ -29,7 +32,7 @@ RUN cp /root/imagemonkey-core/env/postgres/indexes.sql /tmp/indexes.sql
 RUN chown postgres:postgres /tmp/indexes.sql
 RUN chmod u+rx /tmp/indexes.sql 
 
-RUN service postgresql restart && sleep 5s && /bin/su - postgres -c "psql -c \"CREATE database imagemonkey;\"" \
+RUN /root/imagemonkey-core/env/docker/start_postgres.sh && /bin/su - postgres -c "psql -c \"CREATE database imagemonkey;\"" \
 	&& /bin/su - postgres -c "psql -d imagemonkey -c \"CREATE USER monkey WITH PASSWORD 'dbRuwMUo4Nfhs5hmMxhk';\"" \
 	&& /bin/su - postgres -c "psql -d imagemonkey -c \"CREATE EXTENSION \"temporal_tables\";\"" \
 	&& /bin/su - postgres -c "psql -d imagemonkey -f /tmp/schema.sql" \
@@ -112,19 +115,20 @@ RUN chmod -R u+rx /home/imagemonkey/geoip_database
 
 # change listen address in postgres config file to localhost
 RUN echo listen_addresses='localhost' >> /etc/postgresql/9.6/main/postgresql.conf
-#RUN service postgresql start
 
 # do not add blog subscription worker...we do not need that in the docker image
 RUN rm /etc/supervisor/conf.d/imagemonkey-blog-subscription-worker.conf
 
 #populate labels in database
-RUN service postgresql restart && sleep 5s && /home/imagemonkey/bin/populate_labels
-
-#RUN cp /root/imagemonkey-core/conf/nginx/nginx.conf /etc/nginx/
+RUN /root/imagemonkey-core/env/docker/start_postgres.sh && cd /home/imagemonkey/bin/ && ./populate_labels && cd /root/
 
 
 EXPOSE 8080
 EXPOSE 8081
+
+CMD /root/imagemonkey-core/env/docker/startup.sh
+
+
 
 
 #RUN sed 's/^\[supervisord\]/\[supervisord\]\nodaemon=true/' /etc/supervisor/supervisord.conf

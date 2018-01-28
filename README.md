@@ -1,13 +1,26 @@
 > # Because training a ML model is easy - finding a good image dataset is hard.
 
 
-ImageMonkey is a free, public open source image validation service. With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources. ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain. 
+ImageMonkey is a free, public open source dataset. With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources. ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain. 
 
 ![Alt Text](https://github.com/bbernhard/imagemonkey-core/raw/master/img/animation.gif)
 
 # Getting started #
 
-## General Information ##
+There are basically two ways to set up your own `ImageMonkey` instance. You can either set up everything by hand, which gives you the flexibility to choose your own linux distribution, monitoring tools and scrips or you could use our `Dockerfile` to spin up a new `ImageMonkey` instance within just a few minutes. 
+
+## Docker ## 
+
+* clone the imagemonkey-core repository with: `git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core`
+* `cd imagemonkey-core/env/docker/`
+* build the imagemonkey-core image with: `docker build -t imagemonkey-core .`
+* start instance with: `docker run --rm -P --name imagemonkey-core-instance imagemonkey-core`
+* get the docker host ip with: `docker-machine env`
+* you can now connect from your host system to the docker machine via: <docker_host_ip>:8080 (website) and <docker_host_ip>:8081 (REST API) 
+
+The docker image is for development only - do **NOT** use it in production!
+
+## Manual Setup ##
 
 The following section contains some notes on how to set up your own instance to host ImageMonkey yourself.
 This should only give you an idea how you *could* configure your system. Of course you are totally free in choosing 
@@ -15,7 +28,7 @@ a different linux distribution, tools and scripts. If you are only interested in
 
 *Info:* Some commands are distribution (Debian 9.1) specific and may not work on your system. 
 
-## Base System Configuration ##
+### Base System Configuration ###
 
 * create a new user `imagemonkey`  with `adduser imagemonkey` 
 * disable root login via ssh by changing the `PermitRootLogin` line in `/etc/ssh/sshd_config` to `PermitRootLogin no`)
@@ -48,7 +61,7 @@ iptables -A OUTPUT -o lo -j ACCEPT
 * save firewall rules with: `iptables-save > /etc/iptables/rules.v4`
 * verify that rules are loaded with `iptables -L`
 
-## Database ##
+### Database ###
 
 * install PostgreSQL
 * edit `/etc/postgresql/9.6/main/postgresql.conf` and set `listen_addresses = 'localhost'`
@@ -75,7 +88,7 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * connect to imagemonkey database and execute `CREATE EXTENSION uuid-ossp;`
 * apply `defaults.sql`
 
-## Webserver & SSL ##
+### Webserver & SSL ###
 
 * install nginx with `apt-get install nginx`
 * install nginx-extras with `apt-get install nginx-extras`
@@ -96,7 +109,7 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * install API application with `go install api.go api_secrets.go common.go imagedb.go`
 * install API application with `go install web.go web_secrets.go common.go imagedb.go` 
 
-## Miscellaneous ##
+### Miscellaneous ###
 * copy `wordlists/en/misc.txt` to `/home/imagemonkey/wordlists/en/misc.txt`
 * create donation directories with: 
 ```
@@ -104,7 +117,7 @@ mkdir -p /home/imagemonkey/donations
 mkdir -p /home/imagemonkey/unverified_donations
 ```
 
-## Watchdog ##
+### Watchdog ###
 * install supervisor with `apt-get install supervisor`
 * add `imagemonkey` user to supervisor group with `adduser imagemonkey supervisor`
 * create logging directories with `mkdir -p /var/log/imagemonkey-api` and `mkdir -p /var/log/imagemonkey-web`
@@ -113,27 +126,15 @@ mkdir -p /home/imagemonkey/unverified_donations
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
 
 
-# What's next? #
+### Datasync ###
+**on imagemonkey-playground instance**
+* install `rsync` with `apt-get install rsync`
+* create a new user `backupuser` with `adduser backupuser` (use a strong password)
+* change to user `backupuser` with `su backupuser` and create a new SSH key with `ssh-keygen -t ed25519 -a 100`
+* copy SSH public key to imagemonkey instance with: `ssh-copy-id -i ~/.ssh/your_generated_id.pub backupuser@imagemonkey-host`
+* give `backupuser` permissions to write to `/home/playground/donations` with: `chgrp backupuser /home/playground/donations && chmod g+rwx /home/playground/donations`
+* add a new cronjob for the user `backupuser` with: `crontab -u backupuser -e` and add the following line (runs rsync every 15min):
 
-## General ##
-* **API abuse prevention:** I strongly believe that such a project only works out, if we keep the API as open as possible (i.e ideally accessible without any registration). However, without any kind of registration or API tokens, it's easily possible that malicious bots/people will destroy valid datasets by wrongly classifying a picture. 
-
-Possible attempts to solve that: 
-- implement an alerting mechanism that fires when a image rapidly changes it's validity
-- add a "training phase" where users need to verify a few easy pictures first and only after they completed the "training phase" and have proven that their intentions are good then their votes are counted
-- add an registration mechanism to make abusive voting less attractive (not my prefered option, but yeah...)
-
-* remember already seen images to avoid that users verify a specific image twice
-
-* add client-side/server-side image compression
-
-## Infrastructure ##
-* currently there are a lot of manual steps involved to host your own instance of `imagemonkey`. There should be a script which automates that. What about a dockerizable image? 
-* add a deployment script which makes deploying changes easier and less error prone.
-
-## REST API ##
-* make it possible to export images only when `probability > treshold`
-
-## Sourcecode ##
-* there is some duplicated code in `api.go` and `web.go` -> we should get rid of it
-
+```
+*/15 * * * * rsync -a backupuser@imagemonkey.io:/home/imagemonkey/donations/ /home/playground/donations/
+```

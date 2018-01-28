@@ -17,22 +17,31 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=2"></script>
+  <script src="js/fabric_helper.js?v=7"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=1"></script>
-  <!--<script src="https://rawgit.com/AndriiHeonia/hull/master/dist/hull.js"></script>-->
+  <script src="js/annotate.js?v=8"></script>
+  <script src="js/simplify.js"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
   </style>
 
   <script>
+  var canvas, annotator;
+  var detailedCanvas = null;
+  var numOfPendingRequests = 0;
+  var autoAnnotations = null;
+
   function getUrlFromImageId(imageId){
     return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
   }
 
   function isTrashMenuButtonEnabled(){
     return !$("#trashMenuItem").hasClass("disabled");
+  }
+
+  function isSmartAnnotationEnabled(){
+    return $("#smartAnnotation").checkbox("is checked")
   }
 
   function changeMenuItem(type){
@@ -42,6 +51,9 @@
       $("#polygonMenuItem").removeClass("active");
       $("#panMenuItem").removeClass("active");
       $("#blockSelectMenuItem").removeClass("active");
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
     }
     else if(type === "Circle"){
       $("#circleMenuItem").addClass("active");
@@ -49,6 +61,9 @@
       $("#polygonMenuItem").removeClass("active");
       $("#panMenuItem").removeClass("active");
       $("#blockSelectMenuItem").removeClass("active");
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
     }
     else if(type === "Polygon"){
       $("#polygonMenuItem").addClass("active");
@@ -56,6 +71,9 @@
       $("#circleMenuItem").removeClass("active");
       $("#panMenuItem").removeClass("active");
       $("#blockSelectMenuItem").removeClass("active");
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
     }
     else if(type === "PanMode"){
       $("#panMenuItem").addClass("active");
@@ -63,6 +81,9 @@
       $("#rectMenuItem").removeClass("active");
       $("#circleMenuItem").removeClass("active");
       $("#blockSelectMenuItem").removeClass("active");
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
     }
     else if(type === "BlockSelection"){
       $("#blockSelectMenuItem").addClass("active");
@@ -70,8 +91,191 @@
       $("#circleMenuItem").removeClass("active");
       $("#polygonMenuItem").removeClass("active");
       $("#panMenuItem").removeClass("active");
-
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
     }
+    else if(type === "FreeDrawing"){
+      $("#freeDrawingMenuItem").addClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
+    }
+    else if(type === "ForegroundSelection"){
+      $("#smartAnnotationFgMenuItem").addClass("active");
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
+      $("#smartAnnotationBgMenuItem").removeClass("active");
+    }
+    else if(type === "BackgroundSelection"){
+      $("#smartAnnotationBgMenuItem").addClass("active");
+      $("#freeDrawingMenuItem").removeClass("active");
+      $("#blockSelectMenuItem").removeClass("active");
+      $("#rectMenuItem").removeClass("active");
+      $("#circleMenuItem").removeClass("active");
+      $("#polygonMenuItem").removeClass("active");
+      $("#panMenuItem").removeClass("active");
+      $("#smartAnnotationFgMenuItem").removeClass("active");
+    }
+  }
+
+  function showHideSmartAnnotationControls(show){
+    if(show){
+      $("#circleMenuItem").hide();
+      $("#polygonMenuItem").hide();
+      $("#smartAnnotationFgMenuItem").show();
+      $("#smartAnnotationBgMenuItem").show();
+    }
+    else{
+      $("#circleMenuItem").show();
+      $("#polygonMenuItem").show();
+      $("#smartAnnotationFgMenuItem").hide();
+      $("#smartAnnotationBgMenuItem").hide();
+    }
+
+    $('#annotatorMenu .item').popup({
+      inline: true,
+      hoverable: true
+    });
+  }
+
+  function showHideControls(show){
+    if(show){
+      $("#doneButton").show();
+      $("#annotatorMenu").show();
+      $("#smartAnnotation").show();
+      $("#showSmartAnnotationHelpDlg").show();
+    }
+    else{
+      $("#doneButton").hide();
+      $("#annotatorMenu").hide();
+      $("#smartAnnotation").hide();
+      $("#showSmartAnnotationHelpDlg").hide();
+    }
+  }
+
+  function pollUntilProcessed(uuid) {
+    var url = "{{ .playgroundBaseUrl }}/v1/grabcut/" + uuid;
+    $.getJSON(url, function (response) {
+      if(jQuery.isEmptyObject(response))
+        setTimeout(pollUntilProcessed(uuid), 1000);
+      else{
+        detailedCanvas.clearObjects();
+
+        if(response["result"]["points"].length > 0){
+          var data = [];
+          data.push(response["result"]);
+          annotator.setSmartAnnotationData(data);
+          detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
+        }
+        
+        numOfPendingRequests -= 1;
+        if(numOfPendingRequests <= 0){
+          $("#smartAnnotationCanvasWrapper").dimmer("hide");
+          numOfPendingRequests = 0;
+        }
+      }
+    });
+  }
+
+  function populateDetailedCanvas(force = false){
+    if((detailedCanvas !== null) && !force)
+      detailedCanvas.clear();
+    else
+      detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", 0, 0);
+
+    var maxWidth = document.getElementById("smartAnnotationContainer").clientWidth - 50; //margin
+    var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+
+    var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
+    var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+
+    $("#smartAnnotationCanvasWrapper").attr("width", w);
+    $("#smartAnnotationCanvasWrapper").attr("height", h);
+    $("#smartAnnotationCanvasWrapper").attr("scaleFactor", scaleFactor);
+    //detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
+    detailedCanvas.setWidth(w);
+    detailedCanvas.setHeight(h);
+    detailedCanvas.setCanvasBackgroundImage(canvas.fabric().backgroundImage, null);
+  }
+
+  function clearDetailedCanvas(){
+    if(detailedCanvas !== null){
+      detailedCanvas.clear();
+    }
+  }
+
+  function getCanvasScaleFactor(){
+    var maxWidth = document.getElementById("annotationAreaContainer").clientWidth - 50; //margin
+    var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+    return scaleFactor;
+  }
+
+  function populateCanvas(backgroundImageUrl, initAnnotator){
+    canvas.fabric().clear();
+
+    var scaleFactor = getCanvasScaleFactor();
+
+    var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
+    var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+
+    $("#annotationAreaContainer").attr("width", w);
+    $("#annotationAreaContainer").attr("height", h);
+    $("#annotationAreaContainer").attr("scaleFactor", scaleFactor);
+    canvas.setWidth(w);
+    canvas.setHeight(h);
+
+    if(initAnnotator){
+      canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
+        annotator.initHistory();
+        if(isSmartAnnotationEnabled())
+          populateDetailedCanvas();
+      });
+    } 
+    else{
+      canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, onCanvasBackgroundImageSet);
+    }
+  }
+
+  function dataURItoBlob(dataURI) {
+    var byteString = atob(dataURI.split(',')[1]);
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], {type: 'image/png'});
+  }
+
+  function grabCutMe(){
+    numOfPendingRequests += 1;
+    $("#smartAnnotationCanvasWrapper").dimmer("show");
+    var blob = dataURItoBlob(annotator.getMask());
+    var formData = new FormData()
+    formData.append('image', blob);
+    formData.append('uuid', $("#annotationArea").attr("imageId"));
+    $.ajax({
+      url: '{{ .playgroundBaseUrl }}/v1/grabcut',
+      processData: false,
+      contentType: false,
+      data: formData,
+      type: 'POST',
+      success: function(data, status, xhr){
+        pollUntilProcessed(xhr.getResponseHeader("Location"));
+      }
+    });
   }
 
   function changeControl(annotator){
@@ -98,64 +302,107 @@
     }
   }
 
-  function onObjectSelected(){
+  function onAnnotatorObjectSelected(){
     $("#trashMenuItem").removeClass("disabled");
   }
 
-  function prepareData(data){
-    var imgScaleX = data["backgroundImage"]["scaleX"];
-    var imgScaleY = data["backgroundImage"]["scaleY"];
-    var objs = data["objects"];
-    var res = [];
-    var left, top, width, height, rx, ry, type, points, pointX, pointY, angle;
-
-    for(var i = 0; i < objs.length; i++){
-      angle = objs[i]["angle"];
-      type = objs[i]["type"];
-      if(type === "rect"){
-        left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-        top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-        width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
-        height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
-
-        if((width != 0) && (height != 0))
-          res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
-      }
-      else if(type === "ellipse"){
-        left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-        top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-        rx = Math.round(((objs[i]["rx"] / imgScaleX)), 0);
-        ry = Math.round(((objs[i]["ry"] / imgScaleY)), 0);
-
-        if((rx != 0) && (ry != 0))
-          res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
-      }
-      else if(type === "polygon"){
-        left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
-        top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
-
-        points = objs[i]["points"];
-        var scaledPoints = [];
-        for(var j = 0; j < points.length; j++){
-          scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX)), 0), "y": Math.round(((points[j]["y"] / imgScaleY)), 0)});
-        }
-
-        res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
-      }
-    }
-
-    return res;
+  function onAnnotatorMouseUp(){
+    if(isSmartAnnotationEnabled() && !annotator.isPanModeEnabled())
+      grabCutMe();
   }
 
+  function canvasHasObjects(){
+    if(canvas.fabric().getObjects().length > 0)
+      return true;
+    return false;
+  }
+
+  function onCanvasBackgroundImageSet(){
+    if(isSmartAnnotationEnabled())
+      populateDetailedCanvas();
+  }
+
+  function isLoadingIndicatorVisible(){
+    return $("#smartAnnotationDimmer").is(":visible"); 
+  }
+
+  function showHideAutoAnnotationsLoadButton(){
+    if(autoAnnotations && (autoAnnotations.length > 0) && (!isSmartAnnotationEnabled())){
+      $("#loadAutoAnnotationsMenuItem").show();
+      $("#loadAutoAnnotationsMenuItem").removeClass("disabled");
+      $("#loadAutoAnnotationsMenuItem").addClass("orange");
+    }
+    else{
+      $("#loadAutoAnnotationsMenuItem").hide();
+    }
+  }
+
+  
+
   $(document).ready(function(){
-      //$("#trashMenuItem").hide();
+      $('#warningMsg').hide();
+      
+      $('#smartAnnotation').checkbox({
+        onChange : function() {
+          var enabled = isSmartAnnotationEnabled();
+          if(enabled){
+            annotator.enableSmartAnnotation();
+
+            $("#spacer").remove();
+            $("#mainGrid").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
+                                      '<br><br><br>' +
+                                      '<div class="" id="smartAnnotationCanvasWrapper">' +
+                                        '<div class="ui dimmer" id="smartAnnotationDimmer">' +
+                                          '<div class="ui loader">' +
+                                          '</div>' +
+                                        '</div>' +
+                                        '<canvas id="smartAnnotationCanvas"></canvas>' +
+                                      '</div>' +
+                                    '</div>');
+
+            populateDetailedCanvas(true);
+          }
+          else{
+            annotator.disableSmartAnnotation();
+
+            $("#smartAnnotationContainer").remove();
+            $("#mainGrid").prepend('<div class="four wide column" id="spacer"></div>');
+          }
+
+          showHideSmartAnnotationControls(enabled);
+          showHideAutoAnnotationsLoadButton();
+        },
+        beforeChecked : function() {
+          if(canvasHasObjects() > 0){
+            $('#discardChangesPopup').modal('show');
+            return false;
+          }
+        },
+        beforeUnchecked : function() {
+          if(canvasHasObjects() > 0){
+            $('#discardChangesPopup').modal('show');
+            return false;
+          }
+        }
+      });
+
+      showHideSmartAnnotationControls(false);
+
+      autoAnnotations = {{.randomImage.AutoAnnotations}};
+      showHideAutoAnnotationsLoadButton();
 
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
-      $('#warningMsg').hide();
-      $('#annotatorMenu .item').popup({
-        inline: true,
-        hoverable: true
-      });
+
+      canvas = new CanvasDrawer("annotationArea");
+      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
+
+      var randomImageId = {{ .randomImage.Id }};
+      $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});  
+      $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
+      populateCanvas(getUrlFromImageId(randomImageId), true);
+      changeControl(annotator);
+      showHideControls(true);
+
 
       var browserFingerprint = null;
 
@@ -178,6 +425,13 @@
         changeMenuItem("Polygon");
       });
 
+       $("#freeDrawingMenuItem").click(function(e) {
+        annotator.disablePanMode();
+        annotator.setShape("FreeDrawing");
+        annotator.setBrushColor("red");
+        changeMenuItem("FreeDrawing");
+      });
+
       $("#trashMenuItem").click(function(e) {
         if(isTrashMenuButtonEnabled())
           $('#deleteObjectsPopup').modal('show');
@@ -192,15 +446,16 @@
       });
 
       $("#zoomInMenuItem").click(function(e) {
-        canvas.setZoom(canvas.getZoom() * 1.1);
+        canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
       });
 
       $("#zoomOutMenuItem").click(function(e) {
-        canvas.setZoom(canvas.getZoom() / 1.1);
+        canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
       });
 
       $("#panMenuItem").click(function(e) {
         annotator.enablePanMode();
+        annotator.setShape("");
         changeMenuItem("PanMode");
       });
 
@@ -217,17 +472,59 @@
           $("#trashMenuItem").addClass("disabled");
       });
 
+      $("#smartAnnotationFgMenuItem").click(function(e) {
+        changeMenuItem("ForegroundSelection");
+        annotator.disablePanMode();
+        annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
+        annotator.setBrushWidth(10);
+        annotator.setShape("FreeDrawing");
+      });
+
+      $("#smartAnnotationBgMenuItem").click(function(e) {
+        changeMenuItem("BackgroundSelection");
+        annotator.disablePanMode();
+        annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
+        annotator.setBrushWidth(10);
+        annotator.setShape("FreeDrawing");
+      });
+
+      $("#loadAutoAnnotationsMenuItem").click(function(e) {
+        if((autoAnnotations !== null) && !$("#loadAutoAnnotationsMenuItem").hasClass("disabled")){
+          annotator.loadAutoAnnotations(autoAnnotations, getCanvasScaleFactor());
+          $("#loadAutoAnnotationsMenuItem").addClass("disabled"); //once clicked, disable it
+          $("#loadAutoAnnotationsMenuItem").removeClass("orange"); //and remove highlight
+        }
+      });
+
+      $("#discardChangesYesButton").click(function(e) {
+        annotator.deleteAll();
+        $("#smartAnnotation").checkbox("toggle");
+      });
+
+      $('#showSmartAnnotationHelpDlg').click(function(){
+        $('#smartAnnotationHelpDlgGif').attr('src', 'img/smart_annotation.gif');
+        $('#smartAnnotationHelpDlg').modal('setting', { detachable:false }).modal('show');
+      });
+
 
 
       $('#doneButton').click(function(e) {
-        var res = prepareData(canvas.toJSON());
+        var res = annotator.toJSON();
 
         if(res.length === 0){ //at least one annotation needs to be there
+          $('#warningMsgText').text('Please annotate the image first.');
+          $('#warningMsg').show(200).delay(1500).hide(200);
+          return;
+        }
+
+        if(isLoadingIndicatorVisible()){ //in case smart annotation is currently running
+          $('#warningMsgText').text('Smart Annotation is currently in progress.');
           $('#warningMsg').show(200).delay(1500).hide(200);
           return;
         }
 
         var postData = {}
+
         postData["annotations"] = res;
         postData["label"] = $('#label').attr('label');
         postData["sublabel"] = $('#label').attr('sublabel');
@@ -238,8 +535,12 @@
 
         headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
+        showHideControls(false);
+        clearDetailedCanvas();
+        canvas.clear();
+
         e.preventDefault();
-        var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
+        var url = "{{ .apiBaseUrl }}/v1/annotate/" + $("#annotationArea").attr("imageId");
         $.ajax({
           url: url,
           type: 'POST',
@@ -247,37 +548,38 @@
           headers: headers,
           success: function(data){
             $.ajax({
-              url: '{{ .apiBaseUrl }}/v1/annotate',
+              url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true',
               dataType: 'json',
               type: 'GET',
               success: function(data){
                 $("#annotationArea").attr("imageId", data.uuid);
+                $("#annotationArea").attr("origImageWidth", data.width);
+                $("#annotationArea").attr("origImageHeight", data.height);
+
+                if("auto_annotations" in data)
+                  autoAnnotations = data["auto_annotations"];
+                else
+                  autoAnnotations = null;
+                showHideAutoAnnotationsLoadButton();
+
                 setLabel(data.label, data.sublabel);
-                canvas.clear();
-                canvas.setZoom(1.0);
-                canvas.absolutePan(new fabric.Point(0,0));
-                setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(data.uuid));
+                canvas.fabric().clear();
+                canvas.fabric().setZoom(1.0);
+                canvas.fabric().absolutePan(new fabric.Point(0,0));
+                populateCanvas(getUrlFromImageId(data.uuid), false);
                 changeControl(annotator);
+                numOfPendingRequests = 0;
+                showHideControls(true);
               }
             });
           }
         });
-
-
-        new Fingerprint2().get(function(result, components){
-          browserFingerprint = result;
-        });
-
       });
 
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
+      });
 
-var canvas = new fabric.Canvas('annotationArea');
-var annotator = new Annotator(canvas, onObjectSelected);
-var randomImgId = {{ .randomImage.Id }};
-setCanvasBackgroundImageUrl(canvas, getUrlFromImageId(randomImgId), function() {
-  annotator.initHistory();
-});
-changeControl(annotator);
 });
 </script>
 </head>
@@ -296,64 +598,124 @@ changeControl(annotator);
   </div>
 
 
-  <div class="ui stackable grid vertical stripe">
-    <div class="four wide column">
-    </div>
-    <div class="eight wide center aligned column">
-      <div class="ui compact icon menu" id="annotatorMenu">
-        <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
-          <i class="square outline icon"></i>
-        </a>
-        <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
-          <i class="circle thin icon"></i>
-        </a>
-        <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
-          <i class="ellipsis horizontal icon"></i>
-        </a>
-
-        <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
-          <i class="zoom icon"></i>
-        </a>
-        <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
-          <i class="zoom out icon"></i>
-        </a>
-        <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
-          <i class="maximize icon"></i>
-        </a>
-        <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
-          <i class="trash icon"></i>
-        </a>
+  <div class="ui stackable grid vertical stripe" id="mainGrid">
+      <div class="four wide column" id="spacer">
       </div>
-
-      <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
-      <p></p>
-      <button class="positive ui button center aligned" id="doneButton">DONE</button>
-
-      <div class="ui warning message" id="warningMsg">
-        <i class="close icon"></i>
-        <div class="header">
-          Please annotate the image first.
-        </div>
-      </div>
-
-      <div class="ui small modal" id="deleteObjectsPopup">
-        <div class="header">
-          Delete Object
-        </div>
-        <div class="content">
-          <p>Are you sure you want to delete the selected objects?</p>
-        </div>
-        <div class="actions">
-          <div class="ui negative button">
-            No
+      <div class="eight wide center aligned column">
+        <div class="row">
+          <div hidden class="ui toggle checkbox" id="smartAnnotation">
+            <input type="checkbox">
+            <label>Smart Annotation</label>
           </div>
-          <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
-            Yes
-            <i class="checkmark icon"></i>
+          <a href="#" id="showSmartAnnotationHelpDlg">[?]</a>
+          <p></p>
+        </div>
+
+        <div hidden class="ui compact icon menu" id="annotatorMenu">
+          <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
+            <i class="square outline icon"></i>
+          </a>
+          <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
+            <i class="circle thin icon"></i>
+          </a>
+          <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
+            <i class="ellipsis horizontal icon"></i>
+          </a>
+          <a hidden class="pencil popup icon item" id="smartAnnotationFgMenuItem" data-content="Foreground Selection">
+            <i class="pencil icon"></i>
+          </a>
+          <a hidden class="pencil popup icon item" id="smartAnnotationBgMenuItem" data-content="Background Selection">
+            <i class="pencil icon"></i>
+          </a>
+
+          <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
+            <i class="zoom icon"></i>
+          </a>
+          <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
+            <i class="zoom out icon"></i>
+          </a>
+          <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
+            <i class="maximize icon"></i>
+          </a>
+          <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
+            <i class="trash icon"></i>
+          </a>
+          <a hidden class="active download popup orange icon item" id="loadAutoAnnotationsMenuItem" data-content="Load Auto Annotations">
+            <i class="download icon"></i>
+          </a>
+        </div>
+
+        <div class="ui longer modal" id="smartAnnotationHelpDlg">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            What's this?
+          </div>
+          <div class="scrolling content">
+            Smart Annotation allows you to easily annotate complex objects with just a few mousestrokes. Start the annotation process by drawing a bounding box around the main object. Fine tune the annotation by marking incorrectly detect foreground and background areas.<br><br>
+
+            <img class="ui huge bordered image" id="smartAnnotationHelpDlgGif">
+
+            <!--<ul class="ui list">
+              <li>works best when object is clearly separated from background</li>
+              <li></li>
+            </ul>-->
+          </div>
+          <p><p>
+          <div class="actions">
+            <div class="ui right labeled cancel button">
+              Close
+            </div>
+          </div>
+        </div>
+
+        <div id="annotationAreaContainer">
+          <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
+        </div>
+        <p></p>
+        <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
+
+        <div hidden class="ui warning message" id="warningMsg">
+          <i class="close icon"></i>
+          <div class="header" id="warningMsgText">
+          </div>
+        </div>
+
+        <div class="ui small modal" id="deleteObjectsPopup">
+          <div class="header">
+            Delete Object
+          </div>
+          <div class="content">
+            <p>Are you sure you want to delete the selected objects?</p>
+          </div>
+          <div class="actions">
+            <div class="ui negative button">
+              No
+            </div>
+            <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
+              Yes
+              <i class="checkmark icon"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="ui small modal" id="discardChangesPopup">
+          <div class="header">
+            Discard Changes
+          </div>
+          <div class="content">
+            <p>Changing the annotation mode <b>removes</b> all annotations. Do you want to proceed?</p>
+          </div>
+          <div class="actions">
+            <div class="ui negative button">
+              No
+            </div>
+            <div class="ui positive right labeled icon button" id="discardChangesYesButton">
+              Yes
+              <i class="checkmark icon"></i>
+            </div>
           </div>
         </div>
       </div>
-    </div>
   </div>
   {{ template "footer.html" .}}
 

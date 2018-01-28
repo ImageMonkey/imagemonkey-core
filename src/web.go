@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"github.com/gin-gonic/gin"
 	"fmt"
-	"strings"
 	"os"
 	log "github.com/Sirupsen/logrus"
 	"flag"
@@ -28,7 +27,7 @@ func main() {
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
-	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8081", "Playground Base URL")
+	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8082", "Playground Base URL")
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
@@ -110,10 +109,11 @@ func main() {
 	router.GET("/annotate", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "annotate.html", gin.H{
 			"title": "Annotate",
-			"randomImage": getRandomUnannotatedImage(),
+			"randomImage": pick(getRandomUnannotatedImage(true))[0],
 			"activeMenuNr": 4,
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": webAppIdentifier,
+			"playgroundBaseUrl": playgroundBaseUrl,
 		})
 	})
 
@@ -172,7 +172,7 @@ func main() {
 	router.GET("/verify_annotation", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "validate_annotations.html", gin.H{
 			"title": "Validate Annotations",
-			"randomImage": pick(getRandomAnnotatedImage())[0],
+			"randomImage": pick(getRandomAnnotatedImage(false))[0],
 			"activeMenuNr": 6,
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": webAppIdentifier,
@@ -187,19 +187,20 @@ func main() {
 			"apiBaseUrl": apiBaseUrl,
 		})
 	})	
-	router.GET("/explore", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "explore.html", gin.H{
-			"title": "Explore Dataset",
+	router.GET("/statistics", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "statistics.html", gin.H{
+			"title": "Statistics",
 			"words": words,
 			"activeMenuNr": 8,
 			"statistics": pick(explore(words))[0],
 		})
 	})
-	router.GET("/export", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "export.html", gin.H{
-			"title": "Export Dataset",
-			"labels": pick(getAllImageLabels())[0],
+	router.GET("/explore", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "explore.html", gin.H{
+			"title": "Explore Dataset",
 			"activeMenuNr": 9,
+			"apiBaseUrl": apiBaseUrl,
+			"labelAccessors": pick(getLabelAccessors())[0],
 		})
 	})
 	router.GET("/apps", func(c *gin.Context) {
@@ -215,25 +216,14 @@ func main() {
 			"playgroundPredictBaseUrl": playgroundBaseUrl,
 		})
 	})
-
-	router.GET("/data", func(c *gin.Context) {
-		tags := ""
-		params := c.Request.URL.Query()
-		if temp, ok := params["tags"]; ok {
-			tags = temp[0]
-			jsonData, err := export(strings.Split(tags, ","))
-			if(err == nil){
-				c.JSON(http.StatusOK, jsonData)
-				return
-			} else{
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Couldn't export data"})
-				return
-			}
-		} else {
-			c.JSON(422, gin.H{"error": "No tags specified"})
-			return
-		}
-	})
+	/*router.GET("/browse", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "browse.html", gin.H{
+			"title": "Browse",
+			"activeMenuNr": 12,
+			"apiBaseUrl": apiBaseUrl,
+			"labelAccessors": pick(getLabelAccessors())[0],
+		})
+	})*/
 
 	router.Run(":8080")
 }
