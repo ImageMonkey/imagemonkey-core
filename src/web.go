@@ -109,7 +109,7 @@ func main() {
 	router.GET("/annotate", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "annotate.html", gin.H{
 			"title": "Annotate",
-			"randomImage": getRandomUnannotatedImage(),
+			"randomImage": pick(getRandomUnannotatedImage(true))[0],
 			"activeMenuNr": 4,
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": webAppIdentifier,

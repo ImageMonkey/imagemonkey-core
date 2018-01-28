@@ -60,7 +60,7 @@ function calcScaleFactor(img, maxImageWidth){
     return scaleFactor;
 }
 
-function drawAnnotations(canvas, annotations, scaleFactor){
+function drawAnnotations(canvas, annotations, scaleFactor, callback){
   for(var i = 0; i < annotations.length; i++){
     var type = annotations[i]["type"];
     if(type === "rect"){
@@ -86,7 +86,8 @@ function drawAnnotations(canvas, annotations, scaleFactor){
             hasControls: false,
             selectable: false
         });
-        canvas.add(rect);      
+        canvas.add(rect);
+        typeof callback === 'function' && callback(rect);     
     }
     else if(type === "ellipse"){
         var top = (annotations[i]["top"] * scaleFactor);
@@ -112,6 +113,7 @@ function drawAnnotations(canvas, annotations, scaleFactor){
             selectable: false
         });
         canvas.add(ellipsis);
+        typeof callback === 'function' && callback(ellipsis);
     }
     else if(type === "polygon"){
         var top = undefined;
@@ -163,6 +165,7 @@ function drawAnnotations(canvas, annotations, scaleFactor){
             });
         } 
         canvas.add(polygon);
+        typeof callback === 'function' && callback(polygon);
     }
 }
 

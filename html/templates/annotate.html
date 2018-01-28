@@ -19,7 +19,8 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=7"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=7"></script>
+  <script src="js/annotate.js?v=8"></script>
+  <script src="js/simplify.js"></script>
 
   <style>
   .canvas-container{margin: 0 auto;}
@@ -29,6 +30,7 @@
   var canvas, annotator;
   var detailedCanvas = null;
   var numOfPendingRequests = 0;
+  var autoAnnotations = null;
 
   function getUrlFromImageId(imageId){
     return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
@@ -213,13 +215,18 @@
     }
   }
 
-  function populateCanvas(backgroundImageUrl, initAnnotator){
-    canvas.fabric().clear();
-
+  function getCanvasScaleFactor(){
     var maxWidth = document.getElementById("annotationAreaContainer").clientWidth - 50; //margin
     var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
     if(scaleFactor > 1.0)
       scaleFactor = 1.0;
+    return scaleFactor;
+  }
+
+  function populateCanvas(backgroundImageUrl, initAnnotator){
+    canvas.fabric().clear();
+
+    var scaleFactor = getCanvasScaleFactor();
 
     var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
     var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
@@ -319,10 +326,22 @@
     return $("#smartAnnotationDimmer").is(":visible"); 
   }
 
+  function showHideAutoAnnotationsLoadButton(){
+    if(autoAnnotations && (autoAnnotations.length > 0) && (!isSmartAnnotationEnabled())){
+      $("#loadAutoAnnotationsMenuItem").show();
+      $("#loadAutoAnnotationsMenuItem").removeClass("disabled");
+      $("#loadAutoAnnotationsMenuItem").addClass("orange");
+    }
+    else{
+      $("#loadAutoAnnotationsMenuItem").hide();
+    }
+  }
+
   
 
   $(document).ready(function(){
-
+      $('#warningMsg').hide();
+      
       $('#smartAnnotation').checkbox({
         onChange : function() {
           var enabled = isSmartAnnotationEnabled();
@@ -351,6 +370,7 @@
           }
 
           showHideSmartAnnotationControls(enabled);
+          showHideAutoAnnotationsLoadButton();
         },
         beforeChecked : function() {
           if(canvasHasObjects() > 0){
@@ -368,8 +388,21 @@
 
       showHideSmartAnnotationControls(false);
 
+      autoAnnotations = {{.randomImage.AutoAnnotations}};
+      showHideAutoAnnotationsLoadButton();
+
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
-      $('#warningMsg').hide();
+
+      canvas = new CanvasDrawer("annotationArea");
+      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
+
+      var randomImageId = {{ .randomImage.Id }};
+      $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});  
+      $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
+      populateCanvas(getUrlFromImageId(randomImageId), true);
+      changeControl(annotator);
+      showHideControls(true);
+
 
       var browserFingerprint = null;
 
@@ -455,12 +488,16 @@
         annotator.setShape("FreeDrawing");
       });
 
-      $("#discardChangesYesButton").click(function(e) {
-        //remove all objects from canvas
-        var objects = canvas.fabric().getObjects();
-        for (var i = 0, len = objects.length; i < len; i++) {
-          objects[i].remove();
+      $("#loadAutoAnnotationsMenuItem").click(function(e) {
+        if((autoAnnotations !== null) && !$("#loadAutoAnnotationsMenuItem").hasClass("disabled")){
+          annotator.loadAutoAnnotations(autoAnnotations, getCanvasScaleFactor());
+          $("#loadAutoAnnotationsMenuItem").addClass("disabled"); //once clicked, disable it
+          $("#loadAutoAnnotationsMenuItem").removeClass("orange"); //and remove highlight
         }
+      });
+
+      $("#discardChangesYesButton").click(function(e) {
+        annotator.deleteAll();
         $("#smartAnnotation").checkbox("toggle");
       });
 
@@ -503,7 +540,7 @@
         canvas.clear();
 
         e.preventDefault();
-        var url = '{{ .apiBaseUrl }}/v1/annotate/' + $("#annotationArea").attr("imageId");
+        var url = "{{ .apiBaseUrl }}/v1/annotate/" + $("#annotationArea").attr("imageId");
         $.ajax({
           url: url,
           type: 'POST',
@@ -511,13 +548,20 @@
           headers: headers,
           success: function(data){
             $.ajax({
-              url: '{{ .apiBaseUrl }}/v1/annotate',
+              url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true',
               dataType: 'json',
               type: 'GET',
               success: function(data){
                 $("#annotationArea").attr("imageId", data.uuid);
                 $("#annotationArea").attr("origImageWidth", data.width);
                 $("#annotationArea").attr("origImageHeight", data.height);
+
+                if("auto_annotations" in data)
+                  autoAnnotations = data["auto_annotations"];
+                else
+                  autoAnnotations = null;
+                showHideAutoAnnotationsLoadButton();
+
                 setLabel(data.label, data.sublabel);
                 canvas.fabric().clear();
                 canvas.fabric().setZoom(1.0);
@@ -536,16 +580,6 @@
         browserFingerprint = result;
       });
 
-
-canvas = new CanvasDrawer("annotationArea");
-annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
-
-var randomImageId = {{ .randomImage.Id }};
-$("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});
-$("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
-populateCanvas(getUrlFromImageId(randomImageId), true);
-  changeControl(annotator);
-  showHideControls(true);
 });
 </script>
 </head>
@@ -605,6 +639,9 @@ populateCanvas(getUrlFromImageId(randomImageId), true);
           </a>
           <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
             <i class="trash icon"></i>
+          </a>
+          <a hidden class="active download popup orange icon item" id="loadAutoAnnotationsMenuItem" data-content="Load Auto Annotations">
+            <i class="download icon"></i>
           </a>
         </div>
 

@@ -1008,8 +1008,22 @@ func main(){
 	})
 
 	router.GET("/v1/annotate", func(c *gin.Context) {
-		randomImage := getRandomUnannotatedImage()
-		c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel})
+		params := c.Request.URL.Query()
+		
+
+		addAutoAnnotations := false
+		if temp, ok := params["add_auto_annotations"]; ok {
+			if temp[0] == "true" {
+				addAutoAnnotations = true
+			}
+		}
+
+		randomImage, err := getRandomUnannotatedImage(addAutoAnnotations)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		c.JSON(http.StatusOK, randomImage)
 	})
 
 	router.GET("/v1/annotation", func(c *gin.Context) {
