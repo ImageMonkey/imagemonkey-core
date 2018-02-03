@@ -104,6 +104,9 @@ var Polygon = (function () {
 
       this.currentId = generateRandomId();
     }
+    circle.set({'belongsToPolygon': this.currentId});
+
+
     //var points = [(options.e.layerX/this.canvas.getZoom()),(options.e.layerY/this.canvas.getZoom()),(options.e.layerX/this.canvas.getZoom()),(options.e.layerY/this.canvas.getZoom())];
     var points = [pointer.x, pointer.y, pointer.x, pointer.y];
     line = new fabric.Line(points, {
@@ -178,33 +181,6 @@ var Polygon = (function () {
   }
 
   Polygon.prototype.movePolyPoints = function (polygonId, moveX, moveY){
-    /*var newPoints = [];
-    var points = this.polygons[polygonId];
-    var inst = this;
-    for(var i = 0; i < points.length; i++){
-      var newLeft = points[i].left + moveX;
-      var newTop = points[i].top + moveY;
-      var circle = new fabric.Circle({
-        radius: 5,
-        fill: '#ffffff',
-        stroke: '#333333',
-        strokeWidth: 0.5,
-        left: newLeft,
-        top: newTop,
-        selectable: true,
-        hasBorders: false,
-        hasControls: false,
-        originX:'center',
-        originY:'center',
-        index: points[i].index
-      });
-      //inst.canvas.remove(points[i]);
-      //inst.canvas.add(circle);
-      newPoints.push(circle);
-    }
-    this.polygons[polygonId] = newPoints;
-    this.canvas.renderAll();*/
-
     var points = this.polygons[polygonId];
     var inst = this;
     for(var i = 0; i < points.length; i++){
@@ -224,6 +200,10 @@ var Polygon = (function () {
     inst.canvas.renderAll();
   }
 
+  Polygon.prototype.getPaintedPolygonById = function (id) {
+    return this.canvas.getItemByAttr("id", id);
+  }
+
   Polygon.prototype.isInPolyEditMode = function () {
     return (this.currentlyShownPolygonId === "") ? false : true;
   }
@@ -237,27 +217,13 @@ var Polygon = (function () {
   }
 
   Polygon.prototype.updateCurrentlyEditedPolygon = function (points) {
-    var oldPolygon = this.canvas.getItemByAttr("id", this.currentlyShownPolygonId);
+    this.updatePolygonPoints(this.currentlyShownPolygonId, points);
+  }
+
+  Polygon.prototype.updatePolygonPoints = function (id, points) {
+    var oldPolygon = this.canvas.getItemByAttr("id", id);
     oldPolygon.points = points;
     this.canvas.renderAll();
-    /*this.canvas.remove(oldPolygon);
-
-    var newPolygon = new fabric.Polygon(points,{
-      stroke: oldPolygon.stroke,
-      strokeWidth: oldPolygon.strokeWidth,
-      fill: oldPolygon.fill,
-      hasBorders: oldPolygon.hasBorders,
-      hasControls: oldPolygon.hasControls,
-      objectCaching: oldPolygon.objectCaching,
-      selectable: oldPolygon.selectable,
-      //left: oldPolygon.left,
-      //top: oldPolygon.top,
-      id: oldPolygon.id
-    });
-
-    this.canvas.add(newPolygon);
-    newPolygon.setCoords();
-    this.canvas.renderAll();*/
   }
 
   Polygon.prototype.addPolygon = function (polygon) {
@@ -277,7 +243,8 @@ var Polygon = (function () {
         originX:'center',
         originY:'center',
         index: i,
-        isPolygonHandle: true
+        isPolygonHandle: true,
+        belongsToPolygon: polygon.id
       });
       polyPoints.push(circle);
     }
@@ -306,7 +273,8 @@ var Polygon = (function () {
         originX:'center',
         originY:'center',
         index: index,
-        isPolygonHandle: true
+        isPolygonHandle: true,
+        belongsToPolygon: this.currentId
       });
 
       polyPoints.push(circle);
@@ -537,12 +505,12 @@ var Annotator = (function () {
       var p = o.target;
       if(("isPolygonHandle" in p) && p["isPolygonHandle"]){ 
         if(inst.polygon.isInPolyEditMode()){
-
-          var points = inst.polygon.getCurrentlyEditedPolygon().points;
+ 
+          var points = inst.polygon.getPaintedPolygonById(p.belongsToPolygon).points;
           points[p.index] = {x: (points[p.index].x + o.e.movementX), y: (points[p.index].y + o.e.movementY)}
           //points[p.index] = {x: p.getCenterPoint().x, y: p.getCenterPoint().y};
-          inst.polygon.getCurrentlyEditedPolygon().setCoords();
-          inst.polygon.updateCurrentlyEditedPolygon(points);
+          inst.polygon.getPaintedPolygonById(p.belongsToPolygon).setCoords();
+          inst.polygon.updatePolygonPoints(p.belongsToPolygon, points);
         }
         else{
           var obj = inst.canvas.getActiveObject();
@@ -1082,6 +1050,7 @@ var Annotator = (function () {
         else if(type === "polygon"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+
 
           points = objs[i]["points"];
           var scaledPoints = [];
