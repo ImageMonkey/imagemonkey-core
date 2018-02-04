@@ -23,14 +23,15 @@ fabric.Canvas.prototype.removeItemsByAttr = function(attr, name) {
 
 
 function generateRandomId() {
-    function s4() {
-      return Math.floor((1 + Math.random()) * 0x10000)
-        .toString(16)
-        .substring(1);
-    }
-    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-      s4() + '-' + s4() + s4() + s4();
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
   }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+    s4() + '-' + s4() + s4() + s4();
+}
+
 
 var Polygon = (function () {
   function Polygon(canvas) {
@@ -69,11 +70,11 @@ var Polygon = (function () {
   }
 
   Polygon.prototype.addPoint = function (options) {
-    if(this.currentlyShownPolygonId !== ""){
+    /*if(this.currentlyShownPolygonId !== ""){
       this.getCurrentlyEditedPolygon().selectable = true;
       this.hidePolyPoints(this.currentlyShownPolygonId);
       return;
-    }
+    }*/
 
 
     var random = Math.floor(Math.random() * (this.max - this.min + 1)) + this.min;
@@ -200,6 +201,13 @@ var Polygon = (function () {
     inst.canvas.renderAll();
   }
 
+  Polygon.prototype.removePolygonById = function (polygonId){
+    if(polygonId in this.polygons){
+      this.hidePolyPoints(polygonId);
+      delete this.polygons[polygonId];
+    }
+  }
+
   Polygon.prototype.getPaintedPolygonById = function (id) {
     return this.canvas.getItemByAttr("id", id);
   }
@@ -254,6 +262,7 @@ var Polygon = (function () {
   Polygon.prototype.generatePolygon = function () {
     var points = new Array();
     var polyPoints = new Array();
+    var inst = this;
     $.each(this.pointArray,function(index,point){
       points.push({
         x:point.left,
@@ -274,7 +283,7 @@ var Polygon = (function () {
         originY:'center',
         index: index,
         isPolygonHandle: true,
-        belongsToPolygon: this.currentId
+        belongsToPolygon: inst.currentId
       });
 
       polyPoints.push(circle);
@@ -294,9 +303,11 @@ var Polygon = (function () {
       strokeWidth: 5,
       fill: 'transparent',
       hasBorders: true,
-      hasControls: true,
+      hasControls: false,
       objectCaching: false,
       selectable: true,
+      lockMovementX: true,
+      lockMovementY: true,
       id: this.currentId
     });
     this.canvas.add(polygon);
@@ -306,6 +317,8 @@ var Polygon = (function () {
     this.canvas.selection = true;
     this.index = 0;
     this.currentId = "";
+
+    this.showPolyPoints(polygon.id);
   };
 
   Polygon.prototype.firstId = function () {
@@ -408,7 +421,6 @@ var FreeDrawer = (function () {
 
     this.canvas.isDrawingMode = false;
     this.canvas.freeDrawingBrush.onMouseUp();
-    //console.log("generate")
   };
 
   FreeDrawer.prototype.isPathClosed = function (pointer) {
@@ -505,7 +517,6 @@ var Annotator = (function () {
       var p = o.target;
       if(("isPolygonHandle" in p) && p["isPolygonHandle"]){ 
         if(inst.polygon.isInPolyEditMode()){
- 
           var points = inst.polygon.getPaintedPolygonById(p.belongsToPolygon).points;
           points[p.index] = {x: (points[p.index].x + o.e.movementX), y: (points[p.index].y + o.e.movementY)}
           //points[p.index] = {x: p.getCenterPoint().x, y: p.getCenterPoint().y};
@@ -521,6 +532,19 @@ var Annotator = (function () {
           }
         }
       }
+      /*else if(p.type === "polygon"){
+        var points = p.points; 
+        for(var i = 0; i < points.length; i++){
+          points[i] = {x: (points[i].x + o.e.movementX), y: (points[i].y + o.e.movementY)};
+        }
+        p.set({left: p.left - o.e.movementX});
+        p.set({top: p.top - o.e.movementY});
+        p.points = points;
+        p.setCoords();
+        inst.canvas.renderAll();
+      }*/
+
+
 
     });
     inst.canvas.on('object:selected', function(o) {
@@ -542,6 +566,12 @@ var Annotator = (function () {
           inst.over();
           inst.canvas.hoverCursor = 'move';
         }
+        else{
+          inst.canvas.hoverCursor = 'default';
+        }
+      }
+      else{
+        inst.canvas.hoverCursor = 'default';
       }
     })
     inst.canvas.on('mouse:out', function(o) {
@@ -797,7 +827,11 @@ var Annotator = (function () {
   };
 
   Annotator.prototype.deleteSelected = function (o) {
-    this.canvas.getActiveObject().remove();
+    var activeObj = this.canvas.getActiveObject();
+    if("id" in activeObj){
+      this.polygon.removePolygonById(activeObj["id"]);
+    }
+    activeObj.remove();
   };
 
   Annotator.prototype.objectsSelected = function (o) {
@@ -1019,7 +1053,7 @@ var Annotator = (function () {
 
     }
     else{
-      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color;
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, pointX, pointY, pX, pY;
 
       for(var i = 0; i < objs.length; i++){
         //skip polygon handles
@@ -1050,15 +1084,22 @@ var Annotator = (function () {
         else if(type === "polygon"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
+          width = Math.round(((objs[i]["width"] / imgScaleX)), 0);
+          height = Math.round(((objs[i]["height"] / imgScaleY)), 0);
 
 
           points = objs[i]["points"];
+
           var scaledPoints = [];
           for(var j = 0; j < points.length; j++){
-            scaledPoints.push({"x" : Math.round(((points[j]["x"] / imgScaleX) * objs[i]["scaleX"]), 0), "y": Math.round(((points[j]["y"] / imgScaleY) * objs[i]["scaleY"]), 0)});
+            pointX = Math.round(((points[j]["x"] / imgScaleX) * objs[i]["scaleX"]), 0);
+            pointY = Math.round(((points[j]["y"] / imgScaleY) * objs[i]["scaleY"]), 0);
+            pX = pointX;
+            pY = pointY;
+            scaledPoints.push({"x" : pX, "y": pY});
           }
 
-          res.push({"left" : left, "top": top, "points": scaledPoints, "angle": angle, "type": "polygon"});
+          res.push({"points": scaledPoints, "angle": angle, "type": "polygon"});
         }
       }
     }
