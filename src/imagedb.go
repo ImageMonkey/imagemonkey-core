@@ -946,52 +946,74 @@ func addAnnotations(clientFingerprint string, imageId string, annotations Annota
     return nil
 }
 
-func getRandomUnannotatedImage(addAutoAnnotations bool) (UnannotatedImage, error) {
+func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (UnannotatedImage, error) {
     var unannotatedImage UnannotatedImage
-    //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
-    rows, err := db.Query(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q1.auto_annotations FROM
-                              (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, width as image_width, height as image_height
-                                   FROM image i 
-                                   JOIN image_provider p ON i.image_provider_id = p.id 
-                                   JOIN image_validation v ON v.image_id = i.id
-                                   JOIN label l ON v.label_id = l.id
-                                   LEFT JOIN label pl ON l.parent_id = pl.id
-                                   WHERE i.unlocked = true AND p.name = 'donation' AND 
-                                   CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
-                                   AND NOT EXISTS
+
+    q1 := ""
+    if labelId != -1 {
+        q1 = "AND l.id = $1"
+    }
+
+    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q1.auto_annotations FROM
+                        (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, width as image_width, height as image_height
+                            FROM image i 
+                            JOIN image_provider p ON i.image_provider_id = p.id 
+                            JOIN image_validation v ON v.image_id = i.id
+                            JOIN label l ON v.label_id = l.id
+                            LEFT JOIN label pl ON l.parent_id = pl.id
+                            WHERE i.unlocked = true AND p.name = 'donation' AND 
+                            CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                            %s
+                            AND NOT EXISTS
+                                (
+                                    SELECT 1 FROM image_annotation a 
+                                    WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                                )
+                                OFFSET floor
+                                ( random() * 
                                     (
-                                        SELECT 1 FROM image_annotation a 
-                                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
-                                    )
-                                   OFFSET floor
-                                   ( random() * 
-                                       (
-                                            SELECT count(*) FROM image i
-                                            JOIN image_provider p ON i.image_provider_id = p.id
-                                            JOIN image_validation v ON v.image_id = i.id
-                                            WHERE i.unlocked = true AND p.name = 'donation' AND 
-                                            CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
-                                            AND NOT EXISTS
-                                            (
-                                                SELECT 1 FROM image_annotation a 
-                                                WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
-                                            )
-                                       ) 
-                                   )LIMIT 1
-                              ) q
-                              LEFT JOIN 
-                              (
-                                SELECT a.label_id as label_id, a.image_id as image_id, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as auto_annotations
-                                FROM image_annotation a 
-                                JOIN annotation_data d ON d.image_annotation_id = a.id
-                                JOIN annotation_type t on d.annotation_type_id = t.id
-                                WHERE a.auto_generated = true 
-                                GROUP BY d.image_annotation_id, a.label_id, a.image_id
-                              ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`)
-    if(err != nil) {
-        log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
-        raven.CaptureError(err, nil)
-        return unannotatedImage, err
+                                        SELECT count(*) FROM image i
+                                        JOIN image_provider p ON i.image_provider_id = p.id
+                                        JOIN image_validation v ON v.image_id = i.id
+                                        JOIN label l ON v.label_id = l.id
+                                        WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                        CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                        %s
+                                        AND NOT EXISTS
+                                        (
+                                            SELECT 1 FROM image_annotation a 
+                                            WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                                        )
+                                    ) 
+                                )LIMIT 1
+                        ) q
+                        LEFT JOIN 
+                        (
+                            SELECT a.label_id as label_id, a.image_id as image_id, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as auto_annotations
+                            FROM image_annotation a 
+                            JOIN annotation_data d ON d.image_annotation_id = a.id
+                            JOIN annotation_type t on d.annotation_type_id = t.id
+                            WHERE a.auto_generated = true 
+                            GROUP BY d.image_annotation_id, a.label_id, a.image_id
+                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`, q1, q1)
+
+    //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
+    var rows *sql.Rows
+    var err error
+    if labelId == -1 {
+        rows, err = db.Query(q)
+        if(err != nil) {
+            log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
+            raven.CaptureError(err, nil)
+            return unannotatedImage, err
+        }
+    } else {
+        rows, err = db.Query(q, labelId)
+        if(err != nil) {
+            log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
+            raven.CaptureError(err, nil)
+            return unannotatedImage, err
+        }
     }
 
     defer rows.Close()

@@ -31,6 +31,7 @@
   var detailedCanvas = null;
   var numOfPendingRequests = 0;
   var autoAnnotations = null;
+  var labelId = null;
 
   function getUrlFromImageId(imageId){
     return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
@@ -393,6 +394,10 @@
 
       setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
+      labelId = {{ .labelId }};
+      if(labelId === -1)
+        labelId = null;
+
       canvas = new CanvasDrawer("annotationArea");
       annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
 
@@ -548,7 +553,7 @@
           headers: headers,
           success: function(data){
             $.ajax({
-              url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true',
+              url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId)),
               dataType: 'json',
               type: 'GET',
               success: function(data){

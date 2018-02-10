@@ -1018,7 +1018,17 @@ func main(){
 			}
 		}
 
-		randomImage, err := getRandomUnannotatedImage(addAutoAnnotations)
+		var labelId int64
+		labelId = -1
+		if temp, ok := params["label_id"]; ok {
+			labelId, err = strconv.ParseInt(temp[0], 10, 64)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+				return
+			}
+		}
+
+		randomImage, err := getRandomUnannotatedImage(addAutoAnnotations, labelId)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return

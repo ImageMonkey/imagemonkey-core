@@ -11,6 +11,7 @@ import (
 	"flag"
 	"database/sql"
 	"math"
+	"strconv"
 )
 
 var db *sql.DB
@@ -107,13 +108,28 @@ func main() {
 
 
 	router.GET("/annotate", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		
+
+		var labelId int64
+		labelId = -1
+		if temp, ok := params["label_id"]; ok {
+			labelId, err = strconv.ParseInt(temp[0], 10, 64)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+				return
+			}
+		}
+
+
 		c.HTML(http.StatusOK, "annotate.html", gin.H{
 			"title": "Annotate",
-			"randomImage": pick(getRandomUnannotatedImage(true))[0],
+			"randomImage": pick(getRandomUnannotatedImage(true, labelId))[0],
 			"activeMenuNr": 4,
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": webAppIdentifier,
 			"playgroundBaseUrl": playgroundBaseUrl,
+			"labelId": labelId,
 		})
 	})
 
