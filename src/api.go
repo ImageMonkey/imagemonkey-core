@@ -1137,6 +1137,13 @@ func main(){
 	})
 
 	router.POST("/v1/login", func(c *gin.Context) {
+		type MyCustomClaims struct {
+			Username string `json:"username"`
+			Created int64 `json:"created"`
+			jwt.StandardClaims
+		}
+
+
 		auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
 
         if len(auth) != 2 || auth[0] != "Basic" {
@@ -1163,11 +1170,16 @@ func main(){
 			now := time.Now()
 			expirationTime := now.Add(time.Hour * 24 * 7)
 
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-    			"username": pair[0],
-    			"created": now.Unix(),
-    			"exp": expirationTime.Unix(),
-			})
+			claims := MyCustomClaims{
+				pair[0],
+				now.Unix(),
+				jwt.StandardClaims{
+					ExpiresAt: expirationTime.Unix(),
+					Issuer: "imagemonkey-api",
+				},
+			}
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 			tokenString, err := token.SignedString([]byte(JWT_SECRET))
 			if err != nil {
