@@ -1811,33 +1811,114 @@ func getImagesForAutoAnnotation(labels []string) ([]AutoAnnotationImage, error) 
     
 
     return autoAnnotationImages, nil
+}
 
-
-    /*var images []string
-    rows, err := db.Query(`SELECT i.key FROM image i 
-                           JOIN image_validation v ON v.image_id = i.id
-                           WHERE i.id NOT IN (
-                                SELECT image_id FROM image_annotation WHERE auto_generated = true
-                           )
-                           GROUP BY i.key`)
+func userExists(username string) (bool, error) {
+    var numOfExistingUsers int32
+    err := db.QueryRow("SELECT count(*) FROM account u WHERE u.name = $1", username).Scan(&numOfExistingUsers)
     if err != nil {
-        log.Debug("[Get images for auto annotation] Couldn't get: ", err.Error())
+        log.Debug("[User exists] Couldn't get num of existing users: ", err.Error())
         raven.CaptureError(err, nil)
-        return images, err
-    }
-    defer rows.Close()
-
-    var image string
-    for rows.Next() {
-        err = rows.Scan(&image)
-        if err != nil {
-           log.Debug("[Get images for auto annotation] Couldn't scan row: ", err.Error())
-           raven.CaptureError(err, nil)
-           return images, err 
-        }
-
-        images = append(images, image)
+        return false, err
     }
 
-    return images, nil*/
+    if numOfExistingUsers > 0 {
+        return true, nil
+    }
+    return false, nil
+}
+
+func emailExists(email string) (bool, error) {
+    var numOfExistingUsers int32
+    err := db.QueryRow("SELECT count(*) FROM account u WHERE u.email = $1", email).Scan(&numOfExistingUsers)
+    if err != nil {
+        log.Debug("[Email exists] Couldn't get num of existing users: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    if numOfExistingUsers > 0 {
+        return true, nil
+    }
+    return false, nil
+}
+
+func getHashedPasswordForUser(username string) (string, error) {
+    var hashedPassword string
+    err := db.QueryRow("SELECT hashed_password FROM account u WHERE u.name = $1", username).Scan(&hashedPassword)
+    if err != nil {
+        log.Debug("[Hashed Password] Couldn't get hashed password for user: ", err.Error())
+        raven.CaptureError(err, nil)
+        return "", err
+    }
+
+    return hashedPassword, nil
+}
+
+
+func addAccessToken(username string, accessToken string, expirationTime int64) error {
+    var insertedId int64
+
+    insertedId = 0
+    err := db.QueryRow(`INSERT INTO access_token(user_id, token, expiration_time)
+                        SELECT id, $2, $3 FROM account a WHERE a.name = $1 RETURNING id`, username, accessToken, expirationTime).Scan(&insertedId)
+    if err != nil {
+        log.Debug("[Add Access Token] Couldn't add access token: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if insertedId == 0 {
+        log.Debug("[Add Access Token] Nothing inserted")
+        return errors.New("Nothing inserted")
+    }
+
+    return nil
+}
+
+func removeAccessToken(accessToken string) error {
+    _, err := db.Exec(`DELETE FROM access_token WHERE token = $1`, accessToken)
+    if err != nil {
+        log.Debug("[Remove Access Token] Couldn't remove access token: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
+func accessTokenExists(accessToken string) bool {
+    var numOfAccessTokens int32
+
+    numOfAccessTokens = 0
+    err := db.QueryRow("SELECT count(*) FROM access_token WHERE token = $1", accessToken).Scan(&numOfAccessTokens)
+    if err != nil {
+        log.Debug("[Add Access Token] Couldn't add access token: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false
+    }
+
+    if numOfAccessTokens == 0 {
+        return false
+    }
+
+    return true
+}
+
+func createUser(username string, hashedPassword []byte, email string) error {
+    var insertedId int64
+
+    insertedId = 0
+    err := db.QueryRow("INSERT INTO account(name, hashed_password, email) VALUES($1, $2, $3) RETURNING id", username, hashedPassword, email).Scan(&insertedId)
+    if err != nil {
+        log.Debug("[Creating User] Couldn't create user: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if insertedId == 0 {
+        return errors.New("nothing inserted")
+    }
+
+    return nil
 }

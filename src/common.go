@@ -98,6 +98,12 @@ type ImageInfo struct {
     Height int32
 }
 
+type UserSignupRequest struct {
+    Username string `json:"username"`
+    Email string `json:"email"`
+    Password string `json:"password"`
+}
+
 
 func use(vals ...interface{}) {
     for _, val := range vals {
@@ -255,7 +261,6 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
 
     return labelMap.LabelMapEntries, words, nil
 }
-
 
 func GetSampleExportQueries() []string {
     var queries []string

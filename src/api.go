@@ -25,6 +25,10 @@ import (
     "image/jpeg"
     "image/png"
     "strings"
+    "encoding/base64"
+    "github.com/dgrijalva/jwt-go"
+    "golang.org/x/crypto/bcrypt"
+    "time"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -107,7 +111,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -310,6 +314,8 @@ func main(){
 	}
 
 	sampleExportQueries := GetSampleExportQueries()
+
+	authTokenHandler := NewAuthTokenHandler()
 
 
 	router := gin.Default()
@@ -1128,6 +1134,125 @@ func main(){
 		}
 
 		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/v1/login", func(c *gin.Context) {
+		auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
+
+        if len(auth) != 2 || auth[0] != "Basic" {
+            c.JSON(422, gin.H{"error": "Authorization failed"})
+            return
+        }
+
+        payload, err := base64.StdEncoding.DecodeString(auth[1])
+        if err != nil {
+        	c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+        }
+		pair := strings.SplitN(string(payload), ":", 2)
+
+
+		hashedPassword, err := getHashedPasswordForUser(pair[0])
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(pair[1]))
+		if err == nil { //nil means password match
+			now := time.Now()
+			expirationTime := now.Add(time.Hour * 24 * 7)
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+    			"username": pair[0],
+    			"created": now.Unix(),
+    			"exp": expirationTime.Unix(),
+			})
+
+			tokenString, err := token.SignedString([]byte(JWT_SECRET))
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            	return
+			}
+
+			err = addAccessToken(pair[0], tokenString, expirationTime.Unix())
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            	return
+			}
+
+
+			c.JSON(http.StatusOK, gin.H{"token": tokenString})
+			return
+		}
+
+		c.JSON(403, nil)
+	})
+
+	router.POST("/v1/logout", func(c *gin.Context) {
+		accessTokenInfo := authTokenHandler.GetAccessTokenInfo(c)
+		err := removeAccessToken(accessTokenInfo.Token)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		c.JSON(200, nil)
+	})
+
+	router.POST("/v1/reset_password", func(c *gin.Context) {
+		//removeAllAccessTokens(username)
+
+	})
+
+	router.POST("v1/signup", func(c *gin.Context) {
+		var userSignupRequest UserSignupRequest
+		
+		if c.BindJSON(&userSignupRequest) != nil {
+			c.JSON(400, gin.H{"error": "Couldn't process request - invalid data"})
+			return
+		}
+
+		if ((userSignupRequest.Username == "") || (userSignupRequest.Password == "") || (userSignupRequest.Email == "")) {
+			c.JSON(422, gin.H{"error": "Invalid data"})
+            return
+		}
+
+		userExists, err := userExists(userSignupRequest.Username)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		if userExists {
+			c.JSON(409, gin.H{"error": "Username already taken"})
+            return
+		}
+
+		emailExists, err := emailExists(userSignupRequest.Email)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		if emailExists {
+			c.JSON(409, gin.H{"error": "There already exists a username with this email address"})
+            return
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userSignupRequest.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		err = createUser(userSignupRequest.Username, hashedPassword, userSignupRequest.Email)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		c.JSON(201, nil)
 	})
 
 	router.Run(":8081")

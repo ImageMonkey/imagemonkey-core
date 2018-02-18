@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="js/common.js"></script> 
+  <link rel="stylesheet" href="css/common_sub.css"/>
+
+  <script>
+  $(document).ready(function(){
+    function signup(username, password, email){
+      var data = {}
+
+      data["username"] = username;
+      data["password"] = password;
+      data["email"] = email;
+
+      $.ajax({
+        type: "POST",
+        url: "{{ .apiBaseUrl }}/v1/signup",
+        data: JSON.stringify(data)
+      });
+    }
+
+    function isPasswordEmpty(){
+      var password = document.getElementById('passwordInput').value;
+      var repeatedPassword = document.getElementById('repeatedPasswordInput').value;
+
+      if((password === "") || (repeatedPassword === ""))
+        return true;
+      return false;
+    }
+
+    function isUsernameEmpty(){
+      var username = document.getElementById('usernameInput').value;
+      if(username === "")
+        return true;
+      return false;
+    }
+
+
+    function doPasswordsMatch(){
+      var password = document.getElementById('passwordInput').value;
+      var repeatedPassword = document.getElementById('repeatedPasswordInput').value;
+
+      if(password !== repeatedPassword)
+        return false;
+      return true;
+    }
+
+    function isEmailValid() {
+      var email = document.getElementById('emailInput').value;
+      var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+      var res = re.test(String(email).toLowerCase());
+      return res;
+    }
+
+
+    $('#signupButton').click(function(e) {
+      if(isUsernameEmpty()){
+        $('#signupWarningMsgText').text('Please provide a valid username');
+        $('#signupWarningMsg').show(200).delay(1500).hide(200);
+        return;
+      }
+
+      if(!isEmailValid()){
+        $('#signupWarningMsgText').text('Email address is not valid');
+        $('#signupWarningMsg').show(200).delay(1500).hide(200);
+        return;
+      }
+
+      if(isPasswordEmpty()){
+        $('#signupWarningMsgText').text('Please provide a valid password');
+        $('#signupWarningMsg').show(200).delay(1500).hide(200);
+        return;
+      }
+
+      if(!doPasswordsMatch()){
+        $('#signupWarningMsgText').text('Passwords do not match');
+        $('#signupWarningMsg').show(200).delay(1500).hide(200);
+        return;
+      }
+
+      var username = document.getElementById('usernameInput').value;
+      var password = document.getElementById('passwordInput').value;
+      var email = document.getElementById('emailInput').value;
+
+      signup(username, password, email);
+    });
+
+  });
+  </script>
+</head>
+<body>
+
+  {{ template "menu.html" .}}
+
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Login
+      </h2>
+    </div>
+  </div>
+  <div class="ui stackable center aligned grid vertical stripe">
+    <div class="row">
+        <div class="ui massive stacked segment">
+          <div class="field">
+            <div class="ui left icon input">
+              <i class="user icon"></i>
+              <input type="text" name="username" placeholder="Username" id="usernameInput">
+            </div>
+          </div>
+          <div class="field">
+            <div class="ui left icon input">
+              <i class="lock icon"></i>
+              <input type="password" name="password" placeholder="Password" id="passwordInput">
+            </div>
+          </div>
+          <div class="field">
+            <div class="ui left icon input">
+              <i class="lock icon"></i>
+              <input type="password" name="repeatedPassword" placeholder="Repeat Password" id="repeatedPasswordInput">
+            </div>
+          </div>
+          <div class="field">
+            <div class="ui left icon input">
+              <i class="envelope icon"></i>
+              <input type="text" name="email" placeholder="Email" id="emailInput">
+            </div>
+          </div>
+          <div class="field">
+            <div class="ui fluid massive submit button" id="signupButton">Sign Up</div>
+          </div>
+        </div>
+    </div>
+
+    <div class="row">
+      <div class="ui basic segment">
+        <div hidden class="ui warning message" id="signupWarningMsg">
+          <i class="close icon"></i>
+          <div class="header" id="signupWarningMsgText">
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+  {{ template "footer.html" .}}
+</div>
+
+</body>
+
+</html>

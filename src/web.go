@@ -34,6 +34,9 @@ func main() {
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
 
+
+	sessionCookieHandler := NewSessionCookieHandler()
+
 	flag.Parse()
 	if(*releaseMode){
 		fmt.Printf("Starting gin in release mode!\n")
@@ -83,6 +86,8 @@ func main() {
 			"title": "ImageMonkey",
 			"activeMenuNr": 1,
 			"numOfDonations": pick(getNumOfDonatedImages())[0],
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+			"apiBaseUrl": apiBaseUrl,
 		})
 	})
 	router.GET("/donate", func(c *gin.Context) {
@@ -93,6 +98,7 @@ func main() {
 			"apiBaseUrl": apiBaseUrl,
 			"words": words,
 			"appIdentifier": webAppIdentifier,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 
@@ -103,6 +109,7 @@ func main() {
 			"activeMenuNr": 3,
 			"apiBaseUrl": apiBaseUrl,
 			"labels": labelMap,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 
@@ -130,6 +137,7 @@ func main() {
 			"appIdentifier": webAppIdentifier,
 			"playgroundBaseUrl": playgroundBaseUrl,
 			"labelId": labelId,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 
@@ -183,6 +191,7 @@ func main() {
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": appIdentifier,
 			"callback": callback,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 	router.GET("/verify_annotation", func(c *gin.Context) {
@@ -192,6 +201,7 @@ func main() {
 			"activeMenuNr": 6,
 			"apiBaseUrl": apiBaseUrl,
 			"appIdentifier": webAppIdentifier,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 	router.GET("/quiz", func(c *gin.Context) {
@@ -201,6 +211,7 @@ func main() {
 			"randomAnnotatedImage": pick(getRandomAnnotationForRefinement())[0],
 			"activeMenuNr": 7,
 			"apiBaseUrl": apiBaseUrl,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})	
 	router.GET("/statistics", func(c *gin.Context) {
@@ -209,6 +220,8 @@ func main() {
 			"words": words,
 			"activeMenuNr": 8,
 			"statistics": pick(explore(words))[0],
+			"apiBaseUrl": apiBaseUrl,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 	router.GET("/explore", func(c *gin.Context) {
@@ -217,29 +230,43 @@ func main() {
 			"activeMenuNr": 9,
 			"apiBaseUrl": apiBaseUrl,
 			"labelAccessors": pick(getLabelAccessors())[0],
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 	router.GET("/apps", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "mobile.html", gin.H{
 			"title": "Mobile Apps & Extensions",
 			"activeMenuNr": 10,
+			"apiBaseUrl": apiBaseUrl,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
 	router.GET("/playground", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "playground.html", gin.H{
 			"title": "Playground",
 			"activeMenuNr": 11,
+			"apiBaseUrl": apiBaseUrl,
 			"playgroundPredictBaseUrl": playgroundBaseUrl,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
-	/*router.GET("/browse", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "browse.html", gin.H{
-			"title": "Browse",
-			"activeMenuNr": 12,
+	router.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", gin.H{
+			"title": "Login",
 			"apiBaseUrl": apiBaseUrl,
-			"labelAccessors": pick(getLabelAccessors())[0],
+			"activeMenuNr": 12,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
-	})*/
+	})
+
+	router.GET("/signup", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "signup.html", gin.H{
+			"title": "Sign Up",
+			"apiBaseUrl": apiBaseUrl,
+			"activeMenuNr": -1,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+		})
+	})
 
 	router.Run(":8080")
 }

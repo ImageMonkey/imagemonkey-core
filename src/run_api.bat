@@ -1,0 +1,1 @@
+go run api.go api_secrets.go common.go imagedb.go parser.go auth.go
