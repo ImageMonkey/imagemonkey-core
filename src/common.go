@@ -104,6 +104,11 @@ type UserSignupRequest struct {
     Password string `json:"password"`
 }
 
+type APIUser struct {
+    Name string `json:"name"`
+    ClientFingerprint string `json:"client_fingerprint"`
+}
+
 
 func use(vals ...interface{}) {
     for _, val := range vals {

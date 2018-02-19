@@ -268,5 +268,14 @@ func main() {
 		})
 	})
 
+	router.GET("/profile", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "profile.html", gin.H{
+			"title": "Profile",
+			"apiBaseUrl": apiBaseUrl,
+			"activeMenuNr": -1,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+		})
+	})
+
 	router.Run(":8080")
 }

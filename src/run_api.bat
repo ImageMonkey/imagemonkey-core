@@ -1,1 +1,1 @@
-go run api.go api_secrets.go common.go imagedb.go parser.go auth.go
+go build -o api.exe api.go api_secrets.go common.go imagedb.go parser.go auth.go && api.exe

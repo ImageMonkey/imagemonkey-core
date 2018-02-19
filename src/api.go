@@ -407,7 +407,11 @@ func main(){
 				return
 			}
 
-			err = addAnnotations("", imageId, annotations, true)
+			var apiUser APIUser
+			apiUser.ClientFingerprint = ""
+			apiUser.Name = ""
+
+			err = addAnnotations(apiUser, imageId, annotations, true)
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 				return
@@ -986,9 +990,12 @@ func main(){
 			return
 		}
 
-		browserFingerprint := getBrowserFingerprint(c)
+		var apiUser APIUser
+		apiUser.ClientFingerprint = getBrowserFingerprint(c)
+		apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-		err = addAnnotations(browserFingerprint, imageId, annotations, false)
+
+		err = addAnnotations(apiUser, imageId, annotations, false)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 			return
@@ -1265,6 +1272,33 @@ func main(){
 		}
 
 		c.JSON(201, nil)
+	})
+
+	router.GET("v1/user/:username/profile", func(c *gin.Context) {
+		username := c.Param("username")
+		if username == "" {
+			c.JSON(422, gin.H{"error": "Invalid request - username missing"})
+			return
+		}
+
+		userExists, err := userExists(username) 
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		if !userExists {
+			c.JSON(422, gin.H{"error": "Invalid request - username doesn't exist"})
+			return
+		}
+
+		userStatistics, err := getUserStatistics(username)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		c.JSON(200, gin.H{"statistics": userStatistics})
 	})
 
 	router.Run(":8081")
