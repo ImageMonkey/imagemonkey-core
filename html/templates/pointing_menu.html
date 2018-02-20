@@ -1,4 +1,4 @@
-<script src="js/cookies.min.js"></script> 
+<script src="/js/cookies.min.js"></script> 
 
 <div class="ui container">
   <div class="ui large secondary inverted pointing menu">
@@ -25,6 +25,7 @@
   <div class="ui dropdown item" id="mainMenuDropdown">
     <i class="user icon"></i> {{ .sessionInformation.Username }} <i class="dropdown icon"></i>
     <div class="menu">
+      <div class="item" id="mainMenuProfileButton"><i class="user icon"></i>Profile</div>
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
   </div>
 </div>
@@ -36,6 +37,12 @@
 <script>
   $(document).ready(function(){
     $('#mainMenuDropdown').dropdown();
+
+    function parseJwt(token){
+      var base64Url = token.split('.')[1];
+      var base64 = base64Url.replace('-', '+').replace('_', '/');
+      return JSON.parse(window.atob(base64));
+    };
 
     function logout(){
       console.log("logout")
@@ -54,6 +61,11 @@
 
     $('#mainMenuLogoutButton').click(function(e) {
       logout();
+    });
+
+    $('#mainMenuProfileButton').click(function(e) {
+      var username = parseJwt(Cookies.get("imagemonkey"))["username"]
+      window.location.href = "/profile/" + username; //redirect to profile page
     });
 
 

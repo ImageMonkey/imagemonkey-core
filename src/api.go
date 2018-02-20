@@ -1224,7 +1224,7 @@ func main(){
 
 	})
 
-	router.POST("v1/signup", func(c *gin.Context) {
+	router.POST("/v1/signup", func(c *gin.Context) {
 		var userSignupRequest UserSignupRequest
 		
 		if c.BindJSON(&userSignupRequest) != nil {

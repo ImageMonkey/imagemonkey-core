@@ -28,7 +28,7 @@
           xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
         },
         success: function(data){
-          //chrome://settings/content/cookies
+          Cookies.set('imagemonkey', data.token);
           window.location.href = "/"; //redirect to home page
         },
         error: function (xhr, options, err) {
