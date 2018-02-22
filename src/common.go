@@ -351,3 +351,15 @@ func (p *StatisticsPusher) PushAppAction(appIdentifier string, actionType string
         }
     }
 }
+
+
+func isAlphaNumeric(s string) bool {
+    for _, c := range s {
+        if (!(c > 47 && c < 58) && // numeric (0-9)
+            !(c > 64 && c < 91) && // upper alpha (A-Z)
+            !(c > 96 && c < 123)) { // lower alpha (a-z)
+            return false
+        }
+    }
+    return true
+}

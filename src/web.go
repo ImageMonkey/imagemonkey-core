@@ -251,21 +251,36 @@ func main() {
 		})
 	})
 	router.GET("/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "login.html", gin.H{
-			"title": "Login",
-			"apiBaseUrl": apiBaseUrl,
-			"activeMenuNr": 12,
-			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
-		})
+		sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+		//when logged in, redirect to profile page
+		if(sessionInformation.LoggedIn){
+			redirectUrl := "/profile/" + sessionInformation.Username
+			c.Redirect(302, redirectUrl)
+		} else {
+			c.HTML(http.StatusOK, "login.html", gin.H{
+				"title": "Login",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": 12,
+				"sessionInformation": sessionInformation,
+			})
+		}
 	})
 
 	router.GET("/signup", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "signup.html", gin.H{
-			"title": "Sign Up",
-			"apiBaseUrl": apiBaseUrl,
-			"activeMenuNr": -1,
-			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
-		})
+		sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+		//when logged in, redirect to profile page
+		if(sessionInformation.LoggedIn){
+			redirectUrl := "/profile/" + sessionInformation.Username
+			c.Redirect(302, redirectUrl)
+		} else {
+			c.HTML(http.StatusOK, "signup.html", gin.H{
+				"title": "Sign Up",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+			})
+		}
 	})
 
 	router.GET("/profile/:username", func(c *gin.Context) {
@@ -285,6 +300,15 @@ func main() {
 			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})
+
+	/*router.GET("/reset_password", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "reset_password.html", gin.H{
+			"title": "Profile",
+			"apiBaseUrl": apiBaseUrl,
+			"activeMenuNr": -1,
+			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+		})
+	})*/
 
 	router.Run(":8080")
 }

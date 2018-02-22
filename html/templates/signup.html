@@ -20,6 +20,20 @@
 
   <script>
   $(document).ready(function(){
+    function isAlphaNumeric(str){
+      if(typeof(str)!=='string')
+          return false;
+
+      for(var i=0;i<str.length;i++){
+        var ch = str.charAt(i);
+        if(((ch >= '0') && (ch <= '9')) || ((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z')))
+          continue;
+        return false;
+      }
+      return true;
+    }
+
+
     function signup(username, password, email){
       var data = {}
 
@@ -69,6 +83,11 @@
 
 
     $('#signupButton').click(function(e) {
+      var username = document.getElementById('usernameInput').value;
+      var password = document.getElementById('passwordInput').value;
+      var email = document.getElementById('emailInput').value;
+
+
       if(isUsernameEmpty()){
         $('#signupWarningMsgText').text('Please provide a valid username');
         $('#signupWarningMsg').show(200).delay(1500).hide(200);
@@ -93,9 +112,11 @@
         return;
       }
 
-      var username = document.getElementById('usernameInput').value;
-      var password = document.getElementById('passwordInput').value;
-      var email = document.getElementById('emailInput').value;
+      if(!isAlphaNumeric(username)){
+        $('#signupWarningMsgText').text('Username contains invalid characters');
+        $('#signupWarningMsg').show(200).delay(1500).hide(200);
+        return;
+      }
 
       signup(username, password, email);
     });

@@ -1219,11 +1219,6 @@ func main(){
 		c.JSON(200, nil)
 	})
 
-	router.POST("/v1/reset_password", func(c *gin.Context) {
-		//removeAllAccessTokens(username)
-
-	})
-
 	router.POST("/v1/signup", func(c *gin.Context) {
 		var userSignupRequest UserSignupRequest
 		
@@ -1234,6 +1229,11 @@ func main(){
 
 		if ((userSignupRequest.Username == "") || (userSignupRequest.Password == "") || (userSignupRequest.Email == "")) {
 			c.JSON(422, gin.H{"error": "Invalid data"})
+            return
+		}
+
+		if(!isAlphaNumeric(userSignupRequest.Username)){
+			c.JSON(422, gin.H{"error": "Username contains invalid characters"})
             return
 		}
 
@@ -1274,7 +1274,7 @@ func main(){
 		c.JSON(201, nil)
 	})
 
-	router.GET("v1/user/:username/profile", func(c *gin.Context) {
+	router.GET("/v1/user/:username/profile", func(c *gin.Context) {
 		username := c.Param("username")
 		if username == "" {
 			c.JSON(422, gin.H{"error": "Invalid request - username missing"})
@@ -1299,6 +1299,16 @@ func main(){
 		}
 
 		c.JSON(200, gin.H{"statistics": userStatistics})
+	})
+
+	router.POST("/v1/user/:username/password_reset", func(c *gin.Context) {
+		username := c.Param("username")
+		if username == "" {
+			c.JSON(422, gin.H{"error": "Invalid request - username missing"})
+			return
+		}
+
+		c.JSON(201, nil)
 	})
 
 	router.Run(":8081")
