@@ -4,3 +4,5 @@ src/api_secrets.go
 src/statworker_secrets.go
 donations/*
 unverified_donations/*
+src/web.exe
+src/api.exe

@@ -98,6 +98,17 @@ type ImageInfo struct {
     Height int32
 }
 
+type UserSignupRequest struct {
+    Username string `json:"username"`
+    Email string `json:"email"`
+    Password string `json:"password"`
+}
+
+type APIUser struct {
+    Name string `json:"name"`
+    ClientFingerprint string `json:"client_fingerprint"`
+}
+
 
 func use(vals ...interface{}) {
     for _, val := range vals {
@@ -256,7 +267,6 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     return labelMap.LabelMapEntries, words, nil
 }
 
-
 func GetSampleExportQueries() []string {
     var queries []string
     queries = append(queries, "dog | cat")
@@ -340,4 +350,16 @@ func (p *StatisticsPusher) PushAppAction(appIdentifier string, actionType string
             return
         }
     }
+}
+
+
+func isAlphaNumeric(s string) bool {
+    for _, c := range s {
+        if (!(c > 47 && c < 58) && // numeric (0-9)
+            !(c > 64 && c < 91) && // upper alpha (A-Z)
+            !(c > 96 && c < 123)) { // lower alpha (a-z)
+            return false
+        }
+    }
+    return true
 }
