@@ -551,6 +551,9 @@
           type: 'POST',
           data: JSON.stringify(postData),
           headers: headers,
+          beforeSend: function(xhr) {
+            xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          },
           success: function(data){
             $.ajax({
               url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId)),
