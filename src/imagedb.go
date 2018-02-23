@@ -1986,12 +1986,35 @@ func getUserStatistics(username string) (UserStatistics, error) {
         return userStatistics, err
     }
 
+
+    userStatistics.Total.Validations = 0
+    err = tx.QueryRow("SELECT count(*) FROM image_validation").Scan(&userStatistics.Total.Validations)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[User Statistics] Couldn't get total validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return userStatistics, err
+    }
+
+    //TODO
+    /*userStatistics.User.Validations = 0
+    err = tx.QueryRow(`SELECT count(*) FROM user_image_validation u
+                       JOIN account a on u.account_id = a.id WHERE a.name = $1`, username).Scan(&userStatistics.User.Validations)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[User Statistics] Couldn't get user validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return userStatistics, err
+    }*/
+
+
     err = tx.Commit()
     if err != nil {
         log.Debug("[User Statistics] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return userStatistics, err
     }
+
 
     return userStatistics, nil
 }
