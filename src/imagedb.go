@@ -8,6 +8,7 @@ import (
     "database/sql"
     "fmt"
     "errors"
+    "time"
 )
 
 type RectangleAnnotation struct {
@@ -229,6 +230,12 @@ type UserStatistics struct {
         Validations int32 `json:"validations"`
         Annotations int32 `json:"annotations"`
     } `json:"user"`
+}
+
+type UserInfo struct {
+    Name string `json:"name"`
+    Created int64 `json:"created"`
+    ProfilePicture string `json:"profile_picture"`
 }
 
 
@@ -1861,6 +1868,23 @@ func userExists(username string) (bool, error) {
     return false, nil
 }
 
+func getUserInfo(username string) (UserInfo, error) {
+    var userInfo UserInfo
+
+    userInfo.Name = ""
+    userInfo.Created = 0
+    userInfo.ProfilePicture = ""
+
+    err := db.QueryRow("SELECT name, profile_picture, created FROM account WHERE name = $1", username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created)
+    if err != nil {
+        log.Debug("[User Info] Couldn't get user info: ", err.Error())
+        raven.CaptureError(err, nil)
+        return userInfo, err
+    }
+
+    return userInfo, nil
+}
+
 func emailExists(email string) (bool, error) {
     var numOfExistingUsers int32
     err := db.QueryRow("SELECT count(*) FROM account u WHERE u.email = $1", email).Scan(&numOfExistingUsers)
@@ -1941,8 +1965,11 @@ func accessTokenExists(accessToken string) bool {
 func createUser(username string, hashedPassword []byte, email string) error {
     var insertedId int64
 
+    created := int64(time.Now().Unix())
+
     insertedId = 0
-    err := db.QueryRow("INSERT INTO account(name, hashed_password, email) VALUES($1, $2, $3) RETURNING id", username, hashedPassword, email).Scan(&insertedId)
+    err := db.QueryRow("INSERT INTO account(name, hashed_password, email, created) VALUES($1, $2, $3, $4) RETURNING id", 
+                        username, hashedPassword, email, created).Scan(&insertedId)
     if err != nil {
         log.Debug("[Creating User] Couldn't create user: ", err.Error())
         raven.CaptureError(err, nil)
@@ -2017,4 +2044,41 @@ func getUserStatistics(username string) (UserStatistics, error) {
 
 
     return userStatistics, nil
+}
+
+func changeProfilePicture(username string, uuid string) (string, error) {
+    var existingProfilePicture string
+
+    existingProfilePicture = ""
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+    err = tx.QueryRow(`SELECT COALESCE(a.profile_picture, '') FROM account a WHERE a.name = $1`, username).Scan(&existingProfilePicture)
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't get existing profile picture: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+    _, err = tx.Exec(`UPDATE account SET profile_picture = $1 WHERE name = $2`, uuid, username)
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't change profile picture: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+    return existingProfilePicture, nil
 }

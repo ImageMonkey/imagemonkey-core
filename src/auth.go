@@ -128,8 +128,6 @@ func NewAuthTokenHandler() *AuthTokenHandler {
 func (p *AuthTokenHandler) GetAccessTokenInfo(c *gin.Context) AccessTokenInfo {
 	auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
 
-	log.Debug("aaa = ", len(auth))
-
     if len(auth) != 2 || auth[0] != "Bearer" {
     	var accessTokenInfo AccessTokenInfo
 		accessTokenInfo.Username = ""
@@ -137,8 +135,6 @@ func (p *AuthTokenHandler) GetAccessTokenInfo(c *gin.Context) AccessTokenInfo {
 		accessTokenInfo.Valid = false
     	return accessTokenInfo
    	}
-
-   	log.Debug("bla = ", auth[1])
 
    	return _parseAccessToken(auth[1])
 }

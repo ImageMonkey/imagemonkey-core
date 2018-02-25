@@ -21,6 +21,76 @@
 
   <script>
   $(document).ready(function(){
+    var ownProfile = false;
+
+    setCreationTime({{ .userInfo.Created }});
+
+
+    {{ if eq .sessionInformation.Username .userInfo.Name }}
+      ownProfile = true;
+    {{ end }}
+
+
+    if(ownProfile){
+      $("#userProfileCardImage").dimmer({
+        on: 'hover'
+      });
+    }
+
+    $("#hiddenUpload").change(function(){
+      var file = document.querySelector("input[type=file]").files[0];
+      previewImage(file);
+      uploadImage(file);
+    });
+
+    function setCreationTime(creationTime){
+      var monthShortNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+
+      var d = new Date(creationTime * 1000);
+      var s = "Created in " + monthShortNames[d.getMonth()]+', '+d.getFullYear();
+      $("#userCreationTime").text(s);
+    }
+
+
+    function previewImage(file){
+       var preview = document.getElementById("userProfileImage");
+       var reader = new FileReader();
+
+       reader.onloadend = function () {
+           preview.src = reader.result;
+       }
+
+       if (file) {
+           reader.readAsDataURL(file); //reads the data as a URL
+       } else {
+           preview.src = "";
+       }
+    }
+
+
+
+
+    function uploadImage(file){
+      var formData = new FormData();
+      formData.append('image', file); 
+
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/user/' + {{ .userInfo.Name }} + '/profile/change_picture',
+        data: formData,
+        type: 'POST',
+        contentType: false,
+        processData: false, 
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        },
+        success: function(data){
+        }
+
+      });
+    }
+
     var numOfUserAnnotationsChartConfig = {
         type: 'pie',
         data: {
@@ -84,16 +154,73 @@
     </div>
   </div>
   <div class="ui stackable center aligned grid vertical stripe">
-    <div class="six wide column">
-      <div class="row">
-        <canvas id="numOfUserAnnotationsChart"/>
+    <div class="three wide column">
+    </div>
+    <div class="three wide column">
+      <div class="ui special cards" id="userProfileCard">
+        <div class="card">
+          <div class="blurring dimmable image" id="userProfileCardImage">
+            <div class="ui dimmer">
+              <div class="content">
+                <div class="center">
+                  <span>
+                    <label for="hiddenUpload" class="ui icon button">
+                      <i class="upload icon"></i>
+                      Upload Picture
+                    </label>
+                    <input type="file" id="hiddenUpload"
+                      style="display: none;"
+                    />
+                  </span>
+
+                  <!--<div class="ui inverted button" id="changeProfilePictureButton">Change Picture</div>-->
+                </div>
+              </div>
+            </div>
+            <!--<img src=<"https://semantic-ui.com/images/wireframe/square-image.png" id="userProfileImage">-->
+            <img src="{{ .apiBaseUrl }}/v1/user/{{ .userInfo.Name }}/profile/avatar">
+          </div>
+          <div class="content">
+            <a class="header">{{ .userInfo.Name }}</a>
+            <div class="meta">
+              <span class="date" id="userCreationTime"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="six wide column">
-      <div class="row">
-        <canvas id="numOfUserValidationsChart"/>
+
+    <div class="one wide column"></div>
+
+
+    <div class="eight wide column">
+      <div class="ui top attached tabular menu">
+        <a class="active item">
+          Overview
+        </a>
+      </div>
+      <div class="ui bottom attached segment">
+        <div class="ui stackable center aligned grid">
+          <div class="eight wide column">
+            <div class="row">
+              <canvas id="numOfUserAnnotationsChart"/>
+            </div>
+          </div>
+          <div class="eight wide column">
+            <div class="row">
+              <canvas id="numOfUserValidationsChart"/>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+    <div class="column">
+    </div>
+
+    <div class="two wide column">
+    </div>
+
+
   </div>
 </div>
 

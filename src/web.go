@@ -286,8 +286,8 @@ func main() {
 	router.GET("/profile/:username", func(c *gin.Context) {
 		username := c.Param("username")
 
-		exists, _ := userExists(username)
-		if !exists {
+		userInfo, _ := getUserInfo(username)
+		if userInfo.Name == "" {
 			c.String(404, "404 page not found")
 			return
 		}
@@ -297,6 +297,7 @@ func main() {
 			"apiBaseUrl": apiBaseUrl,
 			"activeMenuNr": -1,
 			"statistics": pick(getUserStatistics(username))[0],
+			"userInfo": userInfo,
 			"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 		})
 	})

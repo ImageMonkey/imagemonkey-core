@@ -258,6 +258,7 @@ func main(){
 	redisMaxConnections := flag.Int("redis_max_connections", 500, "Max connections to Redis")
 	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
 	labelExamplesDir := flag.String("examples_dir", "../label_examples/", "Location of the label examples")
+	userProfilePicturesDir := flag.String("avatars_dir", "../avatars/", "Avatars directory")
 
 	flag.Parse()
 	if(*releaseMode){
@@ -871,7 +872,11 @@ func main(){
 
         //image doesn't already exist, so save it and add it to the database
 		uuid := uuid.NewV4().String()
-		c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
+		err = c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't set add photo - please try again later"})	
+			return
+		}
 
 		browserFingerprint := getBrowserFingerprint(c)
 
@@ -1309,6 +1314,131 @@ func main(){
 		}
 
 		c.JSON(201, nil)
+	})
+
+	router.POST("/v1/user/:username/profile/change_picture", func(c *gin.Context) {
+		username := c.Param("username")
+		if username == "" {
+			c.JSON(422, gin.H{"error": "Invalid request - username missing"})
+			return
+		}
+
+		accessTokenInfo := authTokenHandler.GetAccessTokenInfo(c)
+		if !accessTokenInfo.Valid {
+			c.JSON(403, gin.H{"error": "Please provide a valid access token"})
+			return
+		}
+
+		if accessTokenInfo.Username != username {
+			c.JSON(403, gin.H{"error": "Permission denied"})
+			return
+		}
+
+		file, header, err := c.Request.FormFile("image")
+		if(err != nil){
+			c.JSON(400, gin.H{"error": "Picture is missing"})
+			return
+		}
+
+		// Create a buffer to store the header of the file
+        fileHeader := make([]byte, 512)
+
+        // Copy the file header into the buffer
+        if _, err := file.Read(fileHeader); err != nil {
+        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
+        	return
+        }
+
+        // set position back to start.
+        if _, err := file.Seek(0, 0); err != nil {
+        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
+        	return
+        }
+
+        if(!filetype.IsImage(fileHeader)){
+        	c.JSON(422, gin.H{"error": "Unsopported MIME type detected"})
+        	return
+        }
+
+        uuid := uuid.NewV4().String()
+		err = c.SaveUploadedFile(header, (*userProfilePicturesDir + uuid))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't set profile picture - please try again later"})	
+			return
+		}
+
+		oldProfilePicture, err := changeProfilePicture(username, uuid)
+		if(err != nil){
+			c.JSON(500, gin.H{"error": "Couldn't set profile picture - please try again later"})	
+			return
+		}
+
+		//if there exists an old profile picture, remove it.
+		//we don't care if we can't remove it for some reason (it's not worth to fail the request just because of that) 
+		if oldProfilePicture != "" {
+			dst := *userProfilePicturesDir + oldProfilePicture
+			os.Remove(dst)
+		}
+
+		c.JSON(201, nil)
+
+	})
+
+	router.GET("/v1/user/:username/profile/avatar", func(c *gin.Context) {
+		params := c.Request.URL.Query()
+		username := c.Param("username")
+		if username == "" {
+			c.JSON(422, gin.H{"error": "Invalid request - username missing"})
+			return
+		}
+
+		userInfo, err := getUserInfo(username)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+
+		if userInfo.Name == "" {
+			c.JSON(422, gin.H{"error": "Incorrect username"})
+			return
+		}
+
+
+		var width uint
+		width = 0
+		if temp, ok := params["width"]; ok {
+			n, err := strconv.ParseUint(temp[0], 10, 32)
+		    if err == nil {
+		        width = uint(n)
+		    }
+		}
+
+		var height uint
+		height = 0
+		if temp, ok := params["height"]; ok {
+			n, err := strconv.ParseUint(temp[0], 10, 32)
+		    if err == nil {
+            	height = uint(n)
+		    }
+		}
+
+		imgBytes, format, err := ResizeImage((*userProfilePicturesDir + userInfo.ProfilePicture), width, height)
+		if err != nil {
+			log.Debug("[Serving Avatar] Couldn't serve avatar: ", err.Error())
+			c.String(500, "Couldn't process request - please try again later")
+			return
+
+		}
+
+		c.Writer.Header().Set("Content-Type", ("image/" + format))
+        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
+        _, err = c.Writer.Write(imgBytes) 
+        if err != nil {
+            log.Debug("[Serving Avatar] Couldn't serve avatar: ", err.Error())
+            c.String(500, "Couldn't process request - please try again later")
+            return
+        }
+
 	})
 
 	router.Run(":8081")
