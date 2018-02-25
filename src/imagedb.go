@@ -1875,7 +1875,7 @@ func getUserInfo(username string) (UserInfo, error) {
     userInfo.Created = 0
     userInfo.ProfilePicture = ""
 
-    err := db.QueryRow("SELECT name, profile_picture, created FROM account WHERE name = $1", username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created)
+    err := db.QueryRow("SELECT name, COALESCE(profile_picture, ''), created FROM account WHERE name = $1", username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created)
     if err != nil {
         log.Debug("[User Info] Couldn't get user info: ", err.Error())
         raven.CaptureError(err, nil)

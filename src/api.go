@@ -1422,7 +1422,12 @@ func main(){
 		    }
 		}
 
-		imgBytes, format, err := ResizeImage((*userProfilePicturesDir + userInfo.ProfilePicture), width, height)
+		fname := userInfo.ProfilePicture
+		if userInfo.ProfilePicture == "" {
+			fname = "default.png"
+		}
+
+		imgBytes, format, err := ResizeImage((*userProfilePicturesDir + fname), width, height)
 		if err != nil {
 			log.Debug("[Serving Avatar] Couldn't serve avatar: ", err.Error())
 			c.String(500, "Couldn't process request - please try again later")
