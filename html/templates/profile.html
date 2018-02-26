@@ -99,7 +99,7 @@
                 backgroundColor: ["red", "green"],
                 label: 'Annotations'
             }],
-            labels: ["Your Annotations", "Total Annotations"]
+            labels: ["Your Annotations ({{ .statistics.User.Annotations }})", "Total Annotations ({{ .statistics.Total.Annotations }})"]
         },
         options: {
             responsive: true,
@@ -118,7 +118,7 @@
                 backgroundColor: ["red", "green"],
                 label: 'Validations'
             }],
-            labels: ["Your Validations", "Total Validations"]
+            labels: ["Your Validations ({{ .statistics.User.Validations }})", "Total Validations ({{ .statistics.Total.Validations }})"]
         },
         options: {
             responsive: true,
