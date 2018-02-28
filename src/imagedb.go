@@ -959,8 +959,8 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
         var id int64
 
         id = 0
-        err = tx.QueryRow(`INSERT INTO user_image_annotation(image_annotation_id, account_id)
-                                SELECT $1, a.id FROM account a WHERE a.name = $2 RETURNING id`, insertedId, apiUser.Name).Scan(&id)
+        err = tx.QueryRow(`INSERT INTO user_image_annotation(image_annotation_id, account_id, timestamp)
+                                SELECT $1, a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2 RETURNING id`, insertedId, apiUser.Name).Scan(&id)
         if err != nil {
             tx.Rollback()
             log.Debug("[Add User Annotation] Couldn't add user annotation entry: ", err.Error())
