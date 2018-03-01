@@ -279,7 +279,10 @@
         dataType: 'json',
         type: 'POST',
         data: JSON.stringify(data),
-        headers: headers, 
+        headers: headers,
+        beforeSend: function(xhr) {
+            xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        },
         success: function(data){
           getRandomImages();
 

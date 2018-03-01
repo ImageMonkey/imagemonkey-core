@@ -591,9 +591,11 @@ func main(){
 		}
 
 
-		browserFingerprint := getBrowserFingerprint(c)
+		var apiUser APIUser
+		apiUser.ClientFingerprint = getBrowserFingerprint(c)
+		apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-		err := validateDonatedPhoto(browserFingerprint, imageId, labelValidationEntry, parameter)
+		err := validateDonatedPhoto(apiUser, imageId, labelValidationEntry, parameter)
 		if(err != nil){
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 			return
