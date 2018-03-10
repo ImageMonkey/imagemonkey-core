@@ -105,6 +105,8 @@ func main() {
 				"numOfDonations": pick(getNumOfDonatedImages())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"apiBaseUrl": apiBaseUrl,
+				"annotationStatistics": pick(getAnnotationStatistics("last-month"))[0],
+				"validationStatistics": pick(getValidationStatistics("last-month"))[0],
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {

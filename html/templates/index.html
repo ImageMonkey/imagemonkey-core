@@ -15,6 +15,80 @@
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css"/>
   <script src="js/common.js"></script> 
+  <script src="/js/chart.bundle.min.js"></script>
+
+  <script>
+  $(document).ready(function(){
+    var annotationStatistics = {{ .annotationStatistics }};
+    var validationStatistics = {{ .validationStatistics }};
+
+    var numOfAnnotations = [];
+    var numOfValidations = [];
+    var dates = [];
+
+    if(annotationStatistics.length === validationStatistics.length) {
+      for(var i = 0; i < annotationStatistics.length; i++) {
+        numOfAnnotations.push(annotationStatistics[i]["value"]);
+        numOfValidations.push(validationStatistics[i]["value"]);
+        dates.push(annotationStatistics[i]["date"]);
+      }
+    }
+
+
+    var statisticsChartConfig = {
+        type: "bar",
+        data: {
+            datasets: [
+              {
+                data:  numOfAnnotations,
+                backgroundColor: "#0584cd",
+                label: "Annotations"
+              },
+              {
+                data:  numOfValidations,
+                backgroundColor: "red",
+                label: "Validations"
+              }
+            ],
+            labels: dates
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: "Activity (last 30 days)",
+              fontColor: "white",
+              fontSize: 17
+            },
+            scales: {
+              xAxes: [{ 
+                  ticks: {
+                    fontColor: "white", // this here
+                  },
+              }],
+              yAxes: [{
+                  ticks: {
+                    fontColor: "white", // this here
+                  },
+              }],
+            },
+            legend: {
+              position: "bottom",
+              labels: {
+                fontColor: "white"
+              }
+            }
+        }
+    };
+
+    var statisticsChartCtx = document.getElementById("statisticsChart").getContext("2d");
+    window.statisticsChart = new Chart(statisticsChartCtx, statisticsChartConfig);
+
+  });
+
+  </script>
+
+
 </head>
 <body>
 
@@ -32,21 +106,24 @@
         <h2>Let's create our own image dataset</h2>
         <div class="ui huge primary button" onclick="location.href='/donate';">Donate a picture <i class="right arrow icon"></i></div>
 
-        <h1 class="ui inverted header">#{{ .numOfDonations }}</h1>
-        <p style="font-size:25px;">Donations</p>
+        <h1 style="font-size:50px;">#{{ .numOfDonations }}</h1>
+        <p style="font-size:25px; margin-top:-15px;">Donations</p>
+
+        <div class="ui center aligned grid">
+          <div class="row"></div>
+          <div class="row"></div>
+          <div class="sixteen wide centered column">
+            <canvas id="statisticsChart"/>
+          </div>
+        </div>
+
       </div>
 
     </div>
-
-    <div class="ui vertical stripe segment">
-      <div class="ui text container">
-        <h3 class="ui header center aligned">Because training a ML model is easy - finding a good image dataset is hard.</h3>
-      </div>
-    </div>
-    <div class="ui vertical stripe segment">
-      <div class="ui middle aligned stackable grid container">
+    <div class="ui stackable center aligned grid vertical stripe">
         <div class="row">
-          <div class="eight wide column">
+          <div class="two wide column"></div>
+          <div class="six wide left aligned column">
             <h3 class="ui header">Easy as pie</h3>
             <p>Donating a photo should be as easy as clicking a single button. Everybody should be able do it. Everywhere.</p>
             <h3 class="ui header">Publicly available</h3>
@@ -58,27 +135,9 @@
             <img src="img/animation.gif" class="ui large bordered rounded image">
           </div>
         </div>
-        <div class="row">
-          <div class="center aligned column">
-            <a class="ui huge button" href="/verify">Check It Out</a>
-          </div>
-        </div>
-      </div>
     </div>
-
-    <div class="ui one column stackable grid container">
-      <div class="column"></div>
-      <h2 class="ui center aligned header">About</h2>
-      <div class="ui vertical stripe column">
-        <p><b>ImageMonkey is a free, public open source image validation service.</b><br>With all the great machine learning frameworks available it's pretty easy to train pre-trained Machine Learning models with your own image dataset. However, in order to do so you need a lot of images. And that's usually the point where it get's tricky. You either have to create the training images yourself or scrape them together from various datasources.<br><br>ImageMonkey aims to solve this problem, by providing a platform where users can drop their photos, tag them with a label, and put them into public domain.</p>
-      </div>
-      <div class="column"></div>
-    </div>
-
-    {{ template "footer.html" .}}
-
   </div>
-
+  {{ template "footer.html" .}}
 </body>
 
 </html>

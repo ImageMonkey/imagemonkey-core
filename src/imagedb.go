@@ -238,6 +238,17 @@ type UserInfo struct {
     ProfilePicture string `json:"profile_picture"`
 }
 
+/*type MonthlyStatistics struct {
+    Annotations []int32 `json:"annotations"`
+    Validations []int32 `json:"validations"`
+    Dates []string `json:"dates"`
+}*/
+
+type DataPoint struct {
+    Value int32 `json:"value"`
+    Date string `json:"date"`
+}
+
 
 func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageInfo, labels []LabelMeEntry ) error{
 	tx, err := db.Begin()
@@ -2131,3 +2142,137 @@ func changeProfilePicture(username string, uuid string) (string, error) {
 
     return existingProfilePicture, nil
 }
+
+/*func getMonthlyStatistics() (MonthlyStatistics, error) {
+    var monthlyStatistics MonthlyStatistics
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_annotations AS (
+                            SELECT * FROM image_annotation_history h
+                           )
+                          SELECT date,
+                           ( SELECT count(*) FROM num_of_annotations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get monthly statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return monthlyStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var numOfAnnotations int32
+        //var numOfValidations int32
+        var date string
+        err = rows.Scan(&date, &numOfAnnotations)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return monthlyStatistics, err
+        }
+
+        monthlyStatistics.Dates = append(monthlyStatistics.Dates, date)
+        monthlyStatistics.Annotations = append(monthlyStatistics.Annotations, numOfAnnotations)
+    }
+
+    return monthlyStatistics, nil
+}*/
+
+func getAnnotationStatistics(period string) ([]DataPoint, error) {
+    var annotationStatistics []DataPoint
+
+    if period != "last-month" {
+        return annotationStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_annotations AS (
+                            SELECT * FROM image_annotation_history h
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_annotations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationStatistics, err
+        }
+
+        annotationStatistics = append(annotationStatistics, datapoint)
+    }
+
+    return annotationStatistics, nil
+}
+
+
+func getValidationStatistics(period string) ([]DataPoint, error) {
+    var validationStatistics []DataPoint
+
+    if period != "last-month" {
+        return validationStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_validations AS (
+                            SELECT * FROM image_validation_history h
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_validations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return validationStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return validationStatistics, err
+        }
+
+        validationStatistics = append(validationStatistics, datapoint)
+    }
+
+    return validationStatistics, nil
+}
+
+
