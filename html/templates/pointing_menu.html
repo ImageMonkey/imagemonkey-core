@@ -12,9 +12,24 @@
   <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
   <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
   <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
-  <a class="{{if (eq .activeMenuNr 8)}}active {{end}}item" href="/statistics">Statistics</a>
-  <a class="{{if (eq .activeMenuNr 9)}}active {{end}}item" href="/explore">Explore</a>
-  <a class="item" href="/api">API</a>
+
+  <div class="ui dropdown item" id="datasetPointingMenuDropdown">
+    Dataset<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/statistics';">Statistics</div>
+      <div class="center aligned item" onclick="window.location='/explore';">Explore</div>
+    </div>
+  </div>
+
+  <div class="ui dropdown item" id="developersPointingMenuDropdown">
+    Developers<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/api';">API</div>
+      <div class="center aligned item" onclick="window.location='/libraries';">Libraries</div>
+    </div>
+  </div>
+
+
   <a class="{{if (eq .activeMenuNr 10)}}active {{end}}item" href="/apps">Apps</a>
   <a class="{{if (eq .activeMenuNr 11)}}active {{end}}item" href="/playground">Playground</a>
   <a class="item" href="/blog">Blog</a>
@@ -27,16 +42,18 @@
     <div class="menu">
       <div class="item" id="mainMenuProfileButton"><i class="user icon"></i>Profile</div>
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
+    </div>
   </div>
-</div>
-{{ end }}
+  {{ end }}
 </div>
 </div>
 
 
-<script>
+<script type="text/javascript">
   $(document).ready(function(){
     $('#mainMenuDropdown').dropdown();
+    $('#developersPointingMenuDropdown').dropdown();
+    $('#datasetPointingMenuDropdown').dropdown();
 
     function parseJwt(token){
       var base64Url = token.split('.')[1];
@@ -45,7 +62,6 @@
     };
 
     function logout(){
-      console.log("logout")
       $.ajax({
         type: "POST",
         url: "{{ .apiBaseUrl }}/v1/logout",

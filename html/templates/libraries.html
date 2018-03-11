@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="js/common.js"></script> 
+  <script src="js/highlight.pack.js"></script>
+  <link rel="stylesheet" href="css/highlightjs/default.css"/>
+
+  <style>
+    pre code.hljs {
+      display: block;
+    }
+
+    code.hljs {
+      display: inline;
+    }
+  </style>
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+      hljs.initHighlightingOnLoad();
+    })
+
+  </script>
+
+</head>
+
+
+<body>
+
+  {{ template "menu.html" .}}
+
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Libraries
+      </h2>
+    </div>
+  </div>
+  <div class="ui vertical stripe segment">
+    <div class="ui text container">
+
+      <div class="row">
+        One of the best things about ImageMonkey is our tight integration with Tensorflow.<br><br>You want to train your own image classifier based on the ImageMonkey dataset?<br>
+        It's as easy as that:<br><br>
+
+        <h3>Install pymonkey</h3>
+        Execute the following command to install our Python library (<b>Python 3.5.x</b> required!)
+        <div class="ui segment">
+          <pre><code class="python">
+        pip install pymonkey
+          </code></pre>
+        </div>
+        
+        <h3>Train model</h3>
+        <div class="ui segment">
+          <pre><code class="python">
+        import logging
+
+        from pymonkey import API
+        from pymonkey import TensorflowTrainer
+
+        if __name__ == "__main__":
+            logging.basicConfig()
+
+            tensorflow_trainer = TensorflowTrainer("C:\\training", 
+            clear_before_start=True, auto_download_tensorflow_train_script=True)
+            tensorflow_trainer.train(["dog", "cat"], min_probability = 0.8)
+          </code></pre>
+        </div>
+
+        This automatically downloads all images that are either marked as <code class="bash">dog</code> or <code class="bash">cat</code> to the folder <code class="bash">C:\training</code> and starts the transfer learning based on the
+        <code class="bash">Inception v3</code> model.
+      </div>
+    </div>
+  </div>
+</div>
+{{ template "footer.html" .}}
+
+</body>
+
+</html>

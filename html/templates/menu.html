@@ -9,12 +9,27 @@
     <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
     <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
     <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
-    <a class="{{if (eq .activeMenuNr 8)}}active {{end}}item" href="/statistics">Statistics</a>
-    <a class="{{if (eq .activeMenuNr 9)}}active {{end}}item" href="/explore">Explore</a>
-    <a class="item" href="/api">API</a>
+
+
+    <div class="ui dropdown item" id="datasetMenuDropdown">
+      Dataset<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/statistics';">Statistics</div>
+        <div class="center aligned item" onclick="window.location='/explore';">Explore</div>
+      </div>
+    </div>
+    
+    <div class="ui dropdown item" id="developersMenuDropdown">
+      Developers<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/api';">API</div>
+        <div class="center aligned item" onclick="window.location='/libraries';">Libraries</div>
+      </div>
+    </div>
+
     <a class="{{if (eq .activeMenuNr 10)}}active {{end}}item" href="/apps">Apps</a>
     <a class="{{if (eq .activeMenuNr 11)}}active {{end}}item" href="/playground">Playground</a>
-    <a class="item" href="/api">Blog</a>
+    <a class="item" href="/blog">Blog</a>
 
     {{if (eq .sessionInformation.LoggedIn false)}}
     <a class="{{if (eq .activeMenuNr 12)}}active {{end}}item" href="/login">Login</a>
@@ -35,8 +50,18 @@
   <a class="{{if (eq .activeMenuNr 8)}}active {{end}}item" href="/statistics">Statistics</a>
   <a class="{{if (eq .activeMenuNr 9)}}active {{end}}item" href="/explore">Explore</a>
   <a class="item" href="/api">API</a>
+  <a class="{{if (eq .activeMenuNr 13)}}active {{end}}item" href="/libraries">Libraries</a>
+
+
   <a class="{{if (eq .activeMenuNr 10)}}active {{end}}item" href="/apps">Apps</a>
   <a class="{{if (eq .activeMenuNr 11)}}active {{end}}item" href="/playground">Playground</a>
-  <a class="item" href="/api">Blog</a>
+  <a class="item" href="/blog">Blog</a>
   <a class="{{if (eq .activeMenuNr 12)}}active {{end}}item" href="/login">Login</a>
 </div>
+
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#developersMenuDropdown').dropdown();
+    $('#datasetMenuDropdown').dropdown();
+  })
+</script>
