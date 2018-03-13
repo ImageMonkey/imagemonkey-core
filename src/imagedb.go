@@ -2198,7 +2198,9 @@ func getAnnotationStatistics(period string) ([]DataPoint, error) {
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
                            num_of_annotations AS (
-                            SELECT * FROM image_annotation_history h
+                            SELECT sys_period FROM image_annotation_history h
+                            UNION ALL 
+                            SELECT sys_period FROM image_annotation h1
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_annotations s
@@ -2243,7 +2245,9 @@ func getValidationStatistics(period string) ([]DataPoint, error) {
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
                            num_of_validations AS (
-                            SELECT * FROM image_validation_history h
+                            SELECT sys_period FROM image_validation_history h
+                            UNION ALL
+                            SELECT sys_period FROM image_validation h1
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
