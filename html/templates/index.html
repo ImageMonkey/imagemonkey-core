@@ -102,12 +102,18 @@
       {{ template "pointing_menu.html" .}}  
 
       <div class="ui text container">
-        <h1 class="ui inverted header">ImageMonkey</h1>
+        <h1></h1>
+        <h1></h1>
+        <img class="ui centered medium image" src="img/logo.png">
+        <h1 class="ui inverted header" style="margin-top: 0.5em;">ImageMonkey</h1>
+
         <h2>Let's create our own image dataset</h2>
         <div class="ui huge primary button" onclick="location.href='/donate';">Donate a picture <i class="right arrow icon"></i></div>
 
         <h1 style="font-size:50px;">#{{ .numOfDonations }}</h1>
         <p style="font-size:25px; margin-top:-15px;">Donations</p>
+
+        <h1 class="ui inverted header"></h1>
 
         <div class="ui center aligned grid">
           <div class="row"></div>
