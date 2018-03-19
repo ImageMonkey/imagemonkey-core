@@ -250,7 +250,7 @@ type DataPoint struct {
 }
 
 
-func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageInfo, labels []LabelMeEntry ) error{
+func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint string, labels []LabelMeEntry) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -260,9 +260,9 @@ func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageI
 
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
     //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
-	imageId := 0
+	var imageId int64 
 	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
-					  filename, false, int64(imageInfo.Hash), "donation", imageInfo.Width, imageInfo.Height).Scan(&imageId)
+					  imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageInfo.Source.Provider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
 	if(err != nil){
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -271,31 +271,41 @@ func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageI
 	}
 
     if labels[0].Label != "" { //only create a image validation entry, if a label is provided
-        err = _addLabelsToImage(clientFingerprint, filename, labels, tx)
+
+        //per default we start with 0 validations, except if we are importing an image from a trusted
+        //source. in that case, already set "numOfValid" to 1.
+        numOfValid := 0
+        if imageInfo.Source.Trusted {
+            numOfValid = 1
+        }
+
+        err = _addLabelsToImage(clientFingerprint, imageInfo.Name, labels, numOfValid, tx)
         if err != nil {
             return err //tx already rolled back in case of error, so we can just return here
         }
+    }
 
 
-    	/*labelId := 0
-    	err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                            SELECT $1, $2, $3, $5, l.id FROM label l WHERE l.name = $4 RETURNING id`, 
-    					  imageId, 0, 0, label, clientFingerprint).Scan(&labelId)
-    	if(err != nil){
-    		tx.Rollback()
-    		log.Debug("[Adding donated photo] Couldn't insert image validation entry: ", err.Error())
-    		raven.CaptureError(err, nil)
-    		return err
-    	}
-
-
-        if addSublabels {
-            TODO: add sublabels (image_validionn_entry)
-        }*/
-
+    if imageInfo.Source.Provider != "donation" {
+        err = _addImageSource(imageId, imageInfo.Source, tx)
+        if err != nil {
+            return err //tx already rolled back in case of error, so we can just return here
+        }
     }
 
 	return tx.Commit()
+}
+
+func _addImageSource(imageId int64, imageSource ImageSource, tx *sql.Tx) error {
+    _, err := tx.Exec("INSERT INTO image_source(image_id, url) VALUES($1, $2)", imageId, imageSource.Url)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Add Image source] Couldn't add image source: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
 }
 
 func imageExists(hash uint64) (bool, error){
@@ -1534,7 +1544,7 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
         return err
     }
 
-    err = _addLabelsToImage(clientFingerprint, imageId, labels, tx)
+    err = _addLabelsToImage(clientFingerprint, imageId, labels, 0, tx)
     if err != nil { 
         return err //tx already rolled back in case of error, so we can just return here 
     }
@@ -1549,7 +1559,7 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
 }
 
 
-func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, tx *sql.Tx) error {
+func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, tx *sql.Tx) error {
     for _, item := range labels {
         rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
         if err != nil {
@@ -1578,7 +1588,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
         if len(item.Sublabels) > 0 {
             _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
                             SELECT $1, $2, $3, $4, l.id FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))`,
-                            imageId, 0, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
+                            imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
             if err != nil {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
@@ -1592,7 +1602,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
                             SELECT $1, $2, $3, $4, id from label l WHERE id NOT IN (
                                 SELECT label_id from image_validation v where image_id = $1
                             ) AND l.name = $5 AND l.parent_id IS NULL`,
-                            imageId, 0, 0, clientFingerprint, item.Label)
+                            imageId, numOfValid, 0, clientFingerprint, item.Label)
         if err != nil {
             pqErr := err.(*pq.Error)
             if pqErr.Code.Name() != "unique_violation" {

@@ -92,10 +92,19 @@ type BlogSubscribeRequest struct {
     Email string `json:"email"`
 }
 
+type ImageSource struct {
+    Provider string
+    Url string
+    Trusted bool
+}
+
 type ImageInfo struct {
     Hash uint64
     Width int32
     Height int32
+    Name string
+    Source ImageSource
+
 }
 
 type UserSignupRequest struct {
