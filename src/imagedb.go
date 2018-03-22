@@ -270,6 +270,7 @@ func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint str
 		return err
 	}
 
+    var insertedValidationIds []int64
     if labels[0].Label != "" { //only create a image validation entry, if a label is provided
 
         //per default we start with 0 validations, except if we are importing an image from a trusted
@@ -279,7 +280,7 @@ func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint str
             numOfValid = 1
         }
 
-        err = _addLabelsToImage(clientFingerprint, imageInfo.Name, labels, numOfValid, tx)
+        insertedValidationIds, err = _addLabelsToImage(clientFingerprint, imageInfo.Name, labels, numOfValid, tx)
         if err != nil {
             return err //tx already rolled back in case of error, so we can just return here
         }
@@ -287,7 +288,12 @@ func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint str
 
 
     if imageInfo.Source.Provider != "donation" {
-        err = _addImageSource(imageId, imageInfo.Source, tx)
+        imageSourceId, err := _addImageSource(imageId, imageInfo.Source, tx)
+        if err != nil {
+            return err //tx already rolled back in case of error, so we can just return here
+        }
+
+        err = _addImageValidationSources(imageSourceId, insertedValidationIds, tx)
         if err != nil {
             return err //tx already rolled back in case of error, so we can just return here
         }
@@ -296,16 +302,31 @@ func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint str
 	return tx.Commit()
 }
 
-func _addImageSource(imageId int64, imageSource ImageSource, tx *sql.Tx) error {
-    _, err := tx.Exec("INSERT INTO image_source(image_id, url) VALUES($1, $2)", imageId, imageSource.Url)
-    if err != nil {
-        tx.Rollback()
-        log.Debug("[Add Image source] Couldn't add image source: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
+func _addImageValidationSources(imageSourceId int64, imageValidationIds []int64, tx *sql.Tx) error {
+    for _, id := range imageValidationIds {
+        _, err := tx.Exec("INSERT INTO image_validation_source(image_source_id, image_validation_id) VALUES($1, $2)", imageSourceId, id)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Add image validation source] Couldn't add image validation source: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
     }
 
     return nil
+}
+
+func _addImageSource(imageId int64, imageSource ImageSource, tx *sql.Tx) (int64, error) {
+    var insertedId int64
+    err := tx.QueryRow("INSERT INTO image_source(image_id, url) VALUES($1, $2) RETURNING id", imageId, imageSource.Url).Scan(&insertedId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Add image source] Couldn't add image source: ", err.Error())
+        raven.CaptureError(err, nil)
+        return insertedId, err
+    }
+
+    return insertedId, nil
 }
 
 func imageExists(hash uint64) (bool, error){
@@ -1544,7 +1565,7 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
         return err
     }
 
-    err = _addLabelsToImage(clientFingerprint, imageId, labels, 0, tx)
+    _, err = _addLabelsToImage(clientFingerprint, imageId, labels, 0, tx)
     if err != nil { 
         return err //tx already rolled back in case of error, so we can just return here 
     }
@@ -1559,14 +1580,15 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
 }
 
 
-func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, tx *sql.Tx) error {
+func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, tx *sql.Tx) ([]int64, error) {
+    var insertedIds []int64
     for _, item := range labels {
         rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
         if err != nil {
             tx.Rollback()
             log.Debug("[Adding image labels] Couldn't get image ", err.Error())
             raven.CaptureError(err, nil)
-            return err
+            return insertedIds, err
         }
 
         defer rows.Close()
@@ -1578,7 +1600,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't scan image image entry: ", err.Error())
                 raven.CaptureError(err, nil)
-                return err
+                return insertedIds, err
             }
         }
 
@@ -1586,35 +1608,55 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
 
         //add sublabels
         if len(item.Sublabels) > 0 {
-            _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                            SELECT $1, $2, $3, $4, l.id FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))`,
-                            imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
+            rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
+                                  SELECT $1, $2, $3, $4, l.id FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
+                                  RETURNING id`,
+                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
             if err != nil {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
                 raven.CaptureError(err, nil)
-                return err
+                return insertedIds, err
             }
+
+            for rows.Next() {
+                var insertedSublabelId int64
+                err = rows.Scan(&insertedSublabelId)
+                if err != nil {
+                    rows.Close()
+                    tx.Rollback()
+                    log.Debug("[Adding image labels] Couldn't scan sublabels: ", err.Error())
+                    raven.CaptureError(err, nil)
+                    return insertedIds, err
+                }
+                insertedIds = append(insertedIds, insertedSublabelId)
+            }
+            rows.Close()
         }
 
         //add base label
-        _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                            SELECT $1, $2, $3, $4, id from label l WHERE id NOT IN (
+        var insertedLabelId int64
+        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
+                              SELECT $1, $2, $3, $4, id from label l WHERE id NOT IN 
+                              (
                                 SELECT label_id from image_validation v where image_id = $1
-                            ) AND l.name = $5 AND l.parent_id IS NULL`,
-                            imageId, numOfValid, 0, clientFingerprint, item.Label)
+                              ) AND l.name = $5 AND l.parent_id IS NULL
+                              RETURNING id`,
+                              imageId, numOfValid, 0, clientFingerprint, item.Label).Scan(&insertedLabelId)
         if err != nil {
             pqErr := err.(*pq.Error)
             if pqErr.Code.Name() != "unique_violation" {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
                 raven.CaptureError(err, nil)
-                return err
+                return insertedIds, err
             }
         }
+
+        insertedIds = append(insertedIds, insertedLabelId)
     }
 
-    return nil
+    return insertedIds, nil
 }
 
 func getAllImageLabels() ([]string, error) {
