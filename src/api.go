@@ -490,7 +490,14 @@ func main(){
 	{
 		clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
 		clientAuth.GET("/v1/unverified/donation", func(c *gin.Context) {
-			images, err := getAllUnverifiedImages()
+			params := c.Request.URL.Query()
+
+			imageProvider := ""
+			if temp, ok := params["image_provider"]; ok {
+				imageProvider = temp[0]
+			}
+
+			images, err := getAllUnverifiedImages(imageProvider)
 			use(images)
 			if err != nil {
 				c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"}) 
@@ -508,10 +515,22 @@ func main(){
 			imageSource.Trusted = true
 
 
+			var dir string
+			var autoUnlock bool
+
+			autoUnlockStr := c.PostForm("auto_unlock")
+			if autoUnlockStr == "yes" {
+				autoUnlock = true
+				dir = *donationsDir
+			} else {
+				autoUnlock = false
+				dir = *unverifiedDonationsDir
+			}
+			
 
 			//we trust images from the labelme database, so we automatically save them
 			//into the donations folder and unlock them per default.
-			donate(c, imageSource, labelMap, *donationsDir, redisPool, statisticsPusher, true)
+			donate(c, imageSource, labelMap, dir, redisPool, statisticsPusher, autoUnlock)
 		})
 
 		clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {

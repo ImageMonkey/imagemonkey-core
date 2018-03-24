@@ -1349,15 +1349,34 @@ func getNumOfValidatedImages() (int64, error){
     return num, nil
 }
 
-func getAllUnverifiedImages() ([]Image, error){
+func getAllUnverifiedImages(imageProvider string) ([]Image, error){
     var images []Image
-    rows, err := db.Query(`SELECT i.key, l.name FROM image i 
+
+    q1 := ""
+    params := false
+    if imageProvider != "" {
+        params = true
+        q1 = "AND (p.name = $1)"
+    }
+
+    q := fmt.Sprintf(`SELECT i.key, l.name, p.name FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
                             JOIN label l ON v.label_id = l.id
-                            WHERE ((i.unlocked = false) AND (p.name = 'donation'))`)
+                            WHERE (
+                                (i.unlocked = false)
+                                %s
+                            )`, q1)
 
-    if(err != nil){
+    var err error
+    var rows *sql.Rows
+    if params {
+        rows, err = db.Query(q, imageProvider)
+    } else {
+        rows, err = db.Query(q)
+    }
+
+    if err != nil {
         log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
         raven.CaptureError(err, nil)
         return images, err
@@ -1367,8 +1386,7 @@ func getAllUnverifiedImages() ([]Image, error){
 
     for rows.Next() {
         var image Image
-        image.Provider = "donation"
-        err = rows.Scan(&image.Id, &image.Label)
+        err = rows.Scan(&image.Id, &image.Label, &image.Provider)
         if err != nil {
             log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
