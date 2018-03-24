@@ -209,6 +209,117 @@ func getAppIdentifier(c *gin.Context) string {
 	return appIdentifier
 }
 
+func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMapEntry, dir string, 
+				redisPool *redis.Pool, statisticsPusher *StatisticsPusher, autoUnlock bool) {
+	label := c.PostForm("label")
+
+	file, header, err := c.Request.FormFile("image")
+	if(err != nil){
+		c.JSON(400, gin.H{"error": "Picture is missing"})
+		return
+	}
+
+	// Create a buffer to store the header of the file
+    fileHeader := make([]byte, 512)
+
+    // Copy the file header into the buffer
+    if _, err := file.Read(fileHeader); err != nil {
+        c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
+        return
+    }
+
+    // set position back to start.
+    if _, err := file.Seek(0, 0); err != nil {
+        c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
+        return
+    }
+
+    if(!filetype.IsImage(fileHeader)){
+        c.JSON(422, gin.H{"error": "Unsopported MIME type detected"})
+        return
+    }
+
+    //check if image already exists by using an image hash
+    imageInfo, err := getImageInfo(file)
+    if(err != nil){
+        c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
+        return 
+    }
+    exists, err := imageExists(imageInfo.Hash)
+    if(err != nil){
+        c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
+        return
+    }
+    if(exists){
+        c.JSON(409, gin.H{"error": "Couldn't add photo - image already exists"})
+        return
+    }
+
+    if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
+        if !isLabelValid(labelMap, label, []string{}) {
+        	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
+        	return
+        }
+    }
+
+    addSublabels := false
+    temp := c.PostForm("add_sublabels")
+    if temp == "true" {
+        addSublabels = true
+    }
+
+
+	labelMapEntry := labelMap[label]
+	if !addSublabels {
+		labelMapEntry.LabelMapEntries = nil
+	}
+	var labelMeEntry LabelMeEntry
+	var labelMeEntries []LabelMeEntry
+	labelMeEntry.Label = label
+	for key, _ := range labelMapEntry.LabelMapEntries {
+		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, key)
+	}
+	labelMeEntries = append(labelMeEntries, labelMeEntry)
+
+    //image doesn't already exist, so save it and add it to the database
+	uuid := uuid.NewV4().String()
+	err = c.SaveUploadedFile(header, (dir + uuid))
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Couldn't set add photo - please try again later"})	
+		return
+	}
+
+	browserFingerprint := getBrowserFingerprint(c)
+
+	imageInfo.Source = imageSource
+	imageInfo.Name = uuid
+
+	err = addDonatedPhoto(imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
+	if(err != nil){
+		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
+		return
+	}
+
+	//get client IP address and try to determine country
+	var contributionsPerCountryRequest ContributionsPerCountryRequest
+	contributionsPerCountryRequest.Type = "donation"
+	contributionsPerCountryRequest.CountryCode = "--"
+	ip := net.ParseIP(getIPAddress(c.Request))
+	if ip != nil {
+		record, err := geoipDb.Country(ip)
+		if err != nil { //just log, but don't abort...it's just for statistics
+			log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
+				
+		} else {
+			contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+		}
+	}
+	pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+	statisticsPusher.PushAppAction(getAppIdentifier(c), "donation")
+
+	c.JSON(http.StatusOK, nil)
+}
+
 func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
 	if val, ok := labelsMap[label]; ok {
 		if len(sublabels) > 0 {
@@ -379,13 +490,47 @@ func main(){
 	{
 		clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
 		clientAuth.GET("/v1/unverified/donation", func(c *gin.Context) {
-			images, err := getAllUnverifiedImages()
+			params := c.Request.URL.Query()
+
+			imageProvider := ""
+			if temp, ok := params["image_provider"]; ok {
+				imageProvider = temp[0]
+			}
+
+			images, err := getAllUnverifiedImages(imageProvider)
 			use(images)
 			if err != nil {
 				c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"}) 
 			} else {
 				c.JSON(http.StatusOK, images)
 			}
+		})
+
+		clientAuth.POST("/v1/internal/labelme/donate",  func(c *gin.Context) {
+			imageSourceUrl := c.PostForm("image_source_url")
+
+			var imageSource ImageSource
+			imageSource.Provider = "labelme"
+			imageSource.Url = imageSourceUrl
+			imageSource.Trusted = true
+
+
+			var dir string
+			var autoUnlock bool
+
+			autoUnlockStr := c.PostForm("auto_unlock")
+			if autoUnlockStr == "yes" {
+				autoUnlock = true
+				dir = *donationsDir
+			} else {
+				autoUnlock = false
+				dir = *unverifiedDonationsDir
+			}
+			
+
+			//we trust images from the labelme database, so we automatically save them
+			//into the donations folder and unlock them per default.
+			donate(c, imageSource, labelMap, dir, redisPool, statisticsPusher, autoUnlock)
 		})
 
 		clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {
@@ -801,111 +946,11 @@ func main(){
 
 
 	router.POST("/v1/donate", func(c *gin.Context) {
-		label := c.PostForm("label")
+		var imageSource ImageSource
+		imageSource.Provider = "donation"
+		imageSource.Trusted = false
 
-		file, header, err := c.Request.FormFile("image")
-		if(err != nil){
-			fmt.Printf("err = %s", err.Error())
-			c.JSON(400, gin.H{"error": "Picture is missing"})
-			return
-		}
-
-		// Create a buffer to store the header of the file
-        fileHeader := make([]byte, 512)
-
-        // Copy the file header into the buffer
-        if _, err := file.Read(fileHeader); err != nil {
-        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
-        	return
-        }
-
-        // set position back to start.
-        if _, err := file.Seek(0, 0); err != nil {
-        	c.JSON(422, gin.H{"error": "Unable to detect MIME type"})
-        	return
-        }
-
-        if(!filetype.IsImage(fileHeader)){
-        	c.JSON(422, gin.H{"error": "Unsopported MIME type detected"})
-        	return
-        }
-
-        //check if image already exists by using an image hash
-        imageInfo, err := getImageInfo(file)
-        if(err != nil){
-        	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
-        	return 
-        }
-        exists, err := imageExists(imageInfo.Hash)
-        if(err != nil){
-        	c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
-        	return
-        }
-        if(exists){
-        	c.JSON(409, gin.H{"error": "Couldn't add photo - image already exists"})
-        	return
-        }
-
-        if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        	if !isLabelValid(labelMap, label, []string{}) {
-        		c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
-        		return
-        	}
-        }
-
-        addSublabels := false
-        temp := c.PostForm("add_sublabels")
-        if temp == "true" {
-        	addSublabels = true
-        }
-
-
-		labelMapEntry := labelMap[label]
-		if !addSublabels {
-			labelMapEntry.LabelMapEntries = nil
-		}
-		var labelMeEntry LabelMeEntry
-		var labelMeEntries []LabelMeEntry
-		labelMeEntry.Label = label
-		for key, _ := range labelMapEntry.LabelMapEntries {
-			labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, key)
-		}
-		labelMeEntries = append(labelMeEntries, labelMeEntry)
-
-        //image doesn't already exist, so save it and add it to the database
-		uuid := uuid.NewV4().String()
-		err = c.SaveUploadedFile(header, (*unverifiedDonationsDir + uuid))
-		if err != nil {
-			c.JSON(500, gin.H{"error": "Couldn't set add photo - please try again later"})	
-			return
-		}
-
-		browserFingerprint := getBrowserFingerprint(c)
-
-		err = addDonatedPhoto(browserFingerprint, uuid, imageInfo, labelMeEntries)
-		if(err != nil){
-			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
-			return
-		}
-
-		//get client IP address and try to determine country
-		var contributionsPerCountryRequest ContributionsPerCountryRequest
-		contributionsPerCountryRequest.Type = "donation"
-		contributionsPerCountryRequest.CountryCode = "--"
-		ip := net.ParseIP(getIPAddress(c.Request))
-		if ip != nil {
-			record, err := geoipDb.Country(ip)
-			if err != nil { //just log, but don't abort...it's just for statistics
-				log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
-				
-			} else {
-				contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
-			}
-		}
-		pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
-		statisticsPusher.PushAppAction(getAppIdentifier(c), "donation")
-
-		c.JSON(http.StatusOK, nil)
+		donate(c, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, false)
 	})
 
 	router.POST("/v1/report/:imageid", func(c *gin.Context) {
