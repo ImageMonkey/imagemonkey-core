@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"math"
 	"strconv"
+	"github.com/getsentry/raven-go"
 )
 
 var db *sql.DB
@@ -21,9 +22,6 @@ func main() {
 
 	log.SetLevel(log.DebugLevel)
 
-	fmt.Printf("Setting environment variable for sentry\n")
-	os.Setenv("SENTRY_DSN", WEB_SENTRY_DSN)
-
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
@@ -31,6 +29,7 @@ func main() {
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8082", "Playground Base URL")
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -39,9 +38,17 @@ func main() {
 	sessionCookieHandler := NewSessionCookieHandler()
 
 	flag.Parse()
-	if(*releaseMode){
+	if *releaseMode {
 		fmt.Printf("Starting gin in release mode!\n")
 		gin.SetMode(gin.ReleaseMode)
+	}
+
+	if *useSentry {
+		fmt.Printf("Setting Sentry DSN\n")
+		raven.SetDSN(SENTRY_DSN)
+		raven.SetEnvironment("web")
+
+		raven.CaptureMessage("Starting up web worker", nil)
 	}
 
 	funcMap := template.FuncMap{

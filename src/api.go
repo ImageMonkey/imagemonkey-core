@@ -29,6 +29,7 @@ import (
     "github.com/dgrijalva/jwt-go"
     "golang.org/x/crypto/bcrypt"
     "time"
+    "github.com/getsentry/raven-go"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -370,11 +371,20 @@ func main(){
 	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
 	labelExamplesDir := flag.String("examples_dir", "../label_examples/", "Location of the label examples")
 	userProfilePicturesDir := flag.String("avatars_dir", "../avatars/", "Avatars directory")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 
 	flag.Parse()
-	if(*releaseMode){
+	if *releaseMode {
 		fmt.Printf("[Main] Starting gin in release mode!\n")
 		gin.SetMode(gin.ReleaseMode)
+	}
+
+	if *useSentry {
+		fmt.Printf("Setting Sentry DSN\n")
+		raven.SetDSN(SENTRY_DSN)
+		raven.SetEnvironment("api")
+
+		raven.CaptureMessage("Starting up api worker", nil)
 	}
 
 	log.Debug("[Main] Reading Label Map")
