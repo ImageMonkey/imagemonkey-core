@@ -211,7 +211,7 @@ func getAppIdentifier(c *gin.Context) string {
 }
 
 func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMapEntry, dir string, 
-				redisPool *redis.Pool, statisticsPusher *StatisticsPusher, autoUnlock bool) {
+				redisPool *redis.Pool, statisticsPusher *StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
 
 	file, header, err := c.Request.FormFile("image")
@@ -307,7 +307,7 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
 	contributionsPerCountryRequest.CountryCode = "--"
 	ip := net.ParseIP(getIPAddress(c.Request))
 	if ip != nil {
-		record, err := geoipDb.Country(ip)
+		record, err := geodb.Country(ip)
 		if err != nil { //just log, but don't abort...it's just for statistics
 			log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
 				
@@ -540,7 +540,7 @@ func main(){
 
 			//we trust images from the labelme database, so we automatically save them
 			//into the donations folder and unlock them per default.
-			donate(c, imageSource, labelMap, dir, redisPool, statisticsPusher, autoUnlock)
+			donate(c, imageSource, labelMap, dir, redisPool, statisticsPusher, geoipDb, autoUnlock)
 		})
 
 		clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {
@@ -960,7 +960,7 @@ func main(){
 		imageSource.Provider = "donation"
 		imageSource.Trusted = false
 
-		donate(c, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, false)
+		donate(c, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 	})
 
 	router.POST("/v1/report/:imageid", func(c *gin.Context) {
