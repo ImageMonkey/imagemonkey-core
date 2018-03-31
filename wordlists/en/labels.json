@@ -440,6 +440,16 @@
 				}
 			]
 		},
+		"bicycle": {
+			"description": "optional",
+			"accessors": ["."],
+			"isa": ["vehicle"]
+		},
+		"building": {
+			"description": "optional",
+			"accessors": ["."],
+			"isa": []
+		},
 		"TV": {
 			"description": "optional",
 			"accessors": ["."],
