@@ -1494,11 +1494,25 @@ func getImageToLabel() (Image, error) {
     defer unlabeledRows.Close()
 
     if !unlabeledRows.Next() {
-        rows, err := tx.Query(`SELECT q.key, l.name as label, COALESCE(pl.name, '') as parentLabel
-                               FROM image_validation v 
-                               JOIN (SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
-                               JOIN label l on v.label_id = l.id 
-                               LEFT JOIN label pl on l.parent_id = pl.id`)
+        rows, err := tx.Query(`SELECT q.key, label, COALESCE(parent_label, '') as parent_label 
+                               FROM 
+                                (
+                                    SELECT v.image_id as image_id, l.name as label, COALESCE(pl.name, '') as parent_label
+                                    FROM image_validation v 
+                                    JOIN label l on v.label_id = l.id 
+                                    LEFT JOIN label pl on l.parent_id = pl.id
+
+                                    UNION ALL
+
+                                    SELECT ils.image_id as image_id, s.name as label, '' as parent_label
+                                    FROM image_label_suggestion ils
+                                    JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                ) q1
+                                JOIN (
+                                    SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true 
+                                    OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1
+                                ) q
+                                ON q.id = q1.image_id `)
 
 
         if err != nil {
@@ -1575,7 +1589,7 @@ func getImageToLabel() (Image, error) {
     return image, nil
 }
 
-func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry) error {
+func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageId string, labels []LabelMeEntry) error {
     tx, err := db.Begin()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
@@ -1583,11 +1597,32 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
         return err
     }
 
-    _, err = _addLabelsToImage(clientFingerprint, imageId, labels, 0, tx)
-    if err != nil { 
-        return err //tx already rolled back in case of error, so we can just return here 
+    var knownLabels []LabelMeEntry
+    for _, item := range labels {
+        if !isLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
+            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
+                err := _addLabelSuggestionToImage(apiUser.ClientFingerprint, item.Label, imageId, tx)
+                if err != nil {
+                    return err //tx already rolled back in case of error, so we can just return here 
+                }
+            } else {
+                tx.Rollback()
+                log.Debug("you need to be authenticated")
+                return errors.New("you need to be authenticated to perform this action") 
+            }
+        } else {
+            knownLabels = append(knownLabels, item)
+        }
     }
 
+    if len(knownLabels) > 0 {
+        _, err = _addLabelsToImage(apiUser.ClientFingerprint, imageId, knownLabels, 0, tx)
+        if err != nil { 
+            return err //tx already rolled back in case of error, so we can just return here 
+        }
+    }
+
+    
     err = tx.Commit()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't commit changes: ", err.Error())
@@ -1597,6 +1632,51 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
     return err
 }
 
+func _addLabelSuggestionToImage(clientFingerprint string, label string, imageId string, tx *sql.Tx) error {
+    var labelSuggestionId int64
+
+    labelSuggestionId = -1
+    rows, err := tx.Query("SELECT id FROM label_suggestion WHERE name = $1", label)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Adding suggestion label] Couldn't get label: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if !rows.Next() { //label does not exist yet, insert it
+        rows.Close()
+
+        err := tx.QueryRow("INSERT INTO label_suggestion(name) VALUES($1) ON CONFLICT (name) DO NOTHING RETURNING id", label).Scan(&labelSuggestionId)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Adding suggestion label] Couldn't add label: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    } else {
+        err = rows.Scan(&labelSuggestionId)
+        rows.Close()
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Adding suggestion label] Couldn't scan label: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id) 
+                        SELECT $1, id, $3 FROM image WHERE key = $2
+                        ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, clientFingerprint, imageId, labelSuggestionId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Adding image label suggestion] Couldn't add image label suggestion: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
 
 func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, tx *sql.Tx) ([]int64, error) {
     var insertedIds []int64
@@ -2348,5 +2428,4 @@ func getValidationStatistics(period string) ([]DataPoint, error) {
 
     return validationStatistics, nil
 }
-
 

@@ -372,3 +372,22 @@ func isAlphaNumeric(s string) bool {
     }
     return true
 }
+
+func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+    if val, ok := labelsMap[label]; ok {
+        if len(sublabels) > 0 {
+            availableSublabels := val.LabelMapEntries
+
+            for _, value := range sublabels {
+                _, ok := availableSublabels[value]
+                if !ok {
+                    return false
+                }
+            }
+            return true
+        }
+        return true
+    }
+
+    return false
+}
