@@ -1601,7 +1601,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
     for _, item := range labels {
         if !isLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
             if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
-                err := _addLabelSuggestionToImage(apiUser.ClientFingerprint, item.Label, imageId, tx)
+                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, tx)
                 if err != nil {
                     return err //tx already rolled back in case of error, so we can just return here 
                 }
@@ -1632,7 +1632,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
     return err
 }
 
-func _addLabelSuggestionToImage(clientFingerprint string, label string, imageId string, tx *sql.Tx) error {
+func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, tx *sql.Tx) error {
     var labelSuggestionId int64
 
     labelSuggestionId = -1
@@ -1647,7 +1647,9 @@ func _addLabelSuggestionToImage(clientFingerprint string, label string, imageId 
     if !rows.Next() { //label does not exist yet, insert it
         rows.Close()
 
-        err := tx.QueryRow("INSERT INTO label_suggestion(name) VALUES($1) ON CONFLICT (name) DO NOTHING RETURNING id", label).Scan(&labelSuggestionId)
+        err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by) 
+                            SELECT $1, id FROM account a WHERE a.name = $2 
+                            ON CONFLICT (name) DO NOTHING RETURNING id`, label, apiUser.Name).Scan(&labelSuggestionId)
         if err != nil {
             tx.Rollback()
             log.Debug("[Adding suggestion label] Couldn't add label: ", err.Error())
@@ -1667,7 +1669,7 @@ func _addLabelSuggestionToImage(clientFingerprint string, label string, imageId 
 
     _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id) 
                         SELECT $1, id, $3 FROM image WHERE key = $2
-                        ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, clientFingerprint, imageId, labelSuggestionId)
+                        ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId)
     if err != nil {
         tx.Rollback()
         log.Debug("[Adding image label suggestion] Couldn't add image label suggestion: ", err.Error())

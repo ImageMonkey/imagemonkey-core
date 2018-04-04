@@ -7,3 +7,4 @@ unverified_donations/*
 src/web.exe
 src/api.exe
 avatars/*
+src/shared_secrets.go
