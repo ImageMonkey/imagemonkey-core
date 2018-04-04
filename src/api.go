@@ -947,6 +947,10 @@ func main(){
 			c.JSON(422, gin.H{"error": "reason missing - please provide a valid 'reason'"})
 			return
 		}
+
+		s := "Someone reported a violation (uuid: " + imageId + ", reason: " + report.Reason + ")" 
+		raven.CaptureMessage(s, nil)
+
 		err := reportImage(imageId, report.Reason)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't report image - please try again later"})
