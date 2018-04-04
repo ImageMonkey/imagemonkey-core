@@ -6,5 +6,6 @@ donations/*
 unverified_donations/*
 src/web.exe
 src/api.exe
+src/trendinglabelsworker.exe
 avatars/*
 src/shared_secrets.go

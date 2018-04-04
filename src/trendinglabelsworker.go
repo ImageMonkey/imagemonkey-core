@@ -58,13 +58,16 @@ func createGithubTicket(trendingLabel TrendingLabel, repository string) error {
 
 	client := github.NewClient(tc)
 
+	title := trendingLabel.Name + " is now trending"
+	body := ""
+
 	//create a new Issue
 	issueRequest := &github.IssueRequest{
-		Title:    github.String("test"),
-		Body:    github.String("test"),
+		Title:    github.String(title),
+		Body:    github.String(body),
 	}
 
-	_, _, err := client.Issues.Create(ctx, "bbernhard", repository, issueRequest)
+	_, _, err := client.Issues.Create(ctx, GITHUB_PROJECT_OWNER, repository, issueRequest)
 
 	return err
 }
@@ -78,6 +81,7 @@ func markTrendingLabelAsSent(trendingLabel TrendingLabel) error {
 func main() {
 
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
+	repository := flag.String("repository", "imagemonkey-trending-labels-test", "Github repository")
 	flag.Parse()
 
 	if *useSentry {
@@ -102,12 +106,12 @@ func main() {
 	}
 	defer db.Close()
 
-	var trendingLabel TrendingLabel
+	/*var trendingLabel TrendingLabel
 	trendingLabel.Name = "bla"
-	err = createGithubTicket(trendingLabel, "imagemonkey-trending-labels-test")
+	err = createGithubTicket(trendingLabel, repository)
 	if err != nil {
 		log.Info(err.Error())
-	}
+	}*/
 
 	for {
 		trendingLabels, err := getNewTrendingLabels()
@@ -119,7 +123,7 @@ func main() {
 				log.Info("[Main] Detected a new trending label: ", trendingLabel.Name)
 				log.Info("[Main] Creating Github ticket for trending label: ", trendingLabel.Name)
 				//there is a new trending label...create a github ticket for that
-				err := createGithubTicket(trendingLabel, "imagemonkey-trending-labels-test")
+				err := createGithubTicket(trendingLabel, *repository)
 				if err != nil {
 					log.Error("[Main] Couldn't create github issue for trending label: ", err.Error())
 					raven.CaptureError(err, nil)
