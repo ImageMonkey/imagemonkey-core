@@ -2431,3 +2431,30 @@ func getValidationStatistics(period string) ([]DataPoint, error) {
     return validationStatistics, nil
 }
 
+func getLabelSuggestions() ([]string, error) {
+    var labelSuggestions []string
+
+    rows, err := db.Query("SELECT name FROM label_suggestion")
+    if err != nil {
+        log.Debug("[Get Label Suggestions] Couldn't get label suggestions: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelSuggestions, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var labelSuggestion string
+        err := rows.Scan(&labelSuggestion)
+        if err != nil {
+            log.Debug("[Get Label Suggestions] Couldn't scan label suggestions: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelSuggestions, err
+        }
+
+        labelSuggestions = append(labelSuggestions, labelSuggestion)
+    }
+
+    return labelSuggestions, nil
+}
+

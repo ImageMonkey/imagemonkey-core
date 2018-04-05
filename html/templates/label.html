@@ -297,8 +297,18 @@
     addOldLabels({{ .image.AllLabels }});
 
     var availableLabels = [];
+    var availableLabelsLookupTable = {} //use map for faster access
     {{ range $key, $value := .labels }}
-        availableLabels.push(escapeHtml({{ $key }}));
+      availableLabelsLookupTable[{{ $key }}] = true;
+      availableLabels.push(escapeHtml({{ $key }}));
+    {{ end }}
+
+    {{ range $value := .labelSuggestions }}
+      var escapedLabelSuggestion = escapeHtml({{ $value }});
+      if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
+        availableLabelsLookupTable[escapedLabelSuggestion] = true;
+        availableLabels.push(escapedLabelSuggestion);
+      }
     {{ end }}
 
     getMostPopularLabels();
@@ -314,7 +324,12 @@
     $('#addLabelSuggestionButton').click(function(e){
       var label = $("#labelSuggestion").val();
       if(label !== ""){
-        addLabel(label);
+        if(!(label in availableLabelsLookupTable)){
+          availableLabelsLookupTable[label] = true;
+          availableLabels.push(label);
+        }
+
+        addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
         $("#labelSuggestion").val(''); //clear input after add
       }
     });
@@ -373,7 +388,7 @@
     return split(term).pop();
   }
 
-  $("#addLabelSuggestion")
+  $("#labelSuggestion")
     // don't navigate away from the field on tab when selecting an item
     .on("keydown", function(event) {
       if (event.keyCode === $.ui.keyCode.TAB &&
@@ -483,7 +498,7 @@
             <div class="field">
               <div class="ui center aligned action input" id="labelForm">
                 <div class="ui input">
-                  <input placeholder="Search..." type="text" id="labelSuggestion">
+                  <input placeholder="Enter label..." type="text" id="labelSuggestion">
                 </div>
                 <button class="ui button" id="addLabelSuggestionButton">Add</button>
               </div>
