@@ -321,25 +321,6 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
 	c.JSON(http.StatusOK, nil)
 }
 
-func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
-	if val, ok := labelsMap[label]; ok {
-		if len(sublabels) > 0 {
-			availableSublabels := val.LabelMapEntries
-
-			for _, value := range sublabels {
-				_, ok := availableSublabels[value]
-				if !ok {
-					return false
-				}
-			}
-			return true
-		}
-		return true
-	}
-
-	return false
-}
-
 func IsFilenameValid(filename string) bool {
 	_, err := uuid.FromString(filename)
 
@@ -703,16 +684,11 @@ func main(){
 			return
 		}
 
-		browserFingerprint := getBrowserFingerprint(c)
-
-		for _, item := range labels {
-			if !isLabelValid(labelMap, item.Label, item.Sublabels) {
-				c.JSON(400, gin.H{"error": "Couldn't process request - invalid label(s)"})
-				return
-			}
-		}
-
-		err := addLabelsToImage(browserFingerprint, imageId, labels)
+		var apiUser APIUser
+		apiUser.ClientFingerprint = getBrowserFingerprint(c)
+		apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+		
+		err := addLabelsToImage(apiUser, labelMap, imageId, labels)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 			return
@@ -971,6 +947,10 @@ func main(){
 			c.JSON(422, gin.H{"error": "reason missing - please provide a valid 'reason'"})
 			return
 		}
+
+		s := "Someone reported a violation (uuid: " + imageId + ", reason: " + report.Reason + ")" 
+		raven.CaptureMessage(s, nil)
+
 		err := reportImage(imageId, report.Reason)
 		if(err != nil){
 			c.JSON(500, gin.H{"error": "Couldn't report image - please try again later"})
@@ -1226,6 +1206,17 @@ func main(){
             return
         }
 		pair := strings.SplitN(string(payload), ":", 2)
+
+		userExists, err := userExists(pair[0])
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+            return
+		}
+
+		if !userExists {
+			c.JSON(401, gin.H{"error": "Invalid username or password"})
+            return
+		}
 
 
 		hashedPassword, err := getHashedPasswordForUser(pair[0])

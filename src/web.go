@@ -135,6 +135,7 @@ func main() {
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
+				"labelSuggestions": pick(getLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})

@@ -20,3 +20,7 @@ $(document)
       ;
 
     });
+
+function escapeHtml (str) {
+  return jQuery('<div/>').text(str).html();
+}
