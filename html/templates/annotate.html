@@ -399,6 +399,7 @@
         labelId = null;
 
       canvas = new CanvasDrawer("annotationArea");
+      canvas.fabric().selection = false;
       annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
 
       var randomImageId = {{ .randomImage.Id }};
