@@ -682,7 +682,7 @@ func main(){
 				c.JSON(http.StatusOK, gin.H{"label": mostPopularLabels[pos], "donations": randomGroupedImages})
 
 			} else {
-				randomImage := getRandomImage()
+				randomImage := getRandomImage(-1)
 				c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel, 
 											"validations": gin.H{ "num_yes": randomImage.NumOfValid, "num_no": randomImage.NumOfInvalid} })
 			}

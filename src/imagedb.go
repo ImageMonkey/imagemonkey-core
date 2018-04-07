@@ -839,7 +839,7 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
 }
 
 
-func getRandomImage() Image{
+func getRandomImage(labelId int64) Image{
 	var image Image
 
 	image.Id = ""

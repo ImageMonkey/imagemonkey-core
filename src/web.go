@@ -13,9 +13,24 @@ import (
 	"math"
 	"strconv"
 	"github.com/getsentry/raven-go"
+	"net/url"
 )
 
 var db *sql.DB
+
+func getLabelIdFromUrlParams(params url.Values) (int64, error) {
+	var labelId int64
+	var err error
+	labelId = -1
+	if temp, ok := params["label_id"]; ok {
+		labelId, err = strconv.ParseInt(temp[0], 10, 64)
+		if err != nil {
+			return labelId, err
+		}
+	}
+
+	return labelId, nil
+}
 
 func main() {
 	fmt.Printf("Starting Web Service...\n")
@@ -145,14 +160,10 @@ func main() {
 			params := c.Request.URL.Query()
 			
 
-			var labelId int64
-			labelId = -1
-			if temp, ok := params["label_id"]; ok {
-				labelId, err = strconv.ParseInt(temp[0], 10, 64)
-				if err != nil {
-					c.JSON(422, gin.H{"error": "label id needs to be an integer"})
-					return
-				}
+			labelId, err := getLabelIdFromUrlParams(params)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+				return
 			}
 
 
@@ -207,10 +218,16 @@ func main() {
 				}
 			}
 
+			labelId, err := getLabelIdFromUrlParams(params)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+				return
+			}
+
 
 			c.HTML(http.StatusOK, "validate.html", gin.H{
 				"title": "Validate Label",
-				"randomImage": getRandomImage(),
+				"randomImage": getRandomImage(labelId),
 				"activeMenuNr": 5,
 				"showHeader": showHeader,
 				"showFooter": showFooter,
@@ -218,6 +235,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": appIdentifier,
 				"callback": callback,
+				"labelId": labelId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})
