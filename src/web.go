@@ -11,26 +11,10 @@ import (
 	"flag"
 	"database/sql"
 	"math"
-	"strconv"
 	"github.com/getsentry/raven-go"
-	"net/url"
 )
 
 var db *sql.DB
-
-func getLabelIdFromUrlParams(params url.Values) (int64, error) {
-	var labelId int64
-	var err error
-	labelId = -1
-	if temp, ok := params["label_id"]; ok {
-		labelId, err = strconv.ParseInt(temp[0], 10, 64)
-		if err != nil {
-			return labelId, err
-		}
-	}
-
-	return labelId, nil
-}
 
 func main() {
 	fmt.Printf("Starting Web Service...\n")

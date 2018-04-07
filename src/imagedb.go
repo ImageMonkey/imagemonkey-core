@@ -846,15 +846,30 @@ func getRandomImage(labelId int64) Image{
 	image.Label = ""
 	image.Provider = "donation"
 
-	rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid 
-                           FROM image i 
-						   JOIN image_provider p ON i.image_provider_id = p.id 
-						   JOIN image_validation v ON v.image_id = i.id
-						   JOIN label l ON v.label_id = l.id
-                           LEFT JOIN label pl ON l.parent_id = pl.id
-						   WHERE ((i.unlocked = true) AND (p.name = 'donation') 
-                           AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)) LIMIT 1`)
-	if(err != nil){
+    labelIdStr := ""
+    if labelId != -1 {
+        labelIdStr = " AND l.id = $1"
+    }
+
+    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid 
+                        FROM image i 
+                        JOIN image_provider p ON i.image_provider_id = p.id 
+                        JOIN image_validation v ON v.image_id = i.id
+                        JOIN label l ON v.label_id = l.id
+                        LEFT JOIN label pl ON l.parent_id = pl.id
+                        WHERE ((i.unlocked = true) AND (p.name = 'donation') 
+                        AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)%s) LIMIT 1`, labelIdStr)
+
+	var rows *sql.Rows
+    var err error
+    if labelId != -1 {
+        rows, err = db.Query(q, labelId)
+    } else {
+        rows, err = db.Query(q)
+    }
+	
+
+    if err != nil {
 		log.Debug("[Fetch random image] Couldn't fetch random image: ", err.Error())
 		raven.CaptureError(err, nil)
 		return image
@@ -863,22 +878,36 @@ func getRandomImage(labelId int64) Image{
 	
     var label1 string
     var label2 string
-	if(!rows.Next()){
-        otherRows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid
-                                    FROM image i 
-                                    JOIN image_provider p ON i.image_provider_id = p.id 
-                                    JOIN image_validation v ON v.image_id = i.id
-                                    JOIN label l ON v.label_id = l.id
-                                    LEFT JOIN label pl ON l.parent_id = pl.id
-                                    WHERE i.unlocked = true AND p.name = 'donation' 
-                                    OFFSET floor(random() * 
-                                        ( SELECT count(*) FROM image i 
-                                          JOIN image_provider p ON i.image_provider_id = p.id 
-                                          JOIN image_validation v ON v.image_id = i.id 
-                                          WHERE i.unlocked = true AND p.name = 'donation'
-                                        )
-                                    ) LIMIT 1`)
-        if(!otherRows.Next()){
+	if !rows.Next() {
+        var otherRows *sql.Rows
+
+        offsetLabelIdStr := ""
+        if labelId != -1 {
+            offsetLabelIdStr = " AND v.label_id = $2"
+        }
+
+        q1 := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid
+                            FROM image i 
+                            JOIN image_provider p ON i.image_provider_id = p.id 
+                            JOIN image_validation v ON v.image_id = i.id
+                            JOIN label l ON v.label_id = l.id
+                            LEFT JOIN label pl ON l.parent_id = pl.id
+                            WHERE i.unlocked = true AND p.name = 'donation'%s 
+                            OFFSET floor(random() * 
+                                ( SELECT count(*) FROM image i 
+                                  JOIN image_provider p ON i.image_provider_id = p.id 
+                                  JOIN image_validation v ON v.image_id = i.id 
+                                  WHERE i.unlocked = true AND p.name = 'donation'%s
+                                )
+                            ) LIMIT 1`, labelIdStr, offsetLabelIdStr)
+
+        if labelId != -1 {
+            otherRows, err = db.Query(q1, labelId, labelId)
+        } else {
+            otherRows, err = db.Query(q1)
+        }
+        
+        if !otherRows.Next() {
     		log.Debug("[Fetch random image] Missing result set")
     		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
     		return image
@@ -886,14 +915,14 @@ func getRandomImage(labelId int64) Image{
         defer otherRows.Close()
 
         err = otherRows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
-        if(err != nil){
+        if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
         }
 	} else{
         err = rows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
-        if(err != nil){
+        if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image

@@ -682,7 +682,13 @@ func main(){
 				c.JSON(http.StatusOK, gin.H{"label": mostPopularLabels[pos], "donations": randomGroupedImages})
 
 			} else {
-				randomImage := getRandomImage(-1)
+				labelId, err := getLabelIdFromUrlParams(params) 
+				if err != nil {
+					c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+					return
+				}
+
+				randomImage := getRandomImage(labelId)
 				c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel, 
 											"validations": gin.H{ "num_yes": randomImage.NumOfValid, "num_no": randomImage.NumOfInvalid} })
 			}
@@ -1086,14 +1092,10 @@ func main(){
 				}
 			}
 
-			var labelId int64
-			labelId = -1
-			if temp, ok := params["label_id"]; ok {
-				labelId, err = strconv.ParseInt(temp[0], 10, 64)
-				if err != nil {
-					c.JSON(422, gin.H{"error": "label id needs to be an integer"})
-					return
-				}
+			labelId, err := getLabelIdFromUrlParams(params) 
+			if err != nil {
+				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+				return
 			}
 
 			randomImage, err := getRandomUnannotatedImage(addAutoAnnotations, labelId)

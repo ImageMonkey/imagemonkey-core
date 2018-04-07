@@ -36,6 +36,7 @@
   <script type="text/javascript">
   //global image validation map that holds if a image is marked as valid or not
   var imageValidationMapping = {};
+  var labelId = null;
 
   function populateImageGrid(data){
     imageValidationMapping = {};
@@ -85,7 +86,8 @@
     }
     else{
       var multiValidationMode = isMultiValidationMode();
-      var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+      var url = ("{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
+                + ((labelId === null) ? "" : ("&label_id=" + labelId)));
 
       $.ajax({
         url: url,
@@ -209,6 +211,10 @@
 
   $(document).ready(function(){
     var browserFingerprint = null;
+
+    labelId = {{ .labelId }};
+    if(labelId === -1)
+      labelId = null;
 
     $("#multiValidationContainer").hide();
 

@@ -17,6 +17,8 @@ import (
     "encoding/json"
     "github.com/garyburd/redigo/redis"
     log "github.com/Sirupsen/logrus"
+    "net/url"
+    "strconv"
 )
 
 type Report struct {
@@ -390,4 +392,18 @@ func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []
     }
 
     return false
+}
+
+func getLabelIdFromUrlParams(params url.Values) (int64, error) {
+    var labelId int64
+    var err error
+    labelId = -1
+    if temp, ok := params["label_id"]; ok {
+        labelId, err = strconv.ParseInt(temp[0], 10, 64)
+        if err != nil {
+            return labelId, err
+        }
+    }
+
+    return labelId, nil
 }
