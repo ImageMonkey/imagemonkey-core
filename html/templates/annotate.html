@@ -24,6 +24,18 @@
 
   <style>
   .canvas-container{margin: 0 auto;}
+
+  @media only screen and (max-width: 767px) {
+    [class*="mobile hidden"],
+    [class*="tablet only"]:not(.mobile),
+    [class*="computer only"]:not(.mobile),
+    [class*="large monitor only"]:not(.mobile),
+    [class*="widescreen monitor only"]:not(.mobile),
+    [class*="or lower hidden"] {
+      display: none !important;
+    }
+  }
+
   </style>
 
   <script>
@@ -303,6 +315,46 @@
     }
   }
 
+  function getPreferedAnnotationTool() {
+    var radioButtonId = $("#preferedAnnotationToolCheckboxes :radio:checked").attr('id');
+    if(radioButtonId === "preferedRectangleAnnotationToolCheckboxInput") {
+      return "Rectangle";
+    }
+    if(radioButtonId === "preferedCircleAnnotationToolCheckboxInput") {
+      return "Circle";
+    }
+    if(radioButtonId === "preferedPolygonAnnotationToolCheckboxInput") {
+      return "Polygon";
+    }
+    return "Rectangle";
+  }
+
+  function setPreferedAnnotationTool() {
+    var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
+    if(preferedAnnotationTool === "Rectangle") {
+      $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedRectangleAnnotationToolCheckbox").checkbox("set checked");
+    }
+    else if(preferedAnnotationTool === "Circle") {
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedRectangleAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedCircleAnnotationToolCheckbox").checkbox("check");
+    } else if(preferedAnnotationTool === "Polygon") {
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set checked");
+    }
+  }
+
+  function loadPreferedAnnotationTool(annotator) {
+    var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
+    if((preferedAnnotationTool === "Rectangle") || (preferedAnnotationTool === "Circle") || (preferedAnnotationTool === "Polygon")){
+      changeMenuItem(preferedAnnotationTool);
+      annotator.setShape(preferedAnnotationTool);
+    }
+  }
+
   function onAnnotatorObjectSelected(){
     $("#trashMenuItem").removeClass("disabled");
   }
@@ -409,6 +461,8 @@
       changeControl(annotator);
       showHideControls(true);
 
+      loadPreferedAnnotationTool(annotator);
+
 
       var browserFingerprint = null;
 
@@ -510,6 +564,17 @@
       $('#showSmartAnnotationHelpDlg').click(function(){
         $('#smartAnnotationHelpDlgGif').attr('src', 'img/smart_annotation.gif');
         $('#smartAnnotationHelpDlg').modal('setting', { detachable:false }).modal('show');
+      });
+
+      $("#settingsMenuItem").click(function(e) {
+        setPreferedAnnotationTool();
+        $('#annotationSettingsPopup').modal('show');
+      });
+
+      $("#saveAnnotationSettingsButton").click(function(e) {
+        var preferedAnnotationTool = getPreferedAnnotationTool();
+        localStorage.setItem('preferedAnnotationTool', preferedAnnotationTool); //store in local storage
+        $('#annotationSettingsPopup').modal('hide');
       });
 
 
@@ -652,6 +717,9 @@
           <a hidden class="active download popup orange icon item" id="loadAutoAnnotationsMenuItem" data-content="Load Auto Annotations">
             <i class="download icon"></i>
           </a>
+          <a class="settings popup icon item mobile hidden" id="settingsMenuItem" data-content="Settings">
+            <i class="settings icon"></i>
+          </a>
         </div>
 
         <div class="ui longer modal" id="smartAnnotationHelpDlg">
@@ -673,6 +741,46 @@
           <div class="actions">
             <div class="ui right labeled cancel button">
               Close
+            </div>
+          </div>
+        </div>
+
+
+        <div class="ui modal" id="annotationSettingsPopup">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            Annotation Settings
+          </div>
+          <div class="scrolling content">
+            <div class="ui form">
+              <div class="grouped fields" id="preferedAnnotationToolCheckboxes">
+                <label>Choose your prefered annotation tool</label>
+                <div class="field">
+                  <div class="ui radio checkbox" id="preferedRectangleAnnotationToolCheckbox">
+                    <input name="preferedAnnotationTool" id="preferedRectangleAnnotationToolCheckboxInput" checked="checked" type="radio">
+                    <label>Rectangle</label>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="ui radio checkbox" id="preferedCircleAnnotationToolCheckbox">
+                    <input name="preferedAnnotationTool" id="preferedCircleAnnotationToolCheckboxInput" type="radio">
+                    <label>Circle</label>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="ui radio checkbox" id="preferedPolygonAnnotationToolCheckbox">
+                    <input name="preferedAnnotationTool" id="preferedPolygonAnnotationToolCheckboxInput" type="radio">
+                    <label>Polygon</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p><p>
+          <div class="actions">
+            <div class="ui positive right labeled icon button" id="saveAnnotationSettingsButton">
+              Save
+              <i class="checkmark icon"></i>
             </div>
           </div>
         </div>
