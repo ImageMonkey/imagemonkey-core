@@ -647,13 +647,17 @@
       });
 
       $('#blacklistButton').click(function(e) {
+        {{ if (eq .sessionInformation.LoggedIn true) }}
         var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
-        if(blacklistAnnotationUsageDlgAlreadyShown === null) {
+          if(blacklistAnnotationUsageDlgAlreadyShown === null) {
+            $("#blacklistAnnotationUsageDlg").modal("show");
+            localStorage.setItem("blacklistAnnotationUsageDlgShown", true);
+          } else {
+            blacklistAnnotation($("#annotationArea").attr("validationId"));
+          }
+        {{ else }}
           $("#blacklistAnnotationUsageDlg").modal("show");
-          localStorage.setItem("blacklistAnnotationUsageDlgShown", true);
-        } else {
-          blacklistAnnotation($("#annotationArea").attr("validationId"));
-        }
+        {{ end }}
         
       });
 
