@@ -647,10 +647,33 @@
       });
 
       $('#blacklistButton').click(function(e) {
+        var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
+        if(blacklistAnnotationUsageDlgAlreadyShown === null) {
+          $("#blacklistAnnotationUsageDlg").modal("show");
+          localStorage.setItem("blacklistAnnotationUsageDlgShown", true);
+        } else {
+          blacklistAnnotation($("#annotationArea").attr("validationId"));
+        }
+        
+      });
+
+      $('#blacklistAnnotationUsageDlgAcceptButton').click(function(e) {
+        $("#blacklistAnnotationUsageDlg").modal("hide");
         blacklistAnnotation($("#annotationArea").attr("validationId"));
       });
 
       $('#notAnnotableButton').click(function(e) {
+        var markAsUnannotatableUsageDlgAlreadyShown = localStorage.getItem("markAsUnannotatableUsageDlgShown");
+        if(markAsUnannotatableUsageDlgAlreadyShown === null) {
+          $("#markAsUnannotatableUsageDlg").modal("show");
+          localStorage.setItem("markAsUnannotatableUsageDlgShown", true);
+        } else {
+          markAsNotAnnotatable($("#annotationArea").attr("validationId"));
+        }
+      });
+
+      $('#markAsUnannotatableUsageDlgAcceptButton').click(function(e) {
+        $("#markAsUnannotatableUsageDlg").modal("hide");
         markAsNotAnnotatable($("#annotationArea").attr("validationId"));
       });
 
@@ -793,6 +816,73 @@
             <div class="ui right labeled cancel button">
               Close
             </div>
+          </div>
+        </div>
+
+        <div class="ui longer modal" id="blacklistAnnotationUsageDlg">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            Blacklisting Annotations
+          </div>
+          <div class="scrolling content">
+            Everybody has different interests - while some people like to annotate crowded urban scenes, others like to annotate still images. In order to let you focus on the annotation tasks
+            you are interested in, there is the possibility to <b>blacklist</b> annotations. <br>After you've blacklisted an annotation task, the task won't be served again to you. 
+            <br><br>
+            <b>Tip:</b> Only blacklist annotation tasks that you are <b>not</b> interested in. If you aren't in the mood for a specific task, use your browser's refresh button to get another random annotation task.
+
+            {{ if (ne .sessionInformation.LoggedIn true) }}
+            <br><br>
+            <b>You need to be logged in to use this feature!</b>
+            {{ end }}
+
+          </div>
+          <p><p>
+          <div class="actions">
+            {{ if (eq .sessionInformation.LoggedIn true) }}
+            <div class="ui cancel button">
+              Discard
+            </div>
+            <div class="ui positive right labeled icon button" id="blacklistAnnotationUsageDlgAcceptButton">
+              Got it - blacklist annotation!
+              <i class="checkmark icon"></i>
+            </div>
+
+            {{ else }}
+            <div class="ui right labeled cancel button">
+              Close
+            </div>
+            {{ end }}
+          </div>
+        </div>
+
+        <div class="ui longer modal" id="markAsUnannotatableUsageDlg">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            Mark as un-annotatable
+          </div>
+          <div class="scrolling content">
+            Sometimes it's not possible to annotate a object - e.q when the object in question is too small. Use this option if you want to mark the annotation task as not-doable. 
+
+            <br><br>
+            Do <b>not</b> use this option if you are not in the mood for the given annotation task. Instead, use the browser's reload button to get a new, randomly chosen annotation task.
+
+          </div>
+          <p><p>
+          <div class="actions">
+            {{ if (eq .sessionInformation.LoggedIn true) }}
+            <div class="ui cancel button">
+              Discard
+            </div>
+            <div class="ui positive right labeled icon button" id="markAsUnannotatableUsageDlgAcceptButton">
+              Got it - mark it as un-annotatable!
+              <i class="checkmark icon"></i>
+            </div>
+
+            {{ else }}
+            <div class="ui right labeled cancel button">
+              Close
+            </div>
+            {{ end }}
           </div>
         </div>
 
