@@ -80,7 +80,23 @@
   }
 
   function blacklistAnnotation(validationId) {
+    showHideControls(false);
     var url = '{{ .apiBaseUrl }}/v1/validation/' + validationId + '/blacklist-annotation';
+    $.ajax({
+      url: url,
+      type: 'POST',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      },
+      success: function(data, status, xhr){
+        getRandomUnannotatedImage();
+      }
+    });
+  }
+
+  function markAsNotAnnotatable(validationId) {
+    showHideControls(false);
+    var url = '{{ .apiBaseUrl }}/v1/validation/' + validationId + '/not-annotatable';
     $.ajax({
       url: url,
       type: 'POST',
@@ -211,12 +227,16 @@
   function showHideControls(show){
     if(show){
       $("#doneButton").show();
+      $("#blacklistButton").show();
+      $("#notAnnotableButton").show();
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
       $("#showSmartAnnotationHelpDlg").show();
     }
     else{
       $("#doneButton").hide();
+      $("#blacklistButton").hide();
+      $("#notAnnotableButton").hide();
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
       $("#showSmartAnnotationHelpDlg").hide();
@@ -630,6 +650,10 @@
         blacklistAnnotation($("#annotationArea").attr("validationId"));
       });
 
+      $('#notAnnotableButton').click(function(e) {
+        markAsNotAnnotatable($("#annotationArea").attr("validationId"));
+      });
+
       $('#doneButton').click(function(e) {
         var res = annotator.toJSON();
 
@@ -816,6 +840,9 @@
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
         </div>
         <p></p>
+
+        <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
+
         <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
 
         {{ if (eq .sessionInformation.LoggedIn true) }}

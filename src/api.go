@@ -999,6 +999,18 @@ func main(){
 			c.JSON(http.StatusOK, nil)
 		})
 
+		router.POST("/v1/validation/:validationid/not-annotatable", func(c *gin.Context) {
+			validationId := c.Param("validationid")
+
+			err := markValidationAsNotAnnotatable(validationId)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't mark validation as not-annotatable - please try again later"})
+				return
+			}
+
+			c.JSON(http.StatusOK, nil)
+		})
+
 		router.POST("/v1/annotation/:annotationid/validate/:param", func(c *gin.Context) {
 			annotationId := c.Param("annotationid")
 			param := c.Param("param")
