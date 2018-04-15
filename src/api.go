@@ -215,7 +215,7 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
 	label := c.PostForm("label")
 
 	file, header, err := c.Request.FormFile("image")
-	if(err != nil){
+	if err != nil {
 		c.JSON(400, gin.H{"error": "Picture is missing"})
 		return
 	}
@@ -235,23 +235,23 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
         return
     }
 
-    if(!filetype.IsImage(fileHeader)){
+    if !filetype.IsImage(fileHeader) {
         c.JSON(422, gin.H{"error": "Unsopported MIME type detected"})
         return
     }
 
     //check if image already exists by using an image hash
     imageInfo, err := getImageInfo(file)
-    if(err != nil){
-        c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
-        return 
-    }
-    exists, err := imageExists(imageInfo.Hash)
-    if(err != nil){
+    if err != nil {
         c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         return
     }
-    if(exists){
+    exists, err := imageExists(imageInfo.Hash)
+    if err != nil {
+        c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
+        return 
+    }
+    if exists {
         c.JSON(409, gin.H{"error": "Couldn't add photo - image already exists"})
         return
     }
@@ -296,7 +296,7 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
 	imageInfo.Name = uuid
 
 	err = addDonatedPhoto(imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
-	if(err != nil){
+	if err != nil {
 		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 		return
 	}
@@ -318,7 +318,7 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
 	pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 	statisticsPusher.PushAppAction(getAppIdentifier(c), "donation")
 
-	c.JSON(http.StatusOK, nil)
+	c.JSON(http.StatusOK, gin.H{"uuid": uuid})
 }
 
 func IsFilenameValid(filename string) bool {
@@ -466,6 +466,16 @@ func main(){
 				c.String(404, "Invalid filename")
 				return
 			} 
+
+			unlocked, err := isImageUnlocked(imageId) 
+			if err != nil {
+				c.String(500, "Couldn't process request, please try again later")
+				return
+			}
+			if !unlocked {
+				c.String(404, "Couldn't access image, as image is still in locked mode")
+				return
+			}
 
 			imgBytes, format, err := ResizeImage((*donationsDir + imageId), width, height)
 			if err != nil {
