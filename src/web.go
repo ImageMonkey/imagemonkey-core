@@ -142,6 +142,8 @@ func main() {
 
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
+
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			
 
 			labelId, err := getLabelIdFromUrlParams(params)
@@ -153,7 +155,7 @@ func main() {
 
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
-				"randomImage": pick(getRandomUnannotatedImage(true, labelId))[0],
+				"randomImage": pick(getRandomUnannotatedImage(sessionInformation.Username, true, labelId))[0],
 				"activeMenuNr": 4,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,

@@ -25,6 +25,11 @@
   <style>
   .canvas-container{margin: 0 auto;}
 
+
+  .ui.disabled.button.with.tooltip[data-tooltip] {
+    pointer-events: auto !important;
+  }
+
   @media only screen and (max-width: 767px) {
     [class*="mobile hidden"],
     [class*="tablet only"]:not(.mobile),
@@ -44,6 +49,65 @@
   var numOfPendingRequests = 0;
   var autoAnnotations = null;
   var labelId = null;
+
+  function getRandomUnannotatedImage() {
+    $.ajax({
+      url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId)),
+      dataType: 'json',
+      type: 'GET',
+      success: function(data){
+        $("#annotationArea").attr("imageId", data.uuid);
+        $("#annotationArea").attr("origImageWidth", data.width);
+        $("#annotationArea").attr("origImageHeight", data.height);
+        $("#annotationArea").attr("validationId", data.validation.uuid);
+
+        if("auto_annotations" in data)
+          autoAnnotations = data["auto_annotations"];
+        else
+          autoAnnotations = null;
+        showHideAutoAnnotationsLoadButton();
+
+        setLabel(data.label, data.sublabel);
+        canvas.fabric().clear();
+        canvas.fabric().setZoom(1.0);
+        canvas.fabric().absolutePan(new fabric.Point(0,0));
+        populateCanvas(getUrlFromImageId(data.uuid), false);
+        changeControl(annotator);
+        numOfPendingRequests = 0;
+        showHideControls(true);
+      }
+    });
+  }
+
+  function blacklistAnnotation(validationId) {
+    showHideControls(false);
+    var url = '{{ .apiBaseUrl }}/v1/validation/' + validationId + '/blacklist-annotation';
+    $.ajax({
+      url: url,
+      type: 'POST',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      },
+      success: function(data, status, xhr){
+        getRandomUnannotatedImage();
+      }
+    });
+  }
+
+  function markAsNotAnnotatable(validationId) {
+    showHideControls(false);
+    var url = '{{ .apiBaseUrl }}/v1/validation/' + validationId + '/not-annotatable';
+    $.ajax({
+      url: url,
+      type: 'POST',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      },
+      success: function(data, status, xhr){
+        getRandomUnannotatedImage();
+      }
+    });
+  }
 
   function getUrlFromImageId(imageId){
     return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
@@ -163,12 +227,16 @@
   function showHideControls(show){
     if(show){
       $("#doneButton").show();
+      $("#blacklistButton").show();
+      $("#notAnnotableButton").show();
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
       $("#showSmartAnnotationHelpDlg").show();
     }
     else{
       $("#doneButton").hide();
+      $("#blacklistButton").hide();
+      $("#notAnnotableButton").hide();
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
       $("#showSmartAnnotationHelpDlg").hide();
@@ -457,6 +525,7 @@
       var randomImageId = {{ .randomImage.Id }};
       $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});  
       $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
+      $("#annotationArea").attr("validationId", {{ .randomImage.Validation.Id }});
       populateCanvas(getUrlFromImageId(randomImageId), true);
       changeControl(annotator);
       showHideControls(true);
@@ -577,7 +646,40 @@
         $('#annotationSettingsPopup').modal('hide');
       });
 
+      $('#blacklistButton').click(function(e) {
+        {{ if (eq .sessionInformation.LoggedIn true) }}
+        var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
+          if(blacklistAnnotationUsageDlgAlreadyShown === null) {
+            $("#blacklistAnnotationUsageDlg").modal("show");
+            localStorage.setItem("blacklistAnnotationUsageDlgShown", true);
+          } else {
+            blacklistAnnotation($("#annotationArea").attr("validationId"));
+          }
+        {{ else }}
+          $("#blacklistAnnotationUsageDlg").modal("show");
+        {{ end }}
+        
+      });
 
+      $('#blacklistAnnotationUsageDlgAcceptButton').click(function(e) {
+        $("#blacklistAnnotationUsageDlg").modal("hide");
+        blacklistAnnotation($("#annotationArea").attr("validationId"));
+      });
+
+      $('#notAnnotableButton').click(function(e) {
+        var markAsUnannotatableUsageDlgAlreadyShown = localStorage.getItem("markAsUnannotatableUsageDlgShown");
+        if(markAsUnannotatableUsageDlgAlreadyShown === null) {
+          $("#markAsUnannotatableUsageDlg").modal("show");
+          localStorage.setItem("markAsUnannotatableUsageDlgShown", true);
+        } else {
+          markAsNotAnnotatable($("#annotationArea").attr("validationId"));
+        }
+      });
+
+      $('#markAsUnannotatableUsageDlgAcceptButton').click(function(e) {
+        $("#markAsUnannotatableUsageDlg").modal("hide");
+        markAsNotAnnotatable($("#annotationArea").attr("validationId"));
+      });
 
       $('#doneButton').click(function(e) {
         var res = annotator.toJSON();
@@ -621,31 +723,7 @@
             xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
           },
           success: function(data){
-            $.ajax({
-              url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId)),
-              dataType: 'json',
-              type: 'GET',
-              success: function(data){
-                $("#annotationArea").attr("imageId", data.uuid);
-                $("#annotationArea").attr("origImageWidth", data.width);
-                $("#annotationArea").attr("origImageHeight", data.height);
-
-                if("auto_annotations" in data)
-                  autoAnnotations = data["auto_annotations"];
-                else
-                  autoAnnotations = null;
-                showHideAutoAnnotationsLoadButton();
-
-                setLabel(data.label, data.sublabel);
-                canvas.fabric().clear();
-                canvas.fabric().setZoom(1.0);
-                canvas.fabric().absolutePan(new fabric.Point(0,0));
-                populateCanvas(getUrlFromImageId(data.uuid), false);
-                changeControl(annotator);
-                numOfPendingRequests = 0;
-                showHideControls(true);
-              }
-            });
+            getRandomUnannotatedImage();
           }
         });
       });
@@ -745,6 +823,73 @@
           </div>
         </div>
 
+        <div class="ui longer modal" id="blacklistAnnotationUsageDlg">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            Blacklisting Annotations
+          </div>
+          <div class="scrolling content">
+            Everybody has different interests - while some people like to annotate crowded urban scenes, others like to annotate still images. In order to let you focus on the annotation tasks
+            you are interested in, there is the possibility to <b>blacklist</b> annotations. <br>After you've blacklisted an annotation task, the task won't be served again to you. 
+            <br><br>
+            <b>Tip:</b> Only blacklist annotation tasks that you are <b>not</b> interested in. If you aren't in the mood for a specific task, use your browser's refresh button to get another random annotation task.
+
+            {{ if (ne .sessionInformation.LoggedIn true) }}
+            <br><br>
+            <b>You need to be logged in to use this feature!</b>
+            {{ end }}
+
+          </div>
+          <p><p>
+          <div class="actions">
+            {{ if (eq .sessionInformation.LoggedIn true) }}
+            <div class="ui cancel button">
+              Discard
+            </div>
+            <div class="ui positive right labeled icon button" id="blacklistAnnotationUsageDlgAcceptButton">
+              Got it - blacklist annotation!
+              <i class="checkmark icon"></i>
+            </div>
+
+            {{ else }}
+            <div class="ui right labeled cancel button">
+              Close
+            </div>
+            {{ end }}
+          </div>
+        </div>
+
+        <div class="ui longer modal" id="markAsUnannotatableUsageDlg">
+          <i class="close icon"></i>
+          <div class="center aligned header">
+            Mark as un-annotatable
+          </div>
+          <div class="scrolling content">
+            Sometimes it's not possible to annotate a object - e.q when the object in question is too small. Use this option if you want to mark the annotation task as not-doable. 
+
+            <br><br>
+            Do <b>not</b> use this option if you are not in the mood for the given annotation task. Instead, use the browser's reload button to get a new, randomly chosen annotation task.
+
+          </div>
+          <p><p>
+          <div class="actions">
+            {{ if (eq .sessionInformation.LoggedIn true) }}
+            <div class="ui cancel button">
+              Discard
+            </div>
+            <div class="ui positive right labeled icon button" id="markAsUnannotatableUsageDlgAcceptButton">
+              Got it - mark it as un-annotatable!
+              <i class="checkmark icon"></i>
+            </div>
+
+            {{ else }}
+            <div class="ui right labeled cancel button">
+              Close
+            </div>
+            {{ end }}
+          </div>
+        </div>
+
 
         <div class="ui modal" id="annotationSettingsPopup">
           <i class="close icon"></i>
@@ -789,7 +934,16 @@
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
         </div>
         <p></p>
+
+        <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
+
         <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
+
+        {{ if (eq .sessionInformation.LoggedIn true) }}
+        <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
+        {{ else }}
+        <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
+        {{ end }}
 
         <div hidden class="ui warning message" id="warningMsg">
           <i class="close icon"></i>

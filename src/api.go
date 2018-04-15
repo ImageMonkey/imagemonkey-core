@@ -978,6 +978,39 @@ func main(){
 			c.JSON(http.StatusOK, nil)
 		})
 
+		router.POST("/v1/validation/:validationid/blacklist-annotation", func(c *gin.Context) {
+			validationId := c.Param("validationid")
+
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(401, gin.H{"error": "Authentication required"})
+				return
+			}
+
+			err := blacklistForAnnotation(validationId, apiUser)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't blacklist annotation - please try again later"})
+				return
+			}
+
+			c.JSON(http.StatusOK, nil)
+		})
+
+		router.POST("/v1/validation/:validationid/not-annotatable", func(c *gin.Context) {
+			validationId := c.Param("validationid")
+
+			err := markValidationAsNotAnnotatable(validationId)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't mark validation as not-annotatable - please try again later"})
+				return
+			}
+
+			c.JSON(http.StatusOK, nil)
+		})
+
 		router.POST("/v1/annotation/:annotationid/validate/:param", func(c *gin.Context) {
 			annotationId := c.Param("annotationid")
 			param := c.Param("param")
@@ -1083,6 +1116,10 @@ func main(){
 
 		router.GET("/v1/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
+
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 			
 
 			addAutoAnnotations := false
@@ -1098,7 +1135,7 @@ func main(){
 				return
 			}
 
-			randomImage, err := getRandomUnannotatedImage(addAutoAnnotations, labelId)
+			randomImage, err := getRandomUnannotatedImage(apiUser.Name, addAutoAnnotations, labelId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

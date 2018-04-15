@@ -68,6 +68,9 @@ type UnannotatedImage struct {
     Provider string `json:"provider"`
     Width int32 `json:"width"`
     Height int32 `json:"height"`
+    Validation struct {
+        Id string `json:"uuid"`
+    } `json:"validation"`
     AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
 }
 
@@ -1107,16 +1110,32 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     return nil
 }
 
-func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (UnannotatedImage, error) {
+func getRandomUnannotatedImage(username string, addAutoAnnotations bool, labelId int64) (UnannotatedImage, error) {
     var unannotatedImage UnannotatedImage
 
+    //specify the max. number of not-annotatables before we skip the annotation task
+    maxNumNotAnnotatable := 3
+
     q1 := ""
+    posNum := 1
     if labelId != -1 {
         q1 = "AND l.id = $1"
+        posNum = 2
     }
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q1.auto_annotations FROM
-                        (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, width as image_width, height as image_height
+    q2 := fmt.Sprintf(`AND NOT EXISTS
+                       (
+                            SELECT 1 FROM user_annotation_blacklist bl 
+                            JOIN account acc ON acc.id = bl.account_id
+                            WHERE bl.image_validation_id = v.id AND acc.name = $%d
+                       )`, posNum)
+
+    q3 := fmt.Sprintf("AND v.num_of_not_annotatable < $%d", (posNum +1))
+
+
+    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, q1.auto_annotations FROM
+                        (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, 
+                            width as image_width, height as image_height, v.uuid as validation_uuid
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
@@ -1126,27 +1145,31 @@ func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (Unannota
                             CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                             %s
                             AND NOT EXISTS
+                            (
+                                SELECT 1 FROM image_annotation a 
+                                WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                            )
+                            %s
+                            %s
+                            OFFSET floor
+                            ( random() * 
                                 (
-                                    SELECT 1 FROM image_annotation a 
-                                    WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
-                                )
-                                OFFSET floor
-                                ( random() * 
+                                    SELECT count(*) FROM image i
+                                    JOIN image_provider p ON i.image_provider_id = p.id
+                                    JOIN image_validation v ON v.image_id = i.id
+                                    JOIN label l ON v.label_id = l.id
+                                    WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                    CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                    %s
+                                    AND NOT EXISTS
                                     (
-                                        SELECT count(*) FROM image i
-                                        JOIN image_provider p ON i.image_provider_id = p.id
-                                        JOIN image_validation v ON v.image_id = i.id
-                                        JOIN label l ON v.label_id = l.id
-                                        WHERE i.unlocked = true AND p.name = 'donation' AND 
-                                        CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
-                                        %s
-                                        AND NOT EXISTS
-                                        (
-                                            SELECT 1 FROM image_annotation a 
-                                            WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
-                                        )
-                                    ) 
-                                )LIMIT 1
+                                        SELECT 1 FROM image_annotation a 
+                                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                                    )
+                                    %s
+                                    %s
+                                ) 
+                            )LIMIT 1
                         ) q
                         LEFT JOIN 
                         (
@@ -1156,20 +1179,20 @@ func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (Unannota
                             JOIN annotation_type t on d.annotation_type_id = t.id
                             WHERE a.auto_generated = true 
                             GROUP BY d.image_annotation_id, a.label_id, a.image_id
-                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`, q1, q1)
+                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`, q1, q2, q3, q1, q2, q3)
 
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
     var rows *sql.Rows
     var err error
     if labelId == -1 {
-        rows, err = db.Query(q)
+        rows, err = db.Query(q, username, maxNumNotAnnotatable)
         if(err != nil) {
             log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
             raven.CaptureError(err, nil)
             return unannotatedImage, err
         }
     } else {
-        rows, err = db.Query(q, labelId)
+        rows, err = db.Query(q, labelId, username, maxNumNotAnnotatable)
         if(err != nil) {
             log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1185,7 +1208,7 @@ func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (Unannota
     if(rows.Next()){
         unannotatedImage.Provider = "donation"
 
-        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, &autoAnnotationBytes)
+        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, &unannotatedImage.Validation.Id, &autoAnnotationBytes)
         if(err != nil){
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1737,10 +1760,10 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
 
         //add sublabels
         if len(item.Sublabels) > 0 {
-            rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                                  SELECT $1, $2, $3, $4, l.id FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
+            rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
+                                  SELECT $1, $2, $3, $4, l.id, uuid_generate_v4(), $7 FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
                                   RETURNING id`,
-                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
+                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels), 0)
             if err != nil {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
@@ -1765,13 +1788,13 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
 
         //add base label
         var insertedLabelId int64
-        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                              SELECT $1, $2, $3, $4, id from label l WHERE id NOT IN 
+        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
+                              SELECT $1, $2, $3, $4, id, uuid_generate_v4(), $6 from label l WHERE id NOT IN 
                               (
                                 SELECT label_id from image_validation v where image_id = $1
                               ) AND l.name = $5 AND l.parent_id IS NULL
                               RETURNING id`,
-                              imageId, numOfValid, 0, clientFingerprint, item.Label).Scan(&insertedLabelId)
+                              imageId, numOfValid, 0, clientFingerprint, item.Label, 0).Scan(&insertedLabelId)
         if err != nil {
             pqErr := err.(*pq.Error)
             if pqErr.Code.Name() != "unique_violation" {
@@ -2485,5 +2508,30 @@ func getLabelSuggestions() ([]string, error) {
     }
 
     return labelSuggestions, nil
+}
+
+func blacklistForAnnotation(validationId string, apiUser APIUser) error {
+    _, err := db.Exec(`INSERT INTO user_annotation_blacklist(image_validation_id, account_id)
+                        SELECT v.id, (SELECT a.id FROM account a WHERE a.name = $1) as account_id 
+                               FROM image_validation v WHERE v.uuid = $2
+                        ON CONFLICT DO NOTHING`, apiUser.Name, validationId)
+    if err != nil {
+        log.Debug("[Blacklist Annotation] Couldn't blacklist annotation: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+    return nil
+}
+
+func markValidationAsNotAnnotatable(validationId string) error {
+    _, err := db.Exec(`UPDATE image_validation SET num_of_not_annotatable = num_of_not_annotatable + 1 
+                       WHERE uuid = $1`, validationId)
+    if err != nil {
+        log.Debug("[Mark Validation as not annotatable] Couldn't mark validation as not-annotatable: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
 }
 
