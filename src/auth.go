@@ -17,6 +17,14 @@ type AccessTokenInfo struct {
 	Valid bool
 	Token string
 	Username string
+	Empty bool
+}
+
+type APITokenInfo struct {
+	Valid bool
+	Token string
+	Username string
+	Empty bool
 }
 
 
@@ -34,7 +42,7 @@ func _strToToken(tokenString string) (*jwt.Token, error) {
 	return token, err
 }
 
-func _isTokenRevoked(accessToken string) bool {
+func _isAccessTokenRevoked(accessToken string) bool {
 	if accessTokenExists(accessToken) {
 		return false
 	}
@@ -48,6 +56,12 @@ func _parseAccessToken(tokenString string) AccessTokenInfo {
 	accessTokenInfo.Token = ""
 	accessTokenInfo.Valid = false
 
+	if tokenString == "" {
+		accessTokenInfo.Empty = true
+	} else {
+		accessTokenInfo.Empty = false
+	}
+
 
 	token, err := _strToToken(tokenString)
 
@@ -55,7 +69,7 @@ func _parseAccessToken(tokenString string) AccessTokenInfo {
 		//token is valid and signed by the backend, check now if the token was revoked
 		//or if it is still valid
 
-		if !_isTokenRevoked(tokenString) { //still valid - not revoked
+		if !_isAccessTokenRevoked(tokenString) { //still valid - not revoked
 			accessTokenInfo.Valid = true
 			accessTokenInfo.Token = tokenString
 			accessTokenInfo.Username = token.Claims.(jwt.MapClaims)["username"].(string)
@@ -63,6 +77,35 @@ func _parseAccessToken(tokenString string) AccessTokenInfo {
 	}
 
 	return accessTokenInfo
+}
+
+func _parseApiToken(tokenString string) APITokenInfo {
+	var apiTokenInfo APITokenInfo
+	apiTokenInfo.Username = ""
+	apiTokenInfo.Token = ""
+	apiTokenInfo.Valid = false
+
+	if tokenString == "" {
+		apiTokenInfo.Empty = true
+	} else {
+		apiTokenInfo.Empty = false
+	}
+
+	token, err := _strToToken(tokenString)
+
+	if err == nil && token.Valid {
+		//token is valid and signed by the backend, check now if the token was revoked
+		//or if it is still valid
+
+		revoked, _ := isApiTokenRevoked(tokenString) 
+		if !revoked { //still valid - not revoked
+			apiTokenInfo.Valid = true
+			apiTokenInfo.Token = tokenString
+			apiTokenInfo.Username = token.Claims.(jwt.MapClaims)["username"].(string)
+		}
+	}
+
+	return apiTokenInfo
 }
 
 type AuthTokenHandlerInterface interface {
@@ -99,29 +142,11 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
 }
 
 
-/*type AccessTokenStorageInterface interface {
-    Contains(accessToken string) bool
-}
-
-type AccessTokenStorage struct {
-}
-
-func NewAccessTokenStorage() *AccessTokenStorage {
-    return &AccessTokenStorage{} 
-}
-
-func (p *AccessTokenStorage) Contains(accessToken string) bool {
-	return !_isTokenRevoked(accessToken)
-}*/
-
-
 type AuthTokenHandler struct {
-	//accessTokenStorage *AccessTokenStorage
 }
 
 func NewAuthTokenHandler() *AuthTokenHandler {
     return &AuthTokenHandler{
-    	//accessTokenStorage: NewAccessTokenStorage(),
     } 
 }
 
@@ -133,8 +158,15 @@ func (p *AuthTokenHandler) GetAccessTokenInfo(c *gin.Context) AccessTokenInfo {
 		accessTokenInfo.Username = ""
 		accessTokenInfo.Token = ""
 		accessTokenInfo.Valid = false
+		accessTokenInfo.Empty = true
     	return accessTokenInfo
    	}
 
    	return _parseAccessToken(auth[1])
+}
+
+func (p *AuthTokenHandler) GetAPITokenInfo(c *gin.Context) APITokenInfo {
+	apiToken := c.Request.Header.Get("X-Api-Token")
+
+	return _parseApiToken(apiToken)
 }

@@ -12,6 +12,8 @@ import (
 	"database/sql"
 	"math"
 	"github.com/getsentry/raven-go"
+	"html"
+	"time"
 )
 
 var db *sql.DB
@@ -56,6 +58,20 @@ func main() {
 	    "round" : func(f float32, places int) (float64) {
 		    shift := math.Pow(10, float64(places))
 		    return math.Floor((float64(f) * shift) + .5) / shift;    
+		},
+		"htmlEscape" : func(s string) string {
+			return html.EscapeString(s)
+		},
+		"elideRight" : func(s string) string {
+			if len(s) > 15 {
+				return s[:14] + "..."
+			}
+
+			return s
+		},
+		"unixTimestampToDateStr" : func(t int64) string {
+			d := time.Unix(t, 0)
+			return fmt.Sprintf("%d-%02d-%02d", d.Year(), d.Month(), d.Day())
 		},
 	}
 
@@ -323,13 +339,25 @@ func main() {
 				return
 			}
 
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			var apiTokens []APIToken
+			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
+				apiTokens, err = getApiTokens(username)
+				if err != nil {
+					c.String(500, "Internal server error - please try again later")
+					return
+				}
+			}
+
 			c.HTML(http.StatusOK, "profile.html", gin.H{
 				"title": "Profile",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
 				"statistics": pick(getUserStatistics(username))[0],
 				"userInfo": userInfo,
-				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"sessionInformation": sessionInformation,
+				"apiTokens": apiTokens,
 			})
 		})
 

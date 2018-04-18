@@ -19,7 +19,42 @@
   <link rel="stylesheet" href="/css/common_sub.css"/>
   <script src="/js/chart.bundle.min.js"></script>
 
+  <style>
+  .noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+       -khtml-user-select: none; /* Konqueror HTML */
+         -moz-user-select: none; /* Firefox */
+          -ms-user-select: none; /* Internet Explorer/Edge */
+              user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome and Opera */
+  }
+  </style>
+
   <script>
+  var revokeTokenButton = null;
+
+  var showRevokeConfirmationDlg = function(elem) {
+    revokeTokenButton = $(elem);
+    $("#revokeTokenConfirmDlg").modal("show");
+  };
+
+  var copyTokenToClipboard = function(elem) {
+    var token = $(elem).attr("data-token");
+
+    //copy token to clipboard
+    var $temp = $("<input>");
+    $("body").append($temp);
+    $temp.val(token).select();
+    document.execCommand("copy");
+    $temp.remove();
+  }
+
+  function unixTimestampToDateStr(ts) {
+    var date = new Date(ts*1000);
+    return date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
+  }
+
   $(document).ready(function(){
     var ownProfile = false;
 
@@ -28,6 +63,7 @@
 
     {{ if eq .sessionInformation.Username .userInfo.Name }}
       ownProfile = true;
+      var numOfTableEntries = {{ len .apiTokens }};
     {{ end }}
 
 
@@ -37,13 +73,46 @@
       });
     }
 
+    function elideRight(s) {
+      if(s.length > 15) {
+        return s.slice(0,14) + "...";
+      }
+
+      return s;
+    }
+
     $("#hiddenUpload").change(function(){
       var file = document.querySelector("input[type=file]").files[0];
       previewImage(file);
       uploadImage(file);
     });
 
-    function setCreationTime(creationTime){
+    $('#userProfileMenu').on('click', '.item', function() {
+      if(!$(this).hasClass('dropdown')) {
+        $(this)
+          .addClass('active')
+          .siblings('.item')
+            .removeClass('active');
+      }
+      changeTab($(this).attr("id"));
+    });
+
+    $('#addApiTokenButton').click(function(e) {
+      $("#newApiTokenDescription").val(""); //reset
+      $("#addApiTokenDlg").modal("show");
+    });
+
+    $('#addApiTokenDlgDoneButton').click(function(e) {
+      $("#addApiTokenDlg").modal("hide");
+      addApiToken();
+    });
+
+    $('#revokeTokenConfirmedButton').click(function(e) {
+      $("#revokeTokenConfirmDlg").modal("hide");
+      revokeApiToken(revokeTokenButton.attr("data-token-id"), revokeTokenButton.attr("data-token"));
+    });
+
+    function setCreationTime(creationTime) {
       var monthShortNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
       ];
@@ -53,8 +122,66 @@
       $("#userCreationTime").text(s);
     }
 
+    function changeTab(id) {
+      if(id === "userProfileMenuOverviewTab") {
+        $("#statisticsTabContent").show();
+        $("#apiTokensTabContent").hide();
+      }
+      if(id === "userProfileMenuApiTokensTab") {
+        $("#apiTokensTabContent").show();
+        $("#statisticsTabContent").hide();
+      }
+    }
 
-    function previewImage(file){
+
+    function addApiTokenToTable(description, token, issuedAt) {
+      var row = ('<tr><td>' + escapeHtml(description) + '</td>' + '<td class="noselect">' + escapeHtml(elideRight(token)) + '</td>' + 
+                 '<td><div class="ui basic button" onclick="copyTokenToClipboard(this)" data-tooltip="Copy Token to Clipboard" data-token="' +
+                 escapeHtml(token) + '"><i class="copy icon"></i></div></td>' +
+                 '<td>' +  unixTimestampToDateStr(escapeHtml(issuedAt)) + '</td>' +
+                 '<td id="revokedColumn' + numOfTableEntries + '"><i class="green checkmark icon"></td>' +
+                 '<td><div class="ui basic button" data-tooltip="Revoke API Token" data-token="' + escapeHtml(token) + '" data-token-id="' + numOfTableEntries + 
+                 '" onclick="showRevokeConfirmationDlg(this)"><i class="undo icon"></i>Revoke</div></td></tr>');
+      numOfTableEntries += 1;
+      $("#apiTokensTableContent").append(row);
+    }
+
+    function addApiToken() {
+      var description = $("#newApiTokenDescription").val();
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/user/' + {{ .sessionInformation.Username }} + '/api-token',
+        data: JSON.stringify({"description" : description}),
+        type: 'POST', 
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        },
+        success: function(data){
+          addApiTokenToTable(data.description, data.token, data.issued_at);
+        }
+
+      });
+    }
+
+    function revokeApiToken(id, apiToken) {
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/user/' + {{ .sessionInformation.Username }} + '/api-token/' + apiToken + '/revoke',
+        type: 'POST', 
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        },
+        success: function(data){
+          $(('#revokedColumn' + id)).html('<i class="red close icon"></i>');
+          if(revokeTokenButton !== null){
+            revokeTokenButton.addClass("disabled");
+            revokeTokenButton = null;
+          }
+        }
+
+      });
+    }
+
+
+    function previewImage(file) {
        var preview = document.getElementById("userProfileImage");
        var reader = new FileReader();
 
@@ -194,12 +321,17 @@
 
 
     <div class="eight wide column">
-      <div class="ui top attached tabular menu">
-        <a class="active item">
+      <div class="ui top attached tabular menu" id="userProfileMenu">
+        <a class="active item" id="userProfileMenuOverviewTab">
           Overview
         </a>
+        {{ if eq .sessionInformation.Username .userInfo.Name }}
+        <a class="item" id="userProfileMenuApiTokensTab">
+          API Tokens
+        </a>
+        {{ end }}
       </div>
-      <div class="ui bottom attached segment">
+      <div class="ui bottom attached segment" id="statisticsTabContent">
         <div class="ui stackable center aligned grid">
           <div class="eight wide column">
             <div class="row">
@@ -213,7 +345,99 @@
           </div>
         </div>
       </div>
+
+      {{ if eq .sessionInformation.Username .userInfo.Name }}
+      <div hidden class="ui bottom attached segment" id="apiTokensTabContent">
+        <div class="ui stackable center aligned grid">
+          <table class="ui striped table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Token</th>
+                <th></th>
+                <th>Issued at</th>
+                <th>Valid</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="apiTokensTableContent">
+              {{ range $index, $apiToken := .apiTokens }}
+              <tr>
+                <td>{{ htmlEscape $apiToken.Description }}</td>
+                {{$token := htmlEscape $apiToken.Token }}
+                <td class="noselect">{{ elideRight $token }}</td>
+                <td><div class="ui basic button" onclick="copyTokenToClipboard(this)" data-tooltip="Copy Token to Clipboard" data-token="{{ $token }}"><i class="copy icon"></i></div></td>
+                <td>{{ unixTimestampToDateStr $apiToken.IssuedAtUnixTimestamp }}</td>
+                {{ $revokedColumnId := printf "%s%d" "revokedColumn" $index }}
+                <td id="{{ $revokedColumnId }}">{{if eq $apiToken.Revoked false }}<i class="green checkmark icon"></i> {{ else }} <i class="red close icon"></i> {{ end }}</td>
+                <td><div class="ui {{if eq $apiToken.Revoked true }}disabled{{ end }} basic button" data-tooltip="Revoke API Token" data-token="{{ htmlEscape $token }}" data-token-id="{{ $index }}" onclick="showRevokeConfirmationDlg(this)"><i class="undo icon"></i>Revoke</div></td>
+              </tr>
+              {{ end }}
+            </tbody>
+
+            <tfoot class="full-width">
+              <tr>
+                <th></th>
+                <th colspan="5">
+                  <div class="ui right floated small labeled icon button" id="addApiTokenButton">
+                    <i class="plus icon"></i> Add Token
+                  </div>
+                </th>
+              </tr>
+            </tfoot>
+
+          </table>
+        </div>
+      </div>
+      {{ end }}
     </div>
+
+
+    {{ if eq .sessionInformation.Username .userInfo.Name }}
+    <div class="ui longer modal" id="revokeTokenConfirmDlg">
+      <i class="close icon"></i>
+      <div class="center aligned header">
+        Revoke API Token
+      </div>
+      <div class="scrolling content">
+        Are you sure you want to revoke this API token? 
+      </div>
+      <div class="actions">
+        <div class="ui cancel button">
+          Discard
+        </div>
+        <div class="ui positive right labeled icon button" id="revokeTokenConfirmedButton">
+          Revoke
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+    {{ end }}
+
+    <div class="ui longer modal" id="addApiTokenDlg">
+      <i class="close icon"></i>
+      <div class="center aligned header">
+        Add API Token
+      </div>
+      <div class="scrolling content">
+        <form class="ui form">
+          <div class="field">
+            <label>Optional Description</label>
+            <input placeholder="What's the purpose of this token?" type="text" id="newApiTokenDescription">
+          </div>
+        </form>
+      </div>
+      <div class="actions">
+        <div class="ui cancel button">
+          Discard
+        </div>
+        <div class="ui positive right labeled icon button" id="addApiTokenDlgDoneButton">
+          Done
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+
     <div class="column">
     </div>
 

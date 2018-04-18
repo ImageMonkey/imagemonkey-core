@@ -9,6 +9,7 @@ import (
     "fmt"
     "errors"
     "time"
+    "github.com/dgrijalva/jwt-go"
 )
 
 type RectangleAnnotation struct {
@@ -252,8 +253,15 @@ type DataPoint struct {
     Date string `json:"date"`
 }
 
+type APIToken struct {
+    IssuedAtUnixTimestamp int64 `json:"issued_at"`
+    Token string `json:"token"`
+    Description string `json:"description"`
+    Revoked bool `json:"revoked"`
+}
 
-func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint string, labels []LabelMeEntry) error{
+
+func addDonatedPhoto(username string, imageInfo ImageInfo, autoUnlock bool, clientFingerprint string, labels []LabelMeEntry) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -266,7 +274,7 @@ func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint str
 	var imageId int64 
 	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
 					  imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageInfo.Source.Provider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
-	if(err != nil){
+	if err != nil {
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
 		tx.Rollback()
@@ -299,6 +307,18 @@ func addDonatedPhoto(imageInfo ImageInfo, autoUnlock bool, clientFingerprint str
         err = _addImageValidationSources(imageSourceId, insertedValidationIds, tx)
         if err != nil {
             return err //tx already rolled back in case of error, so we can just return here
+        }
+    }
+
+    //in case a username is provided, link image to user account
+    if username != "" {
+        _, err := tx.Exec(`INSERT INTO user_image(image_id, account_id)
+                            SELECT $1, id FROM account WHERE name = $2`, imageId, username)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Add user image entry] Couldn't add entry: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
         }
     }
 
@@ -2546,5 +2566,107 @@ func isImageUnlocked(uuid string) (bool, error) {
     }
 
     return unlocked, nil
+}
+
+func getApiTokens(username string) ([]APIToken, error) {
+    var apiTokens []APIToken
+    rows, err := db.Query(`SELECT token, issued_at, description, revoked 
+                           FROM api_token a
+                           JOIN account a1 ON a1.id = a.account_id
+                           WHERE a1.name = $1`, username)
+    if err != nil {
+        log.Debug("[Get API Tokens] Couldn't get rows: ", err.Error())
+        raven.CaptureError(err, nil)
+        return apiTokens, err
+    }
+
+    defer rows.Close() 
+
+    for rows.Next() {
+        var apiToken APIToken
+        err = rows.Scan(&apiToken.Token, &apiToken.IssuedAtUnixTimestamp, &apiToken.Description, &apiToken.Revoked)
+        if err != nil {
+            log.Debug("[Get API Tokens] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return apiTokens, err
+        }
+
+        apiTokens = append(apiTokens, apiToken)
+    }
+
+    return apiTokens, nil
+}
+
+func isApiTokenRevoked(token string) (bool, error) {
+    var revoked bool
+    err := db.QueryRow("SELECT revoked FROM api_token WHERE token = $1", token).Scan(&revoked)
+    if err != nil {
+        log.Debug("[Is API Token revoked] Couldn't scan row: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    return revoked, nil
+}
+
+func generateApiToken(username string, description string) (APIToken, error) {
+    type MyCustomClaims struct {
+        Username string `json:"username"`
+        Created int64 `json:"created"`
+        jwt.StandardClaims
+    }
+
+    var apiToken APIToken
+
+    issuedAt := time.Now()
+    expiresAt := issuedAt.Add(time.Hour * 24 * 365 * 10) //10 years
+
+    claims := MyCustomClaims {
+                  username,
+                  issuedAt.Unix(),
+                  jwt.StandardClaims{
+                        ExpiresAt: expiresAt.Unix(),
+                        Issuer: "imagemonkey-api",
+                  },
+              }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+    tokenString, err := token.SignedString([]byte(JWT_SECRET))
+    if err != nil {
+        return apiToken, err
+    }
+
+
+    _, err = db.Exec(`INSERT INTO api_token(account_id, issued_at, description, revoked, token, expires_at)
+                        SELECT id, $2, $3, $4, $5, $6 FROM account WHERE name = $1`, 
+                        username, issuedAt.Unix(), description, false, tokenString, expiresAt.Unix())
+    if err != nil {
+        log.Debug("[Generate API Token] Couldn't insert entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return apiToken, err
+    }
+
+    apiToken.Description = description
+    apiToken.Token = tokenString
+    apiToken.IssuedAtUnixTimestamp = issuedAt.Unix()
+
+    return apiToken, nil
+}
+
+func revokeApiToken(username string, apiToken string) (bool, error) {
+    var modifiedId int64
+    err := db.QueryRow(`UPDATE api_token AS a 
+                       SET revoked = true
+                       FROM account AS acc 
+                       WHERE acc.id = a.account_id AND acc.name = $1 AND a.token = $2
+                       RETURNING a.id`, username, apiToken).Scan(&modifiedId)
+    if err != nil {
+        log.Debug("[Revoke API Token] Couldn't revoke token: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    return true, nil
 }
 

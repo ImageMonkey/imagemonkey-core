@@ -210,7 +210,28 @@ func getAppIdentifier(c *gin.Context) string {
 	return appIdentifier
 }
 
-func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMapEntry, dir string, 
+func getUsernameFromContext(c *gin.Context, authTokenHandler *AuthTokenHandler) (string, error) {
+	username := ""
+	accessTokenInfo := authTokenHandler.GetAccessTokenInfo(c)
+
+	if accessTokenInfo.Username == "" { //in case access token is missing, try if there is an api token
+		if !accessTokenInfo.Empty {
+			return "", errors.New("The provided Access Token is either invalid or was revoked")
+		}
+
+		apiTokenInfo := authTokenHandler.GetAPITokenInfo(c)
+		username = apiTokenInfo.Username
+		if username == "" && !apiTokenInfo.Empty {
+			return "", errors.New("The provided API Token is either invalid or was revoked")
+		}
+	} else {
+		username = accessTokenInfo.Username
+	}
+
+	return username, nil
+}
+
+func donate(c *gin.Context, username string, imageSource ImageSource, labelMap map[string]LabelMapEntry, dir string, 
 				redisPool *redis.Pool, statisticsPusher *StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
 
@@ -295,7 +316,7 @@ func donate(c *gin.Context, imageSource ImageSource, labelMap map[string]LabelMa
 	imageInfo.Source = imageSource
 	imageInfo.Name = uuid
 
-	err = addDonatedPhoto(imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
+	err = addDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 		return
@@ -544,7 +565,7 @@ func main(){
 
 				//we trust images from the labelme database, so we automatically save them
 				//into the donations folder and unlock them per default.
-				donate(c, imageSource, labelMap, dir, redisPool, statisticsPusher, geoipDb, autoUnlock)
+				donate(c, "", imageSource, labelMap, dir, redisPool, statisticsPusher, geoipDb, autoUnlock)
 			})
 
 			clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {
@@ -965,7 +986,14 @@ func main(){
 			imageSource.Provider = "donation"
 			imageSource.Trusted = false
 
-			donate(c, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
+			username, err := getUsernameFromContext(c, authTokenHandler)
+			if err != nil {
+				c.JSON(401, gin.H{"error": err.Error()})
+				return
+			}
+
+
+			donate(c, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 		})
 
 		router.POST("/v1/report/:imageid", func(c *gin.Context) {
@@ -1492,6 +1520,69 @@ func main(){
 
 			c.JSON(201, nil)
 
+		})
+
+		router.POST("/v1/user/:username/api-token", func(c *gin.Context) {
+			type ApiTokenRequest struct {
+				Description string `json:"description"`
+			}
+			username := c.Param("username")
+
+			if username == "" {
+				c.JSON(422, gin.H{"error": "Invalid request - username missing"})
+				return
+			}
+
+			var apiTokenRequest ApiTokenRequest
+			if c.BindJSON(&apiTokenRequest) != nil {
+				c.JSON(422, gin.H{"error": "Invalid request - description missing"})
+				return
+			}
+
+			accessTokenInfo := authTokenHandler.GetAccessTokenInfo(c)
+
+			if accessTokenInfo.Username != username { 
+				c.JSON(422, gin.H{"error": "Invalid access token"})
+				return
+			}
+
+			apiToken, err := generateApiToken(username, apiTokenRequest.Description)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't generate API token - please try again later"})	
+				return
+			}
+
+			c.JSON(201, apiToken)
+		})
+
+		router.POST("/v1/user/:username/api-token/:token/revoke", func(c *gin.Context) {
+			username := c.Param("username")
+			token := c.Param("token")
+
+			if username == "" {
+				c.JSON(422, gin.H{"error": "Invalid request - username missing"})
+				return
+			}
+
+			accessTokenInfo := authTokenHandler.GetAccessTokenInfo(c)
+
+			if accessTokenInfo.Username != username { 
+				c.JSON(422, gin.H{"error": "Invalid access token"})
+				return
+			}
+
+			revoked, err := revokeApiToken(username, token)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't revoke API token - please try again later"})	
+				return
+			}
+
+			if !revoked {
+				c.JSON(400, gin.H{"error": "Couldn't revoke API token - invalid token"})	
+				return
+			}
+
+			c.JSON(200, nil)
 		})
 
 		router.GET("/v1/user/:username/profile/avatar", func(c *gin.Context) {

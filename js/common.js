@@ -24,3 +24,11 @@ $(document)
 function escapeHtml (str) {
   return jQuery('<div/>').text(str).html();
 }
+
+function getCookie(s) {
+  var cookie = Cookies.get(s);
+  if(typeof cookie == "undefined"){
+    return "";
+  }
+  return cookie;
+}
