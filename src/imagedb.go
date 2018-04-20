@@ -1428,17 +1428,32 @@ func getAllUnverifiedImages(imageProvider string) ([]Image, error){
     params := false
     if imageProvider != "" {
         params = true
-        q1 = "AND (p.name = $1)"
+        q1 = "WHERE (p.name = $1)"
     }
 
-    q := fmt.Sprintf(`SELECT i.key, l.name, p.name FROM image i 
-                            JOIN image_provider p ON i.image_provider_id = p.id 
-                            JOIN image_validation v ON v.image_id = i.id
-                            JOIN label l ON v.label_id = l.id
-                            WHERE (
-                                (i.unlocked = false)
-                                %s
-                            )`, q1)
+    q := fmt.Sprintf(`SELECT q.image_key, string_agg(q.label_name::text, ',') as labels, 
+                      MAX(p.name) as image_provider
+                      FROM 
+                      (
+                        SELECT i.key as image_key, l.name  as label_name, 
+                        i.image_provider_id as image_provider_id
+                        FROM image i  
+                        LEFT JOIN image_validation v ON v.image_id = i.id
+                        JOIN label l ON v.label_id = l.id
+                        WHERE i.unlocked = false
+
+                        UNION
+                        
+                        SELECT i.key as image_key, g.name  as label_name, 
+                        i.image_provider_id as image_provider_id
+                        FROM image i
+                        LEFT JOIN image_label_suggestion s ON s.image_id = i.id
+                        JOIN label_suggestion g ON g.id = s.label_suggestion_id
+                        WHERE i.unlocked = false
+                     ) q
+                    JOIN image_provider p ON p.id = q.image_provider_id
+                    %s
+                    GROUP BY image_key`, q1)
 
     var err error
     var rows *sql.Rows
