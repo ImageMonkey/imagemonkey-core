@@ -112,7 +112,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization X-Api-Token")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -736,7 +736,12 @@ func main(){
 
 			var apiUser APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
-			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			apiUser.Name, err = getUsernameFromContext(c, authTokenHandler)
+			if err != nil {
+				c.JSON(401, gin.H{"error": err.Error()})
+				return
+			} 
 			
 			err := addLabelsToImage(apiUser, labelMap, imageId, labels)
 			if err != nil {

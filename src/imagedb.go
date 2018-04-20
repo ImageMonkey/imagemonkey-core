@@ -2075,7 +2075,7 @@ func deleteImage(uuid string) error {
         raven.CaptureError(err, nil)
         return err
     }
-
+    imageId := deletedId
     if deletedId == -1 {
         tx.Rollback()
         err = errors.New("nothing deleted")
@@ -2083,6 +2083,20 @@ func deleteImage(uuid string) error {
         raven.CaptureError(err, nil)
         return err
     }
+    
+
+    deletedId = -1 
+    err = tx.QueryRow(`DELETE FROM image_label_suggestion s 
+                       WHERE image_id = $1 RETURNING s.id`, imageId).Scan(&deletedId)
+
+    if deletedId == -1 {
+        tx.Rollback()
+        err = errors.New("nothing deleted")
+        log.Debug("[Delete image] Couldn't delete image_label_suggestion entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+    
 
     err = tx.Commit()
     if err != nil {
