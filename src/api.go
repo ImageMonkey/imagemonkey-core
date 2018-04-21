@@ -112,7 +112,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization X-Api-Token")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -298,6 +298,7 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
 	var labelMeEntry LabelMeEntry
 	var labelMeEntries []LabelMeEntry
 	labelMeEntry.Label = label
+	labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
 	for key, _ := range labelMapEntry.LabelMapEntries {
 		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, key)
 	}

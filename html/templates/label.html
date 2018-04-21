@@ -340,7 +340,7 @@
         //dict to list
         for (var key in newlyAddedLabels){
           if (newlyAddedLabels.hasOwnProperty(key)){
-            labelsLst.push({label: key, sublabels: newlyAddedLabels[key]});
+            labelsLst.push({label: key, annotatable: true, sublabels: newlyAddedLabels[key]});
           }
         }
 

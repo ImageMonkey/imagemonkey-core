@@ -31,6 +31,7 @@ type Label struct {
 
 type LabelMeEntry struct {
     Label string `json:"label"` 
+    Annotatable bool `json:"annotatable"` 
     Sublabels []string `json:"sublabels"`
 }
 

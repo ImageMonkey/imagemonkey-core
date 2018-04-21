@@ -1570,7 +1570,12 @@ func getImageToLabel() (Image, error) {
         return image, err
     }
 
-    unlabeledRows, err := tx.Query(`SELECT i.key from image i WHERE i.unlocked = true AND i.id NOT IN (SELECT image_id FROM image_validation) LIMIT 1`)
+    unlabeledRows, err := tx.Query(`SELECT i.key from image i 
+                                    WHERE i.unlocked = true AND i.id NOT IN (
+                                        SELECT image_id FROM image_validation
+                                    ) AND i.id NOT IN (
+                                        SELECT image_id FROM image_label_suggestion
+                                    ) LIMIT 1`)
     if err != nil {
         tx.Rollback()
         raven.CaptureError(err, nil)
@@ -1688,7 +1693,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
     for _, item := range labels {
         if !isLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
             if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
-                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, tx)
+                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
                 if err != nil {
                     return err //tx already rolled back in case of error, so we can just return here 
                 }
@@ -1719,7 +1724,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
     return err
 }
 
-func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, tx *sql.Tx) error {
+func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {
     var labelSuggestionId int64
 
     labelSuggestionId = -1
@@ -1754,9 +1759,9 @@ func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, t
         }
     }
 
-    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id) 
-                        SELECT $1, id, $3 FROM image WHERE key = $2
-                        ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId)
+    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable) 
+                        SELECT $1, id, $3, $4 FROM image WHERE key = $2
+                        ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
     if err != nil {
         tx.Rollback()
         log.Debug("[Adding image label suggestion] Couldn't add image label suggestion: ", err.Error())
