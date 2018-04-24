@@ -1424,11 +1424,11 @@ func getNumOfValidatedImages() (int64, error){
 func getAllUnverifiedImages(imageProvider string) ([]Image, error){
     var images []Image
 
-    q1 := ""
+    q1 := "WHERE q.image_id NOT IN (SELECT id FROM image_quarantine)"
     params := false
     if imageProvider != "" {
         params = true
-        q1 = "WHERE (p.name = $1)"
+        q1 = "WHERE (p.name = $1) AND q.image_id NOT IN (SELECT id FROM image_quarantine)"
     }
 
     q := fmt.Sprintf(`SELECT q.image_key, string_agg(q.label_name::text, ',') as labels, 
@@ -1436,7 +1436,7 @@ func getAllUnverifiedImages(imageProvider string) ([]Image, error){
                       FROM 
                       (
                         SELECT i.key as image_key, l.name  as label_name, 
-                        i.image_provider_id as image_provider_id
+                        i.image_provider_id as image_provider_id, i.id as image_id
                         FROM image i  
                         LEFT JOIN image_validation v ON v.image_id = i.id
                         JOIN label l ON v.label_id = l.id
@@ -1445,7 +1445,7 @@ func getAllUnverifiedImages(imageProvider string) ([]Image, error){
                         UNION
                         
                         SELECT i.key as image_key, g.name  as label_name, 
-                        i.image_provider_id as image_provider_id
+                        i.image_provider_id as image_provider_id, i.id as image_id
                         FROM image i
                         LEFT JOIN image_label_suggestion s ON s.image_id = i.id
                         JOIN label_suggestion g ON g.id = s.label_suggestion_id
@@ -1490,6 +1490,20 @@ func unlockImage(imageId string) error {
     _,err := db.Exec("UPDATE image SET unlocked = true WHERE key = $1", imageId)
     if err != nil {
         log.Debug("[Unlock Image] Couldn't unlock image: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
+func putImageInQuarantine(imageId string) error {
+    _,err := db.Exec(`INSERT INTO image_quarantine(image_id)
+                        SELECT id FROM image WHERE key = $1
+                        ON CONFLICT(image_id) DO NOTHING`, imageId)
+    if err != nil {
+        log.Debug("[Put Image in Quarantine] Couldn't put image in quarantine: ", err.Error())
+        raven.CaptureError(err, nil)
         return err
     }
 

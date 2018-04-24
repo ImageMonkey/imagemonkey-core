@@ -369,6 +369,7 @@ func main(){
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
+	imageQuarantineDir := flag.String("image_quarantine_dir", "../quarantine/", "Location of the images that are put in quarantine")
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 500, "Max connections to Redis")
 	geoIpDbPath := flag.String("geoip_db", "../geoip_database/GeoLite2-Country.mmdb", "Path to the GeoIP database")
@@ -654,7 +655,7 @@ func main(){
 						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 						return
 					}
-				} else if(param == "bad") { //not handled at the moment, add later if needed
+				} else if param == "bad" { //not handled at the moment, add later if needed
 
 				} else if param == "delete" {
 					err = deleteImage(imageId)
@@ -671,6 +672,21 @@ func main(){
 						return
 					}
 
+				} else if param == "quarantine" {
+					src := *unverifiedDonationsDir + imageId
+					dst := *imageQuarantineDir + imageId
+					err := os.Rename(src, dst)
+					if err != nil {
+						log.Debug("[Main] Couldn't move file ", src, " to ", dst)
+						c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
+						return
+					}
+
+					err = putImageInQuarantine(imageId)
+					if err != nil {
+						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
 				} else{
 					c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
 					return
