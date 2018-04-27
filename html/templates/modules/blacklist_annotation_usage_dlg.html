@@ -1,0 +1,35 @@
+<div class="ui longer modal" id="blacklistAnnotationUsageDlg">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Blacklisting Annotations
+  </div>
+  <div class="scrolling content">
+    Everybody has different interests - while some people like to annotate crowded urban scenes, others like to annotate still images. In order to let you focus on the annotation tasks
+    you are interested in, there is the possibility to <b>blacklist</b> annotations. <br>After you've blacklisted an annotation task, the task won't be served again to you. 
+    <br><br>
+    <b>Tip:</b> Only blacklist annotation tasks that you are <b>not</b> interested in. If you aren't in the mood for a specific task, use your browser's refresh button to get another random annotation task.
+
+    {{ if (ne .sessionInformation.LoggedIn true) }}
+    <br><br>
+    <b>You need to be logged in to use this feature!</b>
+    {{ end }}
+
+  </div>
+  <p><p>
+    <div class="actions">
+      {{ if (eq .sessionInformation.LoggedIn true) }}
+      <div class="ui cancel button">
+        Discard
+      </div>
+      <div class="ui positive right labeled icon button" id="blacklistAnnotationUsageDlgAcceptButton">
+        Got it - blacklist annotation!
+        <i class="checkmark icon"></i>
+      </div>
+
+      {{ else }}
+      <div class="ui right labeled cancel button">
+        Close
+      </div>
+      {{ end }}
+    </div>
+  </div>

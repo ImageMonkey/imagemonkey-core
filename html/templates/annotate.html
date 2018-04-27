@@ -763,172 +763,16 @@
           <p></p>
         </div>
 
-        <div hidden class="ui compact icon menu" id="annotatorMenu">
-          <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
-            <i class="square outline icon"></i>
-          </a>
-          <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
-            <i class="circle thin icon"></i>
-          </a>
-          <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
-            <i class="ellipsis horizontal icon"></i>
-          </a>
-          <a hidden class="pencil popup icon item" id="smartAnnotationFgMenuItem" data-content="Foreground Selection">
-            <i class="pencil icon"></i>
-          </a>
-          <a hidden class="pencil popup icon item" id="smartAnnotationBgMenuItem" data-content="Background Selection">
-            <i class="pencil icon"></i>
-          </a>
+        {{ template "annotation_menu.html" .}}
 
-          <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
-            <i class="zoom icon"></i>
-          </a>
-          <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
-            <i class="zoom out icon"></i>
-          </a>
-          <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
-            <i class="maximize icon"></i>
-          </a>
-          <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
-            <i class="trash icon"></i>
-          </a>
-          <a hidden class="active download popup orange icon item" id="loadAutoAnnotationsMenuItem" data-content="Load Auto Annotations">
-            <i class="download icon"></i>
-          </a>
-          <a class="settings popup icon item mobile hidden" id="settingsMenuItem" data-content="Settings">
-            <i class="settings icon"></i>
-          </a>
-        </div>
+        {{ template "smart_annotation_help_dlg.html" .}}
 
-        <div class="ui longer modal" id="smartAnnotationHelpDlg">
-          <i class="close icon"></i>
-          <div class="center aligned header">
-            What's this?
-          </div>
-          <div class="scrolling content">
-            Smart Annotation allows you to easily annotate complex objects with just a few mousestrokes. Start the annotation process by drawing a bounding box around the main object. Fine tune the annotation by marking incorrectly detect foreground and background areas.<br><br>
+        {{ template "blacklist_annotation_usage_dlg.html" .}}
 
-            <img class="ui huge bordered image" id="smartAnnotationHelpDlgGif">
-
-            <!--<ul class="ui list">
-              <li>works best when object is clearly separated from background</li>
-              <li></li>
-            </ul>-->
-          </div>
-          <p><p>
-          <div class="actions">
-            <div class="ui right labeled cancel button">
-              Close
-            </div>
-          </div>
-        </div>
-
-        <div class="ui longer modal" id="blacklistAnnotationUsageDlg">
-          <i class="close icon"></i>
-          <div class="center aligned header">
-            Blacklisting Annotations
-          </div>
-          <div class="scrolling content">
-            Everybody has different interests - while some people like to annotate crowded urban scenes, others like to annotate still images. In order to let you focus on the annotation tasks
-            you are interested in, there is the possibility to <b>blacklist</b> annotations. <br>After you've blacklisted an annotation task, the task won't be served again to you. 
-            <br><br>
-            <b>Tip:</b> Only blacklist annotation tasks that you are <b>not</b> interested in. If you aren't in the mood for a specific task, use your browser's refresh button to get another random annotation task.
-
-            {{ if (ne .sessionInformation.LoggedIn true) }}
-            <br><br>
-            <b>You need to be logged in to use this feature!</b>
-            {{ end }}
-
-          </div>
-          <p><p>
-          <div class="actions">
-            {{ if (eq .sessionInformation.LoggedIn true) }}
-            <div class="ui cancel button">
-              Discard
-            </div>
-            <div class="ui positive right labeled icon button" id="blacklistAnnotationUsageDlgAcceptButton">
-              Got it - blacklist annotation!
-              <i class="checkmark icon"></i>
-            </div>
-
-            {{ else }}
-            <div class="ui right labeled cancel button">
-              Close
-            </div>
-            {{ end }}
-          </div>
-        </div>
-
-        <div class="ui longer modal" id="markAsUnannotatableUsageDlg">
-          <i class="close icon"></i>
-          <div class="center aligned header">
-            Mark as un-annotatable
-          </div>
-          <div class="scrolling content">
-            Sometimes it's not possible to annotate a object - e.q when the object in question is too small. Use this option if you want to mark the annotation task as not-doable. 
-
-            <br><br>
-            Do <b>not</b> use this option if you are not in the mood for the given annotation task. Instead, use the browser's reload button to get a new, randomly chosen annotation task.
-
-          </div>
-          <p><p>
-          <div class="actions">
-            {{ if (eq .sessionInformation.LoggedIn true) }}
-            <div class="ui cancel button">
-              Discard
-            </div>
-            <div class="ui positive right labeled icon button" id="markAsUnannotatableUsageDlgAcceptButton">
-              Got it - mark it as un-annotatable!
-              <i class="checkmark icon"></i>
-            </div>
-
-            {{ else }}
-            <div class="ui right labeled cancel button">
-              Close
-            </div>
-            {{ end }}
-          </div>
-        </div>
+        {{ template "mark_annotation_as_unannotatable_usage_dlg.html" .}}
 
 
-        <div class="ui modal" id="annotationSettingsPopup">
-          <i class="close icon"></i>
-          <div class="center aligned header">
-            Annotation Settings
-          </div>
-          <div class="scrolling content">
-            <div class="ui form">
-              <div class="grouped fields" id="preferedAnnotationToolCheckboxes">
-                <label>Choose your prefered annotation tool</label>
-                <div class="field">
-                  <div class="ui radio checkbox" id="preferedRectangleAnnotationToolCheckbox">
-                    <input name="preferedAnnotationTool" id="preferedRectangleAnnotationToolCheckboxInput" checked="checked" type="radio">
-                    <label>Rectangle</label>
-                  </div>
-                </div>
-                <div class="field">
-                  <div class="ui radio checkbox" id="preferedCircleAnnotationToolCheckbox">
-                    <input name="preferedAnnotationTool" id="preferedCircleAnnotationToolCheckboxInput" type="radio">
-                    <label>Circle</label>
-                  </div>
-                </div>
-                <div class="field">
-                  <div class="ui radio checkbox" id="preferedPolygonAnnotationToolCheckbox">
-                    <input name="preferedAnnotationTool" id="preferedPolygonAnnotationToolCheckboxInput" type="radio">
-                    <label>Polygon</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p><p>
-          <div class="actions">
-            <div class="ui positive right labeled icon button" id="saveAnnotationSettingsButton">
-              Save
-              <i class="checkmark icon"></i>
-            </div>
-          </div>
-        </div>
+        {{ template "annotation_settings_popup.html" .}}
 
         <div id="annotationAreaContainer">
           <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
@@ -951,41 +795,9 @@
           </div>
         </div>
 
-        <div class="ui small modal" id="deleteObjectsPopup">
-          <div class="header">
-            Delete Object
-          </div>
-          <div class="content">
-            <p>Are you sure you want to delete the selected objects?</p>
-          </div>
-          <div class="actions">
-            <div class="ui negative button">
-              No
-            </div>
-            <div class="ui positive right labeled icon button" id="deletedObjectsYesButton">
-              Yes
-              <i class="checkmark icon"></i>
-            </div>
-          </div>
-        </div>
+        {{ template "delete_annotation_objects_popup.html" .}}
 
-        <div class="ui small modal" id="discardChangesPopup">
-          <div class="header">
-            Discard Changes
-          </div>
-          <div class="content">
-            <p>Changing the annotation mode <b>removes</b> all annotations. Do you want to proceed?</p>
-          </div>
-          <div class="actions">
-            <div class="ui negative button">
-              No
-            </div>
-            <div class="ui positive right labeled icon button" id="discardChangesYesButton">
-              Yes
-              <i class="checkmark icon"></i>
-            </div>
-          </div>
-        </div>
+        {{ template "annotation_discard_dlg.html" .}}
       </div>
   </div>
   {{ template "footer.html" .}}
