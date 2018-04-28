@@ -14,9 +14,29 @@ import (
 	"github.com/getsentry/raven-go"
 	"html"
 	"time"
+	"strings"
+	"path/filepath"
+	"bytes"
 )
 
 var db *sql.DB
+
+
+func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
+    templ := template.New("main").Funcs(funcMap)
+    err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+        if strings.Contains(path, ".html") {
+            _, err = templ.ParseFiles(path)
+            if err != nil {
+                return err
+            }
+        }
+
+        return err
+    })
+
+    return templ, err
+}
 
 func main() {
 	fmt.Printf("Starting Web Service...\n")
@@ -52,6 +72,8 @@ func main() {
 		raven.CaptureMessage("Starting up web worker", nil)
 	}
 
+	var tmpl *template.Template
+
 	funcMap := template.FuncMap{
 	    //simple round function
 	    //be careful: only works for POSITIVE float values
@@ -73,6 +95,11 @@ func main() {
 			d := time.Unix(t, 0)
 			return fmt.Sprintf("%d-%02d-%02d", d.Year(), d.Month(), d.Day())
 		},
+		/*"executeTemplate": func(name string) string {
+    		buf := &bytes.Buffer{}
+    		_ = tmpl.ExecuteTemplate(buf, name, nil)
+    		return buf.String()
+		},*/
 	}
 
 	log.Debug("[Main] Reading Label Map")
@@ -101,8 +128,10 @@ func main() {
 		log.Info("[Main] Starting in maintenance mode")
 	}
 
-	tmpl := template.Must(template.New("main").Funcs(funcMap).ParseGlob(*htmlDir + "*"))
-
+	tmpl, err = GetTemplates(*htmlDir, funcMap)
+	if err != nil {
+		log.Fatal("[Main] Couldn't parse templates", err.Error())
+	}
 
 	router := gin.Default()
 	router.SetHTMLTemplate(tmpl)
