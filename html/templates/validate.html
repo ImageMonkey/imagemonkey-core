@@ -186,7 +186,7 @@
   function showHideControls(show){
     if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
       if(show){
-        $('#validationContainerSegment').show();
+        $('#validationContainerSegment').css('visibility','visible');
         $('#loadingIndicator').addClass('active');
         $('#loadingIndicator').hide();
 
@@ -196,15 +196,15 @@
         else
           $('#showMePollButton').show();
         
-        $('#image').show();
+        $('#image').css('visibility','visible');
       }
       else {
         $('#poll-chart').hide();
-        $('#validationContainerSegment').hide();
+        $('#validationContainerSegment').css('visibility','hidden');
         $('#loadingIndicator').removeClass('active');
         $('#loadingIndicator').show();
         $('#showMePollButton').hide();
-        $('#image').hide();
+        $('#image').css('visibility','hidden');
       }
     }
   }
