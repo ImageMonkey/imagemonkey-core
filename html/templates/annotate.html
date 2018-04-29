@@ -19,7 +19,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=7"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=10"></script>
+  <script src="js/annotate.js?v=11"></script>
   <script src="js/simplify.js"></script>
 
   <style>
@@ -49,6 +49,15 @@
   var numOfPendingRequests = 0;
   var autoAnnotations = null;
   var labelId = null;
+  var annotationInfo = new AnnotationInfo();
+  var annotationSettings = new AnnotationSettings();
+
+  function AnnotationInfo () {
+    this.imageId = "";
+    this.validationId = "";
+    this.origImageWidth = 0;
+    this.origImageHeight = 0;
+  }
 
   function getRandomUnannotatedImage() {
     $.ajax({
@@ -56,10 +65,10 @@
       dataType: 'json',
       type: 'GET',
       success: function(data){
-        $("#annotationArea").attr("imageId", data.uuid);
-        $("#annotationArea").attr("origImageWidth", data.width);
-        $("#annotationArea").attr("origImageHeight", data.height);
-        $("#annotationArea").attr("validationId", data.validation.uuid);
+        annotationInfo.imageId = data.uuid;
+        annotationInfo.origImageWidth = data.width;
+        annotationInfo.origImageHeight = data.height;
+        annotationInfo.validationId = data.validation.uuid;
 
         if("auto_annotations" in data)
           autoAnnotations = data["auto_annotations"];
@@ -71,6 +80,7 @@
         canvas.fabric().clear();
         canvas.fabric().setZoom(1.0);
         canvas.fabric().absolutePan(new fabric.Point(0,0));
+        addMainCanvas();
         populateCanvas(getUrlFromImageId(data.uuid), false);
         changeControl(annotator);
         numOfPendingRequests = 0;
@@ -274,12 +284,12 @@
       detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", 0, 0);
 
     var maxWidth = document.getElementById("smartAnnotationContainer").clientWidth - 50; //margin
-    var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
+    var scaleFactor = maxWidth/annotationInfo.origImageWidth;
     if(scaleFactor > 1.0)
       scaleFactor = 1.0;
 
-    var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
-    var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+    var w = annotationInfo.origImageWidth * scaleFactor;
+    var h = annotationInfo.origImageHeight * scaleFactor;
 
     $("#smartAnnotationCanvasWrapper").attr("width", w);
     $("#smartAnnotationCanvasWrapper").attr("height", h);
@@ -298,19 +308,25 @@
 
   function getCanvasScaleFactor(){
     var maxWidth = document.getElementById("annotationAreaContainer").clientWidth - 50; //margin
-    var scaleFactor = maxWidth/$("#annotationArea").attr("origImageWidth");
+    var scaleFactor = maxWidth/annotationInfo.origImageWidth;
     if(scaleFactor > 1.0)
       scaleFactor = 1.0;
     return scaleFactor;
   }
 
-  function populateCanvas(backgroundImageUrl, initAnnotator){
-    canvas.fabric().clear();
+  function populateCanvas(backgroundImageUrl, initAnnotator, force=true){
+    if((canvas !== null) && !force)
+      canvas.fabric().clear();
+    else{
+      canvas = new CanvasDrawer("annotationArea");
+      canvas.fabric().selection = false;
+      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
+    }
 
     var scaleFactor = getCanvasScaleFactor();
 
-    var w = $("#annotationArea").attr("origImageWidth") * scaleFactor;
-    var h = $("#annotationArea").attr("origImageHeight") * scaleFactor;
+    var w = annotationInfo.origImageWidth * scaleFactor;
+    var h = annotationInfo.origImageHeight * scaleFactor;
 
     $("#annotationAreaContainer").attr("width", w);
     $("#annotationAreaContainer").attr("height", h);
@@ -346,7 +362,7 @@
     var blob = dataURItoBlob(annotator.getMask());
     var formData = new FormData()
     formData.append('image', blob);
-    formData.append('uuid', $("#annotationArea").attr("imageId"));
+    formData.append('uuid', annotationInfo.imageId);
     $.ajax({
       url: '{{ .playgroundBaseUrl }}/v1/grabcut',
       processData: false,
@@ -360,7 +376,7 @@
   }
 
   function changeControl(annotator){
-    if($("#annotationArea").attr("imageId") === ""){
+    if(annotationInfo.imageId === ""){
       $("#labelContainer").hide();
       $("#doneButton").hide();
       annotator.block();
@@ -376,50 +392,10 @@
     $("#label").attr("label", label)
     $("#label").attr("sublabel", sublabel)
     if(sublabel === ""){
-      $("#label").text(label)
+      $("#label").text(("Annotate all: " + label));
     } 
     else {
-      $("#label").text((sublabel + "/" + label))
-    }
-  }
-
-  function getPreferedAnnotationTool() {
-    var radioButtonId = $("#preferedAnnotationToolCheckboxes :radio:checked").attr('id');
-    if(radioButtonId === "preferedRectangleAnnotationToolCheckboxInput") {
-      return "Rectangle";
-    }
-    if(radioButtonId === "preferedCircleAnnotationToolCheckboxInput") {
-      return "Circle";
-    }
-    if(radioButtonId === "preferedPolygonAnnotationToolCheckboxInput") {
-      return "Polygon";
-    }
-    return "Rectangle";
-  }
-
-  function setPreferedAnnotationTool() {
-    var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
-    if(preferedAnnotationTool === "Rectangle") {
-      $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
-      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
-      $("#preferedRectangleAnnotationToolCheckbox").checkbox("set checked");
-    }
-    else if(preferedAnnotationTool === "Circle") {
-      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
-      $("#preferedRectangleAnnotationToolCheckbox").checkbox("set unchecked");
-      $("#preferedCircleAnnotationToolCheckbox").checkbox("check");
-    } else if(preferedAnnotationTool === "Polygon") {
-      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
-      $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
-      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set checked");
-    }
-  }
-
-  function loadPreferedAnnotationTool(annotator) {
-    var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
-    if((preferedAnnotationTool === "Rectangle") || (preferedAnnotationTool === "Circle") || (preferedAnnotationTool === "Polygon")){
-      changeMenuItem(preferedAnnotationTool);
-      annotator.setShape(preferedAnnotationTool);
+      $("#label").text(("Annotate all: " + sublabel + "/" + label));
     }
   }
 
@@ -458,6 +434,42 @@
     }
   }
 
+  function addMainCanvas() {
+    $("#annotationColumnSpacer").remove();
+    $("#annotationColumnContent").remove();
+
+    var spacer = '';
+    var w = "sixteen";
+    if(isSmartAnnotationEnabled())
+      w = "eight";
+    else {
+      var workspaceSize = annotationSettings.loadWorkspaceSize();
+      if(workspaceSize === "small"){
+        w = "eight";
+        spacer = '<div class="four wide column" id="annotationColumnSpacer"></div>';
+      }
+      else if(workspaceSize === "medium"){
+        w = "ten";
+        spacer = '<div class="three wide column" id="annotationColumnSpacer"></div>';
+      }
+      else if(workspaceSize === "big")
+        w = "sixteen";
+    }
+
+    var data =  spacer +
+                '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
+                 '<div id="annotationAreaContainer">' +
+                    '<canvas id="annotationArea" imageId=""></canvas>' +
+                 '</div>' +
+                '</div>';
+
+    $("#annotationColumn").append(data);
+
+    $("#annotationArea").attr("imageId", annotationInfo.imageId);
+    $("#annotationArea").attr("origImageWidth", annotationInfo.origImageWidth);
+    $("#annotationArea").attr("origImageHeight", annotationInfo.origImageHeight);
+    $("#annotationArea").attr("validationId", annotationInfo.validationId);
+  }
   
 
   $(document).ready(function(){
@@ -470,8 +482,7 @@
             annotator.enableSmartAnnotation();
 
             $("#spacer").remove();
-            $("#mainGrid").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
-                                      '<br><br><br>' +
+            $("#annotationColumn").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
                                       '<div class="" id="smartAnnotationCanvasWrapper">' +
                                         '<div class="ui dimmer" id="smartAnnotationDimmer">' +
                                           '<div class="ui loader">' +
@@ -487,8 +498,11 @@
             annotator.disableSmartAnnotation();
 
             $("#smartAnnotationContainer").remove();
-            $("#mainGrid").prepend('<div class="four wide column" id="spacer"></div>');
+            //$("#annotationColumn").prepend('<div class="four wide column" id="spacer"></div>');
           }
+
+          addMainCanvas();
+          populateCanvas(getUrlFromImageId(annotationInfo.imageId), false);
 
           showHideSmartAnnotationControls(enabled);
           showHideAutoAnnotationsLoadButton();
@@ -507,6 +521,13 @@
         }
       });
 
+      annotationInfo.imageId = {{ .randomImage.Id }};
+      annotationInfo.origImageWidth = {{ .randomImage.Width }};
+      annotationInfo.origImageHeight = {{ .randomImage.Height }};
+      annotationInfo.validationId = {{ .randomImage.Validation.Id }};
+
+      addMainCanvas();
+
       showHideSmartAnnotationControls(false);
 
       autoAnnotations = {{.randomImage.AutoAnnotations}};
@@ -522,15 +543,11 @@
       canvas.fabric().selection = false;
       annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
 
-      var randomImageId = {{ .randomImage.Id }};
-      $("#annotationArea").attr("origImageWidth", {{ .randomImage.Width }});  
-      $("#annotationArea").attr("origImageHeight", {{ .randomImage.Height }});
-      $("#annotationArea").attr("validationId", {{ .randomImage.Validation.Id }});
-      populateCanvas(getUrlFromImageId(randomImageId), true);
+      populateCanvas(getUrlFromImageId({{ .randomImage.Id }}), true, false);
       changeControl(annotator);
       showHideControls(true);
 
-      loadPreferedAnnotationTool(annotator);
+      annotationSettings.loadPreferedAnnotationTool(annotator);
 
 
       var browserFingerprint = null;
@@ -636,13 +653,14 @@
       });
 
       $("#settingsMenuItem").click(function(e) {
-        setPreferedAnnotationTool();
+        annotationSettings.setAll();
         $('#annotationSettingsPopup').modal('show');
       });
 
       $("#saveAnnotationSettingsButton").click(function(e) {
-        var preferedAnnotationTool = getPreferedAnnotationTool();
-        localStorage.setItem('preferedAnnotationTool', preferedAnnotationTool); //store in local storage
+        annotationSettings.persistAll();
+
+         
         $('#annotationSettingsPopup').modal('hide');
       });
 
@@ -653,7 +671,7 @@
             $("#blacklistAnnotationUsageDlg").modal("show");
             localStorage.setItem("blacklistAnnotationUsageDlgShown", true);
           } else {
-            blacklistAnnotation($("#annotationArea").attr("validationId"));
+            blacklistAnnotation(annotationInfo.validationId);
           }
         {{ else }}
           $("#blacklistAnnotationUsageDlg").modal("show");
@@ -663,7 +681,7 @@
 
       $('#blacklistAnnotationUsageDlgAcceptButton').click(function(e) {
         $("#blacklistAnnotationUsageDlg").modal("hide");
-        blacklistAnnotation($("#annotationArea").attr("validationId"));
+        blacklistAnnotation(annotationInfo.validationId);
       });
 
       $('#notAnnotableButton').click(function(e) {
@@ -672,13 +690,13 @@
           $("#markAsUnannotatableUsageDlg").modal("show");
           localStorage.setItem("markAsUnannotatableUsageDlgShown", true);
         } else {
-          markAsNotAnnotatable($("#annotationArea").attr("validationId"));
+          markAsNotAnnotatable(annotationInfo.validationId);
         }
       });
 
       $('#markAsUnannotatableUsageDlgAcceptButton').click(function(e) {
         $("#markAsUnannotatableUsageDlg").modal("hide");
-        markAsNotAnnotatable($("#annotationArea").attr("validationId"));
+        markAsNotAnnotatable(annotationInfo.validationId);
       });
 
       $('#doneButton').click(function(e) {
@@ -713,7 +731,7 @@
         canvas.clear();
 
         e.preventDefault();
-        var url = "{{ .apiBaseUrl }}/v1/annotate/" + $("#annotationArea").attr("imageId");
+        var url = "{{ .apiBaseUrl }}/v1/annotate/" + annotationInfo.imageId;
         $.ajax({
           url: url,
           type: 'POST',
@@ -745,60 +763,62 @@
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer">
       <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
-      <h2>Annotate all occurences of the above.</h2>
+      <!--<h2>Annotate all occurences of the above.</h2>-->
     </div>
   </div>
 
 
-  <div class="ui stackable grid vertical stripe" id="mainGrid">
-      <div class="four wide column" id="spacer">
-      </div>
-      <div class="eight wide center aligned column">
-        <div class="row">
-          <div hidden class="ui toggle checkbox" id="smartAnnotation">
-            <input type="checkbox">
-            <label>Smart Annotation</label>
+  <div class="ui stackable grid" id="mainGrid">
+      <div class="row"></div>
+      <div class="row">
+        <div class="sixteen wide center aligned column">
+          <div class="row">
+            <div hidden class="ui toggle checkbox" id="smartAnnotation">
+              <input type="checkbox">
+              <label>Smart Annotation</label>
+            </div>
+            <a href="#" id="showSmartAnnotationHelpDlg">[?]</a>
+            <p></p>
           </div>
-          <a href="#" id="showSmartAnnotationHelpDlg">[?]</a>
-          <p></p>
+
+          {{ template "annotation_menu.html" .}}
+
+          {{ template "smart_annotation_help_dlg.html" .}}
+
+          {{ template "blacklist_annotation_usage_dlg.html" .}}
+
+          {{ template "mark_annotation_as_unannotatable_usage_dlg.html" .}}
+
+          {{ template "annotation_settings_popup.html" .}}
+
+          {{ template "delete_annotation_objects_popup.html" .}}
+
+          {{ template "annotation_discard_dlg.html" .}}
         </div>
+      </div>
 
-        {{ template "annotation_menu.html" .}}
+      <div class="row" id="annotationColumn">
+      </div>
 
-        {{ template "smart_annotation_help_dlg.html" .}}
+      <div class="row">
+        <div class="sixteen wide center aligned column">
+          <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
+          <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
 
-        {{ template "blacklist_annotation_usage_dlg.html" .}}
+          {{ if (eq .sessionInformation.LoggedIn true) }}
+          <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
+          {{ else }}
+          <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
+          {{ end }}
 
-        {{ template "mark_annotation_as_unannotatable_usage_dlg.html" .}}
-
-
-        {{ template "annotation_settings_popup.html" .}}
-
-        <div id="annotationAreaContainer">
-          <canvas id="annotationArea" imageId="{{ .randomImage.Id }}"></canvas> 
-        </div>
-        <p></p>
-
-        <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
-
-        <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
-
-        {{ if (eq .sessionInformation.LoggedIn true) }}
-        <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
-        {{ else }}
-        <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
-        {{ end }}
-
-        <div hidden class="ui warning message" id="warningMsg">
-          <i class="close icon"></i>
-          <div class="header" id="warningMsgText">
+          <div hidden class="ui warning message" id="warningMsg">
+            <i class="close icon"></i>
+            <div class="header" id="warningMsgText">
+            </div>
           </div>
         </div>
-
-        {{ template "delete_annotation_objects_popup.html" .}}
-
-        {{ template "annotation_discard_dlg.html" .}}
       </div>
+      <div class="row"></div>
   </div>
   {{ template "footer.html" .}}
 

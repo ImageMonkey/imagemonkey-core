@@ -1183,3 +1183,106 @@ var Annotator = (function () {
 
   return Annotator;
 }());
+
+
+
+var AnnotationSettings = (function () {
+  function AnnotationSettings() {
+    var inst=this;
+  }
+
+  AnnotationSettings.prototype.getPreferedAnnotationTool = function() {
+    var radioButtonId = $("#preferedAnnotationToolCheckboxes :radio:checked").attr('id');
+    if(radioButtonId === "preferedRectangleAnnotationToolCheckboxInput") {
+      return "Rectangle";
+    }
+    if(radioButtonId === "preferedCircleAnnotationToolCheckboxInput") {
+      return "Circle";
+    }
+    if(radioButtonId === "preferedPolygonAnnotationToolCheckboxInput") {
+      return "Polygon";
+    }
+    return "Rectangle";
+  }
+
+  AnnotationSettings.prototype.getWorkspaceSize = function() {
+    var radioButtonId = $("#annotationWorkspaceSizeCheckboxes :radio:checked").attr('id');
+    if(radioButtonId === "annotationWorkspaceSizeSmallCheckboxInput") {
+      return "small";
+    }
+    if(radioButtonId === "annotationWorkspaceSizeMediumCheckboxInput") {
+      return "medium";
+    }
+    if(radioButtonId === "annotationWorkspaceSizeBigCheckboxInput") {
+      return "big";
+    }
+    return "small";
+  }
+
+  AnnotationSettings.prototype.persistAll = function() {
+    var preferedAnnotationTool = this.getPreferedAnnotationTool();
+    localStorage.setItem('preferedAnnotationTool', preferedAnnotationTool); //store in local storage
+    var workspaceSize = this.getWorkspaceSize();
+    localStorage.setItem('annotationWorkspaceSize', workspaceSize);
+  }
+
+  AnnotationSettings.prototype.setAll = function() {
+    this.setPreferedAnnotationTool();
+    this.setWorkspaceSize();
+  }
+
+  AnnotationSettings.prototype.setWorkspaceSize = function() {
+    var workspaceSize = localStorage.getItem("annotationWorkspaceSize");
+    if(workspaceSize === "small") {
+      $("#annotationWorkspaceSizeMediumCheckbox").checkbox("set unchecked");
+      $("#annotationWorkspaceSizeBigCheckbox").checkbox("set unchecked");
+      $("#annotationWorkspaceSizeSmallCheckbox").checkbox("set checked");
+    }
+    else if(workspaceSize === "medium") {
+      $("#annotationWorkspaceSizeSmallCheckbox").checkbox("set unchecked");
+      $("#annotationWorkspaceSizeBigCheckbox").checkbox("set unchecked");
+      $("#annotationWorkspaceSizeMediumCheckbox").checkbox("check");
+    } 
+    else if(workspaceSize === "big") {
+      $("#annotationWorkspaceSizeSmallCheckbox").checkbox("set unchecked");
+      $("#annotationWorkspaceSizeMediumCheckbox").checkbox("set unchecked");
+      $("#annotationWorkspaceSizeBigCheckbox").checkbox("set checked");
+    }
+  }
+
+  AnnotationSettings.prototype.setPreferedAnnotationTool = function() {
+    var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
+    if(preferedAnnotationTool === "Rectangle") {
+      $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedRectangleAnnotationToolCheckbox").checkbox("set checked");
+    }
+    else if(preferedAnnotationTool === "Circle") {
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedRectangleAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedCircleAnnotationToolCheckbox").checkbox("check");
+    } else if(preferedAnnotationTool === "Polygon") {
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
+      $("#preferedPolygonAnnotationToolCheckbox").checkbox("set checked");
+    }
+  }
+
+  AnnotationSettings.prototype.loadPreferedAnnotationTool = function(annotator) {
+    var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
+    if((preferedAnnotationTool === "Rectangle") || (preferedAnnotationTool === "Circle") || (preferedAnnotationTool === "Polygon")){
+      changeMenuItem(preferedAnnotationTool);
+      annotator.setShape(preferedAnnotationTool);
+    }
+  }
+
+  AnnotationSettings.prototype.loadWorkspaceSize = function() {
+    var workspaceSize = localStorage.getItem("annotationWorkspaceSize");
+    if((workspaceSize === "small") || (workspaceSize === "medium") || (workspaceSize === "big")){
+      return workspaceSize;
+    }
+    return "small";
+  }
+
+  return AnnotationSettings;
+}());
