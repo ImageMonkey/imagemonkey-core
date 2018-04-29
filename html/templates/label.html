@@ -16,7 +16,7 @@
 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
-  <script src="js/common.js?v=1"></script> 
+  <script src="js/common.js?v=2"></script> 
   <script src="js/label.js"></script>
   <script src="js/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="css/jquery-ui.css">
@@ -363,7 +363,7 @@
             data: JSON.stringify(labelsLst),
             headers: headers,
             beforeSend: function(xhr) {
-              xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+              xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
             },
             complete: function(data){
             },
