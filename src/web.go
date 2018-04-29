@@ -16,7 +16,6 @@ import (
 	"time"
 	"strings"
 	"path/filepath"
-	"bytes"
 )
 
 var db *sql.DB
