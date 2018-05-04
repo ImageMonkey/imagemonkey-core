@@ -1424,11 +1424,11 @@ func getNumOfValidatedImages() (int64, error){
 func getAllUnverifiedImages(imageProvider string) ([]Image, error){
     var images []Image
 
-    q1 := "WHERE q.image_id NOT IN (SELECT id FROM image_quarantine)"
+    q1 := "WHERE q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
     params := false
     if imageProvider != "" {
         params = true
-        q1 = "WHERE (p.name = $1) AND q.image_id NOT IN (SELECT id FROM image_quarantine)"
+        q1 = "WHERE (p.name = $1) AND q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
     }
 
     q := fmt.Sprintf(`SELECT q.image_key, string_agg(q.label_name::text, ',') as labels, 
