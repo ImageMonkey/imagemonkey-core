@@ -291,7 +291,7 @@ func addDonatedPhoto(username string, imageInfo ImageInfo, autoUnlock bool, clie
             numOfValid = 1
         }
 
-        insertedValidationIds, err = _addLabelsToImage(clientFingerprint, imageInfo.Name, labels, numOfValid, tx)
+        insertedValidationIds, err = _addLabelsToImage(clientFingerprint, imageInfo.Name, labels, numOfValid, 0, tx)
         if err != nil {
             return err //tx already rolled back in case of error, so we can just return here
         }
@@ -1722,7 +1722,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
     }
 
     if len(knownLabels) > 0 {
-        _, err = _addLabelsToImage(apiUser.ClientFingerprint, imageId, knownLabels, 0, tx)
+        _, err = _addLabelsToImage(apiUser.ClientFingerprint, imageId, knownLabels, 0, 0, tx)
         if err != nil { 
             return err //tx already rolled back in case of error, so we can just return here 
         }
@@ -1786,7 +1786,7 @@ func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, a
     return nil
 }
 
-func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, tx *sql.Tx) ([]int64, error) {
+func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, numOfNotAnnotatable int, tx *sql.Tx) ([]int64, error) {
     var insertedIds []int64
     for _, item := range labels {
         rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
@@ -1817,7 +1817,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
             rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
                                   SELECT $1, $2, $3, $4, l.id, uuid_generate_v4(), $7 FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
                                   RETURNING id`,
-                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels), 0)
+                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels), numOfNotAnnotatable)
             if err != nil {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
@@ -1848,7 +1848,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
                                 SELECT label_id from image_validation v where image_id = $1
                               ) AND l.name = $5 AND l.parent_id IS NULL
                               RETURNING id`,
-                              imageId, numOfValid, 0, clientFingerprint, item.Label, 0).Scan(&insertedLabelId)
+                              imageId, numOfValid, 0, clientFingerprint, item.Label, numOfNotAnnotatable).Scan(&insertedLabelId)
         if err != nil {
             pqErr := err.(*pq.Error)
             if pqErr.Code.Name() != "unique_violation" {
