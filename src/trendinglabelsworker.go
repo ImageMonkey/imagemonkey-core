@@ -109,9 +109,9 @@ func addCommentToGithubTicket(trendingLabel TrendingLabel, repository string) er
 }
 
 func updateSentTrendingLabelCount(trendingLabel TrendingLabel) error {
-	_, err := db.Exec(`INSERT INTO trending_label_suggestion(label_suggestion_id, num_of_last_sent, github_issue_id) VALUES($1, $2, $3)
+	_, err := db.Exec(`INSERT INTO trending_label_suggestion(label_suggestion_id, num_of_last_sent, github_issue_id, closed) VALUES($1, $2, $3, $4)
 						ON CONFLICT(label_suggestion_id) DO UPDATE SET num_of_last_sent = $2, github_issue_id = $3`, 
-						trendingLabel.Id, trendingLabel.Count, trendingLabel.GithubIssue.Id)
+						trendingLabel.Id, trendingLabel.Count, trendingLabel.GithubIssue.Id, false)
 	return err
 }
 
