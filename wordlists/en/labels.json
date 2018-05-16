@@ -503,6 +503,14 @@
 					"description": "optional"
 				}
 			}
+		},
+		"grass": {
+			"description": "optional",
+			"accessors": ["."]
+		},
+		"road": {
+			"description": "optional",
+			"accessors": ["."]
 		}
 	}
 }
