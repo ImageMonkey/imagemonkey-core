@@ -377,6 +377,8 @@ func main(){
 	userProfilePicturesDir := flag.String("avatars_dir", "../avatars/", "Avatars directory")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
+	//labelGraphDefinitionPath := flag.String("label_graph_def", "../wordlists/en/graph.dot", "Path to the label graph definition")
+	labelGraphRepositoryPath := flag.String("label_graph_repository", "../wordlists/en/graphdefinitions", "Path to the label graph repository")
 
 	flag.Parse()
 	if *releaseMode {
@@ -412,6 +414,12 @@ func main(){
 	err = db.Ping()
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
+	}
+
+	labelGraphRepository := NewLabelGraphRepository(*labelGraphRepositoryPath)
+	err = labelGraphRepository.Load()
+	if err != nil {
+		log.Fatal("[Main] Couldn't load label graph repository: ", err.Error())
 	}
 
 
@@ -871,47 +879,26 @@ func main(){
 		})
 
 		router.GET("/v1/export", func(c *gin.Context) {
-			params := c.Request.URL.Query()
-
-			annotationsOnly := false
-			if temp, ok := params["annotations_only"]; ok {
-				if temp[0] == "true" {
-					annotationsOnly = true
-				}
+			query, annotationsOnly, err := getExploreUrlParams(c)
+			if err != nil {
+				c.JSON(422, gin.H{"error": err.Error()})
 			}
 
-			if temp, ok := params["query"]; ok {
-				if temp[0] == "" {
-					c.JSON(422, gin.H{"error": "no query specified"})
-					return
-				}
+			queryParser := NewQueryParser(query)
+	        parseResult, err := queryParser.Parse()
+	        if err != nil {
+	            c.JSON(422, gin.H{"error": err.Error()})
+	            return
+	        }
 
-
-				query, err := url.QueryUnescape(temp[0])
-				if err != nil {
-					c.JSON(422, gin.H{"error": "invalid query"})
-					return
-				}
-
-				queryParser := NewQueryParser(query)
-				parseResult, err := queryParser.Parse()
-				if err != nil {
-					c.JSON(422, gin.H{"error": err.Error()})
-					return
-				}
-
-				jsonData, err := export(parseResult, annotationsOnly)
-				if(err == nil){
-					c.JSON(http.StatusOK, jsonData)
-					return
-				} else{
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't export data, please try again later."})
-					return
-				}
-			} else {
-				c.JSON(422, gin.H{"error": "no query specified"})
-				return
-			}
+	        jsonData, err := export(parseResult, annotationsOnly)
+	        if err == nil {
+	            c.JSON(http.StatusOK, jsonData)
+	            return
+	        }
+	        
+	        c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't export data, please try again later."})
+	        return
 		})
 
 
@@ -1001,7 +988,71 @@ func main(){
 			c.JSON(http.StatusOK, popularLabels)
 		})
 
+		router.GET("/v1/label/graph/:labelgraphname", func(c *gin.Context) {
+			labelGraphName := c.Param("labelgraphname")
 
+			labelGraph, err := labelGraphRepository.Get(labelGraphName) 
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid label graph name"})
+				return
+			}
+
+			labelGraphJson, err := labelGraph.GetJson()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, labelGraphJson)
+		})
+
+		router.GET("/v1/label/graph/:labelgraphname/query-builder", func(c *gin.Context) {
+			params := c.Request.URL.Query()
+
+			labelGraphName := c.Param("labelgraphname")
+
+			identifier := ""
+			if temp, ok := params["identifier"]; ok {
+				identifier, err = url.QueryUnescape(temp[0])
+				if err != nil {
+					c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid identifier"})
+					return
+				}
+			}
+
+			if identifier == "" {
+				c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid identifier"})
+				return
+			}
+
+			labelGraph, err := labelGraphRepository.Get(labelGraphName) 
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid label graph name"})
+				return
+			}
+
+			q := ""
+			children := labelGraph.GetChildren(identifier)
+			for _, child := range children {
+				uuid := child.Attrs["id"]
+				if uuid == "" {
+					continue
+				}
+
+				uuid, err = strconv.Unquote(uuid)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+
+				if q == "" {
+					q += uuid
+				} else {
+					q += " | " + uuid
+				}
+			}
+
+			c.JSON(http.StatusOK, gin.H{"query": q})
+		})
 
 		router.POST("/v1/donate", func(c *gin.Context) {
 			var imageSource ImageSource
