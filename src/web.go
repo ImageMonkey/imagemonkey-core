@@ -409,12 +409,20 @@ func main() {
 		})
 
 		router.GET("/graph", func(c *gin.Context) {
+			params := c.Request.URL.Query()
+
+			labelGraphName := "main"
+			if temp, ok := params["name"]; ok {
+				labelGraphName = temp[0]
+			}
+
+
 			c.HTML(http.StatusOK, "graph.html", gin.H{
 				"title": "Label Graph",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": 14,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
-				"defaultLabelGraphName": "main",
+				"defaultLabelGraphName": labelGraphName,
 			})
 		})
 
