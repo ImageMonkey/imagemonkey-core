@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"os"
-	"fmt"
 	"github.com/awalterschulze/gographviz"
-	"time"
+	"path/filepath"
 	"strconv"
+	"io/ioutil"
+	"encoding/json"
+	"errors"
 )
 
 type LabelGraphNode struct {
@@ -141,4 +143,78 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 	}
 
 	return result, nil
+}
+
+
+type LabelGraphRepository struct {
+    dir string
+    labelGraphs map[string]*LabelGraph
+}
+
+func NewLabelGraphRepository(dir string) *LabelGraphRepository {
+    return &LabelGraphRepository{
+        dir: dir,
+    } 
+}
+
+func (p *LabelGraphRepository) Get(id string) (*LabelGraph, error) {
+	val, ok := p.labelGraphs[id]
+	if !ok {
+		return nil, errors.New((id + " is not a valid label graph"))
+	}
+
+	return val, nil
+}
+
+func (p *LabelGraphRepository) Load() error {
+	type LabelGraphMappingEntry struct {
+	    Name string `json:"name"`
+	}
+
+	type LabelGraphMapping map[string]LabelGraphMappingEntry
+	var labelGraphMapping LabelGraphMapping
+
+	p.labelGraphs = make(map[string]*LabelGraph)
+
+	//read the mapping.json file
+	raw, err := ioutil.ReadFile((p.dir + "/mapping.json"))
+    if err != nil {
+        return err
+    }
+    err = json.Unmarshal(raw, &labelGraphMapping)
+    if err != nil {
+    	return err
+    }
+
+	err = filepath.Walk(p.dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		filename := filepath.Base(path)
+		if filename == "mapping.json" {
+			return nil
+		}
+
+
+		val, ok := labelGraphMapping[filename]
+		if !ok {
+			return errors.New((filename + " not in label graph mapping file"))
+		}
+
+
+		labelGraph := NewLabelGraph(path)
+		err = labelGraph.Load()
+		if err != nil {
+			return err
+		}
+		p.labelGraphs[val.Name] = labelGraph
+
+		return nil
+	})
+	return err
 }
