@@ -84,7 +84,8 @@
 	            .distance(function(d) { return radius(d.source.size / 2) + radius(d.target.size / 2); })
 	          .strength(function(d) {return 0.75; })
 	          )
-	    	.force("charge", d3.forceManyBody().strength(-300))
+	    	.force("charge", function(d, i) { return d.identifier=="root" ? -10000 : -300; })
+	    	//.force("charge", d3.forceManyBody().strength(-300))
 	    	.force("collide", d3.forceCollide().radius(function(d) { return radius(d.size / 2) + 2; }))
 	    	.force("center", d3.forceCenter(width / 2, height / 2));
 
