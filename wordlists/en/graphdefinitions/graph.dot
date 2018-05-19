@@ -1,0 +1,38 @@
+digraph G { 
+	{ 
+		rootnode [label="root" size=250 fontsize=25 color=red]
+
+		vehicle [label="vehicle" size=150 fontsize=20 color=blue]
+		tree [label="tree" id="de9c51d5-b633-4a92-be3f-2e09a7ed5dc4"]
+		building [label="building" id="3619dc01-f1e2-4791-9ddd-56550c2a6b7d"]
+		car [label="car" id="94bbd2ff-8a8e-4d1c-9ac5-f9506aa20e43"] 
+		bicycle [label="bicycle" id="c8cfc6a0-1a20-4e89-b879-d7378b882939"]
+		road [label="road" id="26ba089d-d11b-46ff-8f40-e292ba0e7624"]
+		person [label="person", id="64766828-a943-433f-8800-1901cebf959d"]
+
+		food [label="food" size=150 fontsize=20 color=blue]
+		wholefood [label="whole food"]
+		processedfood [label="proc. food"]
+		apple [label="apple" id="f81cf567-4798-4e4d-95f9-b430cf04ee55"]
+		orange [label="orange" id="5ca7ccad-3b8c-4c9a-ac27-44cddc96d4fa"]
+		pizza [label="pizza" id="be8270fd-2c5c-47ff-b938-0555e5201a18"]
+
+		food -> wholefood
+		food -> processedfood
+		processedfood -> pizza
+		wholefood -> apple
+		wholefood -> orange
+
+		vehicle -> car
+		vehicle -> bicycle
+
+		rootnode -> food
+		rootnode -> vehicle
+		rootnode -> building
+		rootnode -> road
+		rootnode -> person
+		rootnode -> tree
+	} 
+	
+	
+}
