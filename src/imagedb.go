@@ -544,6 +544,23 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
         joinType = "JOIN"
     }
 
+    
+    q1 := ""
+    q2 := ""
+    q3 := ""
+    identifier := ""
+    if parseResult.isUuidQuery {
+        q1 = "JOIN label l ON l.id = r.label_id"
+        q2 = "JOIN label l ON l.id = n.label_id"
+        q3 = "JOIN label l ON l.id = v.label_id"
+        identifier = "l.name"
+    } else {
+        q1 = "JOIN label_accessor a ON r.label_id = a.label_id"
+        q2 = "JOIN label_accessor a ON n.label_id = a.label_id"
+        q3 = "JOIN label_accessor a ON a.label_id = v.label_id"
+        identifier = "a.accessor"
+    }
+
 
     q := fmt.Sprintf(`SELECT i.key, CASE WHEN json_agg(q3.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q3.annotations)::jsonb END as annotations, 
                       q3.validations, i.width, i.height
@@ -552,29 +569,29 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
                       (
                           SELECT COALESCE(q.image_id, q1.image_id) as image_id, q.annotations, q1.validations FROM 
                           (
-                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || %s || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
                             FROM image_annotation_refinement r 
                             JOIN annotation_data d ON r.annotation_data_id = d.id
                             JOIN annotation_type t ON d.annotation_type_id = t.id
                             JOIN image_annotation an ON d.image_annotation_id = an.id
-                            JOIN label_accessor a ON r.label_id = a.label_id
+                            %s
                             WHERE ((%s) AND an.auto_generated = false)
 
                             UNION
 
-                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || %s || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
                             FROM image_annotation n
                             JOIN annotation_data d ON d.image_annotation_id = n.id
                             JOIN annotation_type t ON d.annotation_type_id = t.id
-                            JOIN label_accessor a ON n.label_id = a.label_id
+                            %s
                             WHERE ((%s) AND n.auto_generated = false)
                           ) q
                           
                           %s (
-                            SELECT i.id as image_id, json_agg(json_build_object('label', accessor, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
+                            SELECT i.id as image_id, json_agg(json_build_object('label', %s, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
                             FROM image i 
                             JOIN image_validation v ON i.id = v.image_id
-                            JOIN label_accessor a ON a.label_id = v.label_id
+                            %s
                             WHERE (%s)
                             GROUP BY i.id
                           ) q1 
@@ -584,7 +601,7 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
                      ON i.id = q3.image_id
                       
                      WHERE i.unlocked = true
-                     GROUP BY i.key, q3.validations, i.width, i.height`, parseResult.query, parseResult.query, joinType, parseResult.query)
+                     GROUP BY i.key, q3.validations, i.width, i.height`, identifier, q1, parseResult.query, identifier, q2, parseResult.query, joinType, identifier, q3, parseResult.query)
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
