@@ -24,19 +24,23 @@
 	"labels": {
 		"dog": {
 			"description": "optional",
+			"uuid": "bac46d8e-0655-46d5-a393-36c69a18ee2c",
 			"accessors": ["."],
 			"isa": ["animal"],
 			"has": {
 				"eye": {
 					"description": "optional",
+					"uuid": "f14d4609-b018-4641-b9c1-bf93fe220050",
 					"accessors": [".has"]
 				},
 				"ear": {
 					"description": "optional",
+					"uuid": "889c1585-5c6c-4e3e-a757-514849d81521",
 					"accessors": [".has"]
 				},
 				"mouth": {
 					"description": "optional",
+					"uuid": "d4304606-7d1f-4803-b7b4-7d37dcc30714",
 					"accessors": [".has"]
 				}
 			},
@@ -47,13 +51,16 @@
 					"accessors": [".size"],
 					"answers": [
 						{
-							"name": "big"
+							"name": "big",
+							"uuid": "23c84822-5468-409c-aca8-22df259333fa"
 						},
 						{ 
-							"name": "medium"
+							"name": "medium",
+							"uuid": "b23519ff-8b2f-45c6-a22a-4dcabaee4649"
 						},
 						{
-							"name": "small"
+							"name": "small",
+							"uuid": "f4a78d49-63e9-4ccd-951f-33b5231a83b6"
 						}
 					],
 					"allow_unknown": true,
@@ -67,10 +74,12 @@
 					"accessors": [".type"],
 					"answers": [
 						{
-							"name": "dog"
+							"name": "dog",
+							"uuid": "71cc64b6-85b3-4463-afe3-73b7bbb09b46"
 						},
 						{ 
-							"name": "puppy"
+							"name": "puppy",
+							"uuid": "47dae924-d1c3-4ded-8479-ea965d157948"
 						}
 					],
 					"allow_unknown": true,
@@ -85,6 +94,7 @@
 					"answers": [
 						{
 							"name": "Labrador Retriever",
+							"uuid": "d33ac818-ca09-45b0-b3b0-e16a4e422147",
 							"examples": [
 								{
 									"filename": "LabradorRetriever.jpg"								
@@ -93,6 +103,7 @@
 						},
 						{
 							"name": "English Cocker Spaniel",
+							"uuid": "8a725d6a-9ce8-4759-89ae-218a266e8dfd",
 							"examples": [
 								{
 									"filename": "EnglishCockerSpaniel.jpg"								
@@ -101,6 +112,7 @@
 						},
 						{
 							"name": "English Springer Spaniel",
+							"uuid": "ab7e8185-017b-44d8-9b7e-cda53d2fd0e7",
 							"examples": [
 								{
 									"filename": "EnglishSpringerSpaniel.jpg"								
@@ -109,6 +121,7 @@
 						},
 						{
 							"name": "German Shepherd",
+							"uuid": "430fd4e2-7bc7-4a97-b317-6d98e89d9fcf",
 							"examples": [
 								{
 									"filename": "GermanShepherd.jpg"
@@ -117,6 +130,7 @@
 						},
 						{
 							"name": "Staffordshire Bull Terrier",
+							"uuid": "267736de-9e7f-4cce-b073-00e6458bdf65",
 							"examples": [
 								{
 									"filename": "StaffordshireBullTerrier.jpg"
@@ -125,6 +139,7 @@
 						},
 						{
 							"name": "Golden Retriever",
+							"uuid": "20444b53-8cd0-4b60-b9a3-897c033229b3",
 							"examples": [
 								{
 									"filename": "GoldenRetriever.jpg"
@@ -133,6 +148,7 @@
 						},
 						{
 							"name": "Boxer",
+							"uuid": "7ef05e8a-6cc5-43d5-a729-642b46368bcc",
 							"examples": [
 								{
 									"filename": "Boxer.jpg"
@@ -141,6 +157,7 @@
 						},
 						{
 							"name": "Beagle",
+							"uuid": "8d699ef9-292b-4d71-8b87-711f7d14ac57",
 							"examples": [
 								{
 									"filename": "Beagle.jpg"
@@ -149,6 +166,7 @@
 						},
 						{
 							"name": "Dachshund",
+							"uuid": "859defaa-ddc4-4540-b4fc-03d7383ca79c",
 							"examples": [
 								{
 									"filename": "Dachshund.jpg"
@@ -157,6 +175,7 @@
 						},
 						{
 							"name": "Poodle",
+							"uuid": "435d46b6-d6cf-428e-8f33-d910a65f77f6",
 							"examples": [
 								{
 									"filename": "Poodle.jpg"
@@ -165,6 +184,7 @@
 						},
 						{
 							"name": "Rottweiler",
+							"uuid": "97ac9993-5765-4804-9a88-9605c6474858",
 							"examples": [
 								{
 									"filename": "Rottweiler.jpg"
@@ -173,6 +193,7 @@
 						},
 						{
 							"name": "Siberian Husky",
+							"uuid": "dc12147e-c6d7-480b-953c-b5c7843b3a15",
 							"examples": [
 								{
 									"filename": "SiberianHusky.jpg"
@@ -181,6 +202,7 @@
 						},
 						{
 							"name": "Bulldog",
+							"uuid": "6ae55ed6-0c91-4bb1-b824-f2a83454d200",
 							"examples": [
 								{
 									"filename": "Bulldog.jpg"
@@ -189,6 +211,7 @@
 						},
 						{
 							"name": "Mops",
+							"uuid": "ac775710-d593-493b-ad01-2ff52035ad4b",
 							"examples": [
 								{
 									"filename": "Mops.jpg"
@@ -197,6 +220,7 @@
 						},
 						{
 							"name": "Dalmatiner",
+							"uuid": "48fbd2d5-4b25-4af6-801d-f45bbd3337b1",
 							"examples": [
 								{
 									"filename": "Dalmatiner.jpg"
@@ -205,6 +229,7 @@
 						},
 						{
 							"name": "Great Dane",
+							"uuid": "390fe1ab-b6a2-459e-8cb7-f340d53f8933",
 							"examples": [
 								{
 									"filename": "GreatDane.jpg"
@@ -227,35 +252,42 @@
 		},
 		"cat": {
 			"description": "optional",
+			"uuid": "05c02fc5-9095-41e4-acb1-68303654ebb1",
 			"accessors": ["."],
 			"isa": ["animal"],
 			"has": {
 				"eye": {
 					"description": "optional",
+					"uuid": "d6a550b6-4384-43dc-a2e9-4abb6ae80462",
 					"accessors": [".has"]
 				},
 				"ear": {
 					"description": "optional",
+					"uuid": "e6f48b23-4553-421b-be6d-0600905078c8",
 					"accessors": [".has"]
 				},
 				"mouth": {
 					"description": "optional",
+					"uuid": "3bf40bb8-f671-46d5-9f6b-efe385010508",
 					"accessors": [".has"]
 				}
 			}
 		},
 		"pizza": {
 			"description": "optional",
+			"uuid": "be8270fd-2c5c-47ff-b938-0555e5201a18",
 			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"orange": {
 			"description": "optional",
+			"uuid": "5ca7ccad-3b8c-4c9a-ac27-44cddc96d4fa",
 			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"apple": {
 			"description": "optional",
+			"uuid": "f81cf567-4798-4e4d-95f9-b430cf04ee55",
 			"accessors": ["."],
 			"isa": ["food"],
 			"quiz": [
@@ -264,13 +296,16 @@
 					"accessors": [".color"],
 					"answers": [
 						{
-							"name": "red"
+							"name": "red",
+							"uuid": "7fbcde03-3778-4cd2-bab0-bbaedeb68f35"
 						},
 						{
-							"name": "green"
+							"name": "green",
+							"uuid": "f89d9385-516f-41f4-b83e-74481b479050"
 						},
 						{ 
-							"name": "yellow"
+							"name": "yellow",
+							"uuid": "37dc1749-8f34-4640-8fc2-abe5d2fa2b62"
 						}
 					],
 					"allow_unknown": true,
@@ -283,11 +318,13 @@
 		},
 		"banana": {
 			"description": "optional",
+			"uuid": "1c1dfe7c-0978-4c59-8728-7857a3867296",
 			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"car": {
 			"description": "optional",
+			"uuid": "67f02864-cb77-48aa-811c-7633a7d7d564",
 			"accessors": ["."],
 			"isa": ["vehicle"],
 			"quiz": [
@@ -296,106 +333,140 @@
 					"accessors": [".brand"],
 					"answers": [
 						{
-							"name": "Seat"
+							"name": "Seat",
+							"uuid": "03f08e3e-442d-4fae-8cb8-edb945e5931a"
 						}, 
 						{
-							"name": "Renault"
+							"name": "Renault",
+							"uuid": "cd4950c6-2da8-4dfd-8dc0-53a834e63faf"
 						},
 						{
-							"name": "Peugot"
+							"name": "Peugot",
+							"uuid": "fd2924a3-89f8-44a9-95cc-e8a745407106"
 						},
 						{
-							"name": "BMW"
+							"name": "BMW",
+							"uuid": "8553c39d-408e-46b5-9543-66594a9d8cab"
 						},
 						{
-							"name": "Ford"
+							"name": "Ford",
+							"uuid": "a7cf8f7d-bd75-4fa5-b3d6-bdb4bf7b0cc0"
 						},
 						{
-							"name": "Opel"
+							"name": "Opel",
+							"uuid": "665a8c44-dab5-4cf7-af56-b3a6ccd3d62b"
 						},
 						{
-							"name": "Alfa Romeo"
+							"name": "Alfa Romeo",
+							"uuid": "6a76d6bd-c54d-4c74-9243-991d870f6d92"
 						},
 						{
-							"name": "Chevrolet"
+							"name": "Chevrolet",
+							"uuid": "04235cbd-9ee6-4808-91ff-084069b2fffa"
 						},
 						{
-							"name": "Porsche"
+							"name": "Porsche",
+							"uuid": "db0f5870-dba2-4f81-8fd6-4ad43a25c5fb"
 						},
 						{
-							"name": "Honda"
+							"name": "Honda",
+							"uuid": "47e55f6c-d7d4-4bf0-8d17-c16938513bb7"
 						},
 						{
-							"name": "Subaru"
+							"name": "Subaru",
+							"uuid": "0a1f762b-72f0-4825-aa11-5953b8b9f866"
 						},
 						{
-							"name": "Mazda"
+							"name": "Mazda",
+							"uuid": "bd998d0c-caa0-437d-a83f-4d84d9e224b6"
 						}, 
 						{
-							"name": "Mitsubishi"
+							"name": "Mitsubishi",
+							"uuid": "96b93795-987f-4a8d-905a-9944c54a2736"
 						},
 						{
-							"name": "Lexus"
+							"name": "Lexus",
+							"uuid": "9b03de96-6d8b-47b3-ac78-07d599a9a467"
 						}, 
 						{
-							"name": "Toyota"
+							"name": "Toyota",
+							"uuid": "3c89b447-65e3-4510-9f64-277cfa795e35"
 						},
 						{
-							"name": "Volkswagen"
+							"name": "Volkswagen",
+							"uuid": "677de3a6-6fc7-4731-a0ea-99bf546be8c4"
 						},
 						{
-							"name": "Suzuki"
+							"name": "Suzuki",
+							"uuid": "69584d5d-8a66-4c55-995d-390303e92d0e"
 						},
 						{
-							"name": "Mercedes-Benz"
+							"name": "Mercedes-Benz",
+							"uuid": "a0f76a59-73bf-4be2-a16b-b0dea8b455a4"
 						},
 						{
-							"name": "Saab"
+							"name": "Saab",
+							"uuid": "0021b298-37cf-478c-b3b7-f0df57353a8d"
 						},
 						{
-							"name": "Audi"
+							"name": "Audi",
+							"uuid": "b1f81da5-d758-444d-adc6-9215c38797f3"
 						},
 						{
-							"name": "Kia"
+							"name": "Kia",
+							"uuid": "d3c2c5a0-3918-4914-a437-9232850ec29c"
 						},
 						{
-							"name": "Land Rover"
+							"name": "Land Rover",
+							"uuid": "8b5fbe19-dfe1-498b-bd03-42e01965a716"
 						},
 						{
-							"name": "Doge"
+							"name": "Doge",
+							"uuid": "c14da9b8-4f57-4b27-8db1-4f02cf78688d"
 						},
 						{
-							"name": "Chrysler"
+							"name": "Chrysler",
+							"uuid": "6997418f-adc9-4812-a153-4443f5706150"
 						}, 
 						{
-							"name": "Hummer"
+							"name": "Hummer",
+							"uuid": "f75126dd-ae6e-43c9-8f4a-b690a67eb278"
 						}, 
 						{
-							"name": "Hyundai"
+							"name": "Hyundai",
+							"uuid": "8c99f918-caca-469e-b628-299499fa7985"
 						},
 						{
-							"name": "Jaguar"
+							"name": "Jaguar",
+							"uuid": "a97e90d3-5dee-44bf-9d03-797b493e3328"
 						},
 						{
-							"name": "Jeep"
+							"name": "Jeep",
+							"uuid": "f8c7154a-5379-40e3-89b9-227c39359dad"
 						},
 						{
-							"name": "Nissan"
+							"name": "Nissan",
+							"uuid": "b236ba54-dd16-492f-ba65-72a17f1ffce5"
 						},
 						{
-							"name": "Volvo"
+							"name": "Volvo",
+							"uuid": "e0762258-2703-4c7a-8fd0-6f135ac0399e"
 						},
 						{
-							"name": "Daewoo"
+							"name": "Daewoo",
+							"uuid": "64d7ffee-380f-47b3-b7ce-111c44abc2c8"
 						},
 						{
-							"name": "Fiat"
+							"name": "Fiat",
+							"uuid": "b501f40a-ec22-4439-ace9-e2116e150274"
 						}, 
 						{
-							"name": "MINI"
+							"name": "MINI",
+							"uuid": "ac0c6383-3163-45c2-98ad-765be1c9690c"
 						},
 						{
-							"name": "Smart"
+							"name": "Smart",
+							"uuid": "7ca3a10f-5ffd-4a1d-8b34-ee2a3e419094"
 						}
 					],
 					"allow_other": true,
@@ -409,28 +480,36 @@
 					"accessors": [".color"],
 					"answers": [
 						{
-							"name": "white"
+							"name": "white",
+							"uuid": "cb704076-838a-4509-be88-d3401dab98d0"
 						},
 						{
-							"name": "silver"
+							"name": "silver",
+							"uuid": "f0f874b2-da85-4d36-978d-1b5d7e1ac416"
 						},
 						{
-							"name": "black"
+							"name": "black",
+							"uuid": "5825406c-14f6-47ac-9c05-c5654f3305a8"
 						},
 						{
-							"name": "grey"
+							"name": "grey",
+							"uuid": "d8d7afe2-d363-4227-96d7-c39d3cb0683e"
 						},
 						{ 
-							"name": "blue"
+							"name": "blue",
+							"uuid": "c87757a6-0f0c-4710-97e3-eb9b9fea33b0"
 						},
 						{
-							"name": "red"
+							"name": "red",
+							"uuid": "5509fc39-a4a9-40c6-bba4-0496b51c1972"
 						},
 						{
-							"name": "brown"
+							"name": "brown",
+							"uuid": "e1ceff72-427a-4994-bfb6-25d9805e6be0"
 						},
 						{
-							"name": "green"
+							"name": "green",
+							"uuid": "92e3a70a-7438-4c1c-9b23-f5a51cfa9333"
 						}
 					],
 					"allow_other": true,
@@ -442,75 +521,90 @@
 		},
 		"bicycle": {
 			"description": "optional",
+			"uuid": "c8cfc6a0-1a20-4e89-b879-d7378b882939",
 			"accessors": ["."],
 			"isa": ["vehicle"]
 		},
 		"building": {
 			"description": "optional",
+			"uuid": "3619dc01-f1e2-4791-9ddd-56550c2a6b7d",
 			"accessors": ["."],
 			"isa": []
 		},
 		"TV": {
 			"description": "optional",
+			"uuid": "3699ac56-1356-4695-9195-fbcf18471736",
 			"accessors": ["."],
 			"isa": ["electronics"]
 		},
 		"smartphone": {
 			"description": "optional",
+			"uuid": "729f8759-ed57-4a45-984e-73b0f3f96e14",
 			"accessors": ["."],
 			"isa": ["electronics"]
 		},
 		"cup": {
 			"description": "optional",
+			"uuid": "654c2298-aa63-4d7d-b154-c8b521c26532",
 			"accessors": ["."],
 			"isa": []
 		},
 		"glass": {
 			"description": "optional",
+			"uuid": "f08885f5-e0fa-467f-addf-459013170516",
 			"accessors": ["."],
 			"isa": []
 		},
 		"spoon": {
 			"description": "optional",
+			"uuid": "fa12ab77-acef-40ba-90e1-aba5a8e2c245",
 			"accessors": ["."],
 			"isa": []
 		},
 		"egg": {
 			"description": "optional",
+			"uuid": "fe374440-d36d-4330-9145-ef92507f2c9d",
 			"accessors": ["."],
 			"isa": ["food"]
 		},
 		"tennis ball": {
 			"description": "optional",
+			"uuid": "d040c820-cd47-4159-87e2-a0fe69fa678c",
 			"accessors": ["."],
 			"isa": ["sports"]
 		},
 		"bullet": {
 			"description": "optional",
+			"uuid": "b4f05e83-60c9-4ad6-9d01-222f8d16d4ed",
 			"accessors": ["."],
 			"isa": []
 		},
 		"tree": {
 			"description": "optional",
 			"accessors": ["."],
+			"uuid": "de9c51d5-b633-4a92-be3f-2e09a7ed5dc4",
 			"isa": []
 		},
 		"person": {
 			"description": "optional",
+			"uuid": "64766828-a943-433f-8800-1901cebf959d",
 			"accessors": ["."],
 			"has": {
 				"head": {
-					"description": "optional"
+					"description": "optional",
+					"uuid": "a9b9c7c8-9340-4b91-a573-d1f115b6d137"
 				}
 			}
 		},
 		"grass": {
 			"description": "optional",
-			"accessors": ["."]
+			"accessors": ["."],
+			"uuid": "677600b9-9e2e-48c2-8c4a-efbb72a0753f"
 		},
 		"road": {
 			"description": "optional",
-			"accessors": ["."]
+			"accessors": ["."],
+			"uuid": "26ba089d-d11b-46ff-8f40-e292ba0e7624"
 		}
 	}
 }
