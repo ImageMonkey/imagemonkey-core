@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"github.com/awalterschulze/gographviz"
 	"time"
-	//"io/ioutil"
-	//"encoding/json"
 	"strconv"
 )
 
@@ -102,22 +100,6 @@ func (p *LabelGraph) GetChildren(identifier string) []*gographviz.Node {
 	return result
 }
 
-/*func (p *LabelGraph) GetChildrenIds(identifier string) []string {
-	var uuids []string
-
-	children := p.GetChildren(identifier)
-	for _, child := range children {
-		uuid := child.Attrs["id"]
-		if uuid == "" {
-			continue
-		}
-		uuids = append(uuids, uuid)
-	}
-
-	return uuids
-}*/
-
-
 func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 	var result LabelGraphJson
 	var err error
@@ -160,130 +142,3 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 
 	return result, nil
 }
-
-
-
-/*func getGraphDefinition(filename string) (string, error) {
-	f, err := os.Open(filename)
-	if err != nil{
-		return "", err
-	}
-	defer f.Close()
-
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(f)
-	contents := buf.String()
-
-	return contents, nil
-}*/
-
-/*func findAllChildren(graph *gographviz.Graph, labels []string) {
-
-	if(len(labels) == 0) {
-		return
-	}
-
-	//remove first element from list
-	label := labels[0]
-	labels = append(labels[:0], labels[1:]...)
-
-	childrens := graph.Edges.SrcToDsts[label]
-	for _, child := range childrens {
-	    for _,c := range child {
-	    	labels = append(labels, c.Dst)
-	    	bla = append(bla, c.Dst)
-	    }
-	}
-
-	findAllChildren(graph, labels)
-}*/
-
-
-
-
-/*func findAllChildren(graph *gographviz.Graph, label string) []string {
-	defer timeTrack(time.Now(), "parsing")
-
-	var result []string
-
-	var labels []string
-	labels = append(labels, label)
-
-	var innerFct func(graph *gographviz.Graph, labels []string)
-
-	innerFct = func(graph *gographviz.Graph, labels []string) {
-
-		if(len(labels) == 0) {
-			return
-		}
-
-		//remove first element from list
-		label := labels[0]
-		labels = append(labels[:0], labels[1:]...)
-
-		children := graph.Edges.SrcToDsts[label]
-		for _, child := range children {
-		    for _,c := range child {
-		    	labels = append(labels, c.Dst)
-		    	result = append(result, c.Dst)
-		    }
-		}
-
-		innerFct(graph, labels)
-	}
-
-	
-	innerFct(graph, labels)
-
-	return result
-}*/
-
-func timeTrack(start time.Time, name string) {
-    elapsed := time.Since(start)
-    fmt.Printf("%s took %s", name, elapsed)
-}
-
-
-
-/*func main() {
-	fmt.Printf("Starting..\n")
-
-	path := "../wordlists/en/graph.dot"
-	labelGraph := NewLabelGraph(path)
-	err := labelGraph.Load()
-	if err != nil {
-		panic(err)
-	}
-
-	children := labelGraph.GetChildren("vehicle")
-	for _,child := range children {
-		if _, ok := child.Attrs["id"]; ok {
-			fmt.Printf("contains id: %s\n", child.Name)
-		}
-	}
-
-	labelGraphJson := labelGraph.GetJson()
-	out, _ := json.Marshal(labelGraphJson)
-    err = ioutil.WriteFile("../html/templates/graph.json", out, 0644)
-    if err != nil {
-    	panic(err)
-    }
-*/
-	/*//path := "../wordlists/en/graph.dot"
-	path := "../wordlists/en/graph_big.dot"
-
-	graphDefinition, err := getGraphDefinition(path)
-	if err != nil {
-		panic(err)
-	}
-
-	graphAst, _ := gographviz.ParseString(graphDefinition)
-	graph := gographviz.NewGraph()
-	graph.SetDir(true)
-	if err := gographviz.Analyse(graphAst, graph); err != nil {
-    	panic(err)
-	}
-
-
-	findAllChildren(graph, strconv.Quote("f3ac43bfd30a47139cffd1647e166286"))*/
-//}
