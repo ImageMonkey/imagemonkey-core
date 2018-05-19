@@ -300,12 +300,22 @@ func main() {
 			})
 		})
 		router.GET("/explore", func(c *gin.Context) {
+			type QueryInfo struct {
+				Query string
+				AnnotationsOnly bool
+			}
+
+			var queryInfo QueryInfo
+
+			queryInfo.Query, queryInfo.AnnotationsOnly, _ = getExploreUrlParams(c)
+
 			c.HTML(http.StatusOK, "explore.html", gin.H{
 				"title": "Explore Dataset",
 				"activeMenuNr": 9,
 				"apiBaseUrl": apiBaseUrl,
 				"labelAccessors": pick(getLabelAccessors())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"queryInfo": queryInfo,
 			})
 		})
 		router.GET("/apps", func(c *gin.Context) {
@@ -395,6 +405,16 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": 13,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+			})
+		})
+
+		router.GET("/graph", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "graph.html", gin.H{
+				"title": "Label Graph",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": 14,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"defaultLabelGraphName": "main",
 			})
 		})
 
