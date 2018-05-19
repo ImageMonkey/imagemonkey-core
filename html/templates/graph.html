@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+
+  <style>
+
+	.links line {
+	  stroke: #999;
+	  stroke-opacity: 0.6;
+	}
+
+	.nodes circle {
+	  stroke: #fff;
+	  stroke-width: 1.5px;
+	}
+
+  </style>
+
+  <script type="text/javascript">
+  	var link, simulation, svg, node, radius, color;
+
+	$(document).ready(function(){
+		initializeGraph();
+	});
+
+	function buildQuery(identifier) {
+		var url = '{{ .apiBaseUrl }}/v1/label/graph/query-builder/' + {{ .defaultLabelGraphName }};
+		$.ajax({
+	      url: url,
+	      dataType: 'json',
+	      data: {identifier: encodeURIComponent(identifier)},
+	      success: function(data){
+	      	window.location.href = encodeURI('/explore/?query=' + data.query); //redirect to explore page
+	      }
+	    });
+	}
+
+
+	function initializeGraph() {
+		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + {{ .defaultLabelGraphName }};
+		$.ajax({
+	      url: url,
+	      dataType: 'json',
+	      success: function(data){
+	      	populateGraph(data);
+	      }
+	    });
+	}
+
+	function populateGraph(graph) {
+		var maxWidth = document.getElementById("labelGraphContainer").clientWidth - 50;
+		var maxHeight = 600;
+		$("#labelGraph").attr("width", maxWidth);
+		$("#labelGraph").attr("height", maxHeight);
+
+		svg = d3.select("svg"),
+	    	width = +svg.attr("width"),
+	    	height = +svg.attr("height");
+
+		color = d3.scaleOrdinal(d3.schemeCategory20);
+	  
+		radius = d3.scaleSqrt()
+	    	.range([0, 6]);
+
+		simulation = d3.forceSimulation()
+	    	.force("link", 
+	           d3.forceLink().id(function(d) { return d.id; })
+	            .distance(function(d) { return radius(d.source.size / 2) + radius(d.target.size / 2); })
+	          .strength(function(d) {return 0.75; })
+	          )
+	    	.force("charge", d3.forceManyBody().strength(-300))
+	    	.force("collide", d3.forceCollide().radius(function(d) { return radius(d.size / 2) + 2; }))
+	    	.force("center", d3.forceCenter(width / 2, height / 2));
+
+
+		link = svg.append("g")
+	      .attr("class", "links")
+	    .selectAll("path")
+	    .data(graph.links)
+	    .enter().append("svg:path")
+	      .attr("stroke-width", function(d) { return 1 });
+
+	  	link.style('fill', 'none')
+	      .style('stroke', 'black')
+	      .style("stroke-width", '2px');
+
+
+	  	node = svg.append("g")
+	      .attr("class", "nodes")
+	    .selectAll("g")
+	    .data(graph.nodes)
+	    .enter().append("g")
+	  		.style('transform-origin', '50% 50%')
+	   	.call(d3.drag()
+	          .on("start", dragstarted)
+	          .on("drag", dragged)
+	          .on("end", dragended));
+	  
+	  	node.append('circle')
+	      .attr("r", function(d) { return radius(d.size / 2); })
+	      .attr("fill", function(d) { 
+	      					if(d.color === "") //in case no color is provided, default to grey
+	      						return d3.color("grey");
+	      					return d3.color(d.color); 
+	      				})
+	      .attr("label-identifier", function(d) { return d.identifier; })
+	      .attr("label-uuid", function(d) { return d.uuid; })
+	      .on("click", onNodeClicked);
+
+	    
+	  
+	  	node.append("text")
+	  	  .text(function(d) { return d.name; })
+	      .attr("dy", ".35em")
+	      .attr("text-anchor", "middle")
+	      .style("font-size", function(d) { return d.fontsize + "px"; })
+	      .attr("pointer-events", "none"); //ignore pointer events for text
+
+	  	simulation
+	      .nodes(graph.nodes)
+	      .on("tick", ticked);
+
+	  	simulation.force("link")
+	      .links(graph.links);
+	    
+	}
+
+	function ticked() {
+		link.attr("d", function(d) {
+			var dx = d.target.x - d.source.x,
+			dy = d.target.y - d.source.y,
+			dr = Math.sqrt(dx * dx + dy * dy);
+			return "M" + 
+			d.source.x + "," + 
+			d.source.y + "A" + 
+			dr + "," + dr + " 0 0,1 " + 
+			d.target.x + "," + 
+			d.target.y;
+		});
+
+		node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+	}
+
+	function onNodeClicked(d, i) {
+		d3.select(this).transition()
+	      .style("fill", "black")
+	      .attr("r", 64)
+	    .transition()
+	      .attr("r", 32)
+	      .style("fill", color(i));
+
+	    buildQuery(d3.select(this).attr("label-identifier"));
+	}
+
+
+
+
+	/*d3.json("graph.json", function(error, graph) {
+	  if (error) throw error;
+
+
+	  var link = svg.append("g")
+	      .attr("class", "links")
+	    .selectAll("path")
+	    .data(graph.links)
+	    .enter().append("svg:path")
+	      .attr("stroke-width", function(d) { return 1 });
+
+	  link.style('fill', 'none')
+	      .style('stroke', 'black')
+	      .style("stroke-width", '2px');
+
+
+	  var node = svg.append("g")
+	      .attr("class", "nodes")
+	    .selectAll("g")
+	    .data(graph.nodes)
+	    .enter().append("g")
+	  .style('transform-origin', '50% 50%')
+	   .call(d3.drag()
+	          .on("start", dragstarted)
+	          .on("drag", dragged)
+	          .on("end", dragended));
+	  
+	  node.append('circle')
+	      .attr("r", function(d) { return radius(d.value / 2); })
+	      .attr("fill", function(d) { return color(d.group); })
+	    
+	  
+	  node.append("text")
+	      .attr("dy", ".35em")
+	      .attr("text-anchor", "middle")
+	      .text(function(d) { return d.name; });
+
+	  simulation
+	      .nodes(graph.nodes)
+	      .on("tick", ticked);
+
+	  simulation.force("link")
+	      .links(graph.links);
+
+	  function ticked() {
+	    link.attr("d", function(d) {
+	        var dx = d.target.x - d.source.x,
+	            dy = d.target.y - d.source.y,
+	            dr = Math.sqrt(dx * dx + dy * dy);
+	        return "M" + 
+	            d.source.x + "," + 
+	            d.source.y + "A" + 
+	            dr + "," + dr + " 0 0,1 " + 
+	            d.target.x + "," + 
+	            d.target.y;
+	    });
+	    
+	    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+	  }
+	});*/
+
+	function dragstarted(d) {
+	  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+	  d.fx = d.x;
+	  d.fy = d.y;
+	}
+
+	function dragged(d) {
+	  d.fx = d3.event.x;
+	  d.fy = d3.event.y;
+	}
+
+	function dragended(d) {
+	  if (!d3.event.active) simulation.alphaTarget(0);
+	  d.fx = null;
+	  d.fy = null;
+	}
+
+   </script>
+</head>
+<body>
+	{{ template "menu.html" .}}
+
+	<!-- Page Contents -->
+	<div class="pusher">
+		<div class="ui inverted vertical masthead center aligned segment">
+			{{ template "pointing_menu.html" .}}
+			<div class="ui text container">
+				<h2 class="ui inverted header">Label Graph</h2>
+			</div>
+		</div>
+
+		<div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-9em;">
+			<div class="sixteen wide center aligned column" id="labelGraphContainer">
+				<svg id="labelGraph"></svg>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
