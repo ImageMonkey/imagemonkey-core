@@ -378,7 +378,7 @@ func main(){
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
 	//labelGraphDefinitionPath := flag.String("label_graph_def", "../wordlists/en/graph.dot", "Path to the label graph definition")
-	labelGraphRepositoryPath := flag.String("label_graph_repository", "../wordlists/en/graphdefinitions", "Path to the label graph repository")
+	labelGraphDefinitionsPath := flag.String("label_graph_definitions", "../wordlists/en/graphdefinitions", "Path to the label graph definitions")
 
 	flag.Parse()
 	if *releaseMode {
@@ -416,7 +416,7 @@ func main(){
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
 
-	labelGraphRepository := NewLabelGraphRepository(*labelGraphRepositoryPath)
+	labelGraphRepository := NewLabelGraphRepository(*labelGraphDefinitionsPath)
 	err = labelGraphRepository.Load()
 	if err != nil {
 		log.Fatal("[Main] Couldn't load label graph repository: ", err.Error())
