@@ -19,6 +19,8 @@ import (
     log "github.com/Sirupsen/logrus"
     "net/url"
     "strconv"
+    "errors"
+    "github.com/gin-gonic/gin"
 )
 
 type Report struct {
@@ -60,6 +62,7 @@ type LabelMapQuizExampleEntry struct {
 type LabelMapQuizAnswerEntry struct {
     Name string `json:"name"`
     Examples []LabelMapQuizExampleEntry `json:"examples"`
+    Uuid string `json:"uuid"`
 }
 
 
@@ -79,6 +82,7 @@ type LabelMapEntry struct {
     LabelMapEntries map[string]LabelMapEntry  `json:"has"`
     Accessors []string `json:accessors"`
     Quiz []LabelMapQuizEntry `json:quiz"`
+    Uuid string `json:"uuid"`
 }
 
 type LabelMap struct {
@@ -407,4 +411,118 @@ func getLabelIdFromUrlParams(params url.Values) (int64, error) {
     }
 
     return labelId, nil
+}
+
+/*func handleExploreUrlParams(c *gin.Context) ([]ExportedImage, error, int) {
+    var exportedData []ExportedImage
+
+    params := c.Request.URL.Query()
+
+    annotationsOnly := false
+    if temp, ok := params["annotations_only"]; ok {
+        if temp[0] == "true" {
+            annotationsOnly = true
+        }
+    }
+
+    if temp, ok := params["query"]; ok {
+        if temp[0] == "" {
+            return exportedData, errors.New("no query specified"), 422
+        }
+
+
+        query, err := url.QueryUnescape(temp[0])
+        if err != nil {
+            return exportedData, errors.New("invalid query"), 422
+        }
+
+        queryParser := NewQueryParser(query, false)
+        parseResult, err := queryParser.Parse()
+        if err != nil {
+            return exportedData, err, 422
+        }
+
+        exportedData, err := export(parseResult, annotationsOnly)
+        if err == nil {
+            return exportedData, nil, 200
+        } else{
+            return exportedData, errors.New("Couldn't export data, please try again later."), 500
+        }
+    } else {
+        return exportedData, errors.New("no query specified"), 422
+    }
+
+    return exportedData, nil, 200 */
+
+    /*params := c.Request.URL.Query()
+
+    annotationsOnly := false
+    if temp, ok := params["annotations_only"]; ok {
+        if temp[0] == "true" {
+            annotationsOnly = true
+        }
+    }
+
+    if temp, ok := params["query"]; ok {
+        if temp[0] == "" {
+            c.JSON(422, gin.H{"error": "no query specified"})
+            return
+        }
+
+
+        query, err := url.QueryUnescape(temp[0])
+        if err != nil {
+            c.JSON(422, gin.H{"error": "invalid query"})
+            return
+        }
+
+        queryParser := NewQueryParser(query, false)
+        parseResult, err := queryParser.Parse()
+        if err != nil {
+            c.JSON(422, gin.H{"error": err.Error()})
+            return
+        }
+
+        jsonData, err := export(parseResult, annotationsOnly)
+        if(err == nil){
+            c.JSON(http.StatusOK, jsonData)
+            return
+        } else{
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't export data, please try again later."})
+            return
+        }
+    } else {
+        c.JSON(422, gin.H{"error": "no query specified"})
+        return
+    }*/
+//}
+
+func getExploreUrlParams(c *gin.Context) (string, bool, error) {
+    var query string
+    var err error
+
+    params := c.Request.URL.Query()
+
+    annotationsOnly := false
+    if temp, ok := params["annotations_only"]; ok {
+        if temp[0] == "true" {
+            annotationsOnly = true
+        }
+    }
+
+    if temp, ok := params["query"]; ok {
+        if temp[0] == "" {
+            return "", annotationsOnly, errors.New("no query specified")
+        }
+
+
+        query, err = url.QueryUnescape(temp[0])
+        if err != nil {
+            return "", annotationsOnly, errors.New("invalid query")
+        }
+    } else {
+        return "", annotationsOnly, errors.New("no query specified")
+    }
+
+    return query, annotationsOnly, nil 
 }
