@@ -4,6 +4,7 @@ import(
 	"unicode"
 	"errors"
 	"strconv"
+    "github.com/satori/go.uuid"
 	"regexp"
 )
 
@@ -27,6 +28,14 @@ func IsLetter(s string) bool {
     return true
 }
 
+func IsUuid(s string) bool {
+    _, err := uuid.FromString(s)
+    if err == nil {
+        return true
+    }
+    return false
+}
+
 func IsAssignment(s string) bool {
 	match, _ := regexp.MatchString("^[a-zA-Z]*\\.[a-zA-Z]*='[a-zA-Z\\s]*'$", s)
 	return match
@@ -43,7 +52,7 @@ func StrToToken(str string) Token {
 		case ")":
 			return RPAR
 		default:
-			if IsAssignment(str) || IsLetter(str) {
+			if IsAssignment(str) || IsLetter(str) || IsUuid(str) {
 				return LABEL
 			}
 	}
@@ -153,11 +162,13 @@ type QueryParser struct {
     lastStrToken string
 	isFirst bool
 	brackets int32
+    isUuidQuery bool
 }
 
 type ParseResult struct {
 	input string
 	query string
+    isUuidQuery bool
 	//validationQuery string
 	queryValues []interface{}
 }
@@ -172,6 +183,9 @@ func NewQueryParser(query string) *QueryParser {
 func (p *QueryParser) Parse() (ParseResult, error) {
 	parseResult := ParseResult{}
 	parseResult.query = ""
+    parseResult.isUuidQuery = p.isUuidQuery
+
+    parseResult.isUuidQuery = false
 
     tokens := Tokenize(p.query)
 
@@ -190,6 +204,11 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     			return parseResult, errors.New(e)
     		}
 
+            //use the first entry to determine whether its a UUID or not. We can't have both labels and UUIDs in the same query, so
+            //we use the first entry to determine the type of the query.
+            parseResult.isUuidQuery = IsUuid(token)
+
+
     		p.isFirst = false
     	} else {
     		if !IsTokenValid(t, p.lastToken) {
@@ -199,7 +218,11 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     	}
 
     	if t == LABEL {
-    		parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+            if parseResult.isUuidQuery {
+                parseResult.query += ("l.uuid = $" + strconv.Itoa(i))
+            } else {
+                parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+            }
     		parseResult.queryValues = append(parseResult.queryValues, token)
     		i += 1
     		numOfLabels += 1
