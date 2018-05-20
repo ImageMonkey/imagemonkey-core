@@ -40,7 +40,7 @@
 	});
 
 	function buildQuery(identifier) {
-		var url = '{{ .apiBaseUrl }}/v1/label/graph/query-builder/' + {{ .defaultLabelGraphName }};
+		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + {{ .defaultLabelGraphName }} + '/query-builder';
 		$.ajax({
 	      url: url,
 	      dataType: 'json',
