@@ -30,14 +30,12 @@
 	  	stroke-width: 1.5px;
 	}
 
-	.mytooltip {
+	.tooltip {
 	  	position:absolute;
 	  	text-align: center;
 	  	width: 450px;
 	  	height:auto;
 	  	background-color: #ffffff;
-	  	//background-color: #EDE3D1;
-	  	//border-radius: 10px;
 	  	color: #787777;
 	  	padding: 6px 12px;
 	  	z-index:3;
@@ -48,21 +46,7 @@
 	  	box-shadow: 7px 7px 35px -20px rgba(0,0,0,1);
 	}
 
-	/*.mytooltip:after {
-	  //box-sizing: border-box;
-	  display: inline;
-	  width: 100%;
-	  line-height: 1;
-	  color: #EDE3D1;
-	  content: "\25BC";
-	  position: absolute;
-	  text-align: center;
-	  //margin: -3px 0 0 0;
-	  top: 100%;
-	  //left: 0;
-	}*/
-
-	.mytooltip span {
+	.tooltip span {
 	    display: block;
 	    text-align: center;
 	    width: 450px;
@@ -70,7 +54,7 @@
 	    margin: 5px auto;
   	}
 
-	#toolTipDescription {
+	#tooltipDescription {
     	display:block;
     	width: 400px;
     	word-wrap:break-word;
@@ -88,7 +72,7 @@
   </style>
 
   <script type="text/javascript">
-  	var link, simulation, svg, node, radius, color, div;
+  	var link, simulation, svg, node, radius, color, tooltip;
 
 	$(document).ready(function(){
 		initializeGraph();
@@ -219,9 +203,9 @@
 	  	simulation.force("link")
 	      .links(graph.links);
 
-	    div = d3.select("body")
+	    tooltip = d3.select("body")
                   .append("div")
-                        .attr("class", "mytooltip")
+                        .attr("class", "tooltip")
                         .style("opacity", 0)
                         .style("position","fixed")
                         .style("display", "block")
@@ -232,35 +216,25 @@
 	}
 
 	function hideTooltip() {
-		/*d3.select(this).attr({
-	        r: radius
-	    });*/
 	    d3.selectAll(".crosshair")
 	        .style("display", "none");
 
-	    div.transition()
+	    tooltip.transition()
 	        .duration(100)       
 	        .style("display", "none");
 	}
 
 	function showTooltip(nodeName, data, xPos, yPos) {
-        /*d3.select(this).attr({
-            r: radius * 2
-        });*/
         d3.selectAll(".crosshair")
         .style("display", "block");
 
-        //var xCoord = d3.mouse(this)[0];
-        //var yCoord = d3.mouse(this)[1];
-
-        //addCrossHair(xCoord, yCoord);
-        div
+        tooltip
         .style("top", (yPos + 2) + "px")
         .style("left", (xPos - 28) + "px")
         .style("opacity", 0.9)
         .style("display", "block")
         .html(
-        	"<div id='thumbnail'><span>" + nodeName + "</span><img src='" + data["thumbnail"]["source"] + "' /><span id='toolTipDescription'>" + data["extract_html"] + "</span></div>")
+        	"<div id='thumbnail'><span>" + nodeName + "</span><img src='" + data["thumbnail"]["source"] + "' /><span id='tooltipDescription'>" + data["extract_html"] + "</span></div>")
         .style("left", (xPos - 113) + "px")   
         .style("top", (yPos - 190) + "px");
 	}
