@@ -19,6 +19,7 @@ type LabelGraphNode struct {
     FontSize string `json:"fontsize"`
     Color string `json:"color"`
     Uuid string `json:"uuid"`
+    OnHover string `json:"onhover"`
 }
 
 type LabelGraphEdge struct {
@@ -113,6 +114,7 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		var labelGraphNode LabelGraphNode
 		labelGraphNode.Id = i
 		labelGraphNode.Idenfifier = node.Name
+		labelGraphNode.OnHover = node.Attrs["URL"]
 		labelGraphNode.Size = node.Attrs["size"]
 		if labelGraphNode.Size == "" {
 			labelGraphNode.Size = "100"
