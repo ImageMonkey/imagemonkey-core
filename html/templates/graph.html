@@ -21,19 +21,74 @@
   <style>
 
 	.links line {
-	  stroke: #999;
-	  stroke-opacity: 0.6;
+	  	stroke: #999;
+	  	stroke-opacity: 0.6;
 	}
 
 	.nodes circle {
-	  stroke: #fff;
-	  stroke-width: 1.5px;
+	  	stroke: #fff;
+	  	stroke-width: 1.5px;
 	}
+
+	.mytooltip {
+	  	position:absolute;
+	  	text-align: center;
+	  	width: 450px;
+	  	height:auto;
+	  	background-color: #ffffff;
+	  	//background-color: #EDE3D1;
+	  	//border-radius: 10px;
+	  	color: #787777;
+	  	padding: 6px 12px;
+	  	z-index:3;
+
+	  	//box shadow (generated with: https://www.cssmatic.com/box-shadow)
+	  	-webkit-box-shadow: 7px 7px 35px -20px rgba(0,0,0,1);
+	  	-moz-box-shadow: 7px 7px 35px -20px rgba(0,0,0,1);
+	  	box-shadow: 7px 7px 35px -20px rgba(0,0,0,1);
+	}
+
+	/*.mytooltip:after {
+	  //box-sizing: border-box;
+	  display: inline;
+	  width: 100%;
+	  line-height: 1;
+	  color: #EDE3D1;
+	  content: "\25BC";
+	  position: absolute;
+	  text-align: center;
+	  //margin: -3px 0 0 0;
+	  top: 100%;
+	  //left: 0;
+	}*/
+
+	.mytooltip span {
+	    display: block;
+	    text-align: center;
+	    width: 450px;
+	    height: auto;
+	    margin: 5px auto;
+  	}
+
+	#toolTipDescription {
+    	display:block;
+    	width: 400px;
+    	word-wrap:break-word;
+  	}
+
+	#thumbnail {
+	    width: 450px;
+	    height: auto;
+	    margin: 0 auto;
+	    color: #787777;
+	    text-align: center;
+  	}
+
 
   </style>
 
   <script type="text/javascript">
-  	var link, simulation, svg, node, radius, color;
+  	var link, simulation, svg, node, radius, color, div;
 
 	$(document).ready(function(){
 		initializeGraph();
@@ -49,6 +104,19 @@
 	      	window.location.href = encodeURI('/explore/?query=' + data.query); //redirect to explore page
 	      }
 	    });
+	}
+
+	function showWikipediaPagePreview(name, xPos, yPos) {
+		var url = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + name;
+		$.ajax({
+	      url: url,
+	      dataType: 'json',
+	      success: function(data){
+	      	showTooltip(name, data, xPos, yPos);
+	      }
+	    });
+
+		
 	}
 
 
@@ -122,7 +190,18 @@
 	      				})
 	      .attr("label-identifier", function(d) { return d.identifier; })
 	      .attr("label-uuid", function(d) { return d.uuid; })
-	      .on("click", onNodeClicked);
+	      .on("click", onNodeClicked)
+	      .on("mouseenter", function(d) {
+	      		if(d.onhover !== "") { //in case the node contains a 'onhover' property
+	      			showWikipediaPagePreview(d.name, d3.event.pageX, d3.event.pageY);
+	            }
+            })
+
+            .on("mouseout", function(d) {
+            	if(d.onhover !== "") {
+	                hideTooltip();
+	            }
+            });
 
 	    
 	  
@@ -139,8 +218,53 @@
 
 	  	simulation.force("link")
 	      .links(graph.links);
+
+	    div = d3.select("body")
+                  .append("div")
+                        .attr("class", "mytooltip")
+                        .style("opacity", 0)
+                        .style("position","fixed")
+                        .style("display", "block")
+                        .style("top", 100)
+                        .style("left", 100)
+                        .style("pointer-events","none");
 	    
 	}
+
+	function hideTooltip() {
+		/*d3.select(this).attr({
+	        r: radius
+	    });*/
+	    d3.selectAll(".crosshair")
+	        .style("display", "none");
+
+	    div.transition()
+	        .duration(100)       
+	        .style("display", "none");
+	}
+
+	function showTooltip(nodeName, data, xPos, yPos) {
+        /*d3.select(this).attr({
+            r: radius * 2
+        });*/
+        d3.selectAll(".crosshair")
+        .style("display", "block");
+
+        //var xCoord = d3.mouse(this)[0];
+        //var yCoord = d3.mouse(this)[1];
+
+        //addCrossHair(xCoord, yCoord);
+        div
+        .style("top", (yPos + 2) + "px")
+        .style("left", (xPos - 28) + "px")
+        .style("opacity", 0.9)
+        .style("display", "block")
+        .html(
+        	"<div id='thumbnail'><span>" + nodeName + "</span><img src='" + data["thumbnail"]["source"] + "' /><span id='toolTipDescription'>" + data["extract_html"] + "</span></div>")
+        .style("left", (xPos - 113) + "px")   
+        .style("top", (yPos - 190) + "px");
+	}
+
 
 	function ticked() {
 		link.attr("d", function(d) {
