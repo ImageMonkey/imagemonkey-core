@@ -117,7 +117,7 @@
 
 	function populateGraph(graph) {
 		var maxWidth = document.getElementById("labelGraphContainer").clientWidth - 50;
-		var maxHeight = 600;
+		var maxHeight = 1500;
 		$("#labelGraph").attr("width", maxWidth);
 		$("#labelGraph").attr("height", maxHeight);
 
@@ -131,15 +131,12 @@
 	    	.range([0, 6]);
 
 		simulation = d3.forceSimulation()
-	    	.force("link", 
-	           d3.forceLink().id(function(d) { return d.id; })
-	            .distance(function(d) { return radius(d.source.size / 2) + radius(d.target.size / 2); })
-	          .strength(function(d) {return 0.75; })
-	          )
-	    	.force("charge", function(d, i) { return d.identifier=="root" ? -10000 : -300; })
-	    	//.force("charge", d3.forceManyBody().strength(-300))
-	    	.force("collide", d3.forceCollide().radius(function(d) { return radius(d.size / 2) + 2; }))
-	    	.force("center", d3.forceCenter(width / 2, height / 2));
+		.force("link", d3.forceLink()
+			.id(function(d) { return d.id; }))
+		.force("charge", d3.forceManyBody()
+			.strength(function(d) { return -600;}))
+		.force("center", d3.forceCenter(width / 2, height / 2))
+		.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(100).strength(1));
 
 
 		link = svg.append("g")
