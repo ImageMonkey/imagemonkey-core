@@ -86,6 +86,7 @@ func (p *LabelGraph) GetChildren(identifier string) []*gographviz.Node {
 		identifier := identifiers[0]
 		identifiers = append(identifiers[:0], identifiers[1:]...)
 
+		result = append(result, p.graph.Nodes.Lookup[identifier])
 		children := p.graph.Edges.SrcToDsts[identifier]
 		for _, child := range children {
 		    for _,c := range child {
