@@ -5,7 +5,7 @@ digraph G {
 		vehicle [label="vehicle" size=150 fontsize=20 color=blue]
 		tree [label="tree" id="de9c51d5-b633-4a92-be3f-2e09a7ed5dc4"]
 		building [label="building" id="3619dc01-f1e2-4791-9ddd-56550c2a6b7d"]
-		car [label="car" id="94bbd2ff-8a8e-4d1c-9ac5-f9506aa20e43" URL="car"] 
+		car [label="car" id="67f02864-cb77-48aa-811c-7633a7d7d564" URL="car"] 
 		bicycle [label="bicycle" id="c8cfc6a0-1a20-4e89-b879-d7378b882939"]
 		road [label="road" id="26ba089d-d11b-46ff-8f40-e292ba0e7624"]
 		person [label="person", id="64766828-a943-433f-8800-1901cebf959d"]
