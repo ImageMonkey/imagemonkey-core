@@ -305,7 +305,12 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
     //image doesn't already exist, so save it and add it to the database
-	uuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Couldn't set add photo - please try again later"})	
+		return
+	}
+	uuid := u.String()
 	err = c.SaveUploadedFile(header, (dir + uuid))
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Couldn't set add photo - please try again later"})	
@@ -1571,7 +1576,12 @@ func main(){
 	        	return
 	        }
 
-	        uuid := uuid.NewV4().String()
+	        u, err := uuid.NewV4()
+	        if err != nil {
+	        	c.JSON(500, gin.H{"error": "Couldn't set profile picture - please try again later"})	
+				return
+	        }
+	        uuid := u.String()
 			err = c.SaveUploadedFile(header, (*userProfilePicturesDir + uuid))
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't set profile picture - please try again later"})	
