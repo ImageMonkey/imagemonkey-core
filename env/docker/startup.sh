@@ -1,10 +1,11 @@
 #!/bin/bash
 sleep infinity & PID=$!
 trap "kill $PID" INT TERM
+trap "kill 0" EXIT
 
 echo "Starting PostgreSQL..."
 #start postgres
-./start_postgres.sh 
+/root/imagemonkey-core/env/docker/start_postgres.sh 
 
 echo "Starting redis-server..."
 #start redis server
