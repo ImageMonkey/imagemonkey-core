@@ -384,6 +384,7 @@ func main(){
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
 	//labelGraphDefinitionPath := flag.String("label_graph_def", "../wordlists/en/graph.dot", "Path to the label graph definition")
 	labelGraphDefinitionsPath := flag.String("label_graph_definitions", "../wordlists/en/graphdefinitions", "Path to the label graph definitions")
+	listenPort := flag.Int("listen_port", 8081, "Specify the listen port")
 
 	flag.Parse()
 	if *releaseMode {
@@ -1751,6 +1752,5 @@ func main(){
 		})
 	}
 
-
-	router.Run(":8081")
+	router.Run(":" + strconv.FormatInt(int64(*listenPort), 10))
 }

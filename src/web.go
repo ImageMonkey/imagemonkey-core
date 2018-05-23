@@ -50,6 +50,7 @@ func main() {
 	htmlDir := flag.String("html_dir", "../html/templates/", "Location of the html directory")
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
+	listenPort := flag.Int("listen_port", 8080, "Specify the listen port")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -436,5 +437,5 @@ func main() {
 		})*/
 	}
 
-	router.Run(":8080")
+	router.Run(":" + strconv.FormatInt(int64(*listenPort), 10))
 }
