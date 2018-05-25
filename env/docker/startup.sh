@@ -12,9 +12,10 @@ echo "Starting redis-server..."
 service redis-server start
 
 
-#copy original imagemonkey-web.conf file and replace it with API_BASE_URL from env variable
+#copy original imagemonkey-web.conf file 
 cp /tmp/imagemonkey-web.conf.bak /etc/supervisor/conf.d/imagemonkey-web.conf
-sed -i.bak 's/-api_base_url=xxxxxx/-api_base_url='"$API_BASE_URL"'/g' /etc/supervisor/conf.d/imagemonkey-web.conf
+#and replace api_base_url with API_BASE_URL from env variable (use @ as delimiter)
+sed -i.bak 's@-api_base_url=xxxxxx@-api_base_url='"$API_BASE_URL"'@g' /etc/supervisor/conf.d/imagemonkey-web.conf
 
 
 echo "Starting supervisord..."
