@@ -13,7 +13,8 @@ service redis-server start
 
 echo "Starting supervisord..."
 #start supervisord
-service supervisor start && supervisorctl reread && supervisorctl update && supervisorctl restart all
+#service supervisor start && 
+supervisorctl reread && supervisorctl update && supervisorctl restart all
 
 echo ""
 echo ""
