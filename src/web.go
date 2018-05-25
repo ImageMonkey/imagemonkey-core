@@ -64,12 +64,6 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	//in case 'fromenv' is passed as api_base_url, get API URL from
-	//environment variable
-	if *apiBaseUrl == "fromenv" {
-		*apiBaseUrl = os.Getenv("API_BASE_URL")
-	}
-
 	if *useSentry {
 		fmt.Printf("Setting Sentry DSN\n")
 		raven.SetDSN(SENTRY_DSN)
