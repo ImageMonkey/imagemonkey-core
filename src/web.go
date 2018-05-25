@@ -56,6 +56,12 @@ func main() {
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
 
+	//in case 'fromenv' is passed as api_base_url, get API URL from
+	//environment variable
+	if *apiBaseUrl == "fromenv" {
+		*apiBaseUrl = os.Getenv("API_BASE_URL")
+	}
+
 
 	sessionCookieHandler := NewSessionCookieHandler()
 
