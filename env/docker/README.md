@@ -1,6 +1,6 @@
 The following document briefly describes how to start up your own ImageMonkey instance in a Docker container. 
 
-#Scenario #1
+# Scenario #1
 This is the most common scenario and the easiest to set up. Choose this option, if your web browser and your docker container will run on the same machine. 
 
 * install docker
@@ -11,7 +11,7 @@ This will start a new ImageMonkey docker instance on your machine. After your do
 
 Now open your browser and navigate to `http://127.0.0.1:8080`
 
-#Scenario #2
+# Scenario #2
 As docker acquires a significant portion of your systems resources, one might want to run the docker instance on a different machine. 
 
 Let's assume your workstation has the private IP `192.168.1.9`. As your workstation is quite old, you want to run the ImageMonkey docker container on a different machine (e.q Raspberry Pi) which is in the same subnet and has the IP `192.168.1.16`. 
