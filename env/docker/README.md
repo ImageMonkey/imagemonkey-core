@@ -4,8 +4,9 @@ The following document briefly describes how to start up your own ImageMonkey in
 This is the most common scenario and the easiest to set up. Choose this option, if your web browser and your docker container will run on the same machine. 
 
 * install docker
-* run `docker pull bbernhard/imagemonkey-core`
-* start docker instance with `docker run --ulimit nofile=90000:90000 -p 8080:8080 -p 8081:8081 imagemonkey`
+* download ImageMonkey Dockerfile with `https://raw.githubusercontent.com/bbernhard/imagemonkey-core/develop/env/docker/Dockerfile`
+* change into the directory where the Dockerfile resides and run `docker build -t imagemonkey-core .`
+* start docker instance with `docker run --ulimit nofile=90000:90000 -p 8080:8080 -p 8081:8081 imagemonkey-core`
 
 This will start a new ImageMonkey docker instance on your machine. After your docker instance is up and running, you will see the following screen: 
 
@@ -17,8 +18,9 @@ As docker acquires a significant portion of your systems resources, one might wa
 Let's assume your workstation has the private IP `192.168.1.9`. As your workstation is quite old, you want to run the ImageMonkey docker container on a different machine (e.q Raspberry Pi) which is in the same subnet and has the IP `192.168.1.16`. 
 
 * install docker
-* run `docker pull bbernhard/imagemonkey-core`
-* start docker instance with `docker run -e API_BASE_URL=http://192.168.1.16:8081 --ulimit nofile=90000:90000 -p 8080:8080 -p 8081:8081 imagemonkey`
+* download ImageMonkey Dockerfile with `https://raw.githubusercontent.com/bbernhard/imagemonkey-core/develop/env/docker/Dockerfile`
+* change into the directory where the Dockerfile resides and run `docker build -t imagemonkey-core .`
+* start docker instance with `docker run -e API_BASE_URL=http://192.168.1.16:8081 --ulimit nofile=90000:90000 -p 8080:8080 -p 8081:8081 imagemonkey-core`
 
 The docker run command looks almost identical to the one in Scenario #1, except that we are setting the `API_BASE_URL` environmental variable inside the docker container to the host systems IP (i.e `192.168.1.16`).
 
