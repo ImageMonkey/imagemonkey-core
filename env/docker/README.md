@@ -22,7 +22,7 @@ Let's assume your workstation has the private IP `192.168.1.9`. As your workstat
 
 The docker run command looks almost identical to the one in Scenario #1, except that we are setting the `API_BASE_URL` environmental variable inside the docker container to the host systems IP (i.e `192.168.1.16`).
 
-
+# FAQ
 **Detailed description of the docker run command** 
 
 `-p 8080:8080 -p 8081:8081`
