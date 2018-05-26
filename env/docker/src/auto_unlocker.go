@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"bytes"
 	"flag"
+	"time"
 )
 
 
@@ -25,7 +26,7 @@ func unlockImage(imageId string) {
     defer resp.Body.Close()
 
     if resp.StatusCode != 201 {
-    	log.Fatal("Couldn't auto-unlock image: ")
+    	log.Fatal("Couldn't auto-unlock image. Status code: ", resp.StatusCode)
     }
 }
 
@@ -47,8 +48,15 @@ func main() {
 	    for {
 	        select {
 	        case event := <-watcher.Events:
-	            //log.Println("event:", event)
 	            if event.Op == fsnotify.Create {
+	            	//this is a pretty ugly fix for a race condition. 
+	            	//when a new image gets uploaded, the file is first written
+	            	//to the filesystem, before the image entry gets added to the database. 
+	            	//so we sleep a bit here in order to make sure that the image entry
+	            	//is for sure in the database. this is pretty ugly and error prone, but
+	            	//for now it works
+	            	time.Sleep(500 * time.Millisecond)
+
 	            	fname := filepath.Base(event.Name)
 	            	log.Info("detected new file: ", fname)
 	            	unlockImage(fname)
