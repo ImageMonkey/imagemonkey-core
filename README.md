@@ -11,12 +11,7 @@ There are basically two ways to set up your own `ImageMonkey` instance. You can 
 
 ## Docker ## 
 
-* clone the imagemonkey-core repository with: `git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core`
-* `cd imagemonkey-core/env/docker/`
-* build the imagemonkey-core image with: `docker build -t imagemonkey-core .`
-* start instance with: `docker run --rm -P --name imagemonkey-core-instance imagemonkey-core`
-* get the docker host ip with: `docker-machine env`
-* you can now connect from your host system to the docker machine via: <docker_host_ip>:8080 (website) and <docker_host_ip>:8081 (REST API) 
+[Run ImageMonkey inside Docker](https://github.com/bbernhard/imagemonkey-core/blob/develop/env/docker/README.md)
 
 The docker image is for development only - do **NOT** use it in production!
 
