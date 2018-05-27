@@ -605,6 +605,31 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "26ba089d-d11b-46ff-8f40-e292ba0e7624"
+		},
+		"bollard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "58899bce-7214-4930-8beb-cb06faa189e5"
+		},
+		"pavement": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f81d3628-5f98-41e9-9967-1a13f88160c7"
+		},
+		"foliage": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "54f0c7a6-6c20-4e96-bf4a-28bebbc6580e"
+		},
+		"bush": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6e045775-6798-4b70-aaa8-b76b79ede454"
+		},
+		"chair": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ace0d018-f335-4947-8604-69323f375b1b"
 		}
 	}
 }
