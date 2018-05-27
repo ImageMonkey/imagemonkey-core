@@ -10,7 +10,13 @@ This is the most common scenario and the easiest to set up. Choose this option, 
 
 This will start a new ImageMonkey docker instance on your machine. After your docker instance is up and running, you will see the following screen: 
 
+![alt text](https://raw.githubusercontent.com/bbernhard/imagemonkey-core/develop/env/docker/documentation/screenshots/docker_container_ready.png)
+
 Now open your browser and navigate to `http://127.0.0.1:8080`
+
+![alt text](https://raw.githubusercontent.com/bbernhard/imagemonkey-core/develop/env/docker/documentation/screenshots/imagemonkey_localhost.png)
+
+You can now upload your first image to your own ImageMonkey instance.
 
 # Scenario #2
 As docker acquires a significant portion of your systems resources, one might want to run the docker instance on a different machine. 
