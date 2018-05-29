@@ -57,36 +57,52 @@
     <div class="ui text container">
 
       <div class="row">
-        One of the best things about ImageMonkey is our tight integration with Tensorflow.<br><br>You want to train your own image classifier based on the ImageMonkey dataset?<br>
+        One of the best things about ImageMonkey is our tight integration with Tensorflow.<br>You want to train your own image classifier based on the ImageMonkey dataset?<br> <br>
         It's as easy as that:<br><br>
 
-        <h3>Install pyimagemonkey</h3>
-        Execute the following command to install our Python library (<b>Python 3.5.x</b> required!)
         <div class="ui segment">
-          <pre><code class="python">
-        pip install pyimagemonkey
+          <pre><code class="bash">
+    docker pull bbernhard/imagemonkey-train:latest
+    docker run -it bbernhard/imagemonkey-train
           </code></pre>
         </div>
-        
-        <h3>Train model</h3>
+        <br>
+        This will download and run a docker image that was prepared to integrate with Tensorflow and ImageMonkey seamlessly. After you've started the 
+        docker container, use the <strong>monkey</strong> script to interact with ImageMonkey dataset. <br><br>
+
+        Here's a list of all available commands:  
+
         <div class="ui segment">
-          <pre><code class="python">
-        import logging
+          <pre><code class="bash">
+      root@ecebfa2aea35:/# monkey --help
+      usage: PROG [-h] {train,list-labels} ...
 
-        from pyimagemonkey import API
-        from pyimagemonkey import TensorflowTrainer
+      positional arguments:
+        {train,list-labels}
+        train              train your own model
+        list-labels        list all labels that are available at ImageMonkey
 
-        if __name__ == "__main__":
-            logging.basicConfig()
-
-            tensorflow_trainer = TensorflowTrainer("C:\\training", 
-            clear_before_start=True, auto_download_tensorflow_train_script=True)
-            tensorflow_trainer.train(["dog", "cat"], min_probability = 0.8)
+        optional arguments:
+        -h, --help           show this help message and exit
           </code></pre>
         </div>
+        <br><br><br>
 
-        This automatically downloads all images that are either marked as <code class="bash">dog</code> or <code class="bash">cat</code> to the folder <code class="bash">C:\training</code> and starts the transfer learning based on the
-        <code class="bash">Inception v3</code> model.
+        Let's assume you want to train your image classifier on all images that are labeled with dog or cat. 
+        Then simply run 
+
+        <div class="ui segment">
+          <pre><code class="bash">
+      monkey train --labels "cat|dog"
+          </code></pre>
+        </div>
+        <br>
+        lean back and go get yourself a coffee ;-)
+
+        <br><br><br>
+        <h1>P.S.</h1>
+        In case you want to access ImageMonkey via Python, have a look at our <a href="https://github.com/bbernhard/imagemonkey-libs">Python library</a>. 
+        But keep in mind, the library is still in an alpha stage and the API might change at any point!
       </div>
     </div>
   </div>
