@@ -1731,7 +1731,7 @@ func main(){
 		})
 
 
-		router.GET("/v1//statistics/annotation", func(c *gin.Context) {
+		router.GET("/v1/statistics/annotation", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			statistics, err := getAnnotationStatistics("last-month")
 			if err != nil {
@@ -1741,7 +1741,7 @@ func main(){
 			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
 		})
 
-		router.GET("/v1//statistics/validation", func(c *gin.Context) {
+		router.GET("/v1/statistics/validation", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			statistics, err := getValidationStatistics("last-month")
 			if err != nil {
@@ -1749,6 +1749,36 @@ func main(){
 				return
 			}
 			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
+		})
+
+		/*router.GET("/v1/activity/validation", func(c *gin.Context) {
+			//currently only last-month is allowed as period
+			activity, err := getValidationActivity("last-month")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, gin.H{"activity": activity, "period": "last-month"})
+		})
+
+		router.GET("/v1/activity/annotation", func(c *gin.Context) {
+			//currently only last-month is allowed as period
+			activity, err := getAnnotationActivity("last-month")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, gin.H{"activity": activity, "period": "last-month"})
+		})*/
+
+		router.GET("/v1/activity", func(c *gin.Context) {
+			//currently only last-month is allowed as period
+			activity, err := getActivity("last-month")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, gin.H{"activity": activity, "period": "last-month"})
 		})
 	}
 

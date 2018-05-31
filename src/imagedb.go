@@ -253,6 +253,19 @@ type DataPoint struct {
     Date string `json:"date"`
 }
 
+type Activity struct {
+    Name string `json:"name"`
+    Type string `json:"type"`
+    Date string `json:"date"`
+    Image struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+        Annotation json.RawMessage `json:"annotation"`
+        Label string `json:"label"`
+    } `json:"image"`
+}
+
 type APIToken struct {
     IssuedAtUnixTimestamp int64 `json:"issued_at"`
     Token string `json:"token"`
@@ -2566,6 +2579,327 @@ func getValidationStatistics(period string) ([]DataPoint, error) {
     }
 
     return validationStatistics, nil
+}
+
+/*func getValidationActivity(period string) ([]Activity, error) {
+    var activity []Activity
+
+    if period != "last-month" {
+        return activity, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height FROM
+                            (
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(v.sys_period) as dt
+                                    FROM image_validation v 
+                                    WHERE id NOT IN ( SELECT id FROM image_validation_history h
+                                                      WHERE h.label_id = v.label_id and v.image_id = h.image_id
+                                                    )
+                                    AND 
+                                    (
+                                            date(lower(v.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(lower(v.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION
+
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt
+                                    FROM image_validation_history h
+                                    WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION ALL
+
+                                (
+                                    SELECT v.label_id, v.image_id, 'verified' as type, upper(h.sys_period) as dt
+                                    FROM image_validation_history h
+                                    JOIN image_validation v 
+                                    ON v.id = h.id
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE 
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+                            ) q
+                            JOIN label l ON q.label_id = l.id
+                            JOIN image i ON q.image_id = i.id
+                            WHERE i.unlocked = true
+                            order by dt desc`)
+    if err != nil {
+        log.Debug("[Get Activity] Couldn't get activity: ", err.Error())
+        raven.CaptureError(err, nil)
+        return activity, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var a Activity
+        err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height)
+        if err != nil {
+            log.Debug("[Get Activity] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return activity, err
+        }
+
+        activity = append(activity, a)
+    }
+
+    return activity, nil
+}*/
+
+
+/*func getAnnotationActivity(period string) ([]Activity, error) {
+    var activity []Activity
+
+    if period != "last-month" {
+        return activity, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
+                           (d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                           FROM
+                            (
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(a.sys_period) as dt, a.id as annotation_id
+                                    FROM image_annotation a 
+                                    WHERE id NOT IN ( SELECT id FROM image_annotation_history h
+                                                      WHERE h.label_id = a.label_id and a.image_id = h.image_id
+                                                    )
+                                    AND 
+                                    (
+                                            date(lower(a.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(lower(a.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION
+
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt, h.id as annotation_id
+                                    FROM image_annotation_history h
+                                    WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION ALL
+
+                                (
+                                    SELECT a.label_id, a.image_id, 'verified' as type, upper(h.sys_period) as dt, null as annotation_id
+                                    FROM image_annotation_history h
+                                    JOIN image_annotation a 
+                                    ON a.id = h.id
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE 
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+                            ) q
+                            JOIN label l ON q.label_id = l.id
+                            JOIN image i ON q.image_id = i.id
+                            LEFT JOIN annotation_data d ON q.annotation_id = d.image_annotation_id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            WHERE i.unlocked = true
+                            order by dt desc`)
+    if err != nil {
+        log.Debug("[Get Activity] Couldn't get activity: ", err.Error())
+        raven.CaptureError(err, nil)
+        return activity, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var a Activity
+        var annotation []byte
+        err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height, &annotation)
+        if err != nil {
+            log.Debug("[Get Activity] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return activity, err
+        }
+
+        if len(annotation) > 0 {
+            err := json.Unmarshal(annotation, &a.Image.Annotation)
+            if err != nil {
+                log.Debug("[Get Activity] Couldn't unmarshal annotations: ", err.Error())
+                raven.CaptureError(err, nil)
+                return activity, err
+            }
+        }
+
+        activity = append(activity, a)
+    }
+
+    return activity, nil
+}*/
+
+func getActivity(period string) ([]Activity, error) {
+    var activity []Activity
+
+    if period != "last-month" {
+        return activity, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
+                           (d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation, q.activity_name 
+                           FROM
+                            (
+                                (
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(a.sys_period) as dt, 
+                                        a.id as annotation_id, 'annotation' as activity_name
+                                        FROM image_annotation a 
+                                        WHERE id NOT IN ( SELECT id FROM image_annotation_history h
+                                                          WHERE h.label_id = a.label_id and a.image_id = h.image_id
+                                                        )
+                                        AND 
+                                        (
+                                                date(lower(a.sys_period)) <= CURRENT_DATE 
+                                                AND 
+                                                date(lower(a.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION
+
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt, 
+                                        h.id as annotation_id, 'annotation' as activity_name
+                                        FROM image_annotation_history h
+                                        WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION ALL
+
+                                    (
+                                        SELECT a.label_id, a.image_id, 'verified' as type, upper(h.sys_period) as dt, 
+                                        h.id as annotation_id, 'annotation' as activity_name
+                                        FROM image_annotation_history h
+                                        JOIN image_annotation a 
+                                        ON a.id = h.id
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+                                )
+
+
+                                UNION ALL
+                                (
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(v.sys_period) as dt, 
+                                        null::bigint as annotation_id, 'validation' as activity_name
+                                        FROM image_validation v 
+                                        WHERE id NOT IN ( SELECT id FROM image_validation_history h
+                                                          WHERE h.label_id = v.label_id and v.image_id = h.image_id
+                                                        )
+                                        AND 
+                                        (
+                                                date(lower(v.sys_period)) <= CURRENT_DATE 
+                                                AND 
+                                                date(lower(v.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION
+
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt, 
+                                        null::bigint as annotation_id, 'validation' as activity_name
+                                        FROM image_validation_history h
+                                        WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION ALL
+
+                                    (
+                                        SELECT v.label_id, v.image_id, 'verified' as type, upper(h.sys_period) as dt, 
+                                        null::bigint as annotation_id, 'validation' as activity_name
+                                        FROM image_validation_history h
+                                        JOIN image_validation v 
+                                        ON v.id = h.id
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+                                )
+                            ) q
+                            JOIN label l ON q.label_id = l.id
+                            JOIN image i ON q.image_id = i.id
+                            LEFT JOIN annotation_data d ON q.annotation_id = d.image_annotation_id
+                            LEFT JOIN annotation_type t ON d.annotation_type_id = t.id
+                            WHERE i.unlocked = true
+                            order by dt desc`)
+    if err != nil {
+        log.Debug("[Get Activity] Couldn't get activity: ", err.Error())
+        raven.CaptureError(err, nil)
+        return activity, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var a Activity
+        var annotation []byte
+        err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height, &annotation, &a.Name)
+        if err != nil {
+            log.Debug("[Get Activity] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return activity, err
+        }
+
+        if len(annotation) > 0 {
+            err := json.Unmarshal(annotation, &a.Image.Annotation)
+            if err != nil {
+                log.Debug("[Get Activity] Couldn't unmarshal annotations: ", err.Error())
+                raven.CaptureError(err, nil)
+                return activity, err
+            }
+        }
+
+        activity = append(activity, a)
+    }
+
+    return activity, nil
 }
 
 func getLabelSuggestions() ([]string, error) {
