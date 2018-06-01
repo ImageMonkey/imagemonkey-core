@@ -55,9 +55,16 @@ func (p *LabelGraph) Load() error {
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(f)
-	p.graphDefinition = buf.String()
+	return p.LoadFromString(buf.String())
+}
 
-	graphAst, _ := gographviz.ParseString(p.graphDefinition)
+func (p *LabelGraph) LoadFromString(buf string) error {
+	p.graphDefinition = buf
+
+	graphAst, err := gographviz.ParseString(p.graphDefinition)
+	if err != nil {
+		return err
+	}
 	p.graph = gographviz.NewGraph()
 	p.graph.SetDir(true)
 	if err := gographviz.Analyse(graphAst, p.graph); err != nil {

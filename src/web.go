@@ -417,13 +417,23 @@ func main() {
 				labelGraphName = temp[0]
 			}
 
+			title := "Label Graph"
+			editorMode := false
+			if temp, ok := params["editor"]; ok {
+				if temp[0] == "true" {
+					editorMode = true
+					title = "Label Graph Editor"
+				}
+			}
+
 
 			c.HTML(http.StatusOK, "graph.html", gin.H{
-				"title": "Label Graph",
+				"title": title,
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": 14,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"defaultLabelGraphName": labelGraphName,
+				"editorMode" : editorMode,
 			})
 		})
 

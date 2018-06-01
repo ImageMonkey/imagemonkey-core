@@ -12,10 +12,13 @@
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
+  <script src="js/semantic.min.js"></script> 
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
+  <script src="js/ace/ace.js"></script> 
+  <script src="js/ace/ext-language_tools.js"></script>
   <script src="js/d3.v4.min.js"></script>
 
   <style>
@@ -68,15 +71,70 @@
 	    text-align: center;
   	}
 
+  	/*#editorContainer {
+	    width: 100%;
+	    height: 100%;
+	}
+
+	#editor {
+	    width: 80%;
+	    //width: 100%;
+	    //height: 100%;
+	    margin: auto;
+	}*/
+
 
   </style>
 
   <script type="text/javascript">
   	var link, simulation, svg, node, radius, color, tooltip;
+  	var editor;
 
 	$(document).ready(function(){
+		{{ if eq .editorMode true }}
+		initializeEditor();
+		{{ end }}
+
 		initializeGraph();
+
+		$('#refreshLabelGraphButton').click(function(e) {
+        	evaluateGraph();
+      	});
 	});
+
+	function initializeEditor() {
+		ace.config.set('themePath', 'js/ace/themes/');
+		ace.config.set('modePath', 'js/ace/');
+
+		$("#editorContainer").css("height", "500px");
+		$("#editorContainer").css("width", "500px");
+		editor = window.ace.edit("editor");
+		editor.resize();
+
+		editor.setValue(`digraph G { 
+    { rootnode [label="root" size=250 fontsize=25 color=red] } 
+    
+}`);
+
+		editor.setOptions({
+		   enableBasicAutocompletion: true, // the editor completes the statement when you hit Ctrl + Space
+		   enableLiveAutocompletion: true, // the editor completes the statement while you are typing
+		   showPrintMargin: false, // hides the vertical limiting strip
+		   maxLines: 30,
+		   minLines: 30,
+		   fontSize: "100%" // ensures that the editor fits in the environment
+
+		});
+
+		// defines the style of the editor
+		editor.setTheme("ace/theme/tomorrow_night_eighties");
+
+		// hides line numbers (widens the area occupied by error and warning messages)
+		editor.renderer.setOption("showLineNumbers", true); 
+
+		// ensures proper autocomplete, validation and highlighting of dot code
+		editor.getSession().setMode("ace/mode/dot");
+	}
 
 	function buildQuery(identifier) {
 		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + {{ .defaultLabelGraphName }} + '/query-builder';
@@ -99,12 +157,27 @@
 	      	showTooltip(name, data, xPos, yPos);
 	      }
 	    });
+	}
 
-		
+	function evaluateGraph() {
+		var url = '{{ .apiBaseUrl }}/v1/label/graph-editor/evaluate';
+	    $.ajax({
+	      url: url,
+	      data: JSON.stringify({data: btoa(editor.getValue())}),
+	      type: 'POST',
+	      success: function(data){
+	      	populateGraph(data);
+	      }, 
+	      error: function(jqXHR,error, errorThrown) {
+	      	$('#labelGraphEditorWarningMsgText').text("Can't parse file - please check for syntax errors!");
+          	$('#labelGraphEditorWarningMsg').show(200).delay(1500).hide(200);
+	      }
+	    });
 	}
 
 
 	function initializeGraph() {
+		{{ if eq .editorMode false }}
 		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + {{ .defaultLabelGraphName }};
 		$.ajax({
 	      url: url,
@@ -113,9 +186,14 @@
 	      	populateGraph(data);
 	      }
 	    });
+	    {{ else }}
+	    	evaluateGraph();
+	    {{ end }}
 	}
 
 	function populateGraph(graph) {
+		d3.select("#labelGraph").html(null); //clear all
+
 		var maxWidth = document.getElementById("labelGraphContainer").clientWidth - 50;
 		var maxHeight = 1500;
 		$("#labelGraph").attr("width", maxWidth);
@@ -142,7 +220,7 @@
 		link = svg.append("g")
 	      .attr("class", "links")
 	    .selectAll("path")
-	    .data(graph.links)
+	    .data(((graph.links === null) ? [] : graph.links))
 	    .enter().append("svg:path")
 	      .attr("stroke-width", function(d) { return 1 });
 
@@ -195,8 +273,9 @@
 	      .nodes(graph.nodes)
 	      .on("tick", ticked);
 
+
 	  	simulation.force("link")
-	      .links(graph.links);
+	      .links(((graph.links === null) ? [] : graph.links));
 
 	    tooltip = d3.select("body")
                   .append("div")
@@ -289,13 +368,48 @@
 		<div class="ui inverted vertical masthead center aligned segment">
 			{{ template "pointing_menu.html" .}}
 			<div class="ui text container">
-				<h2 class="ui inverted header">Label Graph</h2>
+				<h2 class="ui inverted header">{{ .title }}</h2>
 			</div>
 		</div>
 
+		{{ if eq .editorMode false }}
 		<div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-9em;">
-			<div class="sixteen wide center aligned column" id="labelGraphContainer">
-				<svg id="labelGraph"></svg>
+		{{ else }}
+		<div class="ui stackable grid vertical stripe mobile reversed">
+		{{ end }}
+			
+			{{ if eq .editorMode true }}
+			<div class="row">
+				<div class="two wide column"></div>
+				<div class="twelve wide column" id="editor"></div>
+				<div class="two wide column"></div>
+			</div>
+			<div class="row">
+				<div class="two wide column"></div>
+				<div class="twelve wide center aligned column">
+					<div hidden class="ui warning message" id="labelGraphEditorWarningMsg">
+			            <i class="close icon"></i>
+			            <div class="header" id="labelGraphEditorWarningMsgText">
+			            </div>
+		          	</div>
+		        </div>
+		        <div class="two wide column"></div>
+		    </div>
+
+			<div class="row">
+				<div class="sixteen wide center aligned column">
+					<button class="ui blue button" id="refreshLabelGraphButton">
+					  <i class="icon refresh"></i>
+					  Update
+					</button>
+				</div>
+			</div>
+			{{ end }}
+
+			<div class="row">
+				<div class="sixteen wide center aligned column" id="labelGraphContainer">
+					<svg id="labelGraph"></svg>
+				</div>
 			</div>
 		</div>
 	</div>

@@ -1011,6 +1011,39 @@ func main(){
 			c.JSON(http.StatusOK, labelGraphJson)
 		})
 
+		router.POST("/v1/label/graph-editor/evaluate", func(c *gin.Context) {
+			type LabelGraphInput struct {
+			    Data string `json:"data"`
+			}
+
+			var labelGraphInput LabelGraphInput
+			if c.BindJSON(&labelGraphInput) != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - 'data' missing"})
+				return
+			}
+
+			var data []byte
+			data, err = base64.StdEncoding.DecodeString(labelGraphInput.Data)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			labelGraph := NewLabelGraph("")
+			err := labelGraph.LoadFromString(string(data)) 
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request"})
+				return
+			}
+
+			labelGraphJson, err := labelGraph.GetJson()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, labelGraphJson)
+		})
+
 		router.GET("/v1/label/graph/:labelgraphname/query-builder", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
@@ -1039,6 +1072,9 @@ func main(){
 			q := ""
 			children := labelGraph.GetChildren(identifier)
 			for _, child := range children {
+				if child == nil { 
+					continue
+				}
 				uuid := child.Attrs["id"]
 				if uuid == "" {
 					continue
