@@ -87,7 +87,7 @@
   </style>
 
   <script type="text/javascript">
-  	var link, simulation, svg, node, radius, color, tooltip;
+  	var link, simulation, svg, node, radius, color, tooltip, zoom, main;
   	var editor;
 
 	$(document).ready(function(){
@@ -99,6 +99,14 @@
 
 		$('#refreshLabelGraphButton').click(function(e) {
         	evaluateGraph();
+      	});
+
+      	$('#zoomInButton').click(function(e) {
+        	zoomMe(1.2); // increase on 0.2 each time
+      	});
+
+      	$('#zoomOutButton').click(function(e) {
+        	zoomMe(1/1.2); // decrease on 0.2 each time
       	});
 	});
 
@@ -199,9 +207,16 @@
 		$("#labelGraph").attr("width", maxWidth);
 		$("#labelGraph").attr("height", maxHeight);
 
-		svg = d3.select("svg"),
+		svg = d3.select("#labelGraph"),
 	    	width = +svg.attr("width"),
-	    	height = +svg.attr("height");
+	    	height = +svg.attr("height")
+
+	    main = svg.append("g");
+
+
+	    zoom = d3.zoom()
+            .scaleExtent([1, 10])
+            .on("zoom", zoomed);
 
 		color = d3.scaleOrdinal(d3.schemeCategory20);
 	  
@@ -217,7 +232,7 @@
 		.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(100).strength(1));
 
 
-		link = svg.append("g")
+		link = main.append("g")
 	      .attr("class", "links")
 	    .selectAll("path")
 	    .data(((graph.links === null) ? [] : graph.links))
@@ -229,7 +244,7 @@
 	      .style("stroke-width", '2px');
 
 
-	  	node = svg.append("g")
+	  	node = main.append("g")
 	      .attr("class", "nodes")
 	    .selectAll("g")
 	    .data(graph.nodes)
@@ -286,6 +301,8 @@
                         .style("top", 100)
                         .style("left", 100)
                         .style("pointer-events","none");
+
+    	svg.call(zoom).append("g");
 	    
 	}
 
@@ -358,6 +375,16 @@
 	  d.fy = null;
 	}
 
+	function zoomed() {
+		main.attr("transform", d3.event.transform);
+    }
+    function zoomMe(zoomLevel) {
+  		svg.transition()
+	      .delay(100)
+	      .duration(700)
+	      .call(zoom.scaleBy, zoomLevel);
+	}
+
    </script>
 </head>
 <body>
@@ -406,7 +433,11 @@
 			</div>
 			{{ end }}
 
-			<div class="row">
+			<div class="row" style="margin-top:1em; margin-right:1em;">
+				<div class="sixteen wide right aligned column">
+					<div class="ui button" button id="zoomInButton">Zoom In</div>
+  					<div class="ui button" id="zoomOutButton"> Zoom Out</div>
+				</div>
 				<div class="sixteen wide center aligned column" id="labelGraphContainer">
 					<svg id="labelGraph"></svg>
 				</div>
