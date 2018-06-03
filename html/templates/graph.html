@@ -24,11 +24,6 @@
 
   <style>
 
-	/*.links line {
-	  	stroke: #999;
-	  	stroke-opacity: 0.6;
-	}*/
-
 	.nodes circle {
 	  	stroke: #fff;
 	  	stroke-width: 1.5px;
@@ -74,19 +69,6 @@
 
   	.link { stroke: #999; stroke-opacity: .6; stroke-width: 5px; }
 
-  	/*#editorContainer {
-	    width: 100%;
-	    height: 100%;
-	}
-
-	#editor {
-	    width: 80%;
-	    //width: 100%;
-	    //height: 100%;
-	    margin: auto;
-	}*/
-
-
   </style>
 
   <script type="text/javascript">
@@ -124,7 +106,7 @@
 
 		editor.setValue(`digraph G { 
     { rootnode [label="root" size=250 fontsize=25 color=red] } 
-    { r1 [label="r1" color=green] } 
+    { r1 [label="r1" color=green URL="Orange_(fruit)"] } 
     { r2 [label="r2" color=green] } 
     { r3 [label="r3" color=green] } 
     { r4 [label="r4"] } 
@@ -332,7 +314,7 @@
 	      .on("click", onNodeClicked)
 	      .on("mouseenter", function(d) {
 	      		if(d.onhover !== "") { //in case the node contains a 'onhover' property
-	      			showWikipediaPagePreview(d.onhover, d3.event.pageX, d3.event.pageY);
+	      			showWikipediaPagePreview(d.onhover, 100, d3.event.clientY - 200);
 	            }
             })
 
@@ -385,14 +367,16 @@
         .style("display", "block");
 
         tooltip
-        .style("top", (yPos + 2) + "px")
-        .style("left", (xPos - 28) + "px")
+        //.style("top", (yPos + 2) + "px")
+        //.style("left", (xPos - 28 + 500) + "px")
         .style("opacity", 0.9)
         .style("display", "block")
         .html(
         	"<div id='thumbnail'><span>" + nodeName + "</span><img src='" + data["thumbnail"]["source"] + "' /><span id='tooltipDescription'>" + data["extract_html"] + "</span></div>")
-        .style("left", (xPos - 113) + "px")   
-        .style("top", (yPos - 190) + "px");
+        //.style("left", (xPos - 113) + "px")   
+        //.style("top", (yPos - 190) + "px");
+        .style("left", xPos + "px")   
+        .style("top", yPos + "px");
 	}
 
 
