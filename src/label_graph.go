@@ -25,6 +25,7 @@ type LabelGraphNode struct {
 type LabelGraphEdge struct {
     Source int `json:"source"`
     Target int `json:"target"`
+    Label string `json:"label"`
 }
 
 
@@ -113,7 +114,7 @@ func (p *LabelGraph) GetChildren(identifier string) []*gographviz.Node {
 
 func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 	var result LabelGraphJson
-	var err error
+	//var err error
 
 	m := make(map[string]int)
 	nodes := p.graph.Nodes.Nodes
@@ -134,9 +135,9 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		labelGraphNode.Color = node.Attrs["color"]
 		labelGraphNode.Uuid = node.Attrs["id"]
 		labelGraphNode.Name, _ = strconv.Unquote(node.Attrs["label"])
-		if err != nil {
+		/*if err != nil {
 			return result, err
-		}
+		}*/
 
 		m[node.Name] = i
 
@@ -148,6 +149,7 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		var labelGraphEdge LabelGraphEdge
 		labelGraphEdge.Source = m[edge.Src]
 		labelGraphEdge.Target = m[edge.Dst] //edge.Dst
+		labelGraphEdge.Label, _ = strconv.Unquote(edge.Attrs["label"])
 
 		result.Links = append(result.Links, labelGraphEdge)
 	}
