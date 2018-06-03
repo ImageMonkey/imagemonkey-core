@@ -347,7 +347,7 @@
 	  	  .text(function(d) { return d.name; })
 	      .attr("dy", ".35em")
 	      .attr("text-anchor", "middle")
-	      .style("font-size", function(d) { return d.fontsize + "px"; })
+	      .style("font-size", function(d) { return d.fontsize.toString() + "px"; })
 	      .attr("pointer-events", "none"); //ignore pointer events for text
 
 	  	simulation

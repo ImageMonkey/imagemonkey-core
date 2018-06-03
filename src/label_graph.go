@@ -16,7 +16,7 @@ type LabelGraphNode struct {
     Idenfifier string `json:"identifier"`
     Name string `json:"name"`
     Size string `json:"size"`
-    FontSize string `json:"fontsize"`
+    FontSize int `json:"fontsize"`
     Color string `json:"color"`
     Uuid string `json:"uuid"`
     OnHover string `json:"onhover"`
@@ -130,10 +130,21 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		if labelGraphNode.Size == "" {
 			labelGraphNode.Size = "100"
 		}
-		labelGraphNode.FontSize = node.Attrs["fontsize"]
-		if labelGraphNode.FontSize == "" {
-			labelGraphNode.FontSize = "14"
+
+
+		//parse node fontsize
+		fontsize, _ := node.Attrs["fontsize"]
+		if fontsize == "" {
+			labelGraphNode.FontSize = 14
+		} else {
+			labelGraphNode.FontSize, err = strconv.Atoi(fontsize)
+			if err != nil {
+				return result, errors.New("fontsize needs to be an integer value!")
+			}
 		}
+
+
+
 		labelGraphNode.Color = node.Attrs["color"]
 		labelGraphNode.Uuid = node.Attrs["id"]
 		labelGraphNode.Name, _ = strconv.Unquote(node.Attrs["label"])
