@@ -126,7 +126,13 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		var labelGraphNode LabelGraphNode
 		labelGraphNode.Id = i
 		labelGraphNode.Idenfifier = node.Name
-		labelGraphNode.OnHover = node.Attrs["URL"]
+		labelGraphNode.OnHover, err = strconv.Unquote(node.Attrs["URL"])
+		if err != nil { //not quoted in the first place
+			labelGraphNode.OnHover = node.Attrs["URL"]
+		}
+
+
+
 		labelGraphNode.Size = node.Attrs["size"]
 		if labelGraphNode.Size == "" {
 			labelGraphNode.Size = "100"

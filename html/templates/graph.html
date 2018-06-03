@@ -332,7 +332,7 @@
 	      .on("click", onNodeClicked)
 	      .on("mouseenter", function(d) {
 	      		if(d.onhover !== "") { //in case the node contains a 'onhover' property
-	      			showWikipediaPagePreview(d.name, d3.event.pageX, d3.event.pageY);
+	      			showWikipediaPagePreview(d.onhover, d3.event.pageX, d3.event.pageY);
 	            }
             })
 
