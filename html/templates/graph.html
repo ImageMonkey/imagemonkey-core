@@ -124,6 +124,22 @@
 
 		editor.setValue(`digraph G { 
     { rootnode [label="root" size=250 fontsize=25 color=red] } 
+    { r1 [label="r1" color=green] } 
+    { r2 [label="r2" color=green] } 
+    { r3 [label="r3" color=green] } 
+    { r4 [label="r4"] } 
+    { r5 [label="r5"] }
+    { r6 [label="r6" color=blue] }
+    { r7 [label="r7" color=blue] }
+    
+    rootnode -> r1
+    rootnode -> r2
+    rootnode -> r3
+    rootnode -> r4
+    rootnode -> r5
+    
+    r5 -> r6
+    r6 -> r7 [label="link" len=150 fontsize=20]
     
 }`);
 
@@ -282,7 +298,7 @@
             .attrs({
                 'class': 'edgelabel',
                 'id': function (d, i) {return 'edgelabel' + i},
-                'font-size': 10,
+                'font-size': function (d) {return d.fontsize; },
                 'fill': '#aaa'
             });
 

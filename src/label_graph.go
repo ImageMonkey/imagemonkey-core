@@ -27,6 +27,7 @@ type LabelGraphEdge struct {
     Target int `json:"target"`
     Label string `json:"label"`
     Distance int `json:"distance"`
+    FontSize int `json:"fontsize"`
 }
 
 
@@ -152,6 +153,7 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		labelGraphEdge.Target = m[edge.Dst] //edge.Dst
 		labelGraphEdge.Label, _ = strconv.Unquote(edge.Attrs["label"])
 		
+		//parse link distance
 		distance, _ := edge.Attrs["len"]
 		if distance == "" {
 			labelGraphEdge.Distance = 100
@@ -159,6 +161,17 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 			labelGraphEdge.Distance, err = strconv.Atoi(distance)
 			if err != nil {
 				return result, errors.New("distance needs to be an integer value!")
+			}
+		}
+
+		//parse link fontsize 
+		fontsize, _ := edge.Attrs["fontsize"]
+		if fontsize == "" {
+			labelGraphEdge.FontSize = 15
+		} else {
+			labelGraphEdge.FontSize, err = strconv.Atoi(fontsize)
+			if err != nil {
+				return result, errors.New("fontsize needs to be an integer value!")
 			}
 		}
 
