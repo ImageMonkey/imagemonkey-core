@@ -28,6 +28,7 @@ type LabelGraphEdge struct {
     Label string `json:"label"`
     Distance int `json:"distance"`
     FontSize int `json:"fontsize"`
+    Directed bool `json:"directed"`
 }
 
 
@@ -185,6 +186,8 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 				return result, errors.New("fontsize needs to be an integer value!")
 			}
 		}
+
+		labelGraphEdge.Directed = edge.Dir
 
 		result.Links = append(result.Links, labelGraphEdge)
 	}

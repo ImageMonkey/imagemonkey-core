@@ -132,13 +132,13 @@
     { r6 [label="r6" color=blue] }
     { r7 [label="r7" color=blue] }
     
-    rootnode -> r1
-    rootnode -> r2
-    rootnode -> r3
-    rootnode -> r4
-    rootnode -> r5
+    rootnode -- r1
+    rootnode -- r2
+    rootnode -- r3
+    rootnode -- r4
+    rootnode -- r5
     
-    r5 -> r6
+    r5 -- r6
     r6 -> r7 [label="link" len=150 fontsize=20]
     
 }`);
@@ -253,19 +253,18 @@
 		//.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) { return d.size; }).strength(1));
 		//.force("linkForce", function(d) { return 100; });
 
-		svg.append('defs').append('marker')
-        .attrs({'id':'arrowhead',
-            'viewBox':'-0 -5 10 10',
-            'refX':13,
-            'refY':0,
-            'orient':'auto',
-            'markerWidth':20,
-            'markerHeight':20,
-            'xoverflow':'visible'})
-        .append('svg:path')
-        .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
-        .attr('fill', '#999')
-        .style('stroke','none');
+		svg.append("svg:defs").append("svg:marker")
+            .attr("id", "arrowhead")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 45) // This sets how far back it sits, kinda
+            .attr("refY", 0)
+            .attr("markerWidth", 12)
+            .attr("markerHeight", 12)
+            .attr("orient", "auto")
+            .attr("markerUnits", "userSpaceOnUse") //do not make arrowhead dependent on line width
+            .append("svg:path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .style("fill", "#aaa"); //arrowhead color
 
 
 		link = main.selectAll(".link")
@@ -273,7 +272,7 @@
             .enter()
             .append("line")
             .attr("class", "link")
-            //.attr('marker-end','url(#arrowhead)')
+            .attr('marker-end', function(d) { return d.directed ? 'url(#arrowhead)' : '' }); //show arrowhead only if directed graph
 
         link.append("title")
             .text(function (d) {return d.type;});
