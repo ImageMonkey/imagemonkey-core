@@ -226,13 +226,16 @@
 		radius = d3.scaleSqrt()
 	    	.range([0, 6]);
 
-		simulation = d3.forceSimulation()
+		simulation = d3.forceSimulation(graph.links)
 		.force("link", d3.forceLink()
 			.id(function(d) { return d.id; }))
 		.force("charge", d3.forceManyBody()
 			.strength(function(d) { return -600;}))
 		.force("center", d3.forceCenter(width / 2, height / 2))
-		.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(100).strength(1));
+		.force("link", d3.forceLink()
+			.distance(function(d) { return d.distance; }).strength(1));
+		//.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) { return d.size; }).strength(1));
+		//.force("linkForce", function(d) { return 100; });
 
 		svg.append('defs').append('marker')
         .attrs({'id':'arrowhead',

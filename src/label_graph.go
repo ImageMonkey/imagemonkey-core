@@ -26,6 +26,7 @@ type LabelGraphEdge struct {
     Source int `json:"source"`
     Target int `json:"target"`
     Label string `json:"label"`
+    Distance int `json:"distance"`
 }
 
 
@@ -114,7 +115,7 @@ func (p *LabelGraph) GetChildren(identifier string) []*gographviz.Node {
 
 func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 	var result LabelGraphJson
-	//var err error
+	var err error
 
 	m := make(map[string]int)
 	nodes := p.graph.Nodes.Nodes
@@ -150,6 +151,16 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		labelGraphEdge.Source = m[edge.Src]
 		labelGraphEdge.Target = m[edge.Dst] //edge.Dst
 		labelGraphEdge.Label, _ = strconv.Unquote(edge.Attrs["label"])
+		
+		distance, _ := edge.Attrs["len"]
+		if distance == "" {
+			labelGraphEdge.Distance = 100
+		} else {
+			labelGraphEdge.Distance, err = strconv.Atoi(distance)
+			if err != nil {
+				return result, errors.New("distance needs to be an integer value!")
+			}
+		}
 
 		result.Links = append(result.Links, labelGraphEdge)
 	}
