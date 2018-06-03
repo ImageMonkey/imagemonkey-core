@@ -149,9 +149,15 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 		labelGraphNode.Color = node.Attrs["color"]
 		labelGraphNode.Uuid = node.Attrs["id"]
 		labelGraphNode.Name, _ = strconv.Unquote(node.Attrs["label"])
-		/*if err != nil {
-			return result, err
-		}*/
+		
+		//if there is a label property - then use this one 
+		//if there is no label property specified, take the labels name
+		if labelGraphNode.Name == "" && node.Name != "" { 
+			labelGraphNode.Name, err = strconv.Unquote(node.Name)
+			if err != nil { //doesn't contain quotes
+				labelGraphNode.Name = node.Name
+			}
+		}
 
 		m[node.Name] = i
 
