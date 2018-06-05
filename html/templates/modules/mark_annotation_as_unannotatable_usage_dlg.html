@@ -1,0 +1,30 @@
+<div class="ui longer modal" id="markAsUnannotatableUsageDlg">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Mark as un-annotatable
+  </div>
+  <div class="scrolling content">
+    Sometimes it's not possible to annotate a object - e.q when the object in question is too small. Use this option if you want to mark the annotation task as not-doable. 
+
+    <br><br>
+    Do <b>not</b> use this option if you are not in the mood for the given annotation task. Instead, use the browser's reload button to get a new, randomly chosen annotation task.
+
+  </div>
+  <p><p>
+    <div class="actions">
+      {{ if (eq .sessionInformation.LoggedIn true) }}
+      <div class="ui cancel button">
+        Discard
+      </div>
+      <div class="ui positive right labeled icon button" id="markAsUnannotatableUsageDlgAcceptButton">
+        Got it - mark it as un-annotatable!
+        <i class="checkmark icon"></i>
+      </div>
+
+      {{ else }}
+      <div class="ui right labeled cancel button">
+        Close
+      </div>
+      {{ end }}
+    </div>
+  </div>

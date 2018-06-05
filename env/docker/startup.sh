@@ -1,14 +1,22 @@
 #!/bin/bash
 sleep infinity & PID=$!
 trap "kill $PID" INT TERM
+trap "kill 0" EXIT
 
 echo "Starting PostgreSQL..."
 #start postgres
-./start_postgres.sh 
+/root/imagemonkey-core/env/docker/start_postgres.sh 
 
 echo "Starting redis-server..."
 #start redis server
 service redis-server start
+
+
+#copy original imagemonkey-web.conf file 
+cp /tmp/imagemonkey-web.conf.bak /etc/supervisor/conf.d/imagemonkey-web.conf
+#and replace api_base_url with API_BASE_URL from env variable (use @ as delimiter)
+sed -i.bak 's@-api_base_url=xxxxxx@-api_base_url='"$API_BASE_URL"'@g' /etc/supervisor/conf.d/imagemonkey-web.conf
+
 
 echo "Starting supervisord..."
 #start supervisord

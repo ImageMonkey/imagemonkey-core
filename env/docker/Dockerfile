@@ -3,9 +3,10 @@ FROM debian:9
 
 MAINTAINER bbernhard version: 0.1
 
-RUN apt-get update && apt-get install -y postgresql-9.6 nginx nginx-extras redis-server git supervisor wget build-essential postgresql-server-dev-9.6 postgresql-contrib-9.6 dos2unix
+RUN apt-get update && apt-get install -y postgresql-9.6 nginx nginx-extras redis-server git supervisor wget build-essential postgresql-server-dev-9.6 postgresql-contrib-9.6 dos2unix neovim
 RUN mkdir -p /root/imagemonkey-core
 RUN git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core
+RUN cd /root/imagemonkey-core && git checkout develop 
 RUN cp /root/imagemonkey-core/conf/supervisor/* /etc/supervisor/conf.d/
 
 RUN chmod +x /root/imagemonkey-core/env/docker/start_postgres.sh
@@ -60,13 +61,16 @@ RUN cd /tmp/ \
    && tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz \
    && cd /root/
 
+RUN cp /root/imagemonkey-core/env/docker/conf/supervisor/* /etc/supervisor/conf.d/
+RUN cp /root/imagemonkey-core/env/docker/src/* /root/imagemonkey-core/src/
+
 RUN cp -r /root/imagemonkey-core/src /tmp/imagemonkey-core-src
 RUN mv /tmp/imagemonkey-core-src/api_secrets.template /tmp/imagemonkey-core-src/api_secrets.go
 RUN mv /tmp/imagemonkey-core-src/web_secrets.template /tmp/imagemonkey-core-src/web_secrets.go
 RUN chown -R imagemonkey:imagemonkey /tmp/imagemonkey-core-src
 RUN chmod -R u+rwx /tmp/imagemonkey-core-src
 
-RUN /bin/su - imagemonkey -c "cd /tmp/imagemonkey-core-src/ && export GOPATH=/home/imagemonkey/go && export GOBIN=/home/imagemonkey/bin && /usr/local/go/bin/go get -d && /usr/local/go/bin/go install api.go api_secrets.go common.go imagedb.go && /usr/local/go/bin/go install web.go web_secrets.go common.go imagedb.go && /usr/local/go/bin/go install statworker.go web_secrets.go common.go imagedb.go && /usr/local/go/bin/go install populate_labels.go common.go web_secrets.go"
+RUN /bin/su - imagemonkey -c "cd /tmp/imagemonkey-core-src/ && export GOPATH=/home/imagemonkey/go && export GOBIN=/home/imagemonkey/bin && /usr/local/go/bin/go get -d && /usr/local/go/bin/go install api.go api_secrets.go common.go imagedb.go parser.go label_graph.go auth.go && /usr/local/go/bin/go install web.go web_secrets.go common.go imagedb.go auth.go parser.go && /usr/local/go/bin/go install statworker.go web_secrets.go common.go imagedb.go parser.go && /usr/local/go/bin/go install populate_labels.go common.go web_secrets.go && /usr/local/go/bin/go install auto_unlocker.go api_secrets.go"
 
 RUN rm -rf /tmp/imagemonkey-core/src
 
@@ -81,9 +85,9 @@ RUN chmod -R u+rwx /home/imagemonkey/unverified_donations
 RUN mkdir -p /var/log/imagemonkey-api
 RUN mkdir -p /var/log/imagemonkey-web
 RUN mkdir -p /var/log/imagemonkey-statworker
+RUN mkdir -p /var/log/imagemonkey-auto-unlocker
 
-RUN mkdir -p /home/imagemonkey/wordlists/en/
-RUN cp /root/imagemonkey-core/wordlists/en/labels.json /home/imagemonkey/wordlists/en/
+RUN cp -r /root/imagemonkey-core/wordlists /home/imagemonkey/
 RUN chown -R imagemonkey:imagemonkey /home/imagemonkey/wordlists/
 RUN chmod -R u+rx /home/imagemonkey/wordlists/
 
@@ -119,24 +123,24 @@ RUN echo listen_addresses='localhost' >> /etc/postgresql/9.6/main/postgresql.con
 # do not add blog subscription worker...we do not need that in the docker image
 RUN rm /etc/supervisor/conf.d/imagemonkey-blog-subscription-worker.conf
 
+#do not add trending labels worker...we do not need that in the docker image
+RUN rm /etc/supervisor/conf.d/imagemonkey-trending-labels-worker.conf
+
 #populate labels in database
-RUN /root/imagemonkey-core/env/docker/start_postgres.sh && cd /home/imagemonkey/bin/ && ./populate_labels && cd /root/
+RUN /root/imagemonkey-core/env/docker/start_postgres.sh && cd /home/imagemonkey/bin/ && ./populate_labels --dryrun=false && cd /root/
+
+
+#replace playground url and api url in supervisor config file
+
+ENV API_BASE_URL http://127.0.0.1:8081
+
+RUN sed -i.bak 's/-api_base_url=https:\/\/api.imagemonkey.io/-api_base_url=xxxxxx/g' /etc/supervisor/conf.d/imagemonkey-web.conf
+RUN cp /etc/supervisor/conf.d/imagemonkey-web.conf /tmp/imagemonkey-web.conf.bak
+RUN sed -i.bak 's/-playground_base_url=https:\/\/playground.imagemonkey.io//g' /etc/supervisor/conf.d/imagemonkey-web.conf
 
 
 EXPOSE 8080
 EXPOSE 8081
 
-CMD /root/imagemonkey-core/env/docker/startup.sh
 
-
-
-
-#RUN sed 's/^\[supervisord\]/\[supervisord\]\nodaemon=true/' /etc/supervisor/supervisord.conf
-
-#CMD ["service","supervisor", "start"]
-
-#CMD service postgresql start && service redis-server start && sleep 15s && supervisord -c /etc/supervisor/supervisord.conf --nodaemon
-
-
-#RUN service redis-server restart
-#RUN service supervisor start && supervisorctl reread && supervisorctl update && supervisorctl restart all
+CMD ["/root/imagemonkey-core/env/docker/startup.sh"]

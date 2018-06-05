@@ -8,6 +8,8 @@ import (
     "database/sql"
     "fmt"
     "errors"
+    "time"
+    "github.com/dgrijalva/jwt-go"
 )
 
 type RectangleAnnotation struct {
@@ -67,6 +69,9 @@ type UnannotatedImage struct {
     Provider string `json:"provider"`
     Width int32 `json:"width"`
     Height int32 `json:"height"`
+    Validation struct {
+        Id string `json:"uuid"`
+    } `json:"validation"`
     AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
 }
 
@@ -231,8 +236,45 @@ type UserStatistics struct {
     } `json:"user"`
 }
 
+type UserInfo struct {
+    Name string `json:"name"`
+    Created int64 `json:"created"`
+    ProfilePicture string `json:"profile_picture"`
+}
 
-func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageInfo, labels []LabelMeEntry ) error{
+/*type MonthlyStatistics struct {
+    Annotations []int32 `json:"annotations"`
+    Validations []int32 `json:"validations"`
+    Dates []string `json:"dates"`
+}*/
+
+type DataPoint struct {
+    Value int32 `json:"value"`
+    Date string `json:"date"`
+}
+
+type Activity struct {
+    Name string `json:"name"`
+    Type string `json:"type"`
+    Date string `json:"date"`
+    Image struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+        Annotation json.RawMessage `json:"annotation"`
+        Label string `json:"label"`
+    } `json:"image"`
+}
+
+type APIToken struct {
+    IssuedAtUnixTimestamp int64 `json:"issued_at"`
+    Token string `json:"token"`
+    Description string `json:"description"`
+    Revoked bool `json:"revoked"`
+}
+
+
+func addDonatedPhoto(username string, imageInfo ImageInfo, autoUnlock bool, clientFingerprint string, labels []LabelMeEntry) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -242,42 +284,85 @@ func addDonatedPhoto(clientFingerprint string, filename string, imageInfo ImageI
 
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
     //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
-	imageId := 0
+	var imageId int64 
 	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
-					  filename, false, int64(imageInfo.Hash), "donation", imageInfo.Width, imageInfo.Height).Scan(&imageId)
-	if(err != nil){
+					  imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageInfo.Source.Provider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
+	if err != nil {
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
 		tx.Rollback()
 		return err
 	}
 
+    var insertedValidationIds []int64
     if labels[0].Label != "" { //only create a image validation entry, if a label is provided
-        err = _addLabelsToImage(clientFingerprint, filename, labels, tx)
+
+        //per default we start with 0 validations, except if we are importing an image from a trusted
+        //source. in that case, already set "numOfValid" to 1.
+        numOfValid := 0
+        if imageInfo.Source.Trusted {
+            numOfValid = 1
+        }
+
+        insertedValidationIds, err = _addLabelsToImage(clientFingerprint, imageInfo.Name, labels, numOfValid, 0, tx)
+        if err != nil {
+            return err //tx already rolled back in case of error, so we can just return here
+        }
+    }
+
+
+    if imageInfo.Source.Provider != "donation" {
+        imageSourceId, err := _addImageSource(imageId, imageInfo.Source, tx)
         if err != nil {
             return err //tx already rolled back in case of error, so we can just return here
         }
 
+        err = _addImageValidationSources(imageSourceId, insertedValidationIds, tx)
+        if err != nil {
+            return err //tx already rolled back in case of error, so we can just return here
+        }
+    }
 
-    	/*labelId := 0
-    	err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                            SELECT $1, $2, $3, $5, l.id FROM label l WHERE l.name = $4 RETURNING id`, 
-    					  imageId, 0, 0, label, clientFingerprint).Scan(&labelId)
-    	if(err != nil){
-    		tx.Rollback()
-    		log.Debug("[Adding donated photo] Couldn't insert image validation entry: ", err.Error())
-    		raven.CaptureError(err, nil)
-    		return err
-    	}
-
-
-        if addSublabels {
-            TODO: add sublabels (image_validionn_entry)
-        }*/
-
+    //in case a username is provided, link image to user account
+    if username != "" {
+        _, err := tx.Exec(`INSERT INTO user_image(image_id, account_id)
+                            SELECT $1, id FROM account WHERE name = $2`, imageId, username)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Add user image entry] Couldn't add entry: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
     }
 
 	return tx.Commit()
+}
+
+func _addImageValidationSources(imageSourceId int64, imageValidationIds []int64, tx *sql.Tx) error {
+    for _, id := range imageValidationIds {
+        _, err := tx.Exec("INSERT INTO image_validation_source(image_source_id, image_validation_id) VALUES($1, $2)", imageSourceId, id)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Add image validation source] Couldn't add image validation source: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    return nil
+}
+
+func _addImageSource(imageId int64, imageSource ImageSource, tx *sql.Tx) (int64, error) {
+    var insertedId int64
+    err := tx.QueryRow("INSERT INTO image_source(image_id, url) VALUES($1, $2) RETURNING id", imageId, imageSource.Url).Scan(&insertedId)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Add image source] Couldn't add image source: ", err.Error())
+        raven.CaptureError(err, nil)
+        return insertedId, err
+    }
+
+    return insertedId, nil
 }
 
 func imageExists(hash uint64) (bool, error){
@@ -307,28 +392,39 @@ func imageExists(hash uint64) (bool, error){
     }
 }
 
-func validateDonatedPhoto(clientFingerprint string, imageId string, labelValidationEntry LabelValidationEntry, valid bool) error {
+func validateDonatedPhoto(apiUser APIUser, imageId string, labelValidationEntry LabelValidationEntry, valid bool) error {
+    var updatedId int64
+    updatedId = 0
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Validating donated photo] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
 	if valid {
         var err error
         if labelValidationEntry.Sublabel == "" {
-    		_, err = db.Exec(`UPDATE image_validation AS v 
+    		err = tx.QueryRow(`UPDATE image_validation AS v 
     						   SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
     						   FROM image AS i 
-    						   WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null)`, 
-                               clientFingerprint, imageId, labelValidationEntry.Label)
+    						   WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null) RETURNING v.id`, 
+                               apiUser.ClientFingerprint, imageId, labelValidationEntry.Label).Scan(&updatedId)
         } else {
-            _, err = db.Exec(`UPDATE image_validation AS v 
+            err = tx.QueryRow(`UPDATE image_validation AS v 
                               SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
                               FROM image AS i 
                               WHERE v.image_id = i.id AND key = $2 AND v.label_id = (
                                 SELECT l.id FROM label l 
                                 JOIN label pl ON l.parent_id = pl.id
                                 WHERE l.name = $3 AND pl.name = $4
-                              )`, 
-                              clientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label)
+                              ) RETURNING v.id`, 
+                              apiUser.ClientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label).Scan(&updatedId)
         }
 
 		if err != nil {
+            tx.Rollback()
 			log.Debug("[Validating donated photo] Couldn't increase num_of_valid: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
@@ -336,29 +432,68 @@ func validateDonatedPhoto(clientFingerprint string, imageId string, labelValidat
 	} else {
         var err error
         if labelValidationEntry.Sublabel == "" {
-    		_, err = db.Exec(`UPDATE image_validation AS v 
+    		err = tx.QueryRow(`UPDATE image_validation AS v 
     						   SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
     						   FROM image AS i
-    						   WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null)`, 
-                               clientFingerprint, imageId, labelValidationEntry.Label)
+    						   WHERE v.image_id = i.id AND key = $2 AND v.label_id = (SELECT id FROM label WHERE name = $3 AND parent_id is null) RETURNING v.id`, 
+                               apiUser.ClientFingerprint, imageId, labelValidationEntry.Label).Scan(&updatedId)
         } else {
-            _, err = db.Exec(`UPDATE image_validation AS v 
+            err = tx.QueryRow(`UPDATE image_validation AS v 
                                SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
                                FROM image AS i
                                WHERE v.image_id = i.id AND key = $2 AND v.label_id = (
                                 SELECT l.id FROM label l 
                                 JOIN label pl ON l.parent_id = pl.id
                                 WHERE l.name = $3 AND pl.name = $4
-                               )`, 
-                               clientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label)
+                               ) RETURNING v.id`, 
+                               apiUser.ClientFingerprint, imageId, labelValidationEntry.Sublabel, labelValidationEntry.Label).Scan(&updatedId)
         }
 
 		if err != nil {
+            tx.Rollback()
 			log.Debug("[Validating donated photo] Couldn't increase num_of_invalid: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
 		}
 	}
+
+
+    if apiUser.Name != "" {
+        if updatedId == 0 {
+            tx.Rollback()
+            err := errors.New("nothing updated")
+            log.Debug("[Validating donated photo] ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+
+        var insertedId int64
+        insertedId = 0
+        err = tx.QueryRow(`INSERT INTO user_image_validation(image_validation_id, account_id, timestamp)
+                                SELECT $1, a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2 RETURNING id`, updatedId, apiUser.Name).Scan(&insertedId)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Validating donated photo] Couldn't add user image validation entry: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+
+        if insertedId == 0 {
+            tx.Rollback()
+            err := errors.New("nothing updated")
+            log.Debug("[Validating donated photo] ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Validating donated photo] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
 
 	return nil
 }
@@ -422,6 +557,23 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
         joinType = "JOIN"
     }
 
+    
+    q1 := ""
+    q2 := ""
+    q3 := ""
+    identifier := ""
+    if parseResult.isUuidQuery {
+        q1 = "JOIN label l ON l.id = r.label_id"
+        q2 = "JOIN label l ON l.id = n.label_id"
+        q3 = "JOIN label l ON l.id = v.label_id"
+        identifier = "l.name"
+    } else {
+        q1 = "JOIN label_accessor a ON r.label_id = a.label_id"
+        q2 = "JOIN label_accessor a ON n.label_id = a.label_id"
+        q3 = "JOIN label_accessor a ON a.label_id = v.label_id"
+        identifier = "a.accessor"
+    }
+
 
     q := fmt.Sprintf(`SELECT i.key, CASE WHEN json_agg(q3.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q3.annotations)::jsonb END as annotations, 
                       q3.validations, i.width, i.height
@@ -430,29 +582,29 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
                       (
                           SELECT COALESCE(q.image_id, q1.image_id) as image_id, q.annotations, q1.validations FROM 
                           (
-                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            SELECT an.image_id as image_id, (d.annotation || ('{"label":"' || %s || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
                             FROM image_annotation_refinement r 
                             JOIN annotation_data d ON r.annotation_data_id = d.id
                             JOIN annotation_type t ON d.annotation_type_id = t.id
                             JOIN image_annotation an ON d.image_annotation_id = an.id
-                            JOIN label_accessor a ON r.label_id = a.label_id
+                            %s
                             WHERE ((%s) AND an.auto_generated = false)
 
                             UNION
 
-                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || a.accessor || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                            SELECT n.image_id as image_id, (d.annotation || ('{"label":"' || %s || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
                             FROM image_annotation n
                             JOIN annotation_data d ON d.image_annotation_id = n.id
                             JOIN annotation_type t ON d.annotation_type_id = t.id
-                            JOIN label_accessor a ON n.label_id = a.label_id
+                            %s
                             WHERE ((%s) AND n.auto_generated = false)
                           ) q
                           
                           %s (
-                            SELECT i.id as image_id, json_agg(json_build_object('label', accessor, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
+                            SELECT i.id as image_id, json_agg(json_build_object('label', %s, 'num_yes', num_of_valid, 'num_no', num_of_invalid))::jsonb as validations
                             FROM image i 
                             JOIN image_validation v ON i.id = v.image_id
-                            JOIN label_accessor a ON a.label_id = v.label_id
+                            %s
                             WHERE (%s)
                             GROUP BY i.id
                           ) q1 
@@ -462,7 +614,7 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
                      ON i.id = q3.image_id
                       
                      WHERE i.unlocked = true
-                     GROUP BY i.key, q3.validations, i.width, i.height`, parseResult.query, parseResult.query, joinType, parseResult.query)
+                     GROUP BY i.key, q3.validations, i.width, i.height`, identifier, q1, parseResult.query, identifier, q2, parseResult.query, joinType, identifier, q3, parseResult.query)
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
         log.Debug("[Export] Couldn't export data: ", err.Error())
@@ -740,22 +892,37 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
 }
 
 
-func getRandomImage() Image{
+func getRandomImage(labelId int64) Image{
 	var image Image
 
 	image.Id = ""
 	image.Label = ""
 	image.Provider = "donation"
 
-	rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid 
-                           FROM image i 
-						   JOIN image_provider p ON i.image_provider_id = p.id 
-						   JOIN image_validation v ON v.image_id = i.id
-						   JOIN label l ON v.label_id = l.id
-                           LEFT JOIN label pl ON l.parent_id = pl.id
-						   WHERE ((i.unlocked = true) AND (p.name = 'donation') 
-                           AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)) LIMIT 1`)
-	if(err != nil){
+    labelIdStr := ""
+    if labelId != -1 {
+        labelIdStr = " AND l.id = $1"
+    }
+
+    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid 
+                        FROM image i 
+                        JOIN image_provider p ON i.image_provider_id = p.id 
+                        JOIN image_validation v ON v.image_id = i.id
+                        JOIN label l ON v.label_id = l.id
+                        LEFT JOIN label pl ON l.parent_id = pl.id
+                        WHERE ((i.unlocked = true) AND (p.name = 'donation') 
+                        AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)%s) LIMIT 1`, labelIdStr)
+
+	var rows *sql.Rows
+    var err error
+    if labelId != -1 {
+        rows, err = db.Query(q, labelId)
+    } else {
+        rows, err = db.Query(q)
+    }
+	
+
+    if err != nil {
 		log.Debug("[Fetch random image] Couldn't fetch random image: ", err.Error())
 		raven.CaptureError(err, nil)
 		return image
@@ -764,22 +931,36 @@ func getRandomImage() Image{
 	
     var label1 string
     var label2 string
-	if(!rows.Next()){
-        otherRows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid
-                                    FROM image i 
-                                    JOIN image_provider p ON i.image_provider_id = p.id 
-                                    JOIN image_validation v ON v.image_id = i.id
-                                    JOIN label l ON v.label_id = l.id
-                                    LEFT JOIN label pl ON l.parent_id = pl.id
-                                    WHERE i.unlocked = true AND p.name = 'donation' 
-                                    OFFSET floor(random() * 
-                                        ( SELECT count(*) FROM image i 
-                                          JOIN image_provider p ON i.image_provider_id = p.id 
-                                          JOIN image_validation v ON v.image_id = i.id 
-                                          WHERE i.unlocked = true AND p.name = 'donation'
-                                        )
-                                    ) LIMIT 1`)
-        if(!otherRows.Next()){
+	if !rows.Next() {
+        var otherRows *sql.Rows
+
+        offsetLabelIdStr := ""
+        if labelId != -1 {
+            offsetLabelIdStr = " AND v.label_id = $2"
+        }
+
+        q1 := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid
+                            FROM image i 
+                            JOIN image_provider p ON i.image_provider_id = p.id 
+                            JOIN image_validation v ON v.image_id = i.id
+                            JOIN label l ON v.label_id = l.id
+                            LEFT JOIN label pl ON l.parent_id = pl.id
+                            WHERE i.unlocked = true AND p.name = 'donation'%s 
+                            OFFSET floor(random() * 
+                                ( SELECT count(*) FROM image i 
+                                  JOIN image_provider p ON i.image_provider_id = p.id 
+                                  JOIN image_validation v ON v.image_id = i.id 
+                                  WHERE i.unlocked = true AND p.name = 'donation'%s
+                                )
+                            ) LIMIT 1`, labelIdStr, offsetLabelIdStr)
+
+        if labelId != -1 {
+            otherRows, err = db.Query(q1, labelId, labelId)
+        } else {
+            otherRows, err = db.Query(q1)
+        }
+        
+        if !otherRows.Next() {
     		log.Debug("[Fetch random image] Missing result set")
     		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
     		return image
@@ -787,14 +968,14 @@ func getRandomImage() Image{
         defer otherRows.Close()
 
         err = otherRows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
-        if(err != nil){
+        if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
         }
 	} else{
         err = rows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
-        if(err != nil){
+        if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
             return image
@@ -952,8 +1133,8 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
         var id int64
 
         id = 0
-        err = tx.QueryRow(`INSERT INTO user_image_annotation(image_annotation_id, account_id)
-                                SELECT $1, a.id FROM account a WHERE a.name = $2 RETURNING id`, insertedId, apiUser.Name).Scan(&id)
+        err = tx.QueryRow(`INSERT INTO user_image_annotation(image_annotation_id, account_id, timestamp)
+                                SELECT $1, a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2 RETURNING id`, insertedId, apiUser.Name).Scan(&id)
         if err != nil {
             tx.Rollback()
             log.Debug("[Add User Annotation] Couldn't add user annotation entry: ", err.Error())
@@ -979,16 +1160,32 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     return nil
 }
 
-func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (UnannotatedImage, error) {
+func getRandomUnannotatedImage(username string, addAutoAnnotations bool, labelId int64) (UnannotatedImage, error) {
     var unannotatedImage UnannotatedImage
 
+    //specify the max. number of not-annotatables before we skip the annotation task
+    maxNumNotAnnotatable := 3
+
     q1 := ""
+    posNum := 1
     if labelId != -1 {
         q1 = "AND l.id = $1"
+        posNum = 2
     }
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q1.auto_annotations FROM
-                        (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, width as image_width, height as image_height
+    q2 := fmt.Sprintf(`AND NOT EXISTS
+                       (
+                            SELECT 1 FROM user_annotation_blacklist bl 
+                            JOIN account acc ON acc.id = bl.account_id
+                            WHERE bl.image_validation_id = v.id AND acc.name = $%d
+                       )`, posNum)
+
+    q3 := fmt.Sprintf("AND v.num_of_not_annotatable < $%d", (posNum +1))
+
+
+    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, q1.auto_annotations FROM
+                        (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, 
+                            width as image_width, height as image_height, v.uuid as validation_uuid
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
@@ -998,27 +1195,31 @@ func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (Unannota
                             CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                             %s
                             AND NOT EXISTS
+                            (
+                                SELECT 1 FROM image_annotation a 
+                                WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                            )
+                            %s
+                            %s
+                            OFFSET floor
+                            ( random() * 
                                 (
-                                    SELECT 1 FROM image_annotation a 
-                                    WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
-                                )
-                                OFFSET floor
-                                ( random() * 
+                                    SELECT count(*) FROM image i
+                                    JOIN image_provider p ON i.image_provider_id = p.id
+                                    JOIN image_validation v ON v.image_id = i.id
+                                    JOIN label l ON v.label_id = l.id
+                                    WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                    CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
+                                    %s
+                                    AND NOT EXISTS
                                     (
-                                        SELECT count(*) FROM image i
-                                        JOIN image_provider p ON i.image_provider_id = p.id
-                                        JOIN image_validation v ON v.image_id = i.id
-                                        JOIN label l ON v.label_id = l.id
-                                        WHERE i.unlocked = true AND p.name = 'donation' AND 
-                                        CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
-                                        %s
-                                        AND NOT EXISTS
-                                        (
-                                            SELECT 1 FROM image_annotation a 
-                                            WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
-                                        )
-                                    ) 
-                                )LIMIT 1
+                                        SELECT 1 FROM image_annotation a 
+                                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id AND a.auto_generated = false
+                                    )
+                                    %s
+                                    %s
+                                ) 
+                            )LIMIT 1
                         ) q
                         LEFT JOIN 
                         (
@@ -1028,20 +1229,20 @@ func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (Unannota
                             JOIN annotation_type t on d.annotation_type_id = t.id
                             WHERE a.auto_generated = true 
                             GROUP BY d.image_annotation_id, a.label_id, a.image_id
-                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`, q1, q1)
+                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`, q1, q2, q3, q1, q2, q3)
 
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
     var rows *sql.Rows
     var err error
     if labelId == -1 {
-        rows, err = db.Query(q)
+        rows, err = db.Query(q, username, maxNumNotAnnotatable)
         if(err != nil) {
             log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
             raven.CaptureError(err, nil)
             return unannotatedImage, err
         }
     } else {
-        rows, err = db.Query(q, labelId)
+        rows, err = db.Query(q, labelId, username, maxNumNotAnnotatable)
         if(err != nil) {
             log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1057,7 +1258,7 @@ func getRandomUnannotatedImage(addAutoAnnotations bool, labelId int64) (Unannota
     if(rows.Next()){
         unannotatedImage.Provider = "donation"
 
-        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, &autoAnnotationBytes)
+        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, &unannotatedImage.Validation.Id, &autoAnnotationBytes)
         if(err != nil){
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1250,15 +1451,49 @@ func getNumOfValidatedImages() (int64, error){
     return num, nil
 }
 
-func getAllUnverifiedImages() ([]Image, error){
+func getAllUnverifiedImages(imageProvider string) ([]Image, error){
     var images []Image
-    rows, err := db.Query(`SELECT i.key, l.name FROM image i 
-                            JOIN image_provider p ON i.image_provider_id = p.id 
-                            JOIN image_validation v ON v.image_id = i.id
-                            JOIN label l ON v.label_id = l.id
-                            WHERE ((i.unlocked = false) AND (p.name = 'donation'))`)
 
-    if(err != nil){
+    q1 := "WHERE q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
+    params := false
+    if imageProvider != "" {
+        params = true
+        q1 = "WHERE (p.name = $1) AND q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
+    }
+
+    q := fmt.Sprintf(`SELECT q.image_key, string_agg(q.label_name::text, ',') as labels, 
+                      MAX(p.name) as image_provider
+                      FROM 
+                      (
+                        SELECT i.key as image_key, l.name  as label_name, 
+                        i.image_provider_id as image_provider_id, i.id as image_id
+                        FROM image i  
+                        LEFT JOIN image_validation v ON v.image_id = i.id
+                        JOIN label l ON v.label_id = l.id
+                        WHERE i.unlocked = false
+
+                        UNION
+                        
+                        SELECT i.key as image_key, g.name  as label_name, 
+                        i.image_provider_id as image_provider_id, i.id as image_id
+                        FROM image i
+                        LEFT JOIN image_label_suggestion s ON s.image_id = i.id
+                        JOIN label_suggestion g ON g.id = s.label_suggestion_id
+                        WHERE i.unlocked = false
+                     ) q
+                    JOIN image_provider p ON p.id = q.image_provider_id
+                    %s
+                    GROUP BY image_key`, q1)
+
+    var err error
+    var rows *sql.Rows
+    if params {
+        rows, err = db.Query(q, imageProvider)
+    } else {
+        rows, err = db.Query(q)
+    }
+
+    if err != nil {
         log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
         raven.CaptureError(err, nil)
         return images, err
@@ -1268,8 +1503,7 @@ func getAllUnverifiedImages() ([]Image, error){
 
     for rows.Next() {
         var image Image
-        image.Provider = "donation"
-        err = rows.Scan(&image.Id, &image.Label)
+        err = rows.Scan(&image.Id, &image.Label, &image.Provider)
         if err != nil {
             log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1286,6 +1520,20 @@ func unlockImage(imageId string) error {
     _,err := db.Exec("UPDATE image SET unlocked = true WHERE key = $1", imageId)
     if err != nil {
         log.Debug("[Unlock Image] Couldn't unlock image: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
+func putImageInQuarantine(imageId string) error {
+    _,err := db.Exec(`INSERT INTO image_quarantine(image_id)
+                        SELECT id FROM image WHERE key = $1
+                        ON CONFLICT(image_id) DO NOTHING`, imageId)
+    if err != nil {
+        log.Debug("[Put Image in Quarantine] Couldn't put image in quarantine: ", err.Error())
+        raven.CaptureError(err, nil)
         return err
     }
 
@@ -1366,7 +1614,12 @@ func getImageToLabel() (Image, error) {
         return image, err
     }
 
-    unlabeledRows, err := tx.Query(`SELECT i.key from image i WHERE i.unlocked = true AND i.id NOT IN (SELECT image_id FROM image_validation) LIMIT 1`)
+    unlabeledRows, err := tx.Query(`SELECT i.key from image i 
+                                    WHERE i.unlocked = true AND i.id NOT IN (
+                                        SELECT image_id FROM image_validation
+                                    ) AND i.id NOT IN (
+                                        SELECT image_id FROM image_label_suggestion
+                                    ) LIMIT 1`)
     if err != nil {
         tx.Rollback()
         raven.CaptureError(err, nil)
@@ -1377,11 +1630,25 @@ func getImageToLabel() (Image, error) {
     defer unlabeledRows.Close()
 
     if !unlabeledRows.Next() {
-        rows, err := tx.Query(`SELECT q.key, l.name as label, COALESCE(pl.name, '') as parentLabel
-                               FROM image_validation v 
-                               JOIN (SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1) q ON q.id = v.image_id
-                               JOIN label l on v.label_id = l.id 
-                               LEFT JOIN label pl on l.parent_id = pl.id`)
+        rows, err := tx.Query(`SELECT q.key, label, COALESCE(parent_label, '') as parent_label 
+                               FROM 
+                                (
+                                    SELECT v.image_id as image_id, l.name as label, COALESCE(pl.name, '') as parent_label
+                                    FROM image_validation v 
+                                    JOIN label l on v.label_id = l.id 
+                                    LEFT JOIN label pl on l.parent_id = pl.id
+
+                                    UNION ALL
+
+                                    SELECT ils.image_id as image_id, s.name as label, '' as parent_label
+                                    FROM image_label_suggestion ils
+                                    JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                ) q1
+                                JOIN (
+                                    SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true 
+                                    OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1
+                                ) q
+                                ON q.id = q1.image_id `)
 
 
         if err != nil {
@@ -1458,7 +1725,7 @@ func getImageToLabel() (Image, error) {
     return image, nil
 }
 
-func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry) error {
+func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageId string, labels []LabelMeEntry) error {
     tx, err := db.Begin()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
@@ -1466,11 +1733,32 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
         return err
     }
 
-    err = _addLabelsToImage(clientFingerprint, imageId, labels, tx)
-    if err != nil { 
-        return err //tx already rolled back in case of error, so we can just return here 
+    var knownLabels []LabelMeEntry
+    for _, item := range labels {
+        if !isLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
+            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
+                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
+                if err != nil {
+                    return err //tx already rolled back in case of error, so we can just return here 
+                }
+            } else {
+                tx.Rollback()
+                log.Debug("you need to be authenticated")
+                return errors.New("you need to be authenticated to perform this action") 
+            }
+        } else {
+            knownLabels = append(knownLabels, item)
+        }
     }
 
+    if len(knownLabels) > 0 {
+        _, err = _addLabelsToImage(apiUser.ClientFingerprint, imageId, knownLabels, 0, 0, tx)
+        if err != nil { 
+            return err //tx already rolled back in case of error, so we can just return here 
+        }
+    }
+
+    
     err = tx.Commit()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't commit changes: ", err.Error())
@@ -1480,15 +1768,63 @@ func addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMe
     return err
 }
 
+func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {
+    var labelSuggestionId int64
 
-func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, tx *sql.Tx) error {
+    labelSuggestionId = -1
+    rows, err := tx.Query("SELECT id FROM label_suggestion WHERE name = $1", label)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Adding suggestion label] Couldn't get label: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    if !rows.Next() { //label does not exist yet, insert it
+        rows.Close()
+
+        err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by) 
+                            SELECT $1, id FROM account a WHERE a.name = $2 
+                            ON CONFLICT (name) DO NOTHING RETURNING id`, label, apiUser.Name).Scan(&labelSuggestionId)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Adding suggestion label] Couldn't add label: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    } else {
+        err = rows.Scan(&labelSuggestionId)
+        rows.Close()
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Adding suggestion label] Couldn't scan label: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable) 
+                        SELECT $1, id, $3, $4 FROM image WHERE key = $2
+                        ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Adding image label suggestion] Couldn't add image label suggestion: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
+func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, numOfNotAnnotatable int, tx *sql.Tx) ([]int64, error) {
+    var insertedIds []int64
     for _, item := range labels {
         rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
         if err != nil {
             tx.Rollback()
             log.Debug("[Adding image labels] Couldn't get image ", err.Error())
             raven.CaptureError(err, nil)
-            return err
+            return insertedIds, err
         }
 
         defer rows.Close()
@@ -1500,7 +1836,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't scan image image entry: ", err.Error())
                 raven.CaptureError(err, nil)
-                return err
+                return insertedIds, err
             }
         }
 
@@ -1508,35 +1844,55 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
 
         //add sublabels
         if len(item.Sublabels) > 0 {
-            _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                            SELECT $1, $2, $3, $4, l.id FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))`,
-                            imageId, 0, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels))
+            rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
+                                  SELECT $1, $2, $3, $4, l.id, uuid_generate_v4(), $7 FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
+                                  RETURNING id`,
+                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels), numOfNotAnnotatable)
             if err != nil {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
                 raven.CaptureError(err, nil)
-                return err
+                return insertedIds, err
             }
+
+            for rows.Next() {
+                var insertedSublabelId int64
+                err = rows.Scan(&insertedSublabelId)
+                if err != nil {
+                    rows.Close()
+                    tx.Rollback()
+                    log.Debug("[Adding image labels] Couldn't scan sublabels: ", err.Error())
+                    raven.CaptureError(err, nil)
+                    return insertedIds, err
+                }
+                insertedIds = append(insertedIds, insertedSublabelId)
+            }
+            rows.Close()
         }
 
         //add base label
-        _, err = tx.Exec(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id) 
-                            SELECT $1, $2, $3, $4, id from label l WHERE id NOT IN (
+        var insertedLabelId int64
+        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
+                              SELECT $1, $2, $3, $4, id, uuid_generate_v4(), $6 from label l WHERE id NOT IN 
+                              (
                                 SELECT label_id from image_validation v where image_id = $1
-                            ) AND l.name = $5 AND l.parent_id IS NULL`,
-                            imageId, 0, 0, clientFingerprint, item.Label)
+                              ) AND l.name = $5 AND l.parent_id IS NULL
+                              RETURNING id`,
+                              imageId, numOfValid, 0, clientFingerprint, item.Label, numOfNotAnnotatable).Scan(&insertedLabelId)
         if err != nil {
             pqErr := err.(*pq.Error)
             if pqErr.Code.Name() != "unique_violation" {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
                 raven.CaptureError(err, nil)
-                return err
+                return insertedIds, err
             }
         }
+
+        insertedIds = append(insertedIds, insertedLabelId)
     }
 
-    return nil
+    return insertedIds, nil
 }
 
 func getAllImageLabels() ([]string, error) {
@@ -1783,7 +2139,7 @@ func deleteImage(uuid string) error {
         raven.CaptureError(err, nil)
         return err
     }
-
+    imageId := deletedId
     if deletedId == -1 {
         tx.Rollback()
         err = errors.New("nothing deleted")
@@ -1791,6 +2147,20 @@ func deleteImage(uuid string) error {
         raven.CaptureError(err, nil)
         return err
     }
+    
+
+    deletedId = -1 
+    err = tx.QueryRow(`DELETE FROM image_label_suggestion s 
+                       WHERE image_id = $1 RETURNING s.id`, imageId).Scan(&deletedId)
+
+    if deletedId == -1 {
+        tx.Rollback()
+        err = errors.New("nothing deleted")
+        log.Debug("[Delete image] Couldn't delete image_label_suggestion entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+    
 
     err = tx.Commit()
     if err != nil {
@@ -1859,6 +2229,23 @@ func userExists(username string) (bool, error) {
         return true, nil
     }
     return false, nil
+}
+
+func getUserInfo(username string) (UserInfo, error) {
+    var userInfo UserInfo
+
+    userInfo.Name = ""
+    userInfo.Created = 0
+    userInfo.ProfilePicture = ""
+
+    err := db.QueryRow("SELECT name, COALESCE(profile_picture, ''), created FROM account WHERE name = $1", username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created)
+    if err != nil {
+        log.Debug("[User Info] Couldn't get user info: ", err.Error())
+        raven.CaptureError(err, nil)
+        return userInfo, err
+    }
+
+    return userInfo, nil
 }
 
 func emailExists(email string) (bool, error) {
@@ -1941,8 +2328,11 @@ func accessTokenExists(accessToken string) bool {
 func createUser(username string, hashedPassword []byte, email string) error {
     var insertedId int64
 
+    created := int64(time.Now().Unix())
+
     insertedId = 0
-    err := db.QueryRow("INSERT INTO account(name, hashed_password, email) VALUES($1, $2, $3) RETURNING id", username, hashedPassword, email).Scan(&insertedId)
+    err := db.QueryRow("INSERT INTO account(name, hashed_password, email, created) VALUES($1, $2, $3, $4) RETURNING id", 
+                        username, hashedPassword, email, created).Scan(&insertedId)
     if err != nil {
         log.Debug("[Creating User] Couldn't create user: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1986,6 +2376,27 @@ func getUserStatistics(username string) (UserStatistics, error) {
         return userStatistics, err
     }
 
+
+    userStatistics.Total.Validations = 0
+    err = tx.QueryRow("SELECT count(*) FROM image_validation").Scan(&userStatistics.Total.Validations)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[User Statistics] Couldn't get total validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return userStatistics, err
+    }
+
+    userStatistics.User.Validations = 0
+    err = tx.QueryRow(`SELECT count(*) FROM user_image_validation u
+                       JOIN account a on u.account_id = a.id WHERE a.name = $1`, username).Scan(&userStatistics.User.Validations)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[User Statistics] Couldn't get user validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return userStatistics, err
+    }
+
+
     err = tx.Commit()
     if err != nil {
         log.Debug("[User Statistics] Couldn't commit transaction: ", err.Error())
@@ -1993,5 +2404,668 @@ func getUserStatistics(username string) (UserStatistics, error) {
         return userStatistics, err
     }
 
+
     return userStatistics, nil
 }
+
+func changeProfilePicture(username string, uuid string) (string, error) {
+    var existingProfilePicture string
+
+    existingProfilePicture = ""
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+    err = tx.QueryRow(`SELECT COALESCE(a.profile_picture, '') FROM account a WHERE a.name = $1`, username).Scan(&existingProfilePicture)
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't get existing profile picture: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+    _, err = tx.Exec(`UPDATE account SET profile_picture = $1 WHERE name = $2`, uuid, username)
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't change profile picture: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Change Profile Picture] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return existingProfilePicture, err
+    }
+
+    return existingProfilePicture, nil
+}
+
+/*func getMonthlyStatistics() (MonthlyStatistics, error) {
+    var monthlyStatistics MonthlyStatistics
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_annotations AS (
+                            SELECT * FROM image_annotation_history h
+                           )
+                          SELECT date,
+                           ( SELECT count(*) FROM num_of_annotations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get monthly statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return monthlyStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var numOfAnnotations int32
+        //var numOfValidations int32
+        var date string
+        err = rows.Scan(&date, &numOfAnnotations)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return monthlyStatistics, err
+        }
+
+        monthlyStatistics.Dates = append(monthlyStatistics.Dates, date)
+        monthlyStatistics.Annotations = append(monthlyStatistics.Annotations, numOfAnnotations)
+    }
+
+    return monthlyStatistics, nil
+}*/
+
+func getAnnotationStatistics(period string) ([]DataPoint, error) {
+    var annotationStatistics []DataPoint
+
+    if period != "last-month" {
+        return annotationStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_annotations AS (
+                            SELECT sys_period FROM image_annotation_history h
+                            UNION ALL 
+                            SELECT sys_period FROM image_annotation h1
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_annotations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationStatistics, err
+        }
+
+        annotationStatistics = append(annotationStatistics, datapoint)
+    }
+
+    return annotationStatistics, nil
+}
+
+
+func getValidationStatistics(period string) ([]DataPoint, error) {
+    var validationStatistics []DataPoint
+
+    if period != "last-month" {
+        return validationStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_validations AS (
+                            SELECT sys_period FROM image_validation_history h
+                            UNION ALL
+                            SELECT sys_period FROM image_validation h1
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_validations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return validationStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return validationStatistics, err
+        }
+
+        validationStatistics = append(validationStatistics, datapoint)
+    }
+
+    return validationStatistics, nil
+}
+
+/*func getValidationActivity(period string) ([]Activity, error) {
+    var activity []Activity
+
+    if period != "last-month" {
+        return activity, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height FROM
+                            (
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(v.sys_period) as dt
+                                    FROM image_validation v 
+                                    WHERE id NOT IN ( SELECT id FROM image_validation_history h
+                                                      WHERE h.label_id = v.label_id and v.image_id = h.image_id
+                                                    )
+                                    AND 
+                                    (
+                                            date(lower(v.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(lower(v.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION
+
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt
+                                    FROM image_validation_history h
+                                    WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION ALL
+
+                                (
+                                    SELECT v.label_id, v.image_id, 'verified' as type, upper(h.sys_period) as dt
+                                    FROM image_validation_history h
+                                    JOIN image_validation v 
+                                    ON v.id = h.id
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE 
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+                            ) q
+                            JOIN label l ON q.label_id = l.id
+                            JOIN image i ON q.image_id = i.id
+                            WHERE i.unlocked = true
+                            order by dt desc`)
+    if err != nil {
+        log.Debug("[Get Activity] Couldn't get activity: ", err.Error())
+        raven.CaptureError(err, nil)
+        return activity, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var a Activity
+        err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height)
+        if err != nil {
+            log.Debug("[Get Activity] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return activity, err
+        }
+
+        activity = append(activity, a)
+    }
+
+    return activity, nil
+}*/
+
+
+/*func getAnnotationActivity(period string) ([]Activity, error) {
+    var activity []Activity
+
+    if period != "last-month" {
+        return activity, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
+                           (d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotations 
+                           FROM
+                            (
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(a.sys_period) as dt, a.id as annotation_id
+                                    FROM image_annotation a 
+                                    WHERE id NOT IN ( SELECT id FROM image_annotation_history h
+                                                      WHERE h.label_id = a.label_id and a.image_id = h.image_id
+                                                    )
+                                    AND 
+                                    (
+                                            date(lower(a.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(lower(a.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION
+
+                                (
+                                    SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt, h.id as annotation_id
+                                    FROM image_annotation_history h
+                                    WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+
+                                UNION ALL
+
+                                (
+                                    SELECT a.label_id, a.image_id, 'verified' as type, upper(h.sys_period) as dt, null as annotation_id
+                                    FROM image_annotation_history h
+                                    JOIN image_annotation a 
+                                    ON a.id = h.id
+                                    AND 
+                                    (
+                                        date(upper(h.sys_period)) <= CURRENT_DATE 
+                                        AND 
+                                        date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                    )
+                                )
+                            ) q
+                            JOIN label l ON q.label_id = l.id
+                            JOIN image i ON q.image_id = i.id
+                            LEFT JOIN annotation_data d ON q.annotation_id = d.image_annotation_id
+                            JOIN annotation_type t ON d.annotation_type_id = t.id
+                            WHERE i.unlocked = true
+                            order by dt desc`)
+    if err != nil {
+        log.Debug("[Get Activity] Couldn't get activity: ", err.Error())
+        raven.CaptureError(err, nil)
+        return activity, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var a Activity
+        var annotation []byte
+        err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height, &annotation)
+        if err != nil {
+            log.Debug("[Get Activity] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return activity, err
+        }
+
+        if len(annotation) > 0 {
+            err := json.Unmarshal(annotation, &a.Image.Annotation)
+            if err != nil {
+                log.Debug("[Get Activity] Couldn't unmarshal annotations: ", err.Error())
+                raven.CaptureError(err, nil)
+                return activity, err
+            }
+        }
+
+        activity = append(activity, a)
+    }
+
+    return activity, nil
+}*/
+
+func getActivity(period string) ([]Activity, error) {
+    var activity []Activity
+
+    if period != "last-month" {
+        return activity, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
+                           (d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation, q.activity_name 
+                           FROM
+                            (
+                                (
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(a.sys_period) as dt, 
+                                        a.id as annotation_id, 'annotation' as activity_name
+                                        FROM image_annotation a 
+                                        WHERE id NOT IN ( SELECT id FROM image_annotation_history h
+                                                          WHERE h.label_id = a.label_id and a.image_id = h.image_id
+                                                        )
+                                        AND 
+                                        (
+                                                date(lower(a.sys_period)) <= CURRENT_DATE 
+                                                AND 
+                                                date(lower(a.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION
+
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt, 
+                                        h.id as annotation_id, 'annotation' as activity_name
+                                        FROM image_annotation_history h
+                                        WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION ALL
+
+                                    (
+                                        SELECT a.label_id, a.image_id, 'verified' as type, upper(h.sys_period) as dt, 
+                                        h.id as annotation_id, 'annotation' as activity_name
+                                        FROM image_annotation_history h
+                                        JOIN image_annotation a 
+                                        ON a.id = h.id
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+                                )
+
+
+                                UNION ALL
+                                (
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(v.sys_period) as dt, 
+                                        null::bigint as annotation_id, 'validation' as activity_name
+                                        FROM image_validation v 
+                                        WHERE id NOT IN ( SELECT id FROM image_validation_history h
+                                                          WHERE h.label_id = v.label_id and v.image_id = h.image_id
+                                                        )
+                                        AND 
+                                        (
+                                                date(lower(v.sys_period)) <= CURRENT_DATE 
+                                                AND 
+                                                date(lower(v.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION
+
+                                    (
+                                        SELECT label_id, image_id, 'created' as type, lower(h.sys_period) as dt, 
+                                        null::bigint as annotation_id, 'validation' as activity_name
+                                        FROM image_validation_history h
+                                        WHERE h.num_of_valid = 0 AND h.num_of_invalid = 0
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+
+                                    UNION ALL
+
+                                    (
+                                        SELECT v.label_id, v.image_id, 'verified' as type, upper(h.sys_period) as dt, 
+                                        null::bigint as annotation_id, 'validation' as activity_name
+                                        FROM image_validation_history h
+                                        JOIN image_validation v 
+                                        ON v.id = h.id
+                                        AND 
+                                        (
+                                            date(upper(h.sys_period)) <= CURRENT_DATE 
+                                            AND 
+                                            date(upper(h.sys_period)) >= (CURRENT_DATE - interval '1 month')
+                                        )
+                                    )
+                                )
+                            ) q
+                            JOIN label l ON q.label_id = l.id
+                            JOIN image i ON q.image_id = i.id
+                            LEFT JOIN annotation_data d ON q.annotation_id = d.image_annotation_id
+                            LEFT JOIN annotation_type t ON d.annotation_type_id = t.id
+                            WHERE i.unlocked = true
+                            order by dt desc`)
+    if err != nil {
+        log.Debug("[Get Activity] Couldn't get activity: ", err.Error())
+        raven.CaptureError(err, nil)
+        return activity, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var a Activity
+        var annotation []byte
+        err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height, &annotation, &a.Name)
+        if err != nil {
+            log.Debug("[Get Activity] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return activity, err
+        }
+
+        if len(annotation) > 0 {
+            err := json.Unmarshal(annotation, &a.Image.Annotation)
+            if err != nil {
+                log.Debug("[Get Activity] Couldn't unmarshal annotations: ", err.Error())
+                raven.CaptureError(err, nil)
+                return activity, err
+            }
+        }
+
+        activity = append(activity, a)
+    }
+
+    return activity, nil
+}
+
+func getLabelSuggestions() ([]string, error) {
+    var labelSuggestions []string
+
+    rows, err := db.Query("SELECT name FROM label_suggestion")
+    if err != nil {
+        log.Debug("[Get Label Suggestions] Couldn't get label suggestions: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelSuggestions, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var labelSuggestion string
+        err := rows.Scan(&labelSuggestion)
+        if err != nil {
+            log.Debug("[Get Label Suggestions] Couldn't scan label suggestions: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelSuggestions, err
+        }
+
+        labelSuggestions = append(labelSuggestions, labelSuggestion)
+    }
+
+    return labelSuggestions, nil
+}
+
+func blacklistForAnnotation(validationId string, apiUser APIUser) error {
+    _, err := db.Exec(`INSERT INTO user_annotation_blacklist(image_validation_id, account_id)
+                        SELECT v.id, (SELECT a.id FROM account a WHERE a.name = $1) as account_id 
+                               FROM image_validation v WHERE v.uuid = $2
+                        ON CONFLICT DO NOTHING`, apiUser.Name, validationId)
+    if err != nil {
+        log.Debug("[Blacklist Annotation] Couldn't blacklist annotation: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+    return nil
+}
+
+func markValidationAsNotAnnotatable(validationId string) error {
+    _, err := db.Exec(`UPDATE image_validation SET num_of_not_annotatable = num_of_not_annotatable + 1 
+                       WHERE uuid = $1`, validationId)
+    if err != nil {
+        log.Debug("[Mark Validation as not annotatable] Couldn't mark validation as not-annotatable: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
+func isImageUnlocked(uuid string) (bool, error) {
+    var unlocked bool
+    unlocked = false
+    err := db.QueryRow("SELECT unlocked FROM image WHERE key = $1", uuid).Scan(&unlocked)
+    if err != nil {
+        log.Debug("[Is Image Unlocked] Couldn't get row: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    return unlocked, nil
+}
+
+func getApiTokens(username string) ([]APIToken, error) {
+    var apiTokens []APIToken
+    rows, err := db.Query(`SELECT token, issued_at, description, revoked 
+                           FROM api_token a
+                           JOIN account a1 ON a1.id = a.account_id
+                           WHERE a1.name = $1`, username)
+    if err != nil {
+        log.Debug("[Get API Tokens] Couldn't get rows: ", err.Error())
+        raven.CaptureError(err, nil)
+        return apiTokens, err
+    }
+
+    defer rows.Close() 
+
+    for rows.Next() {
+        var apiToken APIToken
+        err = rows.Scan(&apiToken.Token, &apiToken.IssuedAtUnixTimestamp, &apiToken.Description, &apiToken.Revoked)
+        if err != nil {
+            log.Debug("[Get API Tokens] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return apiTokens, err
+        }
+
+        apiTokens = append(apiTokens, apiToken)
+    }
+
+    return apiTokens, nil
+}
+
+func isApiTokenRevoked(token string) (bool, error) {
+    var revoked bool
+    err := db.QueryRow("SELECT revoked FROM api_token WHERE token = $1", token).Scan(&revoked)
+    if err != nil {
+        log.Debug("[Is API Token revoked] Couldn't scan row: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    return revoked, nil
+}
+
+func generateApiToken(username string, description string) (APIToken, error) {
+    type MyCustomClaims struct {
+        Username string `json:"username"`
+        Created int64 `json:"created"`
+        jwt.StandardClaims
+    }
+
+    var apiToken APIToken
+
+    issuedAt := time.Now()
+    expiresAt := issuedAt.Add(time.Hour * 24 * 365 * 10) //10 years
+
+    claims := MyCustomClaims {
+                  username,
+                  issuedAt.Unix(),
+                  jwt.StandardClaims{
+                        ExpiresAt: expiresAt.Unix(),
+                        Issuer: "imagemonkey-api",
+                  },
+              }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+    tokenString, err := token.SignedString([]byte(JWT_SECRET))
+    if err != nil {
+        return apiToken, err
+    }
+
+
+    _, err = db.Exec(`INSERT INTO api_token(account_id, issued_at, description, revoked, token, expires_at)
+                        SELECT id, $2, $3, $4, $5, $6 FROM account WHERE name = $1`, 
+                        username, issuedAt.Unix(), description, false, tokenString, expiresAt.Unix())
+    if err != nil {
+        log.Debug("[Generate API Token] Couldn't insert entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return apiToken, err
+    }
+
+    apiToken.Description = description
+    apiToken.Token = tokenString
+    apiToken.IssuedAtUnixTimestamp = issuedAt.Unix()
+
+    return apiToken, nil
+}
+
+func revokeApiToken(username string, apiToken string) (bool, error) {
+    var modifiedId int64
+    err := db.QueryRow(`UPDATE api_token AS a 
+                       SET revoked = true
+                       FROM account AS acc 
+                       WHERE acc.id = a.account_id AND acc.name = $1 AND a.token = $2
+                       RETURNING a.id`, username, apiToken).Scan(&modifiedId)
+    if err != nil {
+        log.Debug("[Revoke API Token] Couldn't revoke token: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    return true, nil
+}
+

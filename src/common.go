@@ -17,6 +17,10 @@ import (
     "encoding/json"
     "github.com/garyburd/redigo/redis"
     log "github.com/Sirupsen/logrus"
+    "net/url"
+    "strconv"
+    "errors"
+    "github.com/gin-gonic/gin"
 )
 
 type Report struct {
@@ -29,6 +33,7 @@ type Label struct {
 
 type LabelMeEntry struct {
     Label string `json:"label"` 
+    Annotatable bool `json:"annotatable"` 
     Sublabels []string `json:"sublabels"`
 }
 
@@ -57,6 +62,7 @@ type LabelMapQuizExampleEntry struct {
 type LabelMapQuizAnswerEntry struct {
     Name string `json:"name"`
     Examples []LabelMapQuizExampleEntry `json:"examples"`
+    Uuid string `json:"uuid"`
 }
 
 
@@ -76,6 +82,7 @@ type LabelMapEntry struct {
     LabelMapEntries map[string]LabelMapEntry  `json:"has"`
     Accessors []string `json:accessors"`
     Quiz []LabelMapQuizEntry `json:quiz"`
+    Uuid string `json:"uuid"`
 }
 
 type LabelMap struct {
@@ -92,10 +99,19 @@ type BlogSubscribeRequest struct {
     Email string `json:"email"`
 }
 
+type ImageSource struct {
+    Provider string
+    Url string
+    Trusted bool
+}
+
 type ImageInfo struct {
     Hash uint64
     Width int32
     Height int32
+    Name string
+    Source ImageSource
+
 }
 
 type UserSignupRequest struct {
@@ -362,4 +378,67 @@ func isAlphaNumeric(s string) bool {
         }
     }
     return true
+}
+
+func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+    if val, ok := labelsMap[label]; ok {
+        if len(sublabels) > 0 {
+            availableSublabels := val.LabelMapEntries
+
+            for _, value := range sublabels {
+                _, ok := availableSublabels[value]
+                if !ok {
+                    return false
+                }
+            }
+            return true
+        }
+        return true
+    }
+
+    return false
+}
+
+func getLabelIdFromUrlParams(params url.Values) (int64, error) {
+    var labelId int64
+    var err error
+    labelId = -1
+    if temp, ok := params["label_id"]; ok {
+        labelId, err = strconv.ParseInt(temp[0], 10, 64)
+        if err != nil {
+            return labelId, err
+        }
+    }
+
+    return labelId, nil
+}
+
+func getExploreUrlParams(c *gin.Context) (string, bool, error) {
+    var query string
+    var err error
+
+    params := c.Request.URL.Query()
+
+    annotationsOnly := false
+    if temp, ok := params["annotations_only"]; ok {
+        if temp[0] == "true" {
+            annotationsOnly = true
+        }
+    }
+
+    if temp, ok := params["query"]; ok {
+        if temp[0] == "" {
+            return "", annotationsOnly, errors.New("no query specified")
+        }
+
+
+        query, err = url.QueryUnescape(temp[0])
+        if err != nil {
+            return "", annotationsOnly, errors.New("invalid query")
+        }
+    } else {
+        return "", annotationsOnly, errors.New("no query specified")
+    }
+
+    return query, annotationsOnly, nil 
 }

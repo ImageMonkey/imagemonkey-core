@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
-  <script src="js/common.js"></script> 
+  <script src="js/common.js?v=1"></script> 
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/dropzone.js"></script>
   <link rel="stylesheet" href="css/dropzone.css">
@@ -42,9 +42,10 @@
       Dropzone.options.dropzone = {
         maxFiles: 1,
         paramName: "image",
-        resizeWidth: 1000,
+        resizeWidth: 1024,
         resizeQuality: 0.8, 
         headers: { 'X-Browser-Fingerprint' : browserFingerprint, 'X-App-Identifier': '{{ .appIdentifier }}' },
+        url: "{{ .apiBaseUrl }}/v1/donate",
         init: function() {
           this.on("maxfilesexceeded", function(file){
             alert("No more files please!");
@@ -66,10 +67,13 @@
           });
 
           this.on('sending', function(file, xhr, formData) {
+
+            xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"));
+
             var label = getSelectedLabel();
             if(label !== "")
               formData.append("label", label);
-              formData.append("add_sublabels", true);
+              formData.append("add_sublabels", false);
           });
         }
       };
@@ -111,7 +115,7 @@
   <div class="ui vertical stripe segment">
     <div class="ui text container">
       <div class="row">
-       <form action="{{ .apiBaseUrl }}/v1/donate" class="ui segment dropzone" id="dropzone"></form>
+       <form class="ui segment dropzone" id="dropzone"></form>
        <div class="ui basic segment"></div>
        <div class="ui basic segment"></div>
 

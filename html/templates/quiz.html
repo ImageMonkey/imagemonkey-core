@@ -77,7 +77,7 @@
 
     function setImageAnnotation(canvas, imageUuid, annotation){
       canvas.clear();
-      setCanvasBackgroundImageUrl(canvas, ('donations/' + imageUuid), function() {
+      setCanvasBackgroundImageUrl(canvas, ('{{ .apiBaseUrl }}/v1/donation/' + imageUuid), function() {
         drawAnnotations(canvas, [annotation], canvas.backgroundImage.scaleX);
         showHideControls(true);
       });
@@ -277,7 +277,7 @@
       resetExamples();
       if(data["metainfo"]["browse_by_example"]){
           showHideBrowseByExample(true);
-          populateExamples(data["question"]["question"], ('donations/' + data["image"]["uuid"]), data["answers"], data["metainfo"]);
+          populateExamples(data["question"]["question"], ('{{ .apiBaseUrl }}/v1/donation/' + data["image"]["uuid"]), data["answers"], data["metainfo"]);
       }
       else{
         showHideBrowseByExample(false);

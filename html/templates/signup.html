@@ -35,6 +35,9 @@
 
 
     function signup(username, password, email){
+      $("#signupContainer").hide();
+      $("#loadingIndicator").show();
+
       var data = {}
 
       data["username"] = username;
@@ -44,7 +47,25 @@
       $.ajax({
         type: "POST",
         url: "{{ .apiBaseUrl }}/v1/signup",
-        data: JSON.stringify(data)
+        data: JSON.stringify(data),
+        success: function(data){
+          $("#loadingIndicator").hide();
+          $("#signedUpMessage").fadeIn("slow");
+          setInterval(function(){window.location="/";},2000); //redirect after 2 seconds
+        },
+        error: function (xhr, options, err) {
+          $("#signupContainer").show();
+          $("#loadingIndicator").hide();
+
+          if(xhr.status !== 500){
+            $('#signupWarningMsgText').text('Username or email address already exists');
+            $('#signupWarningMsg').show(200).delay(1500).hide(200);
+          }
+          else{
+            $('#signupWarningMsgText').text('Internal error - please try again later');
+            $('#signupWarningMsg').show(200).delay(1500).hide(200);
+          }
+        }
       });
     }
 
@@ -134,12 +155,13 @@
      {{ template "pointing_menu.html" .}}
      <div class="ui text container">
       <h2 class="ui inverted header">
-        Login
+        Create an account
       </h2>
     </div>
   </div>
   <div class="ui stackable center aligned grid vertical stripe">
     <div class="row">
+      <div id="signupContainer">
         <div class="ui massive stacked segment">
           <div class="field">
             <div class="ui left icon input">
@@ -169,6 +191,14 @@
             <div class="ui fluid massive submit button" id="signupButton">Sign Up</div>
           </div>
         </div>
+      </div>
+
+      <div hidden id="signedUpMessage">
+        <i class="massive check circle outline icon"></i>
+        <h1 class="ui center aligned header">Success</h1>
+      </div>
+
+      <div hidden class="ui large loader" id="loadingIndicator"></div>
     </div>
 
     <div class="row">
@@ -183,8 +213,9 @@
 
 
   </div>
-  {{ template "footer.html" .}}
 </div>
+
+{{ template "footer.html" .}}
 
 </body>
 

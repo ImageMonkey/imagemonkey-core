@@ -36,6 +36,7 @@
   <script type="text/javascript">
   //global image validation map that holds if a image is marked as valid or not
   var imageValidationMapping = {};
+  var labelId = null;
 
   function populateImageGrid(data){
     imageValidationMapping = {};
@@ -47,7 +48,7 @@
 
     var donations = data["donations"];
     for(var i = 0; i < donations.length; i++){
-      var imageEndpoint = "donations/" + donations[i].uuid;
+      var imageEndpoint = "{{ .apiBaseUrl }}/v1/donation/" + donations[i].uuid;
       $('#imageGrid').append('<div class="img-container">' +
         '<img src="' + imageEndpoint + '" imageId="' + donations[i].uuid + '" />' + 
         '</div>');
@@ -85,7 +86,8 @@
     }
     else{
       var multiValidationMode = isMultiValidationMode();
-      var url = "{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false");
+      var url = ("{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
+                + ((labelId === null) ? "" : ("&label_id=" + labelId)));
 
       $.ajax({
         url: url,
@@ -104,8 +106,9 @@
             downloadingImage.onload = function(){
             $("#image").attr("src", this.src);
               showHideControls(true);
+              $("#fullscreenDlgContentImage").attr("src", this.src);
             }
-            downloadingImage.src = "donations/" + data.uuid;
+            downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/" + data.uuid;
 
           }
         }
@@ -183,7 +186,7 @@
   function showHideControls(show){
     if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
       if(show){
-        $('#validationContainerSegment').show();
+        $('#validationContainerSegment').css('visibility','visible');
         $('#loadingIndicator').addClass('active');
         $('#loadingIndicator').hide();
 
@@ -193,21 +196,25 @@
         else
           $('#showMePollButton').show();
         
-        $('#image').show();
+        $('#image').css('visibility','visible');
       }
       else {
         $('#poll-chart').hide();
-        $('#validationContainerSegment').hide();
+        $('#validationContainerSegment').css('visibility','hidden');
         $('#loadingIndicator').removeClass('active');
         $('#loadingIndicator').show();
         $('#showMePollButton').hide();
-        $('#image').hide();
+        $('#image').css('visibility','hidden');
       }
     }
   }
 
   $(document).ready(function(){
     var browserFingerprint = null;
+
+    labelId = {{ .labelId }};
+    if(labelId === -1)
+      labelId = null;
 
     $("#multiValidationContainer").hide();
 
@@ -222,6 +229,20 @@
 
       getRandomImages();
     });
+
+
+    $('#imageClick').click( function(e) {
+      e.preventDefault();
+      $("#showImageFullscreenDlg").modal("show"); 
+      return false; 
+    });
+
+    $('#closeImageFullscreenDlgButton').click( function(e) {
+      e.preventDefault();
+      $("#showImageFullscreenDlg").modal("hide");
+      return false;
+    });
+      
 
     //image grid is loaded, we can now show the "done" button
     $('#imageGrid').on('jg.complete', function() {
@@ -279,7 +300,10 @@
         dataType: 'json',
         type: 'POST',
         data: JSON.stringify(data),
-        headers: headers, 
+        headers: headers,
+        beforeSend: function(xhr) {
+            xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        },
         success: function(data){
           getRandomImages();
 
@@ -332,13 +356,18 @@
        <h2 class="ui inverted header">What do you see?</h2>
      </div>
    </div>
+   {{ else }}
+    <!--in case header of no header, include it here-->
+      <script src="/js/cookies.min.js"></script>
    {{ end }}
 
    <div class="ui stackable grid vertical stripe">
     <div class="four wide column">
     </div>
     <div class="eight wide center aligned column" id="singleValidationContainer">
-      <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
+      <a href="#" id="imageClick">
+        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
+      </a>
       <div class="ui center aligned basic segment" id="validationContainerSegment">
         <h1 class="ui header" id="label" label="" sublabel=""></h1>
         <button class="negative ui button center aligned" id="noButton">NO</button>
@@ -366,6 +395,7 @@
         <p></p>
         <button class="positive ui button center aligned" id="multiValidateDoneButton">DONE</button>
       </div>
+    </div>
 
       <div class="ui modal" id="confirmNoValidDlg">
         <div class="ui header">
@@ -386,7 +416,15 @@
         </div>
       </div>
 
-    </div>
+      <div class="ui basic scrolling fullscreen modal" id="showImageFullscreenDlg">
+        <div class="ui right floated inverted basic button" id="closeImageFullscreenDlgButton">
+          <i class="icon close"></i>
+          Close
+        </div>
+        <div class="image content" id="showImageFullscreenDlgContent">
+          <img class="ui centered image" id="fullscreenDlgContentImage" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}">
+        </div>
+      </div>
 
     <div class="four wide center aligned column">
       {{ template "img_info.html" .}}
@@ -397,8 +435,6 @@
       </button>
       <canvas id="poll-chart" hidden/>
     </div>
-  </div>
-
 
 </div>
 {{ if .showFooter }} 

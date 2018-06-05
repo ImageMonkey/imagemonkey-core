@@ -47,6 +47,8 @@
     var selectDataMode = null;
     var detailedCanvas = null;
 
+    $('#browseDataRadioCheckbox').parent().checkbox('set checked');
+
     $('.ui.checkbox').checkbox();
 
     var availableLabels = [];
@@ -268,9 +270,15 @@
       });
 }
 
-$("#goButton").click(function(e) {
-  loadData($("#query").val(), isAnnotationsOnlyChecked());
-});
+  $("#goButton").click(function(e) {
+    loadData($("#query").val(), isAnnotationsOnlyChecked());
+  });
+
+  //in case there are URL parameters prodvided, load when document
+  //gets loaded.
+  {{if ne .queryInfo.Query "" }}
+    loadData({{.queryInfo.Query}}, {{.queryInfo.AnnotationsOnly}})
+  {{ end }}
 
 });
 </script>

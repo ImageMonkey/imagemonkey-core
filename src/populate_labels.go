@@ -93,6 +93,7 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 			}
 		}
 
+
 		//quiz
 		for _, quizEntry := range val.Quiz {
 			for _, quizEntryAccessor := range quizEntry.Accessors {
@@ -123,6 +124,97 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 		}
 	}
 }
+
+func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
+	//quiz answers
+	for _, quizEntry := range val.Quiz {
+		for _, answer := range quizEntry.Answers {
+			_, err := tx.Exec(`INSERT INTO label(name, parent_id, uuid)
+								SELECT $1, id, $3 FROM label WHERE uuid = $2
+								ON CONFLICT(uuid) DO NOTHING`, answer.Name, parentLabelUuid, answer.Uuid)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal("Couldn't add quiz answer ", err.Error())
+				panic(err)
+			}
+		}
+	}
+}
+
+func addLabel(tx *sql.Tx, uuid string, label string) {
+	rows, err := tx.Query("SELECT COUNT(id) FROM label WHERE uuid = $1", uuid)
+	if err != nil {
+		tx.Rollback()
+		log.Fatal(err)
+		panic(err)
+	}
+	if !rows.Next() {
+		tx.Rollback()
+		log.Fatal(err)
+		panic(err)
+	}
+
+	numOfLabels := 0
+	err = rows.Scan(&numOfLabels)
+	if err != nil {
+		tx.Rollback()
+		log.Fatal(err)
+		panic(err)
+	}
+
+	rows.Close()
+
+	if numOfLabels == 0 {
+		log.Info("Adding label ", label)
+		_,err := tx.Exec("INSERT INTO label(name, uuid) VALUES($1, $2)", label, uuid)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+			panic(err)
+		}
+	} else {
+		log.Debug("Skipping label ", label, " as it already exists")
+	}
+}
+
+func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) {
+	rows, err := tx.Query("SELECT count(*) FROM label WHERE uuid = $1", uuid)
+	if err != nil {
+		tx.Rollback()
+		log.Fatal(err)
+		panic(err)
+	}
+	if !rows.Next() {
+		tx.Rollback()
+		log.Fatal(err)
+		panic(err)
+	}
+
+	numOfLabels := 0
+	err = rows.Scan(&numOfLabels)
+	if err != nil {
+		tx.Rollback()
+		log.Fatal(err)
+		panic(err)
+	}
+
+	rows.Close()
+
+	if numOfLabels == 0 {
+		log.Info("Adding label ", sublabel, " (parent: ", label, " )")
+		_,err := tx.Exec(`INSERT INTO label(name, parent_id, uuid)
+			SELECT $1, l.id, $3 FROM label l WHERE l.name = $2 AND l.parent_id is null`,
+			sublabel, label, uuid)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+			panic(err)
+		}
+	} else {
+		log.Debug("Skipping label ", sublabel, " (parent: ", label, " ), as it already exists")
+	}
+}
+
 
 func main(){
 	dryRun := flag.Bool("dryrun", true, "dry run")
@@ -159,82 +251,16 @@ func main(){
 	for k := range labelMap {
 		val := labelMap[k]
 
-		rows, err := tx.Query("SELECT COUNT(id) FROM label WHERE name = $1", k)
-		if err != nil {
-			tx.Rollback()
-			log.Fatal(err)
-			panic(err)
-		}
-		if !rows.Next() {
-			tx.Rollback()
-			log.Fatal(err)
-			panic(err)
-		}
-
-		numOfLabels := 0
-		err = rows.Scan(&numOfLabels)
-		if err != nil {
-			tx.Rollback()
-			log.Fatal(err)
-			panic(err)
-		}
-
-		rows.Close()
-
-		if numOfLabels == 0 {
-			log.Info("Adding label ", k)
-			_,err := tx.Exec("INSERT INTO label(name) VALUES($1)", k)
-			if err != nil {
-				tx.Rollback()
-				log.Fatal(err)
-				panic(err)
-			}
-		} else {
-			log.Debug("Skipping label ", k, " as it already exists")
-		}
-
+		addLabel(tx, val.Uuid, k)
 
 		if len(val.LabelMapEntries) != 0 {
 			for sublabel := range val.LabelMapEntries {
-				rows, err := tx.Query("select count(l.id) from label l join label pl on l.parent_id = pl.id WHERE l.name = $1 AND pl.name = $2", sublabel, k)
-				if err != nil {
-					tx.Rollback()
-					log.Fatal(err)
-					panic(err)
-				}
-				if !rows.Next() {
-					tx.Rollback()
-					log.Fatal(err)
-					panic(err)
-				}
-
-				numOfLabels := 0
-				err = rows.Scan(&numOfLabels)
-				if err != nil {
-					tx.Rollback()
-					log.Fatal(err)
-					panic(err)
-				}
-
-				rows.Close()
-
-				if numOfLabels == 0 {
-					log.Info("Adding label ", sublabel, " (parent: ", k, " )")
-					_,err := tx.Exec(`INSERT INTO label(name, parent_id)
-										SELECT $1, l.id FROM label l WHERE l.name = $2 AND l.parent_id is null`,
-									sublabel, k)
-					if err != nil {
-						tx.Rollback()
-						log.Fatal(err)
-						panic(err)
-					}
-				} else {
-					log.Debug("Skipping label ", sublabel, " (parent: ", k, " ), as it already exists")
-				}
+				addSublabel(tx, val.LabelMapEntries[sublabel].Uuid, k, sublabel)	
 			}
 
 		}
 
+		addQuizAnswers(tx, val.Uuid, val)
 		addAccessors(tx, k, val)
 	} 
 

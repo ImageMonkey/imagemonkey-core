@@ -16,8 +16,10 @@
 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
-  <script src="js/common.js"></script> 
+  <script src="js/common.js?v=2"></script> 
   <script src="js/label.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
 
   <script src="js/fingerprint2.min.js"></script>
 
@@ -86,15 +88,13 @@
       },
       success: function(data){
         $("#image").attr("imageId", data.uuid);
-        
-        //$("#image").attr("src", ("donations/"+data.uuid));
 
         var downloadingImage = new Image();
         downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
           showHideControls(true);
         }
-        downloadingImage.src = "donations/"+data.uuid;
+        downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/"+data.uuid;
 
         addOldLabels(data["all_labels"]);
 
@@ -138,8 +138,9 @@
     oldLabelMap = {};
     if(input !== null){
       for(var i = 0; i < input.length; i++){
-        oldLabelMap[input[i]["label"]] = input[i]["sublabels"];
-        addOldLabel(input[i]["label"]);
+        var escapedLabel = escapeHtml(input[i]["label"]);
+        oldLabelMap[escapedLabel] = input[i]["sublabels"];
+        addOldLabel(escapedLabel);
       }
     }
 
@@ -156,7 +157,7 @@
       success: function(data){
         if(data !== null){
           for(var i = 0; i < data.length; i++){
-            addPopularLabel(data[i]);
+            addPopularLabel(escapeHtml(data[i]));
           }
 
           if(data.length > 0 ) //only show if there is at least one suggestion
@@ -227,9 +228,13 @@
 
   function addLabel(label){
     var added = false;
-    var baseLabelExists = labelExists(label);
+    var escapedLabel = escapeHtml(label);
+    var baseLabelExists = labelExists(escapedLabel);
     var subLabels = []; 
-    var subLabelsDict = labelMap[label]["has"];
+    var subLabelsDict = {};
+    if(escapedLabel in labelMap)
+      sublabelsDict = labelMap[escapedLabel]["has"];
+
     for (key in subLabelsDict) {
       if (subLabelsDict.hasOwnProperty(key))
         subLabels.push(key);
@@ -241,28 +246,28 @@
     if((subLabels !== null) && (subLabels.length > 0)){
       for(var j = 0; j < subLabels.length; j++){
         if(!sublabelExists(label, subLabels[j])){
-          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j] +'" label="' + label + '"' + '>' + subLabels[j] + '/' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j] +'" label="' + escapedLabel + '"' + '>' + subLabels[j] + '/' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
           added = true;
 
-          if(label in newlyAddedLabels){
-            var alreadyAvailableSubLabels = newlyAddedLabels[label];
+          if(escapedLabel in newlyAddedLabels){
+            var alreadyAvailableSubLabels = newlyAddedLabels[escapedLabel];
             alreadyAvailableSubLabels.push(subLabels[j])
-            newlyAddedLabels[label] = alreadyAvailableSubLabels;
+            newlyAddedLabels[escapedLabel] = alreadyAvailableSubLabels;
           }
           else{
-            newlyAddedLabels[label] = [subLabels[j]];
+            newlyAddedLabels[escapedLabel] = [subLabels[j]];
           }
         }
       }    
     }
     else{ 
       if(!baseLabelExists)
-        newlyAddedLabels[label] = [];
+        newlyAddedLabels[escapedLabel] = [];
     }
 
     if(!baseLabelExists){
       added = true;
-      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + label +  '" >' + label + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
 
     if(!added)
@@ -287,8 +292,22 @@
     $('#labelAlreadyExistsMessage').hide();
     $('#mostPopularLabelsContainer').hide();
     var browserFingerprint = null;
-    var oldLabels = {{ .image.AllLabels }};
-    addOldLabels(oldLabels);
+    addOldLabels({{ .image.AllLabels }});
+
+    var availableLabels = [];
+    var availableLabelsLookupTable = {} //use map for faster access
+    {{ range $key, $value := .labels }}
+      availableLabelsLookupTable[{{ $key }}] = true;
+      availableLabels.push(escapeHtml({{ $key }}));
+    {{ end }}
+
+    {{ range $value := .labelSuggestions }}
+      var escapedLabelSuggestion = escapeHtml({{ $value }});
+      if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
+        availableLabelsLookupTable[escapedLabelSuggestion] = true;
+        availableLabels.push(escapedLabelSuggestion);
+      }
+    {{ end }}
 
     getMostPopularLabels();
 
@@ -300,13 +319,26 @@
       }
     });
 
+    $('#addLabelSuggestionButton').click(function(e){
+      var label = $("#labelSuggestion").val();
+      if(label !== ""){
+        if(!(label in availableLabelsLookupTable)){
+          availableLabelsLookupTable[label] = true;
+          availableLabels.push(label);
+        }
+
+        addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
+        $("#labelSuggestion").val(''); //clear input after add
+      }
+    });
+
   $('#doneButton').click(function(e) {
     var labelsLst = [];
 
         //dict to list
         for (var key in newlyAddedLabels){
           if (newlyAddedLabels.hasOwnProperty(key)){
-            labelsLst.push({label: key, sublabels: newlyAddedLabels[key]});
+            labelsLst.push({label: key, annotatable: true, sublabels: newlyAddedLabels[key]});
           }
         }
 
@@ -328,6 +360,9 @@
             type: 'POST',
             data: JSON.stringify(labelsLst),
             headers: headers,
+            beforeSend: function(xhr) {
+              xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+            },
             complete: function(data){
             },
             success: function(data){
@@ -338,57 +373,50 @@
         
       });
 
-      /*$('.ui.search')
-      .search({
-        type: 'category',
-        debug: true,
-        apiSettings: {
-          onResponse: function(imageMonkeyResponse) {
-            var
-              response = {
-                results : {}
-              }
-            ;
-            // translate GitHub API response to work with search
-            $.each(imageMonkeyResponse.items, function(index, item) {
-              var
-                parent_label   = item.parent_label,
-                maxResults = 8
-              ;
-
-              if(index >= maxResults) {
-                return false;
-              }
-
-              // create new language category
-              if(response.results[parent_label] === undefined) {
-                response.results[parent_label] = {
-                  name    : parent_label,
-                  results : []
-                };
-              }
-              // add result to category
-              response.results[parent_label].results.push({
-                title       : item.label,
-                description : item.description
-              });
-            });
-            return response;
-          },
-          url: '{{ .apiBaseUrl}}/v1/label/search?q={query}'
-        }//,
-        //fields: {
-        //  results : 'items',
-        //  title   : 'label'
-        //},
-        minCharacters : 2,
-        searchOnFocus: false,
-        showNoResults: false,
-      });*/
-
   $('.ui.dropdown')
   .dropdown()
   ;
+
+
+  function split(val) {
+    return val.split( / \s*/ );
+  }
+  
+  function extractLast(term) {
+    return split(term).pop();
+  }
+
+  $("#labelSuggestion")
+    // don't navigate away from the field on tab when selecting an item
+    .on("keydown", function(event) {
+      if (event.keyCode === $.ui.keyCode.TAB &&
+        $(this).autocomplete("instance").menu.active) {
+        event.preventDefault();
+    }
+  })
+  .autocomplete({
+    minLength: 0,
+    source: function(request, response) {
+      // delegate back to autocomplete, but extract the last term
+      response($.ui.autocomplete.filter(
+      availableLabels, extractLast(request.term)));
+    },
+    focus: function() {
+      // prevent value inserted on focus
+      return false;
+    },
+    select: function(event, ui) {
+      var terms = split(this.value);
+      // remove the current input
+      terms.pop();
+      // add the selected item
+      terms.push(ui.item.value);
+      // add placeholder to get the comma-and-space at the end
+      terms.push("");
+      this.value = terms.join("");
+      return false;
+    }
+  });
 
   new Fingerprint2().get(function(result, components){
     browserFingerprint = result;
@@ -436,29 +464,47 @@
 
     </div>
     <div class="eight wide center aligned column">
-      <img class="ui large image centered" src="donations/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
+      <img class="ui large image centered" src="{{ .apiBaseUrl}}/v1/donation/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
       
 
       <h2></h2>
-      <p id="objectsWithoutLabelText">Do you see any objects without a label? Add them here</p>
+      <p id="objectsWithoutLabelText">Do you see any objects without a label?</p>
       <div class="ui centered grid">
         <div class="row">
-          <div class="ui search">
-            <div class="ui center aligned action input" id="labelForm">
-              <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
-              <div class="ui search selection dropdown" id="labelDropdown">
-                <div class="default text">Select Label</div>
-                <div class="menu">
-                  {{ range $key, $value := .labels }}
-                  <div class="item" data-value="{{ $key }}"><i class="tag icon"></i>{{ $key }}</div>
-                  {{ end }}
+          <div class="ui form">
+
+            {{ if (eq .sessionInformation.LoggedIn false) }}
+            <div class="field">
+              <div class="ui search">
+                <div class="ui center aligned action input" id="labelForm">
+                  <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
+                  <div class="ui search selection dropdown" id="labelDropdown">
+                    <div class="default text">Select Label</div>
+                    <div class="menu">
+                      {{ range $key, $value := .labels }}
+                      <div class="item" data-value="{{ $key }}"><i class="tag icon"></i>{{ $key }}</div>
+                      {{ end }}
+                    </div>
+                  </div>
+
+                  <button class="ui button" id="addLabelButton">Add</button>
                 </div>
               </div>
-
-
-              <button class="ui button" id="addLabelButton">Add</button>
             </div>
+
+            {{ else }}
+            <div class="field">
+              <div class="ui center aligned action input" id="labelForm">
+                <div class="ui input">
+                  <input placeholder="Enter label..." type="text" id="labelSuggestion">
+                </div>
+                <button class="ui button" id="addLabelSuggestionButton">Add</button>
+              </div>
+            </div>
+            {{ end }}
+
           </div>
+
 
           <div class="ui large loader" id="loadingIndicator"></div>
 

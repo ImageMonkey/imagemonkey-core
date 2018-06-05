@@ -1,0 +1,94 @@
+digraph G { 
+	{ 
+		rootnode [label="root" size=250 fontsize=25 color=red]
+
+		vehicle [label="vehicle" size=150 fontsize=20 color=blue]
+		car [label="car" id="67f02864-cb77-48aa-811c-7633a7d7d564" URL="car"] 
+		bicycle [label="bicycle" id="c8cfc6a0-1a20-4e89-b879-d7378b882939"]
+		road [label="road" id="26ba089d-d11b-46ff-8f40-e292ba0e7624"]
+		person [label="person", id="64766828-a943-433f-8800-1901cebf959d"]
+
+		architecture [label="architecture" size=170 fontsize=20 color=blue]
+		building [label="building" id="3619dc01-f1e2-4791-9ddd-56550c2a6b7d"]
+
+		food [label="food" size=150 fontsize=20 color=blue]
+		wholefood [label="whole food"]
+		processedfood [label="proc. food"]
+		fruits [label="fruits"]
+		apple [label="apple" id="f81cf567-4798-4e4d-95f9-b430cf04ee55"]
+		orange [label="orange" id="5ca7ccad-3b8c-4c9a-ac27-44cddc96d4fa"]
+		pizza [label="pizza" id="be8270fd-2c5c-47ff-b938-0555e5201a18"]
+		banana [label="banana" id="1c1dfe7c-0978-4c59-8728-7857a3867296"]
+		egg [label="egg" id="fe374440-d36d-4330-9145-ef92507f2c9d"]
+
+		mammal [label="mammals" size=150 fontsize=20 color=blue]
+		animal [label="animal"] 
+		cat [label="cat" id="05c02fc5-9095-41e4-acb1-68303654ebb1"]
+		dog [label="dog" id="bac46d8e-0655-46d5-a393-36c69a18ee2c"]
+
+		electronics [label="electronics" size=150 fontsize=20 color=blue]
+		tv [label="TV" id="3699ac56-1356-4695-9195-fbcf18471736"]
+		smartphone [label="Smartphone" id="729f8759-ed57-4a45-984e-73b0f3f96e14"]
+
+		household [label="household" size=150 fontsize=20 color=blue]
+		cup [label="cup" id="654c2298-aa63-4d7d-b154-c8b521c26532"]
+		glass [label="glass" id="f08885f5-e0fa-467f-addf-459013170516"]
+		spoon [label="spoon" id="fa12ab77-acef-40ba-90e1-aba5a8e2c245"]
+
+		sports [label="sports" size=150 fontsize=20 color=blue]
+		tennisball [label="tennis ball" id="d040c820-cd47-4159-87e2-a0fe69fa678c"]
+
+		nature [label="nature" size=150 fontsize=20 color=blue]
+		tree [label="tree" id="de9c51d5-b633-4a92-be3f-2e09a7ed5dc4"]
+
+		misc [label="misc" size=150 fontsize=20 color=blue]
+		bullet [label="bullet" id="b4f05e83-60c9-4ad6-9d01-222f8d16d4ed"]
+
+		food -> wholefood
+		food -> processedfood
+		processedfood -> pizza
+		wholefood -> fruits
+		fruits -> orange
+		fruits -> banana
+		fruits -> apple
+		wholefood -> egg
+
+		vehicle -> car
+		vehicle -> bicycle
+
+		rootnode -> food
+		rootnode -> vehicle
+		rootnode -> household
+		rootnode -> sports
+		rootnode -> architecture
+		rootnode -> mammal
+		rootnode -> electronics
+		rootnode -> nature
+		rootnode -> misc
+
+		
+		nature -> tree
+
+		misc -> bullet
+		
+		architecture -> building
+		architecture -> road
+
+		household -> cup
+		household -> glass
+		household -> spoon
+		
+		electronics -> tv
+		electronics -> smartphone
+
+		sports -> tennisball
+
+
+		mammal -> animal
+		mammal -> person
+		animal -> dog
+		animal -> cat
+	} 
+	
+	
+}
