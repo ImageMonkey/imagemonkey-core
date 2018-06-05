@@ -75,7 +75,7 @@
           setLabel(data.label, data.sublabel);
           setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
 
-          setCanvasBackgroundImageUrl(canvas, ('donations/' + data.image_uuid), function() {
+          setCanvasBackgroundImageUrl(canvas, ('{{ .apiBaseUrl }}/v1/donation/' + data.image_uuid), function() {
             drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
             showHideControls(true);
           });
@@ -88,7 +88,7 @@
       var browserFingerprint = null;
 
       canvas = new fabric.Canvas('canvas');
-      setCanvasBackgroundImageUrl(canvas, 'donations/{{ .randomImage.ImageId }}', function() {
+      setCanvasBackgroundImageUrl(canvas, '{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.ImageId }}', function() {
         drawAnnotations(canvas, {{ .randomImage.Annotations }}, canvas.backgroundImage.scaleX);
       });
 

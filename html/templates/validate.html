@@ -48,7 +48,7 @@
 
     var donations = data["donations"];
     for(var i = 0; i < donations.length; i++){
-      var imageEndpoint = "donations/" + donations[i].uuid;
+      var imageEndpoint = "{{ .apiBaseUrl }}/v1/donation/" + donations[i].uuid;
       $('#imageGrid').append('<div class="img-container">' +
         '<img src="' + imageEndpoint + '" imageId="' + donations[i].uuid + '" />' + 
         '</div>');
@@ -108,7 +108,7 @@
               showHideControls(true);
               $("#fullscreenDlgContentImage").attr("src", this.src);
             }
-            downloadingImage.src = "donations/" + data.uuid;
+            downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/" + data.uuid;
 
           }
         }
@@ -366,7 +366,7 @@
     </div>
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <a href="#" id="imageClick">
-        <img class="ui large image centered" src="donations/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
+        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
       </a>
       <div class="ui center aligned basic segment" id="validationContainerSegment">
         <h1 class="ui header" id="label" label="" sublabel=""></h1>
@@ -422,7 +422,7 @@
           Close
         </div>
         <div class="image content" id="showImageFullscreenDlgContent">
-          <img class="ui centered image" id="fullscreenDlgContentImage" src="donations/{{ .randomImage.Id }}">
+          <img class="ui centered image" id="fullscreenDlgContentImage" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}">
         </div>
       </div>
 

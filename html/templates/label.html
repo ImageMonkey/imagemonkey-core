@@ -88,15 +88,13 @@
       },
       success: function(data){
         $("#image").attr("imageId", data.uuid);
-        
-        //$("#image").attr("src", ("donations/"+data.uuid));
 
         var downloadingImage = new Image();
         downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
           showHideControls(true);
         }
-        downloadingImage.src = "donations/"+data.uuid;
+        downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/"+data.uuid;
 
         addOldLabels(data["all_labels"]);
 
@@ -466,7 +464,7 @@
 
     </div>
     <div class="eight wide center aligned column">
-      <img class="ui large image centered" src="donations/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
+      <img class="ui large image centered" src="{{ .apiBaseUrl}}/v1/donation/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
       
 
       <h2></h2>

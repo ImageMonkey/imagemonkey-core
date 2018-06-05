@@ -120,7 +120,7 @@
   }
 
   function getUrlFromImageId(imageId){
-    return (imageId === "" ? "img/oops-no-annotation-left.png" : ("donations/" + imageId))
+    return (imageId === "" ? "img/oops-no-annotation-left.png" : ("{{ .apiBaseUrl }}/v1/donation/" + imageId))
   }
 
   function isTrashMenuButtonEnabled(){
