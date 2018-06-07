@@ -57,7 +57,7 @@
     <div class="ui text container">
 
       <div class="row">
-        One of the best things about ImageMonkey is our tight integration with Tensorflow.<br>You want to train your own image classifier based on the ImageMonkey dataset?<br> <br>
+        One of the best things about ImageMonkey is our tight integration with Machine learning frameworks like <a href="https://www.tensorflow.org/">Tensorflow</a> and <a href="https://github.com/matterport/Mask_RCNN">Mask RCNN</a>.<br>You want to train your own image classifier based on the ImageMonkey dataset?<br> <br>
         It's as easy as that:<br><br>
 
         <div class="ui segment">
@@ -67,8 +67,8 @@
           </code></pre>
         </div>
         <br>
-        This will download and run a docker image that was prepared to integrate with Tensorflow and ImageMonkey seamlessly. After you've started the 
-        docker container, use the <strong>monkey</strong> script to interact with ImageMonkey dataset. <br><br>
+        This will download and run a docker image where we've already configured tensorflow and MaskRCNN to work seamlessly with ImageMonkey. 
+        After you've started the docker container, use the <strong>monkey</strong> script to interact with ImageMonkey dataset. <br><br>
 
         Here's a list of all available commands:  
 
@@ -88,16 +88,33 @@
         </div>
         <br><br><br>
 
+        <h1 class="ui header">Example</h1>
+
         Let's assume you want to train your image classifier on all images that are labeled with dog or cat. 
         Then simply run 
 
         <div class="ui segment">
           <pre><code class="bash">
-      monkey train --labels "cat|dog"
+      monkey train --labels "cat|dog" --type="image-classification"
           </code></pre>
         </div>
         <br>
         lean back and go get yourself a coffee ;-)
+        <br><br>
+        The script automatically downloads all ImageMonkey images that are labeled with dog or cat and uses transfer learning to retrain an 
+        existing image classifier (inception v3) on these labels.
+        <br><br>
+        Umm, wait, I don't want to train an image classifier - I rather want to train a neural net that is able to do object segmentation. 
+        Nothing easier than that. Simply change the type 
+
+        <div class="ui segment">
+          <pre><code class="bash">
+      monkey train --labels "cat|dog" "--type=object-segmentation"
+          </code></pre>
+        </div> 
+        and MaskRCNN will be used. 
+
+
 
         <br><br><br>
         <h1>P.S.</h1>
