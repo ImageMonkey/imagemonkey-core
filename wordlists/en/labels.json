@@ -630,6 +630,41 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "ace0d018-f335-4947-8604-69323f375b1b"
+		},
+		"plate": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ba766c25-a0db-4458-b792-a9ec4f1777ac"
+		},
+		"wall": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9f6048e9-f867-4003-bb09-4087f087bea3"
+		},
+		"bird": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7"
+		},
+		"street light": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "430b0e22-bd5f-40a3-be13-15fbaf7eff99"
+		},
+		"sea": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "157b4dc1-59de-4c49-830c-2c9ddb66dfee"
+		},
+		"river": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d25e8353-2b45-434c-b8e7-8fe98ab2925b"
+		},
+		"kitchen": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6ea6beb7-b1ce-4ee1-bc94-bd35e118ddda"
 		}
 	}
 }
