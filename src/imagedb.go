@@ -2957,11 +2957,22 @@ func markValidationAsNotAnnotatable(validationId string) error {
 func isImageUnlocked(uuid string) (bool, error) {
     var unlocked bool
     unlocked = false
-    err := db.QueryRow("SELECT unlocked FROM image WHERE key = $1", uuid).Scan(&unlocked)
+    rows, err := db.Query("SELECT unlocked FROM image WHERE key = $1", uuid)
     if err != nil {
         log.Debug("[Is Image Unlocked] Couldn't get row: ", err.Error())
         raven.CaptureError(err, nil)
         return false, err
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&unlocked)
+        if err != nil {
+            log.Debug("[Is Image Unlocked] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return false, err
+        }
     }
 
     return unlocked, nil
