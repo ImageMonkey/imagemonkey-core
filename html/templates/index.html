@@ -14,8 +14,9 @@
   <script src="js/semantic.min.js"></script> 
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
   <script src="js/common.js"></script> 
-  <script src="/js/chart.bundle.min.js"></script>
+  <script src="js/chart.bundle.min.js"></script>
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=5"></script>
 
@@ -28,7 +29,6 @@
       -moz-box-shadow: 10px 10px 5px 0px rgba(0,0,0,0.75);
       box-shadow: 10px 10px 5px 0px rgba(0,0,0,0.75);
     }
-
 
   </style>
 
@@ -62,8 +62,13 @@
     }
 
     function showNextDetailedActivity() {
+      if(detailedActivityData !== null && detailedActivityData.length > 0){
+        $("#detailedActivitySpinner").show();
+        $("#detailedActivityContent").css('visibility','hidden');
+      }
+
       currentDetailedActivityIdx += 1;
-      if(currentDetailedActivityIdx >= detailedActivityData.length)
+      if(detailedActivityData && currentDetailedActivityIdx >= detailedActivityData.length)
         currentDetailedActivityIdx = 0;
 
       if(detailedActivityData && detailedActivityData.length > 0) {
@@ -104,6 +109,9 @@
     }
 
     function drawAnnotationsCallback(canvas, annotations, scaleFactor) {
+      $("#detailedActivitySpinner").hide();
+      $("#detailedActivityContent").css('visibility','visible');
+      canvas.fabric().calcOffset();
       if((annotations !== undefined) && (annotations !== null) && (annotations[0] !== null)){
         canvas.drawAnnotations(annotations, scaleFactor);
       }
@@ -174,8 +182,12 @@
       detailedActivityShown = !detailedActivityShown;
       if(detailedActivityShown) {
         $('#showActivityDetailsButton').html('<i class="up arrow icon"></i> Hide Details');
+
+        $("#detailedActivityContent").css('visibility','hidden');
+        $("#detailedActivitySpinner").show();
+
         showNextDetailedActivity();
-        intervalId = setInterval(showNextDetailedActivity, 3000);
+        intervalId = setInterval(showNextDetailedActivity, 4000);
       }
       else {
         $('#showActivityDetailsButton').html('<i class="down arrow icon"></i> Show Details');
@@ -228,17 +240,26 @@
 
 
             <div hidden id="detailedActivity">
-              <a class="ui green label">
-                <i id="ribbonLabelIcon"></i>
-                <span id="ribbonLabel"></span>
-              </a>
-              <p id="detailedActivityDescription"></p>
-              
-              <div id="canvasContainer">
+              <div class="sk-wave overlay" id="detailedActivitySpinner">
+                <div class="sk-rect sk-rect1"></div>
+                <div class="sk-rect sk-rect2"></div>
+                <div class="sk-rect sk-rect3"></div>
+                <div class="sk-rect sk-rect4"></div>
+                <div class="sk-rect sk-rect5"></div>
+              </div>
+              <div id="detailedActivityContent">
+                <a class="ui green label">
+                  <i id="ribbonLabelIcon"></i>
+                  <span id="ribbonLabel"></span>
+                </a>
+                <p id="detailedActivityDescription"></p>
+                
+                <div id="canvasContainer">
                   <div class="" id="canvasWrapper">
                     <canvas id="canvas"></canvas>
                   </div>
                 </div>
+              </div>
             </div>
           </div>
         </div>
