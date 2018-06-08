@@ -888,6 +888,7 @@ func main(){
 			query, annotationsOnly, err := getExploreUrlParams(c)
 			if err != nil {
 				c.JSON(422, gin.H{"error": err.Error()})
+				return
 			}
 
 			queryParser := NewQueryParser(query)
