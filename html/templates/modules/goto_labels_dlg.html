@@ -24,7 +24,7 @@
               '<img class="ui avatar image" src="img/logo.png">' +
               '<div class="content">' +
                 '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + tooltip +
-                  ' onclick="goToLabelEntryClicked(this);">' + data[i]["label"] +'</a>'
+                  ' onclick="goToLabelEntryClicked(this);">' + escapeHtml(data[i]["label"]) +'</a>'
               '</div>'
             '</div>';
       $("#gotoModeLabelsDlgContentList").append(div);
@@ -42,7 +42,7 @@
               '<img class="ui avatar image" src="img/logo.png">' +
               '<div class="content">' +
                 '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + tooltip + 
-                  '" onclick="goToLabelEntryClicked(this);">' + sublabels[j]["name"] + '/' + data[i]["label"] +'</a>'
+                  '" onclick="goToLabelEntryClicked(this);">' + escapeHtml(sublabels[j]["name"]) + '/' + escapeHtml(data[i]["label"]) +'</a>'
               '</div>'
             '</div>';
           $("#gotoModeLabelsDlgContentList").append(div);
