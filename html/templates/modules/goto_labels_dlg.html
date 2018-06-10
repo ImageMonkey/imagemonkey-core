@@ -1,0 +1,57 @@
+<script>
+  function goToLabelEntryClicked(elem) {
+    $('#gotoModeLabelsDlg').modal({
+      duration:0
+    }).modal('hide');
+
+    var url = $(elem).attr("data-url");
+    window.open(url, '_blank');
+  }
+
+  function addEntriesToGotoLabelsDlg(imageId, data) {
+    var url = '';
+    for(var i = 0; i < data.length; i++) {
+      url = '/verify?label_id=' + data[i]["uuid"] + '&image_id=' + imageId;
+      //$("#gotoModeLabelsDlgContentList").append('<a class="item" target="_blank" href="' + url + '">' + data[i]["label"] + '</a>');
+      $("#gotoModeLabelsDlgContentList").append('<a class="item" data-url="' + url + '" onclick="goToLabelEntryClicked(this);">' + data[i]["label"] + '</a>');
+      var sublabels = data[i]["sublabels"];
+      if(sublabels !== undefined && sublabels !== null) {
+        for(var j = 0; j < sublabels.length; j++) {
+          url = '/verify?label_id=' + sublabels[j]["uuid"] + '&image_id=' + imageId;
+          $("#gotoModeLabelsDlgContentList").append('<a class="item" data-url="' + url + '" onclick="goToLabelEntryClicked(this);">' + sublabels[j]["name"] + '/' + data[i]["label"] + '</a>');
+        }
+      }
+    }
+  }
+
+  function getLabelsForImage(imageId) {
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/label";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      success: function(data){
+        addEntriesToGotoLabelsDlg(imageId, data)
+      }
+    });
+  }
+
+  $(document).ready(function(){
+    getLabelsForImage($("#image").attr("imageId"));
+  });
+</script>
+
+<div class="ui modal" id="gotoModeLabelsDlg">
+  <div class="ui header">
+    Goto
+  </div>
+  <div class="content" id="gotoModeLabelsDlgContent">
+    <div class="ui link list" id="gotoModeLabelsDlgContentList">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+  </div>
+</div>

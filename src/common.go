@@ -18,7 +18,6 @@ import (
     "github.com/garyburd/redigo/redis"
     log "github.com/Sirupsen/logrus"
     "net/url"
-    "strconv"
     "errors"
     "github.com/gin-gonic/gin"
 )
@@ -31,10 +30,19 @@ type Label struct {
     Name string `json:"name"`
 }
 
+type Sublabel struct {
+    Name string `json:"name"`
+    Unlocked bool `json:"unlocked"`
+    Annotatable bool `json:"annotatable"`
+    Uuid string `json:"uuid"`
+}
+
 type LabelMeEntry struct {
     Label string `json:"label"` 
+    Unlocked bool `json:"unlocked"` 
     Annotatable bool `json:"annotatable"` 
-    Sublabels []string `json:"sublabels"`
+    Uuid string `json:"uuid"`
+    Sublabels []Sublabel `json:"sublabels"`
 }
 
 
@@ -380,13 +388,13 @@ func isAlphaNumeric(s string) bool {
     return true
 }
 
-func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []Sublabel) bool {
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
 
             for _, value := range sublabels {
-                _, ok := availableSublabels[value]
+                _, ok := availableSublabels[value.Name]
                 if !ok {
                     return false
                 }
@@ -399,15 +407,11 @@ func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []
     return false
 }
 
-func getLabelIdFromUrlParams(params url.Values) (int64, error) {
-    var labelId int64
-    var err error
-    labelId = -1
+func getLabelIdFromUrlParams(params url.Values) (string, error) {
+    var labelId string
+    labelId = ""
     if temp, ok := params["label_id"]; ok {
-        labelId, err = strconv.ParseInt(temp[0], 10, 64)
-        if err != nil {
-            return labelId, err
-        }
+        labelId = temp[0]
     }
 
     return labelId, nil

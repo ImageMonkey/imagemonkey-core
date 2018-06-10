@@ -273,6 +273,15 @@ type APIToken struct {
     Revoked bool `json:"revoked"`
 }
 
+func sublabelsToStringlist(sublabels []Sublabel) []string {
+    var s []string
+    for _, sublabel := range sublabels {
+        s = append(s, sublabel.Name)
+    }
+
+    return s
+}
+
 
 func addDonatedPhoto(username string, imageInfo ImageInfo, autoUnlock bool, clientFingerprint string, labels []LabelMeEntry) error{
 	tx, err := db.Begin()
@@ -892,7 +901,7 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
 }
 
 
-func getRandomImage(labelId int64) Image{
+func getImageToValidate(imageId string, labelId string) (Image, error) {
 	var image Image
 
 	image.Id = ""
@@ -900,8 +909,19 @@ func getRandomImage(labelId int64) Image{
 	image.Provider = "donation"
 
     labelIdStr := ""
-    if labelId != -1 {
-        labelIdStr = " AND l.id = $1"
+    if labelId != "" {
+        if imageId == "" {
+            labelIdStr = " AND l.uuid = $1"
+        } else {
+            labelIdStr = " AND l.uuid = $2"
+        }
+    }
+
+    //either select a specific image with a given image id or try to select 
+    //an image that's not already validated (as they have preference). 
+    imageIdStr := "(v.num_of_valid = 0) AND (v.num_of_invalid = 0)"
+    if imageId != "" {
+        imageIdStr = "i.key = $1"
     }
 
     q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid 
@@ -911,32 +931,46 @@ func getRandomImage(labelId int64) Image{
                         JOIN label l ON v.label_id = l.id
                         LEFT JOIN label pl ON l.parent_id = pl.id
                         WHERE ((i.unlocked = true) AND (p.name = 'donation') 
-                        AND (v.num_of_valid = 0) AND (v.num_of_invalid = 0)%s) LIMIT 1`, labelIdStr)
+                        AND %s%s) LIMIT 1`, imageIdStr, labelIdStr)
 
 	var rows *sql.Rows
     var err error
-    if labelId != -1 {
-        rows, err = db.Query(q, labelId)
+    if labelId != "" {
+        if imageId != "" {
+            rows, err = db.Query(q, imageId, labelId)
+        } else {
+            rows, err = db.Query(q, labelId)
+        }
     } else {
-        rows, err = db.Query(q)
+        if imageId != "" {
+            rows, err = db.Query(q, imageId)
+        } else {
+            rows, err = db.Query(q)
+        }
     }
 	
 
     if err != nil {
-		log.Debug("[Fetch random image] Couldn't fetch random image: ", err.Error())
+		log.Debug("[Fetch image] Couldn't fetch random image: ", err.Error())
 		raven.CaptureError(err, nil)
-		return image
+		return image, err
 	}
     defer rows.Close()
 	
     var label1 string
     var label2 string
 	if !rows.Next() {
+        //if we provided a image id, but we get no result, its an error.
+        if imageId != "" {
+            return image, errors.New("No image with that identifier")
+        }
+
+
         var otherRows *sql.Rows
 
         offsetLabelIdStr := ""
-        if labelId != -1 {
-            offsetLabelIdStr = " AND v.label_id = $2"
+        if labelId != "" {
+            offsetLabelIdStr = " AND l.uuid = $2"
         }
 
         q1 := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid
@@ -950,11 +984,12 @@ func getRandomImage(labelId int64) Image{
                                 ( SELECT count(*) FROM image i 
                                   JOIN image_provider p ON i.image_provider_id = p.id 
                                   JOIN image_validation v ON v.image_id = i.id 
+                                  JOIN label l ON v.label_id = l.id
                                   WHERE i.unlocked = true AND p.name = 'donation'%s
                                 )
                             ) LIMIT 1`, labelIdStr, offsetLabelIdStr)
 
-        if labelId != -1 {
+        if labelId != "" {
             otherRows, err = db.Query(q1, labelId, labelId)
         } else {
             otherRows, err = db.Query(q1)
@@ -963,7 +998,7 @@ func getRandomImage(labelId int64) Image{
         if !otherRows.Next() {
     		log.Debug("[Fetch random image] Missing result set")
     		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
-    		return image
+    		return image, errors.New("Missing result set")
         }
         defer otherRows.Close()
 
@@ -971,14 +1006,14 @@ func getRandomImage(labelId int64) Image{
         if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
-            return image
+            return image, err
         }
 	} else{
         err = rows.Scan(&image.Id, &label1, &label2, &image.NumOfValid, &image.NumOfInvalid)
         if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
-            return image
+            return image, err
         }
     }
 
@@ -990,7 +1025,7 @@ func getRandomImage(labelId int64) Image{
         image.Sublabel = label1
     }
 
-	return image
+	return image, nil
 }
 
 func reportImage(imageId string, reason string) error{
@@ -1160,7 +1195,7 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     return nil
 }
 
-func getRandomUnannotatedImage(username string, addAutoAnnotations bool, labelId int64) (UnannotatedImage, error) {
+func getRandomUnannotatedImage(username string, addAutoAnnotations bool, labelId string) (UnannotatedImage, error) {
     var unannotatedImage UnannotatedImage
 
     //specify the max. number of not-annotatables before we skip the annotation task
@@ -1168,8 +1203,8 @@ func getRandomUnannotatedImage(username string, addAutoAnnotations bool, labelId
 
     q1 := ""
     posNum := 1
-    if labelId != -1 {
-        q1 = "AND l.id = $1"
+    if labelId != "" {
+        q1 = "AND l.uuid = $1"
         posNum = 2
     }
 
@@ -1234,7 +1269,7 @@ func getRandomUnannotatedImage(username string, addAutoAnnotations bool, labelId
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
     var rows *sql.Rows
     var err error
-    if labelId == -1 {
+    if labelId == "" {
         rows, err = db.Query(q, username, maxNumNotAnnotatable)
         if(err != nil) {
             log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
@@ -1602,7 +1637,7 @@ func updateContributionsPerApp(contributionType string, appIdentifier string) er
 
 
 
-func getImageToLabel() (Image, error) {
+func getImageToLabel(imageId string) (Image, error) {
     var image Image
     var labelMeEntries []LabelMeEntry
     image.Provider = "donation"
@@ -1614,42 +1649,63 @@ func getImageToLabel() (Image, error) {
         return image, err
     }
 
-    unlabeledRows, err := tx.Query(`SELECT i.key from image i 
-                                    WHERE i.unlocked = true AND i.id NOT IN (
-                                        SELECT image_id FROM image_validation
-                                    ) AND i.id NOT IN (
-                                        SELECT image_id FROM image_label_suggestion
-                                    ) LIMIT 1`)
-    if err != nil {
-        tx.Rollback()
-        raven.CaptureError(err, nil)
-        log.Debug("[Get Image to Label] Couldn't get unlabeled image: ", err.Error())
-        return image, err
+    var unlabeledRows *sql.Rows 
+    if imageId == "" {
+        unlabeledRows, err = tx.Query(`SELECT i.key from image i 
+                                        WHERE i.unlocked = true AND i.id NOT IN (
+                                            SELECT image_id FROM image_validation
+                                        ) AND i.id NOT IN (
+                                            SELECT image_id FROM image_label_suggestion
+                                        ) LIMIT 1`)
+        if err != nil {
+            tx.Rollback()
+            raven.CaptureError(err, nil)
+            log.Debug("[Get Image to Label] Couldn't get unlabeled image: ", err.Error())
+            return image, err
+        }
+
+        defer unlabeledRows.Close()
     }
 
-    defer unlabeledRows.Close()
+    if imageId != "" || !unlabeledRows.Next() {
+        //either get a random image or image with specific id
+        q1 := `SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true 
+               OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1`
+        if imageId != "" {
+            q1 = `SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true AND i.key = $1`
+        } 
 
-    if !unlabeledRows.Next() {
-        rows, err := tx.Query(`SELECT q.key, label, COALESCE(parent_label, '') as parent_label 
+        q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
+                          COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
+                          COALESCE(q1.label_uuid, '') as label_uuid
                                FROM 
                                 (
-                                    SELECT v.image_id as image_id, l.name as label, COALESCE(pl.name, '') as parent_label
+                                    SELECT v.image_id as image_id, l.name as label, 
+                                    COALESCE(pl.name, '') as parent_label, true as unlocked, true as annotatable,
+                                    l.uuid::text as label_uuid
                                     FROM image_validation v 
                                     JOIN label l on v.label_id = l.id 
                                     LEFT JOIN label pl on l.parent_id = pl.id
 
                                     UNION ALL
 
-                                    SELECT ils.image_id as image_id, s.name as label, '' as parent_label
+                                    SELECT ils.image_id as image_id, s.name as label, 
+                                    '' as parent_label, false as unlocked, ils.annotatable as annotatable,
+                                    '' as label_uuid
                                     FROM image_label_suggestion ils
                                     JOIN label_suggestion s on ils.label_suggestion_id = s.id
                                 ) q1
-                                JOIN (
-                                    SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true 
-                                    OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1
+                                RIGHT JOIN (
+                                    %s
                                 ) q
-                                ON q.id = q1.image_id `)
+                                ON q.id = q1.image_id`, q1)
 
+        var rows *sql.Rows
+        if imageId == "" {
+            rows, err = tx.Query(q)
+        } else {
+            rows, err = tx.Query(q, imageId)
+        }
 
         if err != nil {
             tx.Rollback()
@@ -1664,14 +1720,22 @@ func getImageToLabel() (Image, error) {
         var label string
         var parentLabel string
         var baseLabel string
+        var labelUnlocked bool
+        var labelAnnotatable bool
+        var labelUuid string
         temp := make(map[string]LabelMeEntry) 
         for rows.Next() {
-            err = rows.Scan(&image.Id, &label, &parentLabel)
+            err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid)
             if err != nil {
                 tx.Rollback()
                 raven.CaptureError(err, nil)
                 log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
                 return image, err
+            }
+
+            //can happen if we are selecting an image by id and that image has no labels yet
+            if label == "" {
+                continue
             }
 
             baseLabel = parentLabel
@@ -1681,14 +1745,19 @@ func getImageToLabel() (Image, error) {
 
             if val, ok := temp[baseLabel]; ok {
                 if parentLabel != "" {
-                    val.Sublabels = append(val.Sublabels, label)
+                    val.Sublabels = append(val.Sublabels, Sublabel {Name: label, Unlocked: labelUnlocked, 
+                                                                        Annotatable: labelAnnotatable, Uuid: labelUuid})
                 }
                 temp[baseLabel] = val
             } else {
                 var labelMeEntry LabelMeEntry
                 labelMeEntry.Label = baseLabel
+                labelMeEntry.Unlocked = labelUnlocked
+                labelMeEntry.Annotatable = labelAnnotatable
+                labelMeEntry.Uuid = labelUuid
                 if parentLabel != "" {
-                    labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, label)
+                    labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, Sublabel {Name: label, Unlocked: labelUnlocked, 
+                                                                                        Annotatable: labelAnnotatable, Uuid: labelUuid})
                 }
                 temp[baseLabel] = labelMeEntry 
             }
@@ -1720,7 +1789,6 @@ func getImageToLabel() (Image, error) {
         log.Debug("[Get Image to Label] Couldn't commit changes: ", err.Error())
         return image, err
     }
-
 
     return image, nil
 }
@@ -1847,7 +1915,7 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
             rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
                                   SELECT $1, $2, $3, $4, l.id, uuid_generate_v4(), $7 FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
                                   RETURNING id`,
-                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(item.Sublabels), numOfNotAnnotatable)
+                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(sublabelsToStringlist(item.Sublabels)), numOfNotAnnotatable)
             if err != nil {
                 tx.Rollback()
                 log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
@@ -1872,7 +1940,8 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
 
         //add base label
         var insertedLabelId int64
-        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
+        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, 
+                                                            label_id, uuid, num_of_not_annotatable) 
                               SELECT $1, $2, $3, $4, id, uuid_generate_v4(), $6 from label l WHERE id NOT IN 
                               (
                                 SELECT label_id from image_validation v where image_id = $1
@@ -1880,16 +1949,18 @@ func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelM
                               RETURNING id`,
                               imageId, numOfValid, 0, clientFingerprint, item.Label, numOfNotAnnotatable).Scan(&insertedLabelId)
         if err != nil {
-            pqErr := err.(*pq.Error)
-            if pqErr.Code.Name() != "unique_violation" {
-                tx.Rollback()
-                log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
-                raven.CaptureError(err, nil)
-                return insertedIds, err
+            if err != sql.ErrNoRows { //handle no rows gracefully (can happen if label already exists)
+                pqErr := err.(*pq.Error)
+                if pqErr.Code.Name() != "unique_violation" {
+                    tx.Rollback()
+                    log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
+                    raven.CaptureError(err, nil)
+                    return insertedIds, err
+                }
             }
+        } else {
+            insertedIds = append(insertedIds, insertedLabelId)
         }
-
-        insertedIds = append(insertedIds, insertedLabelId)
     }
 
     return insertedIds, nil
@@ -3079,4 +3150,3 @@ func revokeApiToken(username string, apiToken string) (bool, error) {
 
     return true, nil
 }
-

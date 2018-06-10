@@ -17,6 +17,7 @@ import (
 	"strings"
 	"path/filepath"
 	"strconv"
+	"errors"
 )
 
 var db *sql.DB
@@ -95,6 +96,20 @@ func main() {
 			d := time.Unix(t, 0)
 			return fmt.Sprintf("%d-%02d-%02d", d.Year(), d.Month(), d.Day())
 		},
+		"dict": func(values ...interface{}) (map[string]interface{}, error) {
+	        if len(values)%2 != 0 {
+	            return nil, errors.New("invalid dict call")
+	        }
+	        dict := make(map[string]interface{}, len(values)/2)
+	        for i := 0; i < len(values); i+=2 {
+	            key, ok := values[i].(string)
+	            if !ok {
+	                return nil, errors.New("dict keys must be strings")
+	            }
+	            dict[key] = values[i+1]
+	        }
+	        return dict, nil
+	    },
 		/*"executeTemplate": func(name string) string {
     		buf := &bytes.Buffer{}
     		_ = tmpl.ExecuteTemplate(buf, name, nil)
@@ -173,9 +188,23 @@ func main() {
 		})
 
 		router.GET("/label", func(c *gin.Context) {
+			params := c.Request.URL.Query()
+
+			imageId := ""
+			if temp, ok := params["image_id"]; ok {
+				imageId = temp[0]
+			}
+
+			img, err := getImageToLabel(imageId)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid image id"})
+				return 
+			}
+
+
 			c.HTML(http.StatusOK, "label.html", gin.H{
 				"title": "Add Labels",
-				"image": pick(getImageToLabel())[0],
+				"image": img,
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
@@ -249,16 +278,27 @@ func main() {
 				}
 			}
 
+			imageId := ""
+			if temp, ok := params["image_id"]; ok {
+				imageId = temp[0]
+			}
+
 			labelId, err := getLabelIdFromUrlParams(params)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
 				return
 			}
 
+			img, err := getImageToValidate(imageId, labelId)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid image id"})
+				return 
+			}
+
 
 			c.HTML(http.StatusOK, "validate.html", gin.H{
 				"title": "Validate Label",
-				"randomImage": getRandomImage(labelId),
+				"randomImage": img,
 				"activeMenuNr": 5,
 				"showHeader": showHeader,
 				"showFooter": showFooter,

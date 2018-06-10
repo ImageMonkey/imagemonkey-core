@@ -1,0 +1,23 @@
+<div class="fifteen wide right aligned column" style="margin-top:-4em;">
+  <div class="ui white buttons">
+    <div class="ui button">
+      <i class="external alternate icon"></i>
+      Goto
+    </div>
+    <div class="ui simple dropdown icon button">
+      <i class="dropdown icon"></i>
+      <div class="menu">
+        {{ if eq .labeling 1 }}
+        <div class="item" onclick="window.open('label?image_id=' + $('#image').attr('imageId'), '_blank');"><i class="edit icon"></i> Labeling Mode</div>
+        {{ end }}
+        {{ if eq .validation 1 }}
+        <div class="item" onclick="$('#gotoModeLabelsDlg').modal('show');"><i class="square outline icon"></i> Validation Mode</div>
+        {{ end }}
+        {{ if eq .annotation 1 }}
+        <div class="item"><i class="square outline icon"></i> Annotation Mode</div>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="one wide column"></div>

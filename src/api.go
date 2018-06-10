@@ -278,7 +278,7 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
     }
 
     if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        if !isLabelValid(labelMap, label, []string{}) {
+        if !isLabelValid(labelMap, label, []Sublabel{}) {
         	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
         	return
         }
@@ -300,7 +300,7 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
 	labelMeEntry.Label = label
 	labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
 	for key, _ := range labelMapEntry.LabelMapEntries {
-		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, key)
+		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, Sublabel{Name: key})
 	}
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
@@ -729,6 +729,12 @@ func main(){
 				}
 			}
 
+			imageId := ""
+			if temp, ok := params["image_id"]; ok {
+				imageId = temp[0]
+			}
+
+
 			if grouped {
 				pos := 0
 				if len(mostPopularLabels) > 0 {
@@ -750,9 +756,14 @@ func main(){
 					return
 				}
 
-				randomImage := getRandomImage(labelId)
-				c.JSON(http.StatusOK, gin.H{"uuid": randomImage.Id, "label": randomImage.Label, "provider": randomImage.Provider, "sublabel": randomImage.Sublabel, 
-											"validations": gin.H{ "num_yes": randomImage.NumOfValid, "num_no": randomImage.NumOfInvalid} })
+				image, err := getImageToValidate(imageId, labelId)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+
+				c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "label": image.Label, "provider": image.Provider, "sublabel": image.Sublabel, 
+											"validations": gin.H{ "num_yes": image.NumOfValid, "num_no": image.NumOfInvalid} })
 			}
 		})
 
@@ -780,6 +791,18 @@ func main(){
 				return
 			}
 			c.JSON(http.StatusOK, nil)
+		})
+
+		router.GET("/v1/donation/:imageid/label", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			img, err := getImageToLabel(imageId)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			c.JSON(http.StatusOK, img.AllLabels)
 		})
 
 		router.POST("/v1/donation/:imageid/validate/:param", func(c *gin.Context) {
@@ -839,7 +862,7 @@ func main(){
 		})
 
 		router.GET("/v1/labelme", func(c *gin.Context) {
-			image, err := getImageToLabel()
+			image, err := getImageToLabel("")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

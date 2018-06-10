@@ -138,10 +138,21 @@
 
   function addOldLabels(input) {
     oldLabelMap = {};
-    if(input !== null){
-      for(var i = 0; i < input.length; i++){
+    if(input !== null) {
+      for(var i = 0; i < input.length; i++) {
         var escapedLabel = escapeHtml(input[i]["label"]);
-        oldLabelMap[escapedLabel] = input[i]["sublabels"];
+
+        var sublabels = input[i]["sublabels"];
+        var s = [];
+        if(sublabels !== undefined && sublabels !== null) {
+          for(var j = 0; j < sublabels.length; j++) {
+            s.push(sublabels[j]["name"]);
+          }
+          oldLabelMap[escapedLabel] = s;
+        } 
+        else
+          oldLabelMap[escapedLabel] = []; //sublabels;
+        
         addOldLabel(escapedLabel);
       }
     }
@@ -234,8 +245,9 @@
     var baseLabelExists = labelExists(escapedLabel);
     var subLabels = []; 
     var subLabelsDict = {};
-    if(escapedLabel in labelMap)
-      sublabelsDict = labelMap[escapedLabel]["has"];
+    if(escapedLabel in labelMap){
+      subLabelsDict = labelMap[escapedLabel]["has"];
+    }
 
     for (key in subLabelsDict) {
       if (subLabelsDict.hasOwnProperty(key))
@@ -339,8 +351,13 @@
 
         //dict to list
         for (var key in newlyAddedLabels){
-          if (newlyAddedLabels.hasOwnProperty(key)){
-            labelsLst.push({label: key, annotatable: true, sublabels: newlyAddedLabels[key]});
+          if (newlyAddedLabels.hasOwnProperty(key)) {
+            var sublabels = newlyAddedLabels[key];
+            var s = [];
+            for(var i = 0; i < sublabels.length; i++) {
+              s.push({"name": sublabels[i]});
+            }
+            labelsLst.push({label: key, annotatable: true, sublabels: s});
           }
         }
 
@@ -440,13 +457,12 @@
      </div>
    </div>
 
-   <div class="ui stackable grid vertical stripe mobile reversed">
+   <div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-8em;">
+
+    {{ template "goto_mode.html" dict "validation" 1 "annotation" 0 "labeling" 0 }}
+
     <div class="one wide column">
     </div>
-
-    <!--<div class="four wide center aligned mobile only column">
-      {{ template "img_info.html" .}}
-    </div>-->
 
     <div class="three wide center aligned column">
       <p><h2 id="labelsHeader">Labels:</h2></p>
@@ -531,6 +547,7 @@
 
       {{ template "label_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
+      {{ template "goto_labels_dlg.html" .}}
     </div>
 
 
