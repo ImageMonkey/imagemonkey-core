@@ -660,10 +660,10 @@
       });
 
       $("#saveAnnotationSettingsButton").click(function(e) {
-        annotationSettings.persistAll();
-
-         
+        annotationSettings.persistAll(); 
         $('#annotationSettingsPopup').modal('hide');
+        $('#annotationSettingsRefreshBrowserPopup').modal('show');
+
       });
 
       $('#blacklistButton').click(function(e) {
