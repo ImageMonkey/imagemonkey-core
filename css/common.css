@@ -83,3 +83,14 @@
         font-size: 1.5em;
       }
     }
+
+    /*sticky footer*/
+    .pusher {
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    .pusher > .footer {
+      flex: 1;
+    }
