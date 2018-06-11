@@ -763,7 +763,7 @@ func main(){
 				}
 
 				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, "provider": image.Provider }, "label": image.Label, "sublabel": image.Sublabel, 
-											"num_yes": image.Validation.NumOfValid, "num_no": image.Validation.NumOfInvalid })
+											"num_yes": image.Validation.NumOfValid, "num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
 			}
 		})
 

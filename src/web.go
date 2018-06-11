@@ -207,6 +207,11 @@ func main() {
 				return 
 			}
 
+			if img.Id == "" && imageId != "" {
+				ShowErrorPage(c)
+				return
+			}
+
 
 			c.HTML(http.StatusOK, "label.html", gin.H{
 				"title": "Add Labels",

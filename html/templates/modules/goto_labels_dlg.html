@@ -100,7 +100,8 @@
       url: url,
       dataType: 'json',
       success: function(data){
-        addValidationEntriesToGotoLabelsDlg(imageId, data)
+        if(data)
+          addValidationEntriesToGotoLabelsDlg(imageId, data)
       }
     });
   }
@@ -111,7 +112,8 @@
       url: url,
       dataType: 'json',
       success: function(data){
-        addAnnotationEntriesToGotoLabelsDlg(imageId, data)
+        if(data)
+          addAnnotationEntriesToGotoLabelsDlg(imageId, data)
       }
     });
   }
