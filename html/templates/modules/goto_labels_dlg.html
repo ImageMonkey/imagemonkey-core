@@ -21,6 +21,14 @@
     }
   }
 
+  function clearAnnotationLabelEntries() {
+    $("#gotoAnnotationModeLabelsDlgContentList").empty();
+  }
+
+  function clearValidationLabelEntries() {
+    $("#gotoValidationModeLabelsDlgContentList").empty();
+  }
+
   function addAnnotationEntriesToGotoLabelsDlg(imageId, data) {
     var url = '';
     var div = '';
@@ -109,8 +117,27 @@
   }
 
   $(document).ready(function(){
-    getLabelsForImage($("#image").attr("imageId"));
-    getUnannotatedLabelsForImage($("#image").attr("imageId"));
+
+    $({{ .imageIdentifier }}).on('load', function () {
+      {{ if eq .validation 1 }}
+      clearValidationLabelEntries();
+      getLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+      {{ end }}
+      
+      {{ if eq .annotation 1 }}
+      clearAnnotationLabelEntries();
+      getUnannotatedLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+      {{ end }}
+    });
+
+    {{ if eq .validation 1 }}
+    getLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+    {{ end }}
+    
+    {{ if eq .annotation 1 }}
+    getUnannotatedLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+    {{ end }}
+
   });
 </script>
 

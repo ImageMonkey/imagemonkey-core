@@ -99,6 +99,7 @@
             populateImageGrid(data);
           }
           else{
+            $("#image").attr("imageId", data.image.uuid);
             $("#image").attr("validationId", data.uuid);
             setLabel(data.label, data.sublabel);
             setPollData(data["num_yes"], data["num_no"]);
@@ -362,13 +363,13 @@
 
    <div class="ui stackable grid vertical stripe" style="margin-top:-8em;">
 
-    {{ template "goto_mode.html" dict "validation" 0 "annotation" 0 "labeling" 1 }}
+    {{ template "goto_mode.html" dict "validation" 0 "annotation" 1 "labeling" 1 }}
 
     <div class="four wide column">
     </div>
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <a href="#" id="imageClick">
-        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" validationId="{{ .randomImage.Validation.Id }}" id="image">
+        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" imageId = "{{ .randomImage.Id }}" validationId="{{ .randomImage.Validation.Id }}" id="image">
       </a>
       <div class="ui center aligned basic segment" id="validationContainerSegment">
         <h1 class="ui header" id="label" label="" sublabel=""></h1>
@@ -385,7 +386,7 @@
 
       {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
-
+      {{ template "goto_labels_dlg.html" dict "validation" 0 "annotation" 1  "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" }}
     </div>
 
     <div class="eight wide center aligned column" id="multiValidationContainer">

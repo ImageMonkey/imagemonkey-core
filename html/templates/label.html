@@ -458,7 +458,7 @@
 
    <div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-8em;">
 
-    {{ template "goto_mode.html" dict "validation" 1 "annotation" 1 "labeling" 0 }}
+    {{ template "goto_mode.html" dict "validation" 1 "annotation" 1 "labeling" 0}}
 
     <div class="one wide column">
     </div>
@@ -546,7 +546,7 @@
 
       {{ template "label_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
-      {{ template "goto_labels_dlg.html" .}}
+      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" }}
     </div>
 
 

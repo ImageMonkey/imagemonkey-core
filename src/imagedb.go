@@ -1199,7 +1199,7 @@ func _getImageForAnnotationFromValidationId(validationId string, addAutoAnnotati
                                 WHERE a.auto_generated = true 
                                 GROUP BY d.image_annotation_id, a.label_id, a.image_id
                             ) q1 ON l.id = q1.label_id AND i.id = q1.image_id
-                            WHERE i.unlocked = true AND p.name = 'donation' AND v.uuid = $1`, validationId)
+                            WHERE i.unlocked = true AND p.name = 'donation' AND v.uuid::text = $1`, validationId)
 
     if err != nil {
         log.Debug("[Get specific Image for Annotation] Couldn't get annotation ", err.Error())

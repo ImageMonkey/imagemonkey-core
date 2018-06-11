@@ -22,6 +22,12 @@ import (
 
 var db *sql.DB
 
+func ShowErrorPage(c *gin.Context) {
+	c.HTML(404, "404.html", gin.H{
+		"title": "Page not found",
+	})
+}
+
 
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
     templ := template.New("main").Funcs(funcMap)
@@ -239,6 +245,12 @@ func main() {
 				return
 			}
 
+			//if we query a certain annotation per validation id and got no result set
+			if img.Id == "" && validationId != "" {
+				ShowErrorPage(c)
+				return
+			}
+
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
 				"randomImage": img,
@@ -305,6 +317,12 @@ func main() {
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid image id"})
 				return 
+			}
+
+			//if we query a specific type of validation and got no result set
+			if img.Id == "" && (imageId != "" || labelId != "") {
+				ShowErrorPage(c)
+				return
 			}
 
 
@@ -497,6 +515,12 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})*/
+
+		router.NoRoute(func(c *gin.Context) {
+			c.HTML(404, "404.html", gin.H{
+				"title": "Page not found",
+			})
+		})
 	}
 
 	router.Run(":" + strconv.FormatInt(int64(*listenPort), 10))
