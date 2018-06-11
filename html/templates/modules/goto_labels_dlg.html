@@ -1,7 +1,7 @@
 <script>
-  function goToLabelEntryClicked(elem) {
+  function goToValidationLabelEntryClicked(elem) {
     if($(elem).attr("data-unlocked") === "true") {
-      $('#gotoModeLabelsDlg').modal({
+      $('#gotoValidationModeLabelsDlg').modal({
         duration:0
       }).modal('hide');
 
@@ -10,7 +10,42 @@
     }
   }
 
-  function addEntriesToGotoLabelsDlg(imageId, data) {
+  function goToAnnotationLabelEntryClicked(elem) {
+    if($(elem).attr("data-unlocked") === "true") {
+      $('#gotoAnnotationModeLabelsDlg').modal({
+        duration:0
+      }).modal('hide');
+
+      var url = $(elem).attr("data-url");
+      window.open(url, '_blank');
+    }
+  }
+
+  function addAnnotationEntriesToGotoLabelsDlg(imageId, data) {
+    var url = '';
+    var div = '';
+    var label = '';
+    var sublabel = '';
+    var unlocked = '';
+    for(var i = 0; i < data.length; i++) {
+      url = '/annotate?validation_id=' + data[i]["validation"]["uuid"];
+      unlocked = 'true';
+      label = escapeHtml(data[i]["validation"]["label"]);
+      sublabel = escapeHtml(data[i]["validation"]["sublabel"])
+
+      div = '<div class="item">' +
+              '<img class="ui avatar image" src="img/logo.png">' +
+              '<div class="content">' +
+                '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + 
+                  '" onclick="goToAnnotationLabelEntryClicked(this);">' +
+                  label + ((sublabel === '') ? '' : ('/' + sublabel)) +'</a>'
+              '</div>'
+            '</div>';
+      $("#gotoAnnotationModeLabelsDlgContentList").append(div);
+    }
+  }
+
+  function addValidationEntriesToGotoLabelsDlg(imageId, data) {
     var url = '';
     var div = '';
     var tooltip = '';
@@ -24,10 +59,10 @@
               '<img class="ui avatar image" src="img/logo.png">' +
               '<div class="content">' +
                 '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + tooltip +
-                  ' onclick="goToLabelEntryClicked(this);">' + escapeHtml(data[i]["label"]) +'</a>'
+                  ' onclick="goToValidationLabelEntryClicked(this);">' + escapeHtml(data[i]["label"]) +'</a>'
               '</div>'
             '</div>';
-      $("#gotoModeLabelsDlgContentList").append(div);
+      $("#gotoValidationModeLabelsDlgContentList").append(div);
 
 
       //$("#gotoModeLabelsDlgContentList").append('<a class="item" data-url="' + url + '" onclick="goToLabelEntryClicked(this);">' + data[i]["label"] + '</a>');
@@ -42,37 +77,66 @@
               '<img class="ui avatar image" src="img/logo.png">' +
               '<div class="content">' +
                 '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + tooltip + 
-                  '" onclick="goToLabelEntryClicked(this);">' + escapeHtml(sublabels[j]["name"]) + '/' + escapeHtml(data[i]["label"]) +'</a>'
+                  '" onclick="goToValidationLabelEntryClicked(this);">' + escapeHtml(sublabels[j]["name"]) + '/' + escapeHtml(data[i]["label"]) +'</a>'
               '</div>'
             '</div>';
-          $("#gotoModeLabelsDlgContentList").append(div);
+          $("#gotoValidationModeLabelsDlgContentList").append(div);
         }
       }
     }
   }
 
   function getLabelsForImage(imageId) {
-    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/label";
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/labels";
     $.ajax({
       url: url,
       dataType: 'json',
       success: function(data){
-        addEntriesToGotoLabelsDlg(imageId, data)
+        addValidationEntriesToGotoLabelsDlg(imageId, data)
+      }
+    });
+  }
+
+  function getUnannotatedLabelsForImage(imageId) {
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/annotations?only_missing=true";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      success: function(data){
+        addAnnotationEntriesToGotoLabelsDlg(imageId, data)
       }
     });
   }
 
   $(document).ready(function(){
     getLabelsForImage($("#image").attr("imageId"));
+    getUnannotatedLabelsForImage($("#image").attr("imageId"));
   });
 </script>
 
-<div class="ui modal" id="gotoModeLabelsDlg">
+<div class="ui modal" id="gotoValidationModeLabelsDlg">
   <div class="ui header">
     <h2 class="ui header">Select a label</h2>
   </div>
-  <div class="scrolling content" id="gotoModeLabelsDlgContent">
-    <div class="ui huge middle aligned divided list" id="gotoModeLabelsDlgContentList">
+  <div class="scrolling content" id="gotoValidationModeLabelsDlgContent">
+    <div class="ui huge middle aligned divided list" id="gotoValidationModeLabelsDlgContentList">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+  </div>
+</div>
+
+
+<div class="ui modal" id="gotoAnnotationModeLabelsDlg">
+  <div class="ui header">
+    <h2 class="ui header">Select a label</h2>
+  </div>
+  <div class="scrolling content" id="gotoAnnotationModeLabelsDlgContent">
+    <div class="ui huge middle aligned divided list" id="gotoAnnotationModeLabelsDlgContentList">
     </div>
   </div>
   <div class="actions">

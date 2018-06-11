@@ -226,10 +226,22 @@ func main() {
 				return
 			}
 
+			validationId := getValidationIdFromUrlParams(params)
+			if validationId != "" {
+				//it doesn't make sene to use the validation id and the label id for querying - so we
+				//give the validation id preference.
+				labelId = ""
+			}
+
+			img, err := getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "err"})
+				return
+			}
 
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
-				"randomImage": pick(getRandomUnannotatedImage(sessionInformation.Username, true, labelId))[0],
+				"randomImage": img,
 				"activeMenuNr": 4,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,

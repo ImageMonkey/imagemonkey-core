@@ -793,7 +793,7 @@ func main(){
 			c.JSON(http.StatusOK, nil)
 		})
 
-		router.GET("/v1/donation/:imageid/label", func(c *gin.Context) {
+		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
 			img, err := getImageToLabel(imageId)
@@ -803,6 +803,26 @@ func main(){
 			}
 
 			c.JSON(http.StatusOK, img.AllLabels)
+		})
+
+		router.GET("/v1/donation/:imageid/annotations", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			params := c.Request.URL.Query()
+
+			if temp, ok := params["only_missing"]; ok {
+				if temp[0] == "true" {
+					ids, err := getUnannotatedValidations(imageId)
+					if err != nil {
+						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
+					c.JSON(http.StatusOK, ids)
+					return
+				}
+			}
+
+			c.JSON(http.StatusOK, nil)
 		})
 
 		router.POST("/v1/validation/:validationid/validate/:param", func(c *gin.Context) {
@@ -1301,12 +1321,15 @@ func main(){
 				return
 			}
 
-			randomImage, err := getRandomUnannotatedImage(apiUser.Name, addAutoAnnotations, labelId)
+			validationId := getValidationIdFromUrlParams(params)
+
+			img, err := getImageForAnnotation(apiUser.Name, addAutoAnnotations, validationId, labelId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 			}
-			c.JSON(http.StatusOK, randomImage)
+			
+			c.JSON(http.StatusOK, img)
 		})
 
 		router.GET("/v1/annotation", func(c *gin.Context) {

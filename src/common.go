@@ -417,6 +417,16 @@ func getLabelIdFromUrlParams(params url.Values) (string, error) {
     return labelId, nil
 }
 
+func getValidationIdFromUrlParams(params url.Values) string {
+    var validationId string
+    validationId = ""
+    if temp, ok := params["validation_id"]; ok {
+        validationId = temp[0]
+    }
+
+    return validationId
+}
+
 func getExploreUrlParams(c *gin.Context) (string, bool, error) {
     var query string
     var err error
