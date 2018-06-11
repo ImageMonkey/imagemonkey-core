@@ -51,7 +51,7 @@
     for(var i = 0; i < donations.length; i++){
       var imageEndpoint = "{{ .apiBaseUrl }}/v1/donation/" + donations[i].uuid;
       $('#imageGrid').append('<div class="img-container">' +
-        '<img src="' + imageEndpoint + '" imageId="' + donations[i].uuid + '" />' + 
+        '<img src="' + imageEndpoint + '" validationId="' + donations[i].uuid + '" />' + 
         '</div>');
 
       //we just loaded some images, so no image is marked as valid yet
@@ -87,7 +87,7 @@
     }
     else{
       var multiValidationMode = isMultiValidationMode();
-      var url = ("{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
+      var url = ("{{ .apiBaseUrl }}/v1/validation?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
                 + ((labelId === null) ? "" : ("&label_id=" + labelId)));
 
       $.ajax({
@@ -99,9 +99,9 @@
             populateImageGrid(data);
           }
           else{
-            $("#image").attr("imageId", data.uuid);
+            $("#image").attr("validationId", data.uuid);
             setLabel(data.label, data.sublabel);
-            setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
+            setPollData(data["num_yes"], data["num_no"]);
 
             var downloadingImage = new Image();
             downloadingImage.onload = function(){
@@ -109,7 +109,7 @@
               showHideControls(true);
               $("#fullscreenDlgContentImage").attr("src", this.src);
             }
-            downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/" + data.uuid;
+            downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/" + data.image.uuid;
 
           }
         }
@@ -125,7 +125,7 @@
     headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
     $.ajax({
-      url: '{{ .apiBaseUrl }}/v1/donation/validate',
+      url: '{{ .apiBaseUrl }}/v1/validation/validate',
       dataType: 'json',
       type: 'PATCH',
       headers: headers,
@@ -148,8 +148,6 @@
     }
 
     data["validations"] = validations;
-    data["label"] = $("#label").attr("label");
-    data["sublabel"] = $("#label").attr("sublabel");
     return {
       data : data,
       containsOnlyInvalid: containsOnlyInvalid
@@ -221,7 +219,7 @@
 
     setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
-    setPollData({{ .randomImage.NumOfValid }}, {{ .randomImage.NumOfInvalid }});
+    setPollData({{ .randomImage.Validation.NumOfValid }}, {{ .randomImage.Validation.NumOfInvalid }});
     showHideControls(true);
 
     //switch between multi-validation mode and single-validation mode with 'm'
@@ -259,10 +257,10 @@
 
     $("#imageGrid").selectable({
       selected: function(event, ui) {
-        imageValidationMapping[$(ui.selected).attr('imageId')] = true;
+        imageValidationMapping[$(ui.selected).attr('validationId')] = true;
       },
       unselected: function(event, ui) {
-        imageValidationMapping[$(ui.unselected).attr('imageId')] = false;
+        imageValidationMapping[$(ui.unselected).attr('validationId')] = false;
       }
     });
 
@@ -295,7 +293,7 @@
       }
 
       e.preventDefault();
-      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
+      var url = '{{ .apiBaseUrl }}/v1/validation/' + $("#image").attr("validationId") + '/validate/' + action;
       $.ajax({
         url: url,
         dataType: 'json',
@@ -370,7 +368,7 @@
     </div>
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <a href="#" id="imageClick">
-        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
+        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" validationId="{{ .randomImage.Validation.Id }}" id="image">
       </a>
       <div class="ui center aligned basic segment" id="validationContainerSegment">
         <h1 class="ui header" id="label" label="" sublabel=""></h1>

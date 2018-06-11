@@ -710,7 +710,7 @@ func main(){
 			})
 		}
 
-		router.GET("/v1/validate", func(c *gin.Context) {
+		router.GET("/v1/validation", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
 			grouped := false
@@ -762,8 +762,8 @@ func main(){
 					return
 				}
 
-				c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "label": image.Label, "provider": image.Provider, "sublabel": image.Sublabel, 
-											"validations": gin.H{ "num_yes": image.NumOfValid, "num_no": image.NumOfInvalid} })
+				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, "provider": image.Provider }, "label": image.Label, "sublabel": image.Sublabel, 
+											"num_yes": image.Validation.NumOfValid, "num_no": image.Validation.NumOfInvalid })
 			}
 		})
 
@@ -805,37 +805,24 @@ func main(){
 			c.JSON(http.StatusOK, img.AllLabels)
 		})
 
-		router.POST("/v1/donation/:imageid/validate/:param", func(c *gin.Context) {
-			imageId := c.Param("imageid")
+		router.POST("/v1/validation/:validationid/validate/:param", func(c *gin.Context) {
+			validationId := c.Param("validationid")
 			param := c.Param("param")
 
-			parameter := false
-			if param == "yes" {
-				parameter = true
-			} else if param == "no" {
-				parameter = false
-			} else{
+			if param != "yes" && param != "no" {
 				c.JSON(404, nil)
 				return
 			}
 
-			var labelValidationEntry LabelValidationEntry
-			if c.BindJSON(&labelValidationEntry) != nil {
-				c.JSON(400, gin.H{"error": "Couldn't process request - please provide valid label(s)"})
-				return
-			}
-
-			if ((labelValidationEntry.Label == "") && (labelValidationEntry.Sublabel == "")) {
-				c.JSON(400, gin.H{"error": "Please provide a valid label"})
-				return
-			}
+			var imageValidationBatch ImageValidationBatch 
+			imageValidationBatch.Validations = append(imageValidationBatch.Validations, ImageValidation {Uuid: validationId, Valid: param})
 
 
 			var apiUser APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err := validateDonatedPhoto(apiUser, imageId, labelValidationEntry, parameter)
+			err := validateImages(apiUser, imageValidationBatch)
 			if(err != nil){
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -871,7 +858,7 @@ func main(){
 			c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
 		})
 
-		router.PATCH("/v1/donation/validate", func(c *gin.Context) {
+		router.PATCH("/v1/validation/validate", func(c *gin.Context) {
 			var imageValidationBatch ImageValidationBatch
 			
 			if c.BindJSON(&imageValidationBatch) != nil {
@@ -879,9 +866,11 @@ func main(){
 				return
 			}
 
-			browserFingerprint := getBrowserFingerprint(c)
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err := validateImages(browserFingerprint, imageValidationBatch)
+			err := validateImages(apiUser, imageValidationBatch)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
