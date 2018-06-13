@@ -1,4 +1,42 @@
 <script>
+
+  {{ if eq .currentScreen "labeling" }}
+  function persistGeneralLabelingSettings() {
+    var settings = new Settings();
+    settings.setAddLabelHotkey($("#recordAddLabelKeyInput").val());
+
+    $("#generalSettingsRefreshBrowserPopup").modal("show");
+  }
+
+  function loadGeneralLabelingSettings() {
+    var settings = new Settings();
+    $("#recordAddLabelKeyInput").val(settings.getAddLabelHotkey());
+  }
+
+  function openGeneralLabelingSettingsDlg() {
+    loadGeneralLabelingSettings();
+    $('#generalLabelingSettingsDlg').modal('show');
+  }
+
+  function recordAddLabelKeySequence() {
+    $("#recordAddLabelKeyButton").addClass("disabled");
+    $("#recordAddLabelKeyInput").val("Press your key combination");
+    Mousetrap.record(function(sequence) {
+      //sequence is an array like ['ctrl+k', 'c']
+      var completeSequence = sequence.join(" ");
+      //there seems to be a bug with mousetrap.js - when recording the shift+enter 
+      //combo, mousetrap.js ALWAYS detects the combo enter+shift. so in case we detect
+      //enter+shift we rewrite it to shift+enter
+      
+      if(completeSequence === "enter+shift")
+        completeSequence = "shift+enter";
+
+      $("#recordAddLabelKeyInput").val(completeSequence);
+      $("#recordAddLabelKeyButton").removeClass("disabled");
+    });
+  }
+  {{ end }}
+
   function goToValidationLabelEntryClicked(elem) {
     if($(elem).attr("data-unlocked") === "true") {
       $('#gotoValidationModeLabelsDlg').modal({
@@ -152,7 +190,7 @@
     </div>
   </div>
   <div class="actions">
-    <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
+    <div class="ui red cancel inverted button">
       <i class="remove icon"></i>
       Cancel
     </div>
@@ -169,9 +207,62 @@
     </div>
   </div>
   <div class="actions">
-    <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
+    <div class="ui red cancel inverted button">
       <i class="remove icon"></i>
       Cancel
     </div>
   </div>
 </div>
+
+{{ if eq .currentScreen "labeling" }}
+<div class="ui modal" id="generalLabelingSettingsDlg">
+  <div class="ui header">
+    <h2 class="ui header">Settings</h2>
+  </div>
+  <div class="scrolling content" id="generalLabelingSettingsDlgContent">
+    <div class="ui raised segment">
+    <div class="ui grid">
+      <div class="eight wide column">
+        <b>Add Label Hotkey</b>
+        <p>Use this key combination to add a new label</p>
+        <div class="ui fluid action input">
+          <input value="shift+enter" type="text" readonly="" id="recordAddLabelKeyInput">
+
+          <div class="ui icon button" onclick="recordAddLabelKeySequence();" id="recordAddLabelKeyButton">
+            Change
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="actions">
+    <div class="ui red cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui green ok button" id="generalLabelingSettingsSaveButton" onclick="persistGeneralLabelingSettings();">
+      <i class="checkmark icon"></i>
+      Save
+    </div>
+  </div>
+</div>
+{{ end }}
+
+
+<div class="ui modal" id="generalSettingsRefreshBrowserPopup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Info
+  </div>
+  <div class="content">
+    Please refresh your browser window to apply the changes.  
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel icon button">
+      Got it
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+
