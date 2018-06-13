@@ -22,5 +22,13 @@ var Settings = (function () {
     return this.set("addlabelhotkey", value);
   }
 
+  Settings.prototype.getLabelSeparator = function() {
+    return this.get("labelseparator", ",");
+  }
+
+  Settings.prototype.setLabelSeparator = function(value) {
+    return this.set("labelseparator", value);
+  }
+
   return Settings;
 }());

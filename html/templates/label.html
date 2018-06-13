@@ -399,15 +399,23 @@
   }
 
   function onAddLabelSuggestion() {
-    var label = $("#labelSuggestion").val();
-    if(label !== ""){
-      if(!(label in availableLabelsLookupTable)){
-        availableLabelsLookupTable[label] = true;
-        availableLabels.push(label);
-      }
+    var labels = $("#labelSuggestion").val();
+    if(labels !== ""){
+      var splittedLabels = labels.split(new Settings().getLabelSeparator());
+      var label = "";
+      for(var i = 0; i < splittedLabels.length; i++) { 
+        label = splittedLabels[i];
+        if(label === "")
+          continue;
 
-      addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
-      $("#labelSuggestion").val(''); //clear input after add
+        if(!(label in availableLabelsLookupTable)) {
+          availableLabelsLookupTable[label] = true;
+          availableLabels.push(label);
+        }
+
+        addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
+        $("#labelSuggestion").val(''); //clear input after add
+      }
     }
   }
 

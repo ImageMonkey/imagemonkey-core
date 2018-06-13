@@ -5,12 +5,19 @@
     var settings = new Settings();
     settings.setAddLabelHotkey($("#recordAddLabelKeyInput").val());
 
+    settings.setLabelSeparator($('#labelSeparatorDropdown').dropdown('get value'));
+    //settings.setLabelSeparator($("#changeLabelSeparatorInput").val())
+
     $("#generalSettingsRefreshBrowserPopup").modal("show");
   }
 
   function loadGeneralLabelingSettings() {
     var settings = new Settings();
     $("#recordAddLabelKeyInput").val(settings.getAddLabelHotkey());
+    //$("#changeLabelSeparatorInput").val();
+
+    $('#labelSeparatorDropdown').dropdown('set selected', settings.getLabelSeparator());
+
   }
 
   function openGeneralLabelingSettingsDlg() {
@@ -35,6 +42,26 @@
       $("#recordAddLabelKeyButton").removeClass("disabled");
     });
   }
+
+
+  /*function recordLabelSeparatorSequence() {
+    $("#changeLabelSeparatorButton").addClass("disabled");
+    $("#changeLabelSeparatorInput").val("Press a single key");
+    Mousetrap.record(function(sequence) {
+      //sequence is an array like ['ctrl+k', 'c']
+      var completeSequence = sequence.join(" ");
+      //there seems to be a bug with mousetrap.js - when recording the shift+enter 
+      //combo, mousetrap.js ALWAYS detects the combo enter+shift. so in case we detect
+      //enter+shift we rewrite it to shift+enter
+      
+      if(completeSequence.length > 1)
+        $("#changeLabelSeparatorInput").val("only a single character!");
+      else
+        $("#changeLabelSeparatorInput").val(completeSequence);
+      $("#changeLabelSeparatorButton").removeClass("disabled");
+    });
+  }*/
+
   {{ end }}
 
   function goToValidationLabelEntryClicked(elem) {
@@ -157,7 +184,6 @@
   }
 
   $(document).ready(function(){
-
     $({{ .imageIdentifier }}).on('load', function () {
       {{ if eq .validation 1 }}
       clearValidationLabelEntries();
@@ -221,20 +247,52 @@
   </div>
   <div class="scrolling content" id="generalLabelingSettingsDlgContent">
     <div class="ui raised segment">
-    <div class="ui grid">
-      <div class="eight wide column">
-        <b>Add Label Hotkey</b>
-        <p>Use this key combination to add a new label</p>
-        <div class="ui fluid action input">
-          <input value="shift+enter" type="text" readonly="" id="recordAddLabelKeyInput">
+      <div class="ui grid">
+        <div class="eight wide column">
+          <b>Add Label Hotkey</b>
+          <p>Use this key combination to add a new label</p>
+          <div class="ui fluid action input">
+            <input value="shift+enter" type="text" readonly="" id="recordAddLabelKeyInput">
 
-          <div class="ui icon button" onclick="recordAddLabelKeySequence();" id="recordAddLabelKeyButton">
-            Change
+            <div class="ui icon button" onclick="recordAddLabelKeySequence();" id="recordAddLabelKeyButton">
+              Change
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <div class="ui raised segment">
+      <div class="ui grid">
+        <div class="eight wide column">
+          <b>Label Separator</b>
+          <p>Use this key combination to add a new label</p>
+          <select class="ui dropdown" id="labelSeparatorDropdown">
+            <option value=""> (none)</option>
+            <option value=",">, (comma)</option>
+            <option value="|">| (pipe)</option>
+            <option value=";">; (semicolon)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!--<div class="ui raised segment">
+      <div class="ui grid">
+        <div class="eight wide column">
+          <b>Label Separator</b>
+          <p>Use this key combination to add a new label</p>
+          <div class="ui fluid action input">
+            <input value="," type="text" readonly="" id="changeLabelSeparatorInput">
+
+            <div class="ui icon button" onclick="recordLabelSeparatorSequence();" id="changeLabelSeparatorButton">
+              Change
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>-->
+
   </div>
   <div class="actions">
     <div class="ui red cancel button">
