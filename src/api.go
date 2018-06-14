@@ -1164,6 +1164,45 @@ func main(){
 			c.JSON(http.StatusOK, nil)
 		})
 
+		router.GET("/v1/validation/unannotated", func(c *gin.Context) {
+			query := getParamFromUrlParams(c, "query", "")
+			if query != "" {
+				query, err = url.QueryUnescape(query)
+		        if err != nil {
+		            c.JSON(422, gin.H{"error": "please provide a valid query"})
+					return
+		        }
+
+		        queryParser := NewQueryParser(query)
+		        parseResult, err := queryParser.Parse()
+		        if err != nil {
+		            c.JSON(422, gin.H{"error": err.Error()})
+		            return
+		        }
+
+		        orderRandomly := false
+		        shuffle := getParamFromUrlParams(c, "shuffle", "")
+		        if shuffle == "true" {
+		        	orderRandomly = true
+		        }
+
+		        var apiUser APIUser
+				apiUser.ClientFingerprint = getBrowserFingerprint(c)
+				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+		        annotationTasks, err := getAvailableAnnotationTasks(apiUser, parseResult, orderRandomly)
+		        if err != nil {
+		        	c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+		        }
+
+				c.JSON(http.StatusOK, annotationTasks)	
+				return	        
+		    } 
+
+		    c.JSON(422, gin.H{"error": "please provide a valid query"})
+		})
+
 		router.POST("/v1/validation/:validationid/blacklist-annotation", func(c *gin.Context) {
 			validationId := c.Param("validationid")
 

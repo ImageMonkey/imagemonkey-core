@@ -22,8 +22,18 @@
   <script src="js/fingerprint2.min.js"></script>
   <script src="js/annotate.js?v=11"></script>
   <script src="js/simplify.js"></script>
+  <script src="js/justified-layout.min.js"></script>
+  <script src="js/infinitescroll.js?v=1"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
 
   <style>
+  /*.justified {
+    position: relative;
+    width: 1060px;
+  }*/
+
   .canvas-container{margin: 0 auto;}
 
 
@@ -60,9 +70,16 @@
     this.origImageHeight = 0;
   }
 
-  function getRandomUnannotatedImage() {
+  function getUnannotatedImage(validationId) {
+    var url = '';
+
+    if(validationId === undefined)
+      url = '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId));
+    else
+      url = '{{ .apiBaseUrl }}/v1/annotate?validation_id=' + validationId;
+
     $.ajax({
-      url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId)),
+      url: url,
       dataType: 'json',
       type: 'GET',
       success: function(data){
@@ -78,9 +95,12 @@
         showHideAutoAnnotationsLoadButton();
 
         setLabel(data.label, data.sublabel);
-        canvas.fabric().clear();
-        canvas.fabric().setZoom(1.0);
-        canvas.fabric().absolutePan(new fabric.Point(0,0));
+
+        if(canvas !== undefined && canvas !== null) {
+          canvas.fabric().clear();
+          canvas.fabric().setZoom(1.0);
+          canvas.fabric().absolutePan(new fabric.Point(0,0));
+        }
         addMainCanvas();
         populateCanvas(getUrlFromImageId(data.uuid), false);
         changeControl(annotator);
@@ -100,7 +120,14 @@
         xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
       },
       success: function(data, status, xhr){
-        getRandomUnannotatedImage();
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        clearDetailedCanvas();
+        canvas.clear();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
       }
     });
   }
@@ -115,7 +142,14 @@
         xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
       },
       success: function(data, status, xhr){
-        getRandomUnannotatedImage();
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        clearDetailedCanvas();
+        canvas.clear();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
       }
     });
   }
@@ -243,6 +277,9 @@
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
       $("#showSmartAnnotationHelpDlg").show();
+      $("#annotationControls").show();
+      $("#annotationButtons").show();
+      $("#loadingSpinner").hide();
     }
     else{
       $("#doneButton").hide();
@@ -251,6 +288,9 @@
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
       $("#showSmartAnnotationHelpDlg").hide();
+      $("#annotationControls").hide();
+      $("#annotationButtons").hide();
+      $("#loadingSpinner").show();
     }
   }
 
@@ -463,7 +503,7 @@
                     '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
                 '</div>';
-
+    $("#annotationColumn").show();
     $("#annotationColumn").append(data);
 
     $("#annotationArea").attr("imageId", annotationInfo.imageId);
@@ -483,6 +523,7 @@
             annotator.enableSmartAnnotation();
 
             $("#spacer").remove();
+            $("#annotationColumn").show();
             $("#annotationColumn").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
                                       '<div class="" id="smartAnnotationCanvasWrapper">' +
                                         '<div class="ui dimmer" id="smartAnnotationDimmer">' +
@@ -522,6 +563,7 @@
         }
       });
 
+      {{ if eq .annotationMode "default" }}
       annotationInfo.imageId = {{ .randomImage.Id }};
       annotationInfo.origImageWidth = {{ .randomImage.Width }};
       annotationInfo.origImageHeight = {{ .randomImage.Height }};
@@ -549,7 +591,7 @@
       showHideControls(true);
 
       annotationSettings.loadPreferedAnnotationTool(annotator);
-
+      {{ end }}
 
       var browserFingerprint = null;
 
@@ -742,7 +784,12 @@
             xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
           },
           success: function(data){
-            getRandomUnannotatedImage();
+            {{ if eq .annotationMode "default" }}
+            getUnannotatedImage();
+            {{ else }}
+            $("#loadingSpinner").hide();
+            showBrowseAnnotationImageGrid();
+            {{ end }}
           }
         });
       });
@@ -770,8 +817,22 @@
 
 
   <div class="ui stackable grid" id="mainGrid">
+      {{ if eq .annotationMode "browse" }}
+      {{ template "annotation_browse_select_mode.html" .}}
+      {{ end }}
+
+
       <div class="row"></div>
-      <div class="row">
+      <div class="row" id="loadingSpinner" style="display: none;">
+        <div class="sk-wave overlay">
+          <div class="sk-rect sk-rect1"></div>
+          <div class="sk-rect sk-rect2"></div>
+          <div class="sk-rect sk-rect3"></div>
+          <div class="sk-rect sk-rect4"></div>
+          <div class="sk-rect sk-rect5"></div>
+        </div>
+      </div>
+      <div class="row" style="display: none;" id="annotationControls">
         <div class="sixteen wide center aligned column">
           <div class="row">
             <div hidden class="ui toggle checkbox" id="smartAnnotation">
@@ -795,13 +856,14 @@
           {{ template "delete_annotation_objects_popup.html" .}}
 
           {{ template "annotation_discard_dlg.html" .}}
+
         </div>
       </div>
 
-      <div class="row" id="annotationColumn">
+      <div class="row" id="annotationColumn" style="display: none;">
       </div>
 
-      <div class="row">
+      <div class="row" style="display: none;" id="annotationButtons">
         <div class="sixteen wide center aligned column">
           <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
           <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>

@@ -456,3 +456,14 @@ func getExploreUrlParams(c *gin.Context) (string, bool, error) {
 
     return query, annotationsOnly, nil 
 }
+
+func getParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string) string {
+    params := c.Request.URL.Query()
+
+    param := defaultIfNotFound
+    if temp, ok := params[name]; ok {
+        param = temp[0]
+    }
+
+    return param
+}

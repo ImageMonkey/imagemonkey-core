@@ -293,6 +293,16 @@ type APIToken struct {
     Revoked bool `json:"revoked"`
 }
 
+type AnnotationTask struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+    } `json:"image"`
+
+    Id string `json:"uuid"`
+}
+
 func sublabelsToStringlist(sublabels []Sublabel) []string {
     var s []string
     for _, sublabel := range sublabels {
@@ -3070,4 +3080,65 @@ func revokeApiToken(username string, apiToken string) (bool, error) {
     }
 
     return true, nil
+}
+
+func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, orderRandomly bool) ([]AnnotationTask, error) {
+    var annotationTasks []AnnotationTask
+
+    q1 := ""
+    if orderRandomly {
+        q1 = " ORDER BY RANDOM()"
+    }
+
+    q2 := ""
+    if apiUser.Name != "" {
+        q2 = fmt.Sprintf(` AND NOT EXISTS
+                           (
+                                SELECT 1 FROM user_annotation_blacklist bl 
+                                JOIN account acc ON acc.id = bl.account_id
+                                WHERE bl.image_validation_id = v.id AND acc.name = $%d
+                           )`, len(parseResult.queryValues) + 1)
+    }
+
+    q := fmt.Sprintf(`SELECT i.key, i.width, i.height, v.uuid
+                      FROM image i 
+                      JOIN image_validation v ON v.image_id = i.id 
+                      JOIN label l ON l.id = v.label_id
+                      JOIN label_accessor a ON l.id = a.label_id
+                      WHERE i.unlocked = true AND (%s) AND NOT EXISTS
+                      ( 
+                        SELECT 1 FROM image_annotation a 
+                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id
+                      )%s%s`, parseResult.query, q2, q1)
+
+    var rows *sql.Rows
+    var err error
+    if apiUser.Name == "" {
+        rows, err = db.Query(q, parseResult.queryValues...)
+    } else {
+        parseResult.queryValues = append(parseResult.queryValues, apiUser.Name)
+        rows, err = db.Query(q, parseResult.queryValues...)
+    }
+    if err != nil {
+        log.Debug("[Annotation Tasks] Couldn't get available annotation tasks: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationTasks, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var annotationTask AnnotationTask
+        err = rows.Scan(&annotationTask.Image.Id, &annotationTask.Image.Width, &annotationTask.Image.Height, 
+                            &annotationTask.Id)
+        if err != nil {
+            log.Debug("[Annotation Tasks] Couldn't get available annotation tasks: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationTasks, err
+        }
+
+        annotationTasks = append(annotationTasks, annotationTask)
+    }
+
+    return annotationTasks, nil
 }

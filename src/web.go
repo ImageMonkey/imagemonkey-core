@@ -237,23 +237,28 @@ func main() {
 				return
 			}
 
-			validationId := getValidationIdFromUrlParams(params)
-			if validationId != "" {
-				//it doesn't make sene to use the validation id and the label id for querying - so we
-				//give the validation id preference.
-				labelId = ""
-			}
+			mode := getParamFromUrlParams(c, "mode", "default")
 
-			img, err := getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "err"})
-				return
-			}
+			var img UnannotatedImage
+			if mode == "default" {
+				validationId := getValidationIdFromUrlParams(params)
+				if validationId != "" {
+					//it doesn't make sene to use the validation id and the label id for querying - so we
+					//give the validation id preference.
+					labelId = ""
+				}
 
-			//if we query a certain annotation per validation id and got no result set
-			if img.Id == "" && validationId != "" {
-				ShowErrorPage(c)
-				return
+				img, err = getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
+				if err != nil {
+					c.JSON(422, gin.H{"error": "err"})
+					return
+				}
+
+				//if we query a certain annotation per validation id and got no result set
+				if img.Id == "" && validationId != "" {
+					ShowErrorPage(c)
+					return
+				}
 			}
 
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
@@ -265,6 +270,8 @@ func main() {
 				"playgroundBaseUrl": playgroundBaseUrl,
 				"labelId": labelId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"annotationMode": mode,
+				"labelAccessors": pick(getLabelAccessors())[0],
 			})
 		})
 
