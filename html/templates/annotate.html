@@ -27,6 +27,7 @@
   <script src="js/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="css/jquery-ui.css">
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
+  <script src="js/mousetrap.min.js"></script>
 
   <style>
   /*.justified {
@@ -62,6 +63,14 @@
   var labelId = null;
   var annotationInfo = new AnnotationInfo();
   var annotationSettings = new AnnotationSettings();
+
+  function zoomIn() {
+    canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+  }
+
+  function zoomOut() {
+    canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+  }
 
   function AnnotationInfo () {
     this.imageId = "";
@@ -595,10 +604,18 @@
 
       var browserFingerprint = null;
 
+      Mousetrap.bind("r", function() { 
+        $("#rectMenuItem").trigger("click");
+      });
+
       $("#rectMenuItem").click(function(e) {
         annotator.disablePanMode();
         annotator.setShape("Rectangle");
         changeMenuItem("Rectangle");
+      });
+
+      Mousetrap.bind("c", function() { 
+        $("#circleMenuItem").trigger("click");
       });
 
       $("#circleMenuItem").click(function(e) {
@@ -606,6 +623,10 @@
         annotator.setShape("Circle");
         changeMenuItem("Circle");
 
+      });
+
+      Mousetrap.bind("p", function() { 
+        $("#polygonMenuItem").trigger("click");
       });
 
       $("#polygonMenuItem").click(function(e) {
@@ -621,6 +642,10 @@
         changeMenuItem("FreeDrawing");
       });
 
+      Mousetrap.bind("del", function() { 
+        $("#trashMenuItem").trigger("click");
+      });
+
       $("#trashMenuItem").click(function(e) {
         if(isTrashMenuButtonEnabled())
           $('#deleteObjectsPopup').modal('show');
@@ -634,12 +659,20 @@
         annotator.undo();
       });
 
+      Mousetrap.bind('+', function() { 
+        zoomIn(); 
+      });
+
       $("#zoomInMenuItem").click(function(e) {
-        canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+        zoomIn();
+      });
+
+      Mousetrap.bind('-', function() { 
+        zoomOut(); 
       });
 
       $("#zoomOutMenuItem").click(function(e) {
-        canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+        zoomOut();
       });
 
       $("#panMenuItem").click(function(e) {

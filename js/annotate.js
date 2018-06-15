@@ -472,6 +472,9 @@ var Annotator = (function () {
     this.brushWidth = 1;
     this.brushType = "PencilBrush";
     this.smartAnnotationData = [];
+    this.defaultStrokeWidth = 5;
+    this.maxStrokeWidth = 5;
+    this.minStrokeWidth = 2;
 
     this.setBrushType(this.brushType);
     this.setBrushColor(this.brushColor);
@@ -550,8 +553,24 @@ var Annotator = (function () {
     inst.canvas.on('object:selected', function(o) {
       inst.objSelected();
     });
+
+    inst.canvas.on('object:scaling', function(o) {
+      var e = o.target;
+      //in case stroke width gets bigger, than max stroke width
+      //rescale it to max stroke width
+      if(e.strokeWidth * e.scaleX > inst.maxStrokeWidth) {
+        e.objectCaching = false;
+        e.strokeWidth = inst.maxStrokeWidth/((e.scaleX+e.scaleY)/2);
+      }
+      //in case stroke width gets smaller, than min stroke width
+      //rescale it to min stroke width
+      if(e.strokeWidth * e.scaleX < inst.minStrokeWidth) {
+        e.objectCaching = false;
+        e.strokeWidth = inst.minStrokeWidth/((e.scaleX+e.scaleY)/2);
+      }
+    });
+
     inst.canvas.on('object:modified', function(o) {
-      
     });
     inst.canvas.on('object:added', function(o) {
       inst.saveState();
@@ -739,7 +758,7 @@ var Annotator = (function () {
       if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
         var activeObj = inst.canvas.getActiveObject();
         activeObj.stroke= 'red';
-        activeObj.strokeWidth= 5;
+        //activeObj.strokeWidth= 5;
         activeObj.fill = 'transparent';
 
         if(origX > pointer.x){
@@ -860,7 +879,8 @@ var Annotator = (function () {
           angle: 0,
           transparentCorners: false,
           hasBorders: true,
-          hasControls: true
+          hasControls: true,
+          strokeWidth: inst.defaultStrokeWidth
         });
 
         inst.canvas.add(rect).setActiveObject(rect);
@@ -1053,7 +1073,7 @@ var Annotator = (function () {
 
     }
     else{
-      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, pointX, pointY, pX, pY;
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, pointX, pointY, pX, pY, strokeWidth;
 
       for(var i = 0; i < objs.length; i++){
         //skip polygon handles
@@ -1068,24 +1088,27 @@ var Annotator = (function () {
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
           width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
           height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
+          strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
 
           if((width != 0) && (height != 0))
-            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
+            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", "stroke_width": strokeWidth});
         }
         else if(type === "ellipse"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
           rx = Math.round(((objs[i]["rx"] / imgScaleX) * objs[i]["scaleX"]), 0);
           ry = Math.round(((objs[i]["ry"] / imgScaleY) * objs[i]["scaleY"]), 0);
+          strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
 
           if((rx != 0) && (ry != 0))
-            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
+            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", "stroke_width": strokeWidth});
         }
         else if(type === "polygon"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
           width = Math.round(((objs[i]["width"] / imgScaleX)), 0);
           height = Math.round(((objs[i]["height"] / imgScaleY)), 0);
+          strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
 
 
           points = objs[i]["points"];
@@ -1099,7 +1122,7 @@ var Annotator = (function () {
             scaledPoints.push({"x" : pX, "y": pY});
           }
 
-          res.push({"points": scaledPoints, "angle": angle, "type": "polygon"});
+          res.push({"points": scaledPoints, "angle": angle, "type": "polygon", "stroke_width": strokeWidth});
         }
       }
     }
