@@ -64,6 +64,25 @@
   var annotationInfo = new AnnotationInfo();
   var annotationSettings = new AnnotationSettings();
 
+  function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
+    var ret = "";
+    $("#annotatorMenu").children().each(function (){
+      if($(this).hasClass("active")){
+        if(ignoreAutoLoadButton) {
+          if($(this).attr("id") !== "loadAutoAnnotationsMenuItem") {
+            ret = $(this).attr("id");
+            return;
+          }
+        } else {
+          ret = $(this).attr("id");
+          return;
+        }
+      }
+    });
+
+    return ret;
+  }
+
   function zoomIn() {
     canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
   }
@@ -523,6 +542,7 @@
   
 
   $(document).ready(function(){
+      var lastActiveMenuItem = "";
       $('#warningMsg').hide();
       
       $('#smartAnnotation').checkbox({
@@ -674,6 +694,17 @@
       $("#zoomOutMenuItem").click(function(e) {
         zoomOut();
       });
+
+      Mousetrap.bind("ctrl", function(e) {
+        if(!e.repeat) { //if the ctrl key is held down, the event constantly fires. we are only interested in the first event 
+          lastActiveMenuItem = getActiveAnnotationMenuItem(true); //remember active menu item
+          $("#panMenuItem").trigger("click");
+        }
+      }, "keydown");
+
+      Mousetrap.bind("ctrl", function(e) { //ctrl key released
+        $("#"+lastActiveMenuItem).trigger("click");
+      }, "keyup");
 
       $("#panMenuItem").click(function(e) {
         annotator.enablePanMode();
