@@ -270,7 +270,7 @@ var CanvasDrawer = (function () {
         fabric.Image.fromURL(url, function (img) {
             this.img = img;
             scaleAndPositionImg(inst.canvas, img, inst.canvasWidth, inst.canvasHeight, callback);
-        });
+        }, { crossOrigin: 'Anonymous' });
         } else {
             this.canvas.backgroundImage = 0;
             this.canvas.setBackgroundImage('', this.canvas.renderAll.bind(this.canvas));
