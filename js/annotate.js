@@ -305,9 +305,11 @@ var Polygon = (function () {
       hasBorders: true,
       hasControls: false,
       objectCaching: false,
-      selectable: true,
+      selectable: false,
       lockMovementX: true,
       lockMovementY: true,
+      selected: false,
+      evented: false,
       id: this.currentId
     });
     this.canvas.add(polygon);
@@ -475,12 +477,53 @@ var Annotator = (function () {
     this.defaultStrokeWidth = 5;
     this.maxStrokeWidth = 5;
     this.minStrokeWidth = 2;
+    this.isSelectMoveMode = false;
 
     this.setBrushType(this.brushType);
     this.setBrushColor(this.brushColor);
     this.setBrushWidth(this.brushWidth);
 
     this.bindEvents();
+  }
+
+  Annotator.prototype._selectObjectByMouse = function(pointer) {
+    var point = new fabric.Point(pointer.x, pointer.y);
+    var objects = this.canvas.getObjects();
+    var foundObj = null;
+    var hasControls;
+    for(var i = 0; i < objects.length; i++) {
+        var boundingRect = objects[i].getBoundingRect();
+        if((pointer.x >= boundingRect.left && pointer.x <= (boundingRect.left + boundingRect.width)) && 
+          (pointer.y >= boundingRect.top && pointer.y <= (boundingRect.top + boundingRect.height))){
+          if(foundObj) { //we already have found one object that lies within the position of the cursor
+            if(objects[i].isContainedWithinObject(foundObj)) { //is there another object that is even smaller? (i.e is fully contained with in existing one)
+              foundObj.set({hasBorders: false, hasControls: false, evented: false, selectable: false, selected: false}); //if so, remove the selected property again..it's not the object we are looking for
+            }
+          }
+
+
+          hasControls = true;
+          if(objects[i]["type"] === "polygon")
+            hasControls = false; //currently we do not support controls on polygon objects
+
+          objects[i].set({hasBorders: true, hasControls: hasControls, evented: true, selectable: true, selected: true});
+          foundObj = objects[i];
+        } else {
+          objects[i].set({hasBorders: false, hasControls: false, evented: false, selectable: false, selected: false});
+        }
+    }
+  }
+
+  //de-select any selected objects + group and make it non-selectable
+  Annotator.prototype._silenceAllObjects = function() {
+    var objects = this.canvas.getObjects();
+    for(var i = 0; i < objects.length; i++) {
+      objects[i].set({evented: false, selectable: false, selected: false});
+    }
+
+    this.canvas.discardActiveObject();
+    this.canvas.discardActiveGroup();
+    this.canvas.renderAll();
   }
 
   Annotator.prototype.bindEvents = function() {
@@ -505,6 +548,11 @@ var Annotator = (function () {
       inst.onMouseDown(o);
       if(inst.isPanMode)
         inst.panning = true;
+      if(inst.isSelectMoveMode) {
+        var pointer = inst.canvas.getPointer(o.e);
+        inst._selectObjectByMouse(pointer);
+      }
+
     });
     inst.canvas.on('mouse:move', function(o) {
       inst.onMouseMove(o);
@@ -583,7 +631,7 @@ var Annotator = (function () {
       else if(o.target){
         if(inst.type !== "Blocks"){
           inst.over();
-          inst.canvas.hoverCursor = 'move';
+          inst.canvas.hoverCursor = 'default';
         }
         else{
           inst.canvas.hoverCursor = 'default';
@@ -605,6 +653,8 @@ var Annotator = (function () {
       this.markBlocks();
       this.createHull();
     }
+
+
     /*else if(this.type === "FreeDrawing"){
       if(this.isDrawing && !this.freeDrawing.isClosedPathMode())
         this.freeDrawing.generatePolygon();
@@ -880,8 +930,11 @@ var Annotator = (function () {
           stroke: "#F00",
           fill: "transparent",
           transparentCorners: false,
-          hasBorders: true,
-          hasControls: true,
+          hasBorders: false,
+          hasControls: false,
+          selectable: false,
+          selected: false,
+          evented: false,
           strokeWidth: inst.defaultStrokeWidth
         });
 
@@ -897,8 +950,11 @@ var Annotator = (function () {
           fill: "transparent",
           stroke: "#F00",
           transparentCorners: false,
-          hasBorders: true,
-          hasControls: true,
+          hasBorders: false,
+          hasControls: false,
+          selectable: false,
+          selected: false,
+          evented: false,
           strokeWidth: inst.defaultStrokeWidth
         });
 
@@ -989,6 +1045,7 @@ var Annotator = (function () {
       this.canvas.isDrawingMode = true;
     else
       this.canvas.isDrawingMode = false;
+
   }
 
   Annotator.prototype.setBrushColor = function(brushColor){
@@ -1012,6 +1069,15 @@ var Annotator = (function () {
     this.canvas.forEachObject(function(o) { //disable object selection in pan mode
       o.selectable = false;
     });
+  }
+
+  Annotator.prototype.enableSelectMoveMode = function() {
+    this.isSelectMoveMode = true;
+  }
+
+  Annotator.prototype.disableSelectMoveMode = function() {
+    this._silenceAllObjects();
+    this.isSelectMoveMode = false;
   }
 
   Annotator.prototype.disablePanMode = function(){

@@ -198,87 +198,35 @@
   }
 
   function changeMenuItem(type){
-    if(type === 'Rectangle'){
-      $("#rectMenuItem").addClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "Circle"){
-      $("#circleMenuItem").addClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "Polygon"){
-      $("#polygonMenuItem").addClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "PanMode"){
-      $("#panMenuItem").addClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "BlockSelection"){
-      $("#blockSelectMenuItem").addClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "FreeDrawing"){
-      $("#freeDrawingMenuItem").addClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "ForegroundSelection"){
-      $("#smartAnnotationFgMenuItem").addClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "BackgroundSelection"){
-      $("#smartAnnotationBgMenuItem").addClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-    }
+    var id = "";
+    if(type === 'Rectangle')
+      id = "rectMenuItem";
+    else if(type === "Circle")
+      id = "circleMenuItem";
+    else if(type === "Polygon")
+      id = "polygonMenuItem";
+    else if(type === "PanMode")
+      id = "panMenuItem";
+    else if(type === "BlockSelection")
+      id = "blockSelectMenuItem";
+    else if(type === "FreeDrawing")
+      id = "freeDrawingMenuItem";
+    else if(type === "ForegroundSelection")
+      id = "smartAnnotationFgMenuItem";
+    else if(type === "BackgroundSelection")
+      id = "smartAnnotationBgMenuItem";
+    else if(type === "SelectMove")
+      id = "selectMoveMenutItem";
+
+    $("#annotatorMenu").children().each(function (){
+      if($(this).attr("id") === id)
+        $(this).addClass("active");
+      else
+        $(this).removeClass("active");
+    });
+
   }
+
 
   function showHideSmartAnnotationControls(show){
     if(show){
@@ -642,6 +590,7 @@
 
       $("#rectMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Rectangle");
         changeMenuItem("Rectangle");
       });
@@ -652,6 +601,7 @@
 
       $("#circleMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Circle");
         changeMenuItem("Circle");
 
@@ -663,12 +613,23 @@
 
       $("#polygonMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Polygon");
         changeMenuItem("Polygon");
       });
 
+      $("#selectMoveMenutItem").click(function(e) {
+        annotator.disablePanMode();
+        annotator.setShape("");
+        annotator.enableSelectMoveMode();
+        changeMenuItem("SelectMove");
+      });
+
+      
+
        $("#freeDrawingMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("FreeDrawing");
         annotator.setBrushColor("red");
         changeMenuItem("FreeDrawing");
@@ -725,12 +686,14 @@
 
       $("#panMenuItem").click(function(e) {
         annotator.enablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("");
         changeMenuItem("PanMode");
       });
 
       $("#blockSelectMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Blocks");
         changeMenuItem("BlockSelection");
         annotator.toggleGrid();
@@ -745,6 +708,7 @@
       $("#smartAnnotationFgMenuItem").click(function(e) {
         changeMenuItem("ForegroundSelection");
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
         annotator.setBrushWidth(10);
         annotator.setShape("FreeDrawing");
@@ -753,6 +717,7 @@
       $("#smartAnnotationBgMenuItem").click(function(e) {
         changeMenuItem("BackgroundSelection");
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
         annotator.setBrushWidth(10);
         annotator.setShape("FreeDrawing");
