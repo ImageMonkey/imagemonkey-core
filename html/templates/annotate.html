@@ -18,16 +18,18 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=7"></script>
+  <script src="js/fabric_helper.js?v=8"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=11"></script>
+  <script src="js/annotate.js?v=12"></script>
   <script src="js/simplify.js"></script>
   <script src="js/justified-layout.min.js"></script>
-  <script src="js/infinitescroll.js?v=1"></script>
+  <script src="js/infinitescroll.js?v=2"></script>
   <script src="js/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="css/jquery-ui.css">
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
   <script src="js/mousetrap.min.js"></script>
+  <script src="js/huebee.min.js"></script>
+  <link rel="stylesheet" href="css/huebee.min.css"/>
 
   <style>
   /*.justified {
@@ -63,6 +65,7 @@
   var labelId = null;
   var annotationInfo = new AnnotationInfo();
   var annotationSettings = new AnnotationSettings();
+  var colorPicker = null;
 
   function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
     var ret = "";
@@ -470,6 +473,10 @@
 
   function onAnnotatorObjectSelected(){
     $("#trashMenuItem").removeClass("disabled");
+
+    var strokeColor = annotator.getStrokeColorOfSelected();
+    if(strokeColor !== null)
+      colorPicker.setColor(strokeColor);
   }
 
   function onAnnotatorMouseUp(){
@@ -624,6 +631,11 @@
 
       var browserFingerprint = null;
 
+      colorPicker = new Huebee($('#colorPicker')[0], {});
+      colorPicker.on('change', function(color, hue, sat, lum) {
+        annotator.setStrokeColorOfSelected(color);
+      });
+
       Mousetrap.bind("r", function() { 
         $("#rectMenuItem").trigger("click");
       });
@@ -693,6 +705,11 @@
 
       $("#zoomOutMenuItem").click(function(e) {
         zoomOut();
+      });
+
+      $('#strokeWidthSlider').on('input', function(e) {
+        var val = parseInt($(this).val());
+        annotator.setStrokeWidthOfSelected(val);
       });
 
       Mousetrap.bind("ctrl", function(e) {

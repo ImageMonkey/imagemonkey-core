@@ -153,7 +153,7 @@ func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCount
 	}
 }
 
-func annotationsValid(annotations []json.RawMessage) error{
+/*func annotationsValid(annotations []json.RawMessage) error{
 	for _, r := range annotations {
 		var obj map[string]interface{}
         err := json.Unmarshal(r, &obj)
@@ -181,7 +181,52 @@ func annotationsValid(annotations []json.RawMessage) error{
 				return err
 			}
         } else {
-        	return errors.New("Invalid type")
+        	return errors.New("Invalid shape type")
+        }
+	}
+
+	if len(annotations) == 0 {
+		return errors.New("annotations missing")
+	}
+
+	return nil
+}*/
+
+func annotationsValid(annotations []json.RawMessage) error{
+	for _, r := range annotations {
+		var obj map[string]interface{}
+        err := json.Unmarshal(r, &obj)
+        if err != nil {
+            return err
+        }
+
+        shapeType := obj["type"]
+        if shapeType == "rect" {
+        	var rectangleAnnotation RectangleAnnotation 
+        	decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
+        	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
+        	err = decoder.Decode(&rectangleAnnotation)
+        	if err != nil {
+        		return err
+        	}
+        } else if shapeType == "ellipse" {
+        	var ellipsisAnnotation EllipsisAnnotation 
+			decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
+        	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
+        	err = decoder.Decode(&ellipsisAnnotation)
+        	if err != nil {
+        		return err
+        	}
+        } else if shapeType == "polygon" {
+        	var polygonAnnotation PolygonAnnotation 
+			decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
+        	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
+        	err = decoder.Decode(&polygonAnnotation)
+        	if err != nil {
+        		return err
+        	}
+        } else {
+        	return errors.New("Invalid shape type")
         }
 	}
 
@@ -191,6 +236,7 @@ func annotationsValid(annotations []json.RawMessage) error{
 
 	return nil
 }
+
 
 func getBrowserFingerprint(c *gin.Context) string {
 	browserFingerprint := ""

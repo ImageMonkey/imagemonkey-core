@@ -12,22 +12,31 @@ import (
     "github.com/dgrijalva/jwt-go"
 )
 
+type AnnotationStroke struct {
+    Width float32 `json:"width"`
+    Color string `json:"color"`
+}
+
 type RectangleAnnotation struct {
-    Id int64 `json:"id"`
+    //Id int64 `json:"id"`
     Left float32 `json:"left"`
     Top float32 `json:"top"`
     Width float32 `json:"width"`
     Height float32 `json:"height"`
     Angle float32 `json:"angle"`
+    Type string `json:"type"`
+    Stroke AnnotationStroke `json:"stroke"`
 }
 
 type EllipsisAnnotation struct {
-    Id int64 `json:"id"`
+    //Id int64 `json:"id"`
     Left float32 `json:"left"`
     Top float32 `json:"top"`
     Rx float32 `json:"rx"`
     Ry float32 `json:"ry"`
     Angle float32 `json:"angle"`
+    Type string `json:"type"`
+    Stroke AnnotationStroke `json:"stroke"`
 }
 
 
@@ -37,11 +46,13 @@ type PolygonPoint struct {
 }
 
 type PolygonAnnotation struct {
-    Id int64 `json:"id"`
+    //Id int64 `json:"id"`
     Left float32 `json:"left"`
     Top float32 `json:"top"`
     Points []PolygonPoint `json:"points"`
     Angle float32 `json:"angle"`
+    Type string `json:"type"`
+    Stroke AnnotationStroke `json:"stroke"`
 }
 
 type Annotations struct {

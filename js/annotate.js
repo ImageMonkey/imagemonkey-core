@@ -299,7 +299,7 @@ var Polygon = (function () {
     });
     this.canvas.remove(this.activeShape).remove(this.activeLine);
     var polygon = new fabric.Polygon(points,{
-      stroke: 'red',
+      stroke: '#F00',
       strokeWidth: 5,
       fill: 'transparent',
       hasBorders: true,
@@ -757,9 +757,9 @@ var Annotator = (function () {
 
       if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
         var activeObj = inst.canvas.getActiveObject();
-        activeObj.stroke= 'red';
+        //activeObj.stroke= 'red';
         //activeObj.strokeWidth= 5;
-        activeObj.fill = 'transparent';
+        //activeObj.fill = 'transparent';
 
         if(origX > pointer.x){
           activeObj.set({ left: Math.abs(pointer.x) }); 
@@ -877,6 +877,8 @@ var Annotator = (function () {
           width: pointer.x-origX,
           height: pointer.y-origY,
           angle: 0,
+          stroke: "#F00",
+          fill: "transparent",
           transparentCorners: false,
           hasBorders: true,
           hasControls: true,
@@ -892,9 +894,12 @@ var Annotator = (function () {
           radius: 0,
           rx: 0,
           ry: 0,
+          fill: "transparent",
+          stroke: "#F00",
           transparentCorners: false,
           hasBorders: true,
-          hasControls: true
+          hasControls: true,
+          strokeWidth: inst.defaultStrokeWidth
         });
 
         inst.canvas.add(circle).setActiveObject(circle);
@@ -1048,6 +1053,34 @@ var Annotator = (function () {
     this.canvas.selection = true; //enable group selection when grid is hidden
   }
 
+  Annotator.prototype.setStrokeWidthOfSelected = function(strokeWidth){
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      activeObj.set({
+        strokeWidth: strokeWidth
+      });
+      this.canvas.renderAll();
+    }
+  }
+
+  Annotator.prototype.setStrokeColorOfSelected = function(strokeColor){
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      activeObj.set({
+        stroke: strokeColor
+      });
+      this.canvas.renderAll();
+    }
+  }
+
+  Annotator.prototype.getStrokeColorOfSelected = function(){
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      return activeObj.get("stroke");
+    }
+    return null;
+  }
+
   Annotator.prototype.toggleGrid = function(){
     if(this.gridVisible)
       this.hideGrid();
@@ -1073,7 +1106,8 @@ var Annotator = (function () {
 
     }
     else{
-      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, pointX, pointY, pX, pY, strokeWidth;
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, 
+          pointX, pointY, pX, pY, strokeWidth, strokeColor;
 
       for(var i = 0; i < objs.length; i++){
         //skip polygon handles
@@ -1089,9 +1123,11 @@ var Annotator = (function () {
           width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
           height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
           strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
+          strokeColor = objs[i]["stroke"];
 
           if((width != 0) && (height != 0))
-            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", "stroke_width": strokeWidth});
+            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", 
+                      "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
         else if(type === "ellipse"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
@@ -1099,9 +1135,11 @@ var Annotator = (function () {
           rx = Math.round(((objs[i]["rx"] / imgScaleX) * objs[i]["scaleX"]), 0);
           ry = Math.round(((objs[i]["ry"] / imgScaleY) * objs[i]["scaleY"]), 0);
           strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
+          strokeColor = objs[i]["stroke"];
 
           if((rx != 0) && (ry != 0))
-            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", "stroke_width": strokeWidth});
+            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", 
+                      "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
         else if(type === "polygon"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
@@ -1109,6 +1147,7 @@ var Annotator = (function () {
           width = Math.round(((objs[i]["width"] / imgScaleX)), 0);
           height = Math.round(((objs[i]["height"] / imgScaleY)), 0);
           strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
+          strokeColor = objs[i]["stroke"];
 
 
           points = objs[i]["points"];
@@ -1122,7 +1161,7 @@ var Annotator = (function () {
             scaledPoints.push({"x" : pX, "y": pY});
           }
 
-          res.push({"points": scaledPoints, "angle": angle, "type": "polygon", "stroke_width": strokeWidth});
+          res.push({"points": scaledPoints, "angle": angle, "type": "polygon", "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
       }
     }

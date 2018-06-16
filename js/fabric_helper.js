@@ -69,9 +69,15 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var height = (annotations[i]["height"] * scaleFactor);
         var width = (annotations[i]["width"] * scaleFactor);
         var angle = annotations[i]["angle"];
+
         var strokeWidth = 5;
-        if("stroke_width" in annotations[i])
-            strokeWidth = annotations[i]["stroke_width"];
+        var strokeColor = "red";
+        var strokeInfo = annotations[i]["stroke"];
+        if(strokeInfo && "width" in strokeInfo)
+            strokeWidth = strokeInfo["width"];
+        if(strokeInfo && "color" in strokeInfo)
+            strokeColor = strokeInfo["color"];
+
 
         var rect = new fabric.Rect({
             left: left,
@@ -81,7 +87,7 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             width: width,
             height: height,
             angle: angle,
-            stroke: 'red',
+            stroke: strokeColor,
             strokeWidth: strokeWidth,
             fill: "transparent",
             transparentCorners: false,
@@ -98,9 +104,14 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var rx = (annotations[i]["rx"] * scaleFactor);
         var ry = (annotations[i]["ry"] * scaleFactor);
         var angle = annotations[i]["angle"];
+
         var strokeWidth = 5;
-        if("stroke_width" in annotations[i])
-            strokeWidth = annotations[i]["stroke_width"];
+        var strokeColor = "red";
+        var strokeInfo = annotations[i]["stroke"];
+        if(strokeInfo && "width" in strokeInfo)
+            strokeWidth = strokeInfo["width"];
+        if(strokeInfo && "color" in strokeInfo)
+            strokeColor = strokeInfo["color"];
 
         var ellipsis = new fabric.Ellipse({
             left: left,
@@ -110,7 +121,7 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             rx: rx,
             ry: ry,
             angle: angle,
-            stroke: 'red',
+            stroke: strokeColor,
             strokeWidth: strokeWidth,
             fill: "transparent",
             transparentCorners: false,
@@ -133,9 +144,16 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         
         var angle = annotations[i]["angle"];
         var points = annotations[i]["points"];
+
         var strokeWidth = 5;
-        if("stroke_width" in annotations[i])
-            strokeWidth = annotations[i]["stroke_width"];
+        var strokeColor = "red";
+        var strokeInfo = annotations[i]["stroke"];
+        if(strokeInfo && "width" in strokeInfo)
+            strokeWidth = strokeInfo["width"];
+        if(strokeInfo && "color" in strokeInfo)
+            strokeColor = strokeInfo["color"];
+
+
         var scaledPoints = [];
 
         for(var j = 0; j < points.length; j++){
@@ -148,7 +166,7 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 originX: 'left',
                 originY: 'top',
                 angle: angle,
-                stroke: 'red',
+                stroke: strokeColor,
                 strokeWidth: strokeWidth,
                 fill: "transparent",
                 transparentCorners: false,
@@ -164,7 +182,7 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 originX: 'left',
                 originY: 'top',
                 angle: angle,
-                stroke: 'red',
+                stroke: strokeColor,
                 strokeWidth: strokeWidth,
                 fill: "transparent",
                 transparentCorners: false,
