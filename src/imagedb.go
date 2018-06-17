@@ -1203,7 +1203,8 @@ func _getImageForAnnotationFromValidationId(validationId string, addAutoAnnotati
     //there is anyway only one annotation per validation allowed, so if someone tries to push another annotation, the corresponding POST request 
     //would fail 
 
-    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, i.width, i.height, v.uuid, q1.auto_annotations
+    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, i.width, i.height, v.uuid, 
+                           json_agg(q1.annotation || ('{"type":"' || q1.name || '"}')::jsonb)::jsonb as auto_annotations
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
@@ -1212,15 +1213,14 @@ func _getImageForAnnotationFromValidationId(validationId string, addAutoAnnotati
 
                             LEFT JOIN 
                             (
-                                SELECT a.label_id as label_id, a.image_id as image_id, 
-                                json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as auto_annotations
+                                SELECT a.label_id as label_id, a.image_id as image_id, d.annotation, t.name
                                 FROM image_annotation a 
                                 JOIN annotation_data d ON d.image_annotation_id = a.id
                                 JOIN annotation_type t on d.annotation_type_id = t.id
-                                WHERE a.auto_generated = true 
-                                GROUP BY d.image_annotation_id, a.label_id, a.image_id
-                            ) q1 ON l.id = q1.label_id AND i.id = q1.image_id
-                            WHERE i.unlocked = true AND p.name = 'donation' AND v.uuid::text = $1`, validationId)
+                                WHERE a.auto_generated = true
+                            ) q1 ON l.id = q1.label_id AND i.id = q1.image_id 
+                            WHERE i.unlocked = true AND p.name = 'donation' AND v.uuid::text = $1
+                            GROUP BY i.key, l.name, pl.name, width, height, v.uuid`, validationId)
 
     if err != nil {
         log.Debug("[Get specific Image for Annotation] Couldn't get annotation ", err.Error())

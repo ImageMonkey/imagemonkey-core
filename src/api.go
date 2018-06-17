@@ -207,6 +207,7 @@ func annotationsValid(annotations []json.RawMessage) error{
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
         	err = decoder.Decode(&rectangleAnnotation)
         	if err != nil {
+        		raven.CaptureError(err, nil)
         		return err
         	}
         } else if shapeType == "ellipse" {
@@ -215,6 +216,7 @@ func annotationsValid(annotations []json.RawMessage) error{
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
         	err = decoder.Decode(&ellipsisAnnotation)
         	if err != nil {
+        		raven.CaptureError(err, nil)
         		return err
         	}
         } else if shapeType == "polygon" {
@@ -223,6 +225,7 @@ func annotationsValid(annotations []json.RawMessage) error{
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
         	err = decoder.Decode(&polygonAnnotation)
         	if err != nil {
+        		raven.CaptureError(err, nil)
         		return err
         	}
         } else {
