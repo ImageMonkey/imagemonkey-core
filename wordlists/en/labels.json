@@ -665,6 +665,51 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "6ea6beb7-b1ce-4ee1-bc94-bd35e118ddda"
+		},
+		"lake": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ddf7feaa-8c5f-4cab-84f2-6f1804998650"
+		},
+		"mushroom": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f7781c7d-b963-45ad-b09e-677a2c626827"
+		},
+		"book": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "735c2bda-dd22-4240-a373-135cbc53a05b"
+		},
+		"bag": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "3bb8f4ee-7eb5-4a61-b1cc-0c50aac8df72"
+		},
+		"bridge": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "50416c82-401a-469a-b2c4-85c64e4eee3a"
+		},
+		"onion": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "caeabb57-4f03-4ff2-bcfb-fba30bf70de6"
+		},
+		"sun": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c6818c11-6c0a-4f51-904b-4c3e07bbbc2d"
+		},
+		"window": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ff212ebc-c56c-47d3-843e-3e4d8693c3e2"
+		},
+		"sunglasses": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e15d84c5-1afa-439e-b089-ba1ce8b32d0f"
 		}
 	}
 }
