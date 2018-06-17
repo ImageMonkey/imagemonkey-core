@@ -12,3 +12,7 @@ CREATE INDEX image_validation_label_id_index ON image_validation (label_id);
 
 -- Label table
 CREATE INDEX label_name_index ON label (name);
+CREATE INDEX label_parent_id_index ON label(parent_id);
+
+-- annotation_data table
+CREATE INDEX annotation_data_image_annotation_id_idx ON annotation_data(image_annotation_id);
