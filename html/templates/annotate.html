@@ -137,6 +137,10 @@
         changeControl(annotator);
         numOfPendingRequests = 0;
         showHideControls(true);
+
+        {{ if eq .annotationMode "browse" }}
+        annotationSettings.loadPreferedAnnotationTool(annotator);
+        {{ end }}
       }
     });
   }
@@ -581,6 +585,8 @@
       showHideControls(true);
 
       annotationSettings.loadPreferedAnnotationTool(annotator);
+      {{ else }}
+      showHideSmartAnnotationControls(false);
       {{ end }}
 
       var browserFingerprint = null;
