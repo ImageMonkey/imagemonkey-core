@@ -420,11 +420,17 @@
   }
 
   function onAnnotatorObjectSelected(){
-    $("#trashMenuItem").removeClass("disabled");
+    if(annotator.objectsSelected() && annotator.isSelectMoveModeEnabled()) {
+        $("#trashMenuItem").removeClass("disabled");
+        $("#propertiesMenuItem").removeClass("disabled");
 
-    var strokeColor = annotator.getStrokeColorOfSelected();
-    if(strokeColor !== null)
-      colorPicker.setColor(strokeColor);
+        var strokeColor = annotator.getStrokeColorOfSelected();
+        if(strokeColor !== null)
+          colorPicker.setColor(strokeColor);
+    } else {
+      $("#trashMenuItem").addClass("disabled");
+      $("#propertiesMenuItem").addClass("disabled");
+    }
   }
 
   function onAnnotatorMouseUp(){

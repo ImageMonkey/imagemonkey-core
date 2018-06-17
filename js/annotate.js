@@ -1045,7 +1045,6 @@ var Annotator = (function () {
       this.canvas.isDrawingMode = true;
     else
       this.canvas.isDrawingMode = false;
-
   }
 
   Annotator.prototype.setBrushColor = function(brushColor){
@@ -1075,8 +1074,13 @@ var Annotator = (function () {
     this.isSelectMoveMode = true;
   }
 
+  Annotator.prototype.isSelectMoveModeEnabled = function() {
+    return this.isSelectMoveMode;
+  }  
+
   Annotator.prototype.disableSelectMoveMode = function() {
     this._silenceAllObjects();
+    this.objSelected();
     this.isSelectMoveMode = false;
   }
 
