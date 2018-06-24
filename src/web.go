@@ -212,6 +212,15 @@ func main() {
 				return
 			}
 
+			isModerator := false
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+			if sessionInformation.LoggedIn {
+				userInfo, _ := getUserInfo(sessionInformation.Username)
+				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanRemoveLabel {
+					isModerator = true
+				}
+			}
+
 
 			c.HTML(http.StatusOK, "label.html", gin.H{
 				"title": "Add Labels",
@@ -221,6 +230,7 @@ func main() {
 				"labels": labelMap,
 				"labelSuggestions": pick(getLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"isModerator" : isModerator,
 			})
 		})
 

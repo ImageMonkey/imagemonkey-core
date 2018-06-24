@@ -112,7 +112,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token, X-Moderation")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
@@ -126,13 +126,23 @@ func CorsMiddleware() gin.HandlerFunc {
 func RequestId() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if values, _ := c.Request.Header["X-Request-Id"]; len(values) > 0 {
-			if(values[0] != ""){
+			if values[0] != "" {
 				c.Writer.Header().Set("X-Request-Id", values[0])
 			}
 		}
 
 		c.Next()
 	}
+}
+
+func isModerationRequest(c *gin.Context) bool {
+	if values, _ := c.Request.Header["X-Moderation"]; len(values) > 0 {
+		if values[0] == "true" {
+			return true
+		}
+	}
+
+	return false
 }
 
 
@@ -891,7 +901,22 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err := validateImages(apiUser, imageValidationBatch)
+			moderatorAction := false
+			if isModerationRequest(c) {
+				if apiUser.Name != "" {
+					userInfo, err := getUserInfo(apiUser.Name)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
+
+					if userInfo.Permissions != nil && userInfo.Permissions.CanRemoveLabel {
+						moderatorAction = true
+					}
+				}
+			}
+
+			err := validateImages(apiUser, imageValidationBatch, moderatorAction)
 			if(err != nil){
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -939,7 +964,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err := validateImages(apiUser, imageValidationBatch)
+			err := validateImages(apiUser, imageValidationBatch, false)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

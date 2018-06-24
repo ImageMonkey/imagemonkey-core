@@ -24,10 +24,13 @@
   <script src="js/mousetrap.min.js"></script>
   <script src="js/mousetrap-record.min.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/contextjs/context.js"></script>
+  <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <script src="js/fingerprint2.min.js"></script>
 
   <script type="text/javascript">
+  var browserFingerprint = null;
   var colorMap = {}
   var oldLabelMap = {}
   var newlyAddedLabels = {}
@@ -58,7 +61,7 @@
       var sublabels = oldLabelMap[label];
       if(sublabels !== null){
         for(var i = 0; i < sublabels.length; i++){
-          if(sublabels[i] === sublabel)
+          if(sublabels[i]["name"] === sublabel)
             return true;
         }
       }
@@ -117,6 +120,18 @@
     }
   }
 
+  function isLabelValid(numOfValid, numOfInvalid) {
+    if((numOfValid + numOfInvalid) > 0) {
+      var probabilityOfBeginValid = numOfValid / (numOfValid + numOfInvalid);
+      if(probabilityOfBeginValid >= 0.75)
+        return true;
+      return false;
+    }
+
+    //images with no validations are always seen as valid
+    return true;
+  }
+
   function showHideControls(show){
     if(show){
       $('#image').show();
@@ -148,14 +163,14 @@
         var s = [];
         if(sublabels !== undefined && sublabels !== null) {
           for(var j = 0; j < sublabels.length; j++) {
-            s.push(sublabels[j]["name"]);
+            s.push({name: sublabels[j]["name"]});
           }
           oldLabelMap[escapedLabel] = s;
         } 
         else
           oldLabelMap[escapedLabel] = []; //sublabels;
         
-        addOldLabel(escapedLabel);
+        addOldLabel(input[i]);
       }
     }
 
@@ -229,16 +244,57 @@
   }
 
 
-  function addOldLabel(label){
+  function addOldLabel(data){
+    var label = escapeHtml(data["label"]);
+    var displayedLabel = '';
     var color = colorMap[label];
     var subLabels = oldLabelMap[label];
+    var id = '';
+    var elem = null;
+    var strikethrough = false;
     if((subLabels !== null) && (subLabels.length > 0)){
       for(var i = 0; i < subLabels.length; i++){
-        $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[i] +'" label="' + label + '"' + '>' + subLabels[i] + '/' + label + '</div>')));
+        //if the label isn't valid, strike through label and make it grey
+        displayedLabel = subLabels[i]["name"] + '/' + label;
+        id = 'old' + subLabels[i]["validation"]["uuid"];
+        strikethrough = false;
+        if(!isLabelValid(subLabels[i]["validation"]["num_yes"], subLabels[i]["validation"]["num_no"])){
+          displayedLabel = subLabels[i]["name"] + '/' + label;
+          color = '';
+          strikethrough = true;
+        }
+
+
+        elem = $(('<div class="ui huge ' + color + ' label existing-label" sublabel="' + subLabels[i]["name"] 
+                    +'" label="' + label + '"' + ' data-validation-uuid="' 
+                    + data["validation"]["uuid"] + '"' + ' id="' + id + '"' + ' >' + displayedLabel + '</div>'));
+
+        if(strikethrough)
+          elem.css("text-decoration", "line-through");
+
+        $('#labels').prepend(elem);
       }
 
     }
-    $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + label +  '" >' + label + '</div>')));
+
+    //if the label isn't valid, strike through label and make it grey
+    strikethrough = false;
+    displayedLabel = label;
+    if(!isLabelValid(data["validation"]["num_yes"], data["validation"]["num_no"])){
+      displayedLabel = label;
+      color = '';
+      strikethrough = true;
+    }
+
+    id = 'old' + data["validation"]["uuid"];
+    elem = $(('<div class="ui huge ' + color + ' label existing-label" label="' + label +  '"' 
+               + ' data-validation-uuid="' + data["validation"]["uuid"] + '"' + ' id="' + id + '"'
+               + ' >' + displayedLabel + '</div>'));
+
+    if(strikethrough)
+      elem.css("text-decoration", "line-through");
+
+    $('#labels').prepend(elem);
   }
 
   function addLabel(label){
@@ -307,7 +363,6 @@
   $(document).ready(function(){
     $('#labelAlreadyExistsMessage').hide();
     $('#mostPopularLabelsContainer').hide();
-    var browserFingerprint = null;
     addOldLabels({{ .image.AllLabels }});
 
     var availableLabels = [];
@@ -326,6 +381,32 @@
     {{ end }}
 
     getMostPopularLabels();
+
+    {{ if eq .isModerator true }}
+    context.init({preventDoubleContext: false});
+    context.attach('.existing-label', [
+
+      {header: 'Moderator'},
+      {text: 'Remove', action: function(e, selector) {
+                          e.preventDefault();
+                          
+                          if(selector.css("text-decoration").startsWith("line-through")) {
+                            $("#moderatorLabelAlreadyRemovedInfoDlg").modal("show");
+                          } else {
+                            var validationUuid = selector.attr("data-validation-uuid");
+
+                            if(validationUuid !== "") {
+                              $("#moderatorRemoveLabelDlg").attr("data-remove-label-id", selector.attr("id"));
+                              $("#moderatorRemoveLabelDlg").attr("data-validation-uuid", validationUuid);
+                              $("#moderatorRemoveLabelDlg").modal("show");
+                            } else {
+                              $("#moderatorOnlyRemoveProductiveLabelsInfoDlg").modal("show");
+                            }
+                          }
+                       }
+      }
+    ]);
+    {{ end }}
 
     $('#addLabelButton').click(function(e){
       var selectedLabel = getSelectedLabel();
@@ -569,6 +650,10 @@
       {{ template "label_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
       {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" }}
+
+      {{ if eq .isModerator true }}
+      {{ template "moderator_label_remove_dlg.html" dict "apiBaseUrl" .apiBaseUrl}}
+      {{ end }}
     </div>
 
 

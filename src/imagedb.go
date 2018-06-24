@@ -267,10 +267,17 @@ type UserStatistics struct {
     } `json:"user"`
 }
 
+type UserPermissions struct {
+    CanRemoveLabel bool `json:"can_remove_label"`
+}
+
 type UserInfo struct {
     Name string `json:"name"`
     Created int64 `json:"created"`
     ProfilePicture string `json:"profile_picture"`
+    IsModerator bool `json:"is_moderator"`
+
+    Permissions *UserPermissions `json:"permissions,omitempty"`
 }
 
 /*type MonthlyStatistics struct {
@@ -442,10 +449,15 @@ func imageExists(hash uint64) (bool, error){
     }
 }
 
-func validateImages(apiUser APIUser, imageValidationBatch ImageValidationBatch) error {
+func validateImages(apiUser APIUser, imageValidationBatch ImageValidationBatch, moderatorAction bool) error {
     var validEntries []string
     var invalidEntries []string
     var updatedRowIds []int64
+
+    stepSize := 1
+    if moderatorAction {
+        stepSize = 5
+    }
 
     validations := imageValidationBatch.Validations
 
@@ -467,9 +479,9 @@ func validateImages(apiUser APIUser, imageValidationBatch ImageValidationBatch) 
 
     if len(invalidEntries) > 0 {
         rows, err := tx.Query(`UPDATE image_validation AS v 
-                               SET num_of_invalid = num_of_invalid + 1, fingerprint_of_last_modification = $1
+                               SET num_of_invalid = num_of_invalid + $3, fingerprint_of_last_modification = $1
                                WHERE uuid = ANY($2) RETURNING id`, 
-                               apiUser.ClientFingerprint, pq.Array(invalidEntries))
+                               apiUser.ClientFingerprint, pq.Array(invalidEntries), stepSize)
         if err != nil {
             tx.Rollback()
             log.Debug("[Batch Validating donated photos] Couldn't increase num_of_invalid: ", err.Error())
@@ -495,9 +507,9 @@ func validateImages(apiUser APIUser, imageValidationBatch ImageValidationBatch) 
 
     if len(validEntries) > 0 {
         rows1, err := tx.Query(`UPDATE image_validation AS v 
-                              SET num_of_valid = num_of_valid + 1, fingerprint_of_last_modification = $1
+                              SET num_of_valid = num_of_valid + $3, fingerprint_of_last_modification = $1
                               WHERE uuid = ANY($2) RETURNING id`, 
-                              apiUser.ClientFingerprint, pq.Array(validEntries))
+                              apiUser.ClientFingerprint, pq.Array(validEntries), stepSize)
         if err != nil {
             tx.Rollback()
             log.Debug("[Batch Validating donated photos] Couldn't increase num_of_valid: ", err.Error())
@@ -1766,12 +1778,14 @@ func getImageToLabel(imageId string) (Image, error) {
 
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
-                          COALESCE(q1.label_uuid, '') as label_uuid
+                          COALESCE(q1.label_uuid, '') as label_uuid, q1.validation_uuid as validation_uuid, 
+                          q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid
                                FROM 
                                 (
                                     SELECT v.image_id as image_id, l.name as label, 
                                     COALESCE(pl.name, '') as parent_label, true as unlocked, true as annotatable,
-                                    l.uuid::text as label_uuid
+                                    l.uuid::text as label_uuid, v.uuid::text as validation_uuid, v.num_of_valid as num_of_valid,
+                                    v.num_of_invalid as num_of_invalid
                                     FROM image_validation v 
                                     JOIN label l on v.label_id = l.id 
                                     LEFT JOIN label pl on l.parent_id = pl.id
@@ -1780,7 +1794,7 @@ func getImageToLabel(imageId string) (Image, error) {
 
                                     SELECT ils.image_id as image_id, s.name as label, 
                                     '' as parent_label, false as unlocked, ils.annotatable as annotatable,
-                                    '' as label_uuid
+                                    '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
                                     FROM image_label_suggestion ils
                                     JOIN label_suggestion s on ils.label_suggestion_id = s.id
                                 ) q1
@@ -1812,9 +1826,13 @@ func getImageToLabel(imageId string) (Image, error) {
         var labelUnlocked bool
         var labelAnnotatable bool
         var labelUuid string
+        var validationUuid string
+        var numOfValid int32
+        var numOfInvalid int32
         temp := make(map[string]LabelMeEntry) 
         for rows.Next() {
-            err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid)
+            err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
+                            &validationUuid, &numOfValid, &numOfInvalid)
             if err != nil {
                 tx.Rollback()
                 raven.CaptureError(err, nil)
@@ -1834,8 +1852,16 @@ func getImageToLabel(imageId string) (Image, error) {
 
             if val, ok := temp[baseLabel]; ok {
                 if parentLabel != "" {
+                    var validation *LabelMeValidation
+                    validation = nil
+                    fmt.Printf(label)
+                    if validationUuid != "" {
+                        validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+                    }
+
                     val.Sublabels = append(val.Sublabels, Sublabel {Name: label, Unlocked: labelUnlocked, 
-                                                                        Annotatable: labelAnnotatable, Uuid: labelUuid})
+                                                                    Annotatable: labelAnnotatable, Uuid: labelUuid,
+                                                                    Validation: validation})
                 }
                 temp[baseLabel] = val
             } else {
@@ -1844,9 +1870,18 @@ func getImageToLabel(imageId string) (Image, error) {
                 labelMeEntry.Unlocked = labelUnlocked
                 labelMeEntry.Annotatable = labelAnnotatable
                 labelMeEntry.Uuid = labelUuid
+                labelMeEntry.Validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
                 if parentLabel != "" {
+                    var validation *LabelMeValidation
+                    validation = nil
+                    if validationUuid != "" {
+                        validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+                    }
+
+
                     labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, Sublabel {Name: label, Unlocked: labelUnlocked, 
-                                                                                        Annotatable: labelAnnotatable, Uuid: labelUuid})
+                                                                                      Annotatable: labelAnnotatable, Uuid: labelUuid,
+                                                                                      Validation: validation})
                 }
                 temp[baseLabel] = labelMeEntry 
             }
@@ -2427,16 +2462,29 @@ func userExists(username string) (bool, error) {
 
 func getUserInfo(username string) (UserInfo, error) {
     var userInfo UserInfo
+    var removeLabelPermission bool
+    removeLabelPermission = false
 
     userInfo.Name = ""
     userInfo.Created = 0
     userInfo.ProfilePicture = ""
+    userInfo.IsModerator = false
 
-    err := db.QueryRow("SELECT name, COALESCE(profile_picture, ''), created FROM account WHERE name = $1", username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created)
+    err := db.QueryRow(`SELECT a.name, COALESCE(a.profile_picture, ''), a.created, a.is_moderator,
+                        COALESCE(p.can_remove_label, false) as remove_label_permission
+                        FROM account a 
+                        LEFT JOIN account_permission p ON p.account_id = a.id 
+                        WHERE a.name = $1`, username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created, 
+                                                            &userInfo.IsModerator, &removeLabelPermission)
     if err != nil {
         log.Debug("[User Info] Couldn't get user info: ", err.Error())
         raven.CaptureError(err, nil)
         return userInfo, err
+    }
+
+    if userInfo.IsModerator {
+        permissions := &UserPermissions {CanRemoveLabel: removeLabelPermission}
+        userInfo.Permissions = permissions
     }
 
     return userInfo, nil
@@ -2525,8 +2573,9 @@ func createUser(username string, hashedPassword []byte, email string) error {
     created := int64(time.Now().Unix())
 
     insertedId = 0
-    err := db.QueryRow("INSERT INTO account(name, hashed_password, email, created) VALUES($1, $2, $3, $4) RETURNING id", 
-                        username, hashedPassword, email, created).Scan(&insertedId)
+    err := db.QueryRow(`INSERT INTO account(name, hashed_password, email, created, is_moderator) 
+                        VALUES($1, $2, $3, $4, $5) RETURNING id`, 
+                        username, hashedPassword, email, created, false).Scan(&insertedId)
     if err != nil {
         log.Debug("[Creating User] Couldn't create user: ", err.Error())
         raven.CaptureError(err, nil)

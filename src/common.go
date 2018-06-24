@@ -30,11 +30,18 @@ type Label struct {
     Name string `json:"name"`
 }
 
+type LabelMeValidation struct {
+    Uuid string `json:"uuid"`
+    NumOfValid int32 `json:"num_yes"`
+    NumOfInvalid int32 `json:"num_no"` 
+}
+
 type Sublabel struct {
     Name string `json:"name"`
     Unlocked bool `json:"unlocked"`
     Annotatable bool `json:"annotatable"`
     Uuid string `json:"uuid"`
+    Validation *LabelMeValidation `json:"validation,omitempty"`
 }
 
 type LabelMeEntry struct {
@@ -42,6 +49,7 @@ type LabelMeEntry struct {
     Unlocked bool `json:"unlocked"` 
     Annotatable bool `json:"annotatable"` 
     Uuid string `json:"uuid"`
+    Validation *LabelMeValidation `json:"validation,omitempty"`
     Sublabels []Sublabel `json:"sublabels"`
 }
 

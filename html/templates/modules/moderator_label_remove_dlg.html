@@ -1,0 +1,86 @@
+<script>
+function strikethroughLabel(id) {
+  $("#"+id).css("text-decoration", "line-through");
+}
+
+
+function validateNo(validationUuid) {
+  var headers = {}
+  if(browserFingerprint !== null)
+    headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+  headers['X-Moderation'] = true;
+
+  var url = '{{ .apiBaseUrl }}/v1/validation/' + validationUuid + '/validate/no';
+  $.ajax({
+    url: url,
+    dataType: 'json',
+    type: 'POST',
+    headers: headers,
+    beforeSend: function(xhr) {
+      xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+    },
+    success: function(data){
+    }
+  });
+}
+
+$(document).ready(function() {
+  $('#moderatorRemoveLabelYesButton').click(function(e){
+    e.preventDefault();
+    var validationUuid = $("#moderatorRemoveLabelDlg").attr("data-validation-uuid");
+    validateNo(validationUuid);
+    strikethroughLabel($("#moderatorRemoveLabelDlg").attr("data-remove-label-id"));
+  });
+});
+</script>
+
+
+<div class="ui small modal" id="moderatorRemoveLabelDlg" data-validation-uuid="" data-remove-label-id="">
+  <div class="header">
+    Remove Label
+  </div>
+  <div class="content">
+    <p>Do you really want to remove this label?</p>
+  </div>
+  <div class="actions">
+    <div class="ui negative button">
+      Discard
+    </div>
+    <div class="ui positive right labeled icon button" id="moderatorRemoveLabelYesButton">
+      Yes
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+
+
+<div class="ui small modal" id="moderatorLabelAlreadyRemovedInfoDlg">
+  <div class="header">
+    Information
+  </div>
+  <div class="content">
+    <p>Label is already marked as removed!</p>
+  </div>
+  <div class="actions">
+    <div class="ui cancel button">
+      Close
+    </div>
+  </div>
+</div>
+
+
+<div class="ui small modal" id="moderatorOnlyRemoveProductiveLabelsInfoDlg">
+  <div class="header">
+    Information
+  </div>
+  <div class="content">
+    <p>It's not possible to remove non-productive labels!</p>
+  </div>
+  <div class="actions">
+    <div class="ui cancel button">
+      Close
+    </div>
+  </div>
+</div>
+

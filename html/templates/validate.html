@@ -280,7 +280,7 @@
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
-      var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
+      //var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
 
       var headers = {}
       if(browserFingerprint !== null)
@@ -299,7 +299,7 @@
         url: url,
         dataType: 'json',
         type: 'POST',
-        data: JSON.stringify(data),
+        //data: JSON.stringify(data),
         headers: headers,
         beforeSend: function(xhr) {
             xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
