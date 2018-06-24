@@ -109,6 +109,8 @@
     else
       url = '{{ .apiBaseUrl }}/v1/annotate?validation_id=' + validationId;
 
+    showHideControls(false);
+
     $.ajax({
       url: url,
       dataType: 'json',
