@@ -5,7 +5,7 @@
 -- Dumped from database version 9.6.5
 -- Dumped by pg_dump version 9.6.5
 
--- Started on 2018-06-24 22:49:52
+-- Started on 2018-07-04 19:21:15
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -16,10 +16,44 @@ SET check_function_bodies = false;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- TOC entry 1 (class 3079 OID 12387)
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- TOC entry 2604 (class 0 OID 0)
+-- Dependencies: 1
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- TOC entry 2 (class 3079 OID 66319)
+-- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+
+
+--
+-- TOC entry 2605 (class 0 OID 0)
+-- Dependencies: 2
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
 SET search_path = public, pg_catalog;
 
 --
--- TOC entry 594 (class 1247 OID 22153)
+-- TOC entry 559 (class 1247 OID 66331)
 -- Name: control_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -34,7 +68,7 @@ CREATE TYPE control_type AS ENUM (
 ALTER TYPE control_type OWNER TO postgres;
 
 --
--- TOC entry 310 (class 1255 OID 22161)
+-- TOC entry 266 (class 1255 OID 66339)
 -- Name: update_array_elements(jsonb, text, jsonb); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -50,7 +84,7 @@ $$;
 ALTER FUNCTION public.update_array_elements(arr jsonb, key text, value jsonb) OWNER TO postgres;
 
 --
--- TOC entry 192 (class 1259 OID 22171)
+-- TOC entry 186 (class 1259 OID 66340)
 -- Name: access_token_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -69,7 +103,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- TOC entry 193 (class 1259 OID 22173)
+-- TOC entry 187 (class 1259 OID 66342)
 -- Name: access_token; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -84,7 +118,7 @@ CREATE TABLE access_token (
 ALTER TABLE access_token OWNER TO monkey;
 
 --
--- TOC entry 194 (class 1259 OID 22180)
+-- TOC entry 188 (class 1259 OID 66349)
 -- Name: account_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -99,7 +133,7 @@ CREATE SEQUENCE account_id_seq
 ALTER TABLE account_id_seq OWNER TO monkey;
 
 --
--- TOC entry 195 (class 1259 OID 22182)
+-- TOC entry 189 (class 1259 OID 66351)
 -- Name: account; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -117,7 +151,7 @@ CREATE TABLE account (
 ALTER TABLE account OWNER TO monkey;
 
 --
--- TOC entry 258 (class 1259 OID 22776)
+-- TOC entry 190 (class 1259 OID 66358)
 -- Name: account_permission_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -132,7 +166,7 @@ CREATE SEQUENCE account_permission_id_seq
 ALTER TABLE account_permission_id_seq OWNER TO monkey;
 
 --
--- TOC entry 259 (class 1259 OID 22778)
+-- TOC entry 191 (class 1259 OID 66360)
 -- Name: account_permission; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -146,7 +180,7 @@ CREATE TABLE account_permission (
 ALTER TABLE account_permission OWNER TO monkey;
 
 --
--- TOC entry 196 (class 1259 OID 22189)
+-- TOC entry 192 (class 1259 OID 66364)
 -- Name: image_annotation_data_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -161,7 +195,7 @@ CREATE SEQUENCE image_annotation_data_id_seq
 ALTER TABLE image_annotation_data_id_seq OWNER TO monkey;
 
 --
--- TOC entry 197 (class 1259 OID 22191)
+-- TOC entry 193 (class 1259 OID 66366)
 -- Name: annotation_data; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -169,14 +203,15 @@ CREATE TABLE annotation_data (
     id bigint DEFAULT nextval('image_annotation_data_id_seq'::regclass) NOT NULL,
     image_annotation_id bigint,
     annotation jsonb,
-    annotation_type_id bigint NOT NULL
+    annotation_type_id bigint NOT NULL,
+    image_annotation_revision_id bigint
 );
 
 
 ALTER TABLE annotation_data OWNER TO monkey;
 
 --
--- TOC entry 198 (class 1259 OID 22198)
+-- TOC entry 194 (class 1259 OID 66373)
 -- Name: annotation_type; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -189,7 +224,7 @@ CREATE TABLE annotation_type (
 ALTER TABLE annotation_type OWNER TO monkey;
 
 --
--- TOC entry 199 (class 1259 OID 22204)
+-- TOC entry 195 (class 1259 OID 66379)
 -- Name: annotations_per_app_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -204,7 +239,7 @@ CREATE SEQUENCE annotations_per_app_id_seq
 ALTER TABLE annotations_per_app_id_seq OWNER TO monkey;
 
 --
--- TOC entry 200 (class 1259 OID 22206)
+-- TOC entry 196 (class 1259 OID 66381)
 -- Name: annotations_per_app; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -218,7 +253,7 @@ CREATE TABLE annotations_per_app (
 ALTER TABLE annotations_per_app OWNER TO monkey;
 
 --
--- TOC entry 201 (class 1259 OID 22213)
+-- TOC entry 197 (class 1259 OID 66388)
 -- Name: annotations_per_country_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -233,7 +268,7 @@ CREATE SEQUENCE annotations_per_country_id_seq
 ALTER TABLE annotations_per_country_id_seq OWNER TO monkey;
 
 --
--- TOC entry 202 (class 1259 OID 22215)
+-- TOC entry 198 (class 1259 OID 66390)
 -- Name: annotations_per_country; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -247,7 +282,7 @@ CREATE TABLE annotations_per_country (
 ALTER TABLE annotations_per_country OWNER TO monkey;
 
 --
--- TOC entry 203 (class 1259 OID 22222)
+-- TOC entry 199 (class 1259 OID 66397)
 -- Name: api_token_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -262,7 +297,7 @@ CREATE SEQUENCE api_token_id_seq
 ALTER TABLE api_token_id_seq OWNER TO monkey;
 
 --
--- TOC entry 204 (class 1259 OID 22224)
+-- TOC entry 200 (class 1259 OID 66399)
 -- Name: api_token; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -280,7 +315,7 @@ CREATE TABLE api_token (
 ALTER TABLE api_token OWNER TO monkey;
 
 --
--- TOC entry 205 (class 1259 OID 22231)
+-- TOC entry 201 (class 1259 OID 66406)
 -- Name: donations_per_app_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -295,7 +330,7 @@ CREATE SEQUENCE donations_per_app_id_seq
 ALTER TABLE donations_per_app_id_seq OWNER TO monkey;
 
 --
--- TOC entry 206 (class 1259 OID 22233)
+-- TOC entry 202 (class 1259 OID 66408)
 -- Name: donations_per_app; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -309,7 +344,7 @@ CREATE TABLE donations_per_app (
 ALTER TABLE donations_per_app OWNER TO monkey;
 
 --
--- TOC entry 207 (class 1259 OID 22240)
+-- TOC entry 203 (class 1259 OID 66415)
 -- Name: donations_per_country_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -324,7 +359,7 @@ CREATE SEQUENCE donations_per_country_id_seq
 ALTER TABLE donations_per_country_id_seq OWNER TO monkey;
 
 --
--- TOC entry 208 (class 1259 OID 22242)
+-- TOC entry 204 (class 1259 OID 66417)
 -- Name: donations_per_country; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -338,7 +373,7 @@ CREATE TABLE donations_per_country (
 ALTER TABLE donations_per_country OWNER TO monkey;
 
 --
--- TOC entry 209 (class 1259 OID 22249)
+-- TOC entry 205 (class 1259 OID 66424)
 -- Name: image; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -356,7 +391,7 @@ CREATE TABLE image (
 ALTER TABLE image OWNER TO monkey;
 
 --
--- TOC entry 210 (class 1259 OID 22255)
+-- TOC entry 206 (class 1259 OID 66430)
 -- Name: image_annotation_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -371,7 +406,7 @@ CREATE SEQUENCE image_annotation_id_seq
 ALTER TABLE image_annotation_id_seq OWNER TO monkey;
 
 --
--- TOC entry 211 (class 1259 OID 22257)
+-- TOC entry 207 (class 1259 OID 66432)
 -- Name: image_annotation; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -384,14 +419,15 @@ CREATE TABLE image_annotation (
     sys_period tstzrange DEFAULT tstzrange(now(), NULL::timestamp with time zone) NOT NULL,
     label_id bigint NOT NULL,
     uuid uuid,
-    auto_generated boolean
+    auto_generated boolean,
+    revision integer
 );
 
 
 ALTER TABLE image_annotation OWNER TO monkey;
 
 --
--- TOC entry 212 (class 1259 OID 22265)
+-- TOC entry 208 (class 1259 OID 66440)
 -- Name: image_annotation_history; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -411,7 +447,7 @@ CREATE TABLE image_annotation_history (
 ALTER TABLE image_annotation_history OWNER TO monkey;
 
 --
--- TOC entry 213 (class 1259 OID 22272)
+-- TOC entry 209 (class 1259 OID 66447)
 -- Name: image_annotation_refinement_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -426,7 +462,7 @@ CREATE SEQUENCE image_annotation_refinement_id_seq
 ALTER TABLE image_annotation_refinement_id_seq OWNER TO monkey;
 
 --
--- TOC entry 214 (class 1259 OID 22274)
+-- TOC entry 210 (class 1259 OID 66449)
 -- Name: image_annotation_refinement; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -443,7 +479,36 @@ CREATE TABLE image_annotation_refinement (
 ALTER TABLE image_annotation_refinement OWNER TO monkey;
 
 --
--- TOC entry 215 (class 1259 OID 22282)
+-- TOC entry 211 (class 1259 OID 66457)
+-- Name: image_annotation_revision_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
+--
+
+CREATE SEQUENCE image_annotation_revision_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE image_annotation_revision_id_seq OWNER TO monkey;
+
+--
+-- TOC entry 212 (class 1259 OID 66459)
+-- Name: image_annotation_revision; Type: TABLE; Schema: public; Owner: monkey
+--
+
+CREATE TABLE image_annotation_revision (
+    id bigint DEFAULT nextval('image_annotation_revision_id_seq'::regclass) NOT NULL,
+    image_annotation_id bigint,
+    revision integer
+);
+
+
+ALTER TABLE image_annotation_revision OWNER TO monkey;
+
+--
+-- TOC entry 213 (class 1259 OID 66463)
 -- Name: image_classification_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -458,7 +523,7 @@ CREATE SEQUENCE image_classification_id_seq
 ALTER TABLE image_classification_id_seq OWNER TO monkey;
 
 --
--- TOC entry 216 (class 1259 OID 22284)
+-- TOC entry 214 (class 1259 OID 66465)
 -- Name: image_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -473,8 +538,8 @@ CREATE SEQUENCE image_id_seq
 ALTER TABLE image_id_seq OWNER TO monkey;
 
 --
--- TOC entry 2641 (class 0 OID 0)
--- Dependencies: 216
+-- TOC entry 2606 (class 0 OID 0)
+-- Dependencies: 214
 -- Name: image_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: monkey
 --
 
@@ -482,7 +547,7 @@ ALTER SEQUENCE image_id_seq OWNED BY image.id;
 
 
 --
--- TOC entry 217 (class 1259 OID 22286)
+-- TOC entry 215 (class 1259 OID 66467)
 -- Name: image_label_suggestion_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -497,7 +562,7 @@ CREATE SEQUENCE image_label_suggestion_id_seq
 ALTER TABLE image_label_suggestion_id_seq OWNER TO monkey;
 
 --
--- TOC entry 218 (class 1259 OID 22288)
+-- TOC entry 216 (class 1259 OID 66469)
 -- Name: image_label_suggestion; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -513,7 +578,7 @@ CREATE TABLE image_label_suggestion (
 ALTER TABLE image_label_suggestion OWNER TO monkey;
 
 --
--- TOC entry 219 (class 1259 OID 22295)
+-- TOC entry 217 (class 1259 OID 66476)
 -- Name: image_provider_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -528,7 +593,7 @@ CREATE SEQUENCE image_provider_id_seq
 ALTER TABLE image_provider_id_seq OWNER TO monkey;
 
 --
--- TOC entry 220 (class 1259 OID 22297)
+-- TOC entry 218 (class 1259 OID 66478)
 -- Name: image_provider; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -541,7 +606,7 @@ CREATE TABLE image_provider (
 ALTER TABLE image_provider OWNER TO monkey;
 
 --
--- TOC entry 221 (class 1259 OID 22304)
+-- TOC entry 219 (class 1259 OID 66485)
 -- Name: image_quarantine_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -556,7 +621,7 @@ CREATE SEQUENCE image_quarantine_id_seq
 ALTER TABLE image_quarantine_id_seq OWNER TO monkey;
 
 --
--- TOC entry 222 (class 1259 OID 22306)
+-- TOC entry 220 (class 1259 OID 66487)
 -- Name: image_quarantine; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -569,7 +634,7 @@ CREATE TABLE image_quarantine (
 ALTER TABLE image_quarantine OWNER TO monkey;
 
 --
--- TOC entry 223 (class 1259 OID 22310)
+-- TOC entry 221 (class 1259 OID 66491)
 -- Name: report_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -584,7 +649,7 @@ CREATE SEQUENCE report_id_seq
 ALTER TABLE report_id_seq OWNER TO monkey;
 
 --
--- TOC entry 224 (class 1259 OID 22312)
+-- TOC entry 222 (class 1259 OID 66493)
 -- Name: image_report; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -598,7 +663,7 @@ CREATE TABLE image_report (
 ALTER TABLE image_report OWNER TO monkey;
 
 --
--- TOC entry 225 (class 1259 OID 22319)
+-- TOC entry 223 (class 1259 OID 66500)
 -- Name: image_source_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -613,7 +678,7 @@ CREATE SEQUENCE image_source_id_seq
 ALTER TABLE image_source_id_seq OWNER TO monkey;
 
 --
--- TOC entry 226 (class 1259 OID 22321)
+-- TOC entry 224 (class 1259 OID 66502)
 -- Name: image_source; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -627,7 +692,7 @@ CREATE TABLE image_source (
 ALTER TABLE image_source OWNER TO monkey;
 
 --
--- TOC entry 227 (class 1259 OID 22328)
+-- TOC entry 225 (class 1259 OID 66509)
 -- Name: image_validation_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -642,7 +707,7 @@ CREATE SEQUENCE image_validation_id_seq
 ALTER TABLE image_validation_id_seq OWNER TO monkey;
 
 --
--- TOC entry 228 (class 1259 OID 22330)
+-- TOC entry 226 (class 1259 OID 66511)
 -- Name: image_validation; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -662,7 +727,7 @@ CREATE TABLE image_validation (
 ALTER TABLE image_validation OWNER TO monkey;
 
 --
--- TOC entry 229 (class 1259 OID 22338)
+-- TOC entry 227 (class 1259 OID 66519)
 -- Name: image_validation_history; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -682,7 +747,7 @@ CREATE TABLE image_validation_history (
 ALTER TABLE image_validation_history OWNER TO monkey;
 
 --
--- TOC entry 230 (class 1259 OID 22344)
+-- TOC entry 228 (class 1259 OID 66525)
 -- Name: image_validation_source_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -697,7 +762,7 @@ CREATE SEQUENCE image_validation_source_id_seq
 ALTER TABLE image_validation_source_id_seq OWNER TO monkey;
 
 --
--- TOC entry 231 (class 1259 OID 22346)
+-- TOC entry 229 (class 1259 OID 66527)
 -- Name: image_validation_source; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -711,7 +776,7 @@ CREATE TABLE image_validation_source (
 ALTER TABLE image_validation_source OWNER TO monkey;
 
 --
--- TOC entry 232 (class 1259 OID 22350)
+-- TOC entry 230 (class 1259 OID 66531)
 -- Name: name_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -726,7 +791,7 @@ CREATE SEQUENCE name_id_seq
 ALTER TABLE name_id_seq OWNER TO monkey;
 
 --
--- TOC entry 233 (class 1259 OID 22352)
+-- TOC entry 231 (class 1259 OID 66533)
 -- Name: label; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -741,7 +806,7 @@ CREATE TABLE label (
 ALTER TABLE label OWNER TO monkey;
 
 --
--- TOC entry 234 (class 1259 OID 22359)
+-- TOC entry 232 (class 1259 OID 66540)
 -- Name: label_accessor_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -756,7 +821,7 @@ CREATE SEQUENCE label_accessor_id_seq
 ALTER TABLE label_accessor_id_seq OWNER TO monkey;
 
 --
--- TOC entry 235 (class 1259 OID 22361)
+-- TOC entry 233 (class 1259 OID 66542)
 -- Name: label_accessor; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -770,7 +835,7 @@ CREATE TABLE label_accessor (
 ALTER TABLE label_accessor OWNER TO monkey;
 
 --
--- TOC entry 236 (class 1259 OID 22368)
+-- TOC entry 234 (class 1259 OID 66549)
 -- Name: label_example_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -785,7 +850,7 @@ CREATE SEQUENCE label_example_id_seq
 ALTER TABLE label_example_id_seq OWNER TO monkey;
 
 --
--- TOC entry 237 (class 1259 OID 22370)
+-- TOC entry 235 (class 1259 OID 66551)
 -- Name: label_example; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -800,7 +865,7 @@ CREATE TABLE label_example (
 ALTER TABLE label_example OWNER TO monkey;
 
 --
--- TOC entry 238 (class 1259 OID 22377)
+-- TOC entry 236 (class 1259 OID 66558)
 -- Name: label_suggestion_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -815,7 +880,7 @@ CREATE SEQUENCE label_suggestion_id_seq
 ALTER TABLE label_suggestion_id_seq OWNER TO monkey;
 
 --
--- TOC entry 239 (class 1259 OID 22379)
+-- TOC entry 237 (class 1259 OID 66560)
 -- Name: label_suggestion; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -829,7 +894,7 @@ CREATE TABLE label_suggestion (
 ALTER TABLE label_suggestion OWNER TO monkey;
 
 --
--- TOC entry 240 (class 1259 OID 22386)
+-- TOC entry 238 (class 1259 OID 66567)
 -- Name: quiz_answer_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -844,7 +909,7 @@ CREATE SEQUENCE quiz_answer_id_seq
 ALTER TABLE quiz_answer_id_seq OWNER TO monkey;
 
 --
--- TOC entry 241 (class 1259 OID 22388)
+-- TOC entry 239 (class 1259 OID 66569)
 -- Name: quiz_answer; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -858,7 +923,7 @@ CREATE TABLE quiz_answer (
 ALTER TABLE quiz_answer OWNER TO monkey;
 
 --
--- TOC entry 242 (class 1259 OID 22392)
+-- TOC entry 240 (class 1259 OID 66573)
 -- Name: quiz_question_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -873,7 +938,7 @@ CREATE SEQUENCE quiz_question_id_seq
 ALTER TABLE quiz_question_id_seq OWNER TO monkey;
 
 --
--- TOC entry 243 (class 1259 OID 22394)
+-- TOC entry 241 (class 1259 OID 66575)
 -- Name: quiz_question; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -885,14 +950,15 @@ CREATE TABLE quiz_question (
     allow_unknown boolean,
     allow_other boolean,
     browse_by_example boolean,
-    multiselect boolean
+    multiselect boolean,
+    uuid uuid
 );
 
 
 ALTER TABLE quiz_question OWNER TO monkey;
 
 --
--- TOC entry 244 (class 1259 OID 22401)
+-- TOC entry 242 (class 1259 OID 66582)
 -- Name: trending_label_suggestion_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -907,7 +973,7 @@ CREATE SEQUENCE trending_label_suggestion_id_seq
 ALTER TABLE trending_label_suggestion_id_seq OWNER TO monkey;
 
 --
--- TOC entry 245 (class 1259 OID 22403)
+-- TOC entry 243 (class 1259 OID 66584)
 -- Name: trending_label_suggestion; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -923,7 +989,7 @@ CREATE TABLE trending_label_suggestion (
 ALTER TABLE trending_label_suggestion OWNER TO monkey;
 
 --
--- TOC entry 246 (class 1259 OID 22407)
+-- TOC entry 244 (class 1259 OID 66588)
 -- Name: user_annotation_blacklist_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -938,7 +1004,7 @@ CREATE SEQUENCE user_annotation_blacklist_id_seq
 ALTER TABLE user_annotation_blacklist_id_seq OWNER TO monkey;
 
 --
--- TOC entry 247 (class 1259 OID 22409)
+-- TOC entry 245 (class 1259 OID 66590)
 -- Name: user_annotation_blacklist; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -952,7 +1018,7 @@ CREATE TABLE user_annotation_blacklist (
 ALTER TABLE user_annotation_blacklist OWNER TO monkey;
 
 --
--- TOC entry 248 (class 1259 OID 22413)
+-- TOC entry 246 (class 1259 OID 66594)
 -- Name: user_image_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -967,7 +1033,7 @@ CREATE SEQUENCE user_image_id_seq
 ALTER TABLE user_image_id_seq OWNER TO monkey;
 
 --
--- TOC entry 249 (class 1259 OID 22415)
+-- TOC entry 247 (class 1259 OID 66596)
 -- Name: user_image; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -981,7 +1047,7 @@ CREATE TABLE user_image (
 ALTER TABLE user_image OWNER TO monkey;
 
 --
--- TOC entry 250 (class 1259 OID 22419)
+-- TOC entry 248 (class 1259 OID 66600)
 -- Name: user_image_annotation_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -996,7 +1062,7 @@ CREATE SEQUENCE user_image_annotation_id_seq
 ALTER TABLE user_image_annotation_id_seq OWNER TO monkey;
 
 --
--- TOC entry 251 (class 1259 OID 22421)
+-- TOC entry 249 (class 1259 OID 66602)
 -- Name: user_image_annotation; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -1011,7 +1077,7 @@ CREATE TABLE user_image_annotation (
 ALTER TABLE user_image_annotation OWNER TO monkey;
 
 --
--- TOC entry 252 (class 1259 OID 22425)
+-- TOC entry 250 (class 1259 OID 66606)
 -- Name: user_image_validation_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -1026,7 +1092,7 @@ CREATE SEQUENCE user_image_validation_id_seq
 ALTER TABLE user_image_validation_id_seq OWNER TO monkey;
 
 --
--- TOC entry 253 (class 1259 OID 22427)
+-- TOC entry 251 (class 1259 OID 66608)
 -- Name: user_image_validation; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -1041,7 +1107,7 @@ CREATE TABLE user_image_validation (
 ALTER TABLE user_image_validation OWNER TO monkey;
 
 --
--- TOC entry 254 (class 1259 OID 22431)
+-- TOC entry 252 (class 1259 OID 66612)
 -- Name: validations_per_app_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -1056,7 +1122,7 @@ CREATE SEQUENCE validations_per_app_id_seq
 ALTER TABLE validations_per_app_id_seq OWNER TO monkey;
 
 --
--- TOC entry 255 (class 1259 OID 22433)
+-- TOC entry 253 (class 1259 OID 66614)
 -- Name: validations_per_app; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -1070,7 +1136,7 @@ CREATE TABLE validations_per_app (
 ALTER TABLE validations_per_app OWNER TO monkey;
 
 --
--- TOC entry 256 (class 1259 OID 22440)
+-- TOC entry 254 (class 1259 OID 66621)
 -- Name: validations_per_country_id_seq; Type: SEQUENCE; Schema: public; Owner: monkey
 --
 
@@ -1085,7 +1151,7 @@ CREATE SEQUENCE validations_per_country_id_seq
 ALTER TABLE validations_per_country_id_seq OWNER TO monkey;
 
 --
--- TOC entry 257 (class 1259 OID 22442)
+-- TOC entry 255 (class 1259 OID 66623)
 -- Name: validations_per_country; Type: TABLE; Schema: public; Owner: monkey
 --
 
@@ -1099,7 +1165,7 @@ CREATE TABLE validations_per_country (
 ALTER TABLE validations_per_country OWNER TO monkey;
 
 --
--- TOC entry 2301 (class 2604 OID 22449)
+-- TOC entry 2257 (class 2604 OID 66630)
 -- Name: image id; Type: DEFAULT; Schema: public; Owner: monkey
 --
 
@@ -1107,7 +1173,7 @@ ALTER TABLE ONLY image ALTER COLUMN id SET DEFAULT nextval('image_id_seq'::regcl
 
 
 --
--- TOC entry 2330 (class 2606 OID 22455)
+-- TOC entry 2286 (class 2606 OID 66632)
 -- Name: access_token access_token_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1116,7 +1182,7 @@ ALTER TABLE ONLY access_token
 
 
 --
--- TOC entry 2479 (class 2606 OID 22783)
+-- TOC entry 2295 (class 2606 OID 66634)
 -- Name: account_permission account_permission_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1125,7 +1191,7 @@ ALTER TABLE ONLY account_permission
 
 
 --
--- TOC entry 2343 (class 2606 OID 22457)
+-- TOC entry 2303 (class 2606 OID 66636)
 -- Name: annotation_type annotation_type_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1134,7 +1200,7 @@ ALTER TABLE ONLY annotation_type
 
 
 --
--- TOC entry 2345 (class 2606 OID 22459)
+-- TOC entry 2305 (class 2606 OID 66638)
 -- Name: annotation_type annotation_type_name_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1143,7 +1209,7 @@ ALTER TABLE ONLY annotation_type
 
 
 --
--- TOC entry 2347 (class 2606 OID 22461)
+-- TOC entry 2307 (class 2606 OID 66640)
 -- Name: annotations_per_app annotations_per_app_app_identifier_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1152,7 +1218,7 @@ ALTER TABLE ONLY annotations_per_app
 
 
 --
--- TOC entry 2349 (class 2606 OID 22463)
+-- TOC entry 2309 (class 2606 OID 66642)
 -- Name: annotations_per_app annotations_per_app_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1161,7 +1227,7 @@ ALTER TABLE ONLY annotations_per_app
 
 
 --
--- TOC entry 2351 (class 2606 OID 22465)
+-- TOC entry 2311 (class 2606 OID 66644)
 -- Name: annotations_per_country annotations_per_country_country_code_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1170,7 +1236,7 @@ ALTER TABLE ONLY annotations_per_country
 
 
 --
--- TOC entry 2353 (class 2606 OID 22467)
+-- TOC entry 2313 (class 2606 OID 66646)
 -- Name: annotations_per_country annotations_per_country_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1179,7 +1245,7 @@ ALTER TABLE ONLY annotations_per_country
 
 
 --
--- TOC entry 2355 (class 2606 OID 22469)
+-- TOC entry 2315 (class 2606 OID 66648)
 -- Name: api_token api_token_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1188,7 +1254,7 @@ ALTER TABLE ONLY api_token
 
 
 --
--- TOC entry 2357 (class 2606 OID 22471)
+-- TOC entry 2317 (class 2606 OID 66650)
 -- Name: api_token api_token_token_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1197,7 +1263,7 @@ ALTER TABLE ONLY api_token
 
 
 --
--- TOC entry 2360 (class 2606 OID 22473)
+-- TOC entry 2320 (class 2606 OID 66652)
 -- Name: donations_per_app donations_per_app_app_identifier_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1206,7 +1272,7 @@ ALTER TABLE ONLY donations_per_app
 
 
 --
--- TOC entry 2362 (class 2606 OID 22475)
+-- TOC entry 2322 (class 2606 OID 66654)
 -- Name: donations_per_app donations_per_app_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1215,7 +1281,7 @@ ALTER TABLE ONLY donations_per_app
 
 
 --
--- TOC entry 2364 (class 2606 OID 22477)
+-- TOC entry 2324 (class 2606 OID 66656)
 -- Name: donations_per_country donations_per_country_country_code_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1224,7 +1290,7 @@ ALTER TABLE ONLY donations_per_country
 
 
 --
--- TOC entry 2366 (class 2606 OID 22479)
+-- TOC entry 2326 (class 2606 OID 66658)
 -- Name: donations_per_country donations_per_country_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1233,7 +1299,7 @@ ALTER TABLE ONLY donations_per_country
 
 
 --
--- TOC entry 2341 (class 2606 OID 22481)
+-- TOC entry 2301 (class 2606 OID 66660)
 -- Name: annotation_data image_annotation_data_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1242,7 +1308,7 @@ ALTER TABLE ONLY annotation_data
 
 
 --
--- TOC entry 2380 (class 2606 OID 22483)
+-- TOC entry 2340 (class 2606 OID 66662)
 -- Name: image_annotation image_annotation_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1251,7 +1317,7 @@ ALTER TABLE ONLY image_annotation
 
 
 --
--- TOC entry 2383 (class 2606 OID 22485)
+-- TOC entry 2343 (class 2606 OID 66664)
 -- Name: image_annotation image_annotation_image_label_uniquekey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1260,7 +1326,7 @@ ALTER TABLE ONLY image_annotation
 
 
 --
--- TOC entry 2388 (class 2606 OID 22487)
+-- TOC entry 2348 (class 2606 OID 66666)
 -- Name: image_annotation_refinement image_annotation_refinement_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1269,7 +1335,7 @@ ALTER TABLE ONLY image_annotation_refinement
 
 
 --
--- TOC entry 2390 (class 2606 OID 22489)
+-- TOC entry 2350 (class 2606 OID 66668)
 -- Name: image_annotation_refinement image_annotation_refinement_label_annotation_data_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1278,7 +1344,16 @@ ALTER TABLE ONLY image_annotation_refinement
 
 
 --
--- TOC entry 2370 (class 2606 OID 22491)
+-- TOC entry 2353 (class 2606 OID 66670)
+-- Name: image_annotation_revision image_annotation_revision_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
+--
+
+ALTER TABLE ONLY image_annotation_revision
+    ADD CONSTRAINT image_annotation_revision_id_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2330 (class 2606 OID 66672)
 -- Name: image image_hash_unique_key; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1287,7 +1362,7 @@ ALTER TABLE ONLY image
 
 
 --
--- TOC entry 2372 (class 2606 OID 22493)
+-- TOC entry 2332 (class 2606 OID 66674)
 -- Name: image image_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1296,7 +1371,7 @@ ALTER TABLE ONLY image
 
 
 --
--- TOC entry 2376 (class 2606 OID 22495)
+-- TOC entry 2336 (class 2606 OID 66676)
 -- Name: image image_key_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1305,7 +1380,7 @@ ALTER TABLE ONLY image
 
 
 --
--- TOC entry 2394 (class 2606 OID 22497)
+-- TOC entry 2357 (class 2606 OID 66678)
 -- Name: image_label_suggestion image_label_suggestion_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1314,7 +1389,7 @@ ALTER TABLE ONLY image_label_suggestion
 
 
 --
--- TOC entry 2396 (class 2606 OID 22499)
+-- TOC entry 2359 (class 2606 OID 66680)
 -- Name: image_label_suggestion image_label_suggestion_image_id_label_suggestion_id_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1323,7 +1398,7 @@ ALTER TABLE ONLY image_label_suggestion
 
 
 --
--- TOC entry 2398 (class 2606 OID 22501)
+-- TOC entry 2361 (class 2606 OID 66682)
 -- Name: image_provider image_provider_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1332,7 +1407,7 @@ ALTER TABLE ONLY image_provider
 
 
 --
--- TOC entry 2401 (class 2606 OID 22503)
+-- TOC entry 2364 (class 2606 OID 66684)
 -- Name: image_quarantine image_quarantine_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1341,7 +1416,7 @@ ALTER TABLE ONLY image_quarantine
 
 
 --
--- TOC entry 2403 (class 2606 OID 22505)
+-- TOC entry 2366 (class 2606 OID 66686)
 -- Name: image_quarantine image_quarantine_image_id_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1350,7 +1425,7 @@ ALTER TABLE ONLY image_quarantine
 
 
 --
--- TOC entry 2409 (class 2606 OID 22507)
+-- TOC entry 2372 (class 2606 OID 66688)
 -- Name: image_source image_source_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1359,7 +1434,7 @@ ALTER TABLE ONLY image_source
 
 
 --
--- TOC entry 2413 (class 2606 OID 22509)
+-- TOC entry 2376 (class 2606 OID 66690)
 -- Name: image_validation image_validation_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1368,7 +1443,7 @@ ALTER TABLE ONLY image_validation
 
 
 --
--- TOC entry 2416 (class 2606 OID 22511)
+-- TOC entry 2379 (class 2606 OID 66692)
 -- Name: image_validation image_validation_image_label_uniquekey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1377,7 +1452,7 @@ ALTER TABLE ONLY image_validation
 
 
 --
--- TOC entry 2421 (class 2606 OID 22513)
+-- TOC entry 2384 (class 2606 OID 66694)
 -- Name: image_validation_source image_validation_source_id; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1386,7 +1461,7 @@ ALTER TABLE ONLY image_validation_source
 
 
 --
--- TOC entry 2431 (class 2606 OID 22515)
+-- TOC entry 2394 (class 2606 OID 66696)
 -- Name: label_accessor label_accessor_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1395,7 +1470,7 @@ ALTER TABLE ONLY label_accessor
 
 
 --
--- TOC entry 2433 (class 2606 OID 22517)
+-- TOC entry 2396 (class 2606 OID 66698)
 -- Name: label_accessor label_accessor_label_id_accessor_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1404,7 +1479,7 @@ ALTER TABLE ONLY label_accessor
 
 
 --
--- TOC entry 2424 (class 2606 OID 22519)
+-- TOC entry 2387 (class 2606 OID 66700)
 -- Name: label label_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1413,7 +1488,7 @@ ALTER TABLE ONLY label
 
 
 --
--- TOC entry 2426 (class 2606 OID 22521)
+-- TOC entry 2389 (class 2606 OID 66702)
 -- Name: label label_name_parent_id_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1422,7 +1497,7 @@ ALTER TABLE ONLY label
 
 
 --
--- TOC entry 2437 (class 2606 OID 22523)
+-- TOC entry 2400 (class 2606 OID 66704)
 -- Name: label_suggestion label_suggestion_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1431,7 +1506,7 @@ ALTER TABLE ONLY label_suggestion
 
 
 --
--- TOC entry 2439 (class 2606 OID 22525)
+-- TOC entry 2402 (class 2606 OID 66706)
 -- Name: label_suggestion label_suggestion_name_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1440,7 +1515,7 @@ ALTER TABLE ONLY label_suggestion
 
 
 --
--- TOC entry 2428 (class 2606 OID 22527)
+-- TOC entry 2391 (class 2606 OID 66708)
 -- Name: label label_uuid_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1449,7 +1524,7 @@ ALTER TABLE ONLY label
 
 
 --
--- TOC entry 2443 (class 2606 OID 22529)
+-- TOC entry 2406 (class 2606 OID 66710)
 -- Name: quiz_answer quiz_id_pley; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1458,7 +1533,7 @@ ALTER TABLE ONLY quiz_answer
 
 
 --
--- TOC entry 2446 (class 2606 OID 22531)
+-- TOC entry 2409 (class 2606 OID 66712)
 -- Name: quiz_question quiz_question_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1467,7 +1542,16 @@ ALTER TABLE ONLY quiz_question
 
 
 --
--- TOC entry 2406 (class 2606 OID 22533)
+-- TOC entry 2411 (class 2606 OID 66974)
+-- Name: quiz_question quiz_question_uuid_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
+--
+
+ALTER TABLE ONLY quiz_question
+    ADD CONSTRAINT quiz_question_uuid_unique UNIQUE (uuid);
+
+
+--
+-- TOC entry 2369 (class 2606 OID 66714)
 -- Name: image_report report_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1476,7 +1560,7 @@ ALTER TABLE ONLY image_report
 
 
 --
--- TOC entry 2449 (class 2606 OID 22535)
+-- TOC entry 2414 (class 2606 OID 66716)
 -- Name: trending_label_suggestion trending_label_suggestion_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1485,7 +1569,7 @@ ALTER TABLE ONLY trending_label_suggestion
 
 
 --
--- TOC entry 2451 (class 2606 OID 22537)
+-- TOC entry 2416 (class 2606 OID 66718)
 -- Name: trending_label_suggestion trending_label_suggestion_label_suggestion_id_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1494,7 +1578,7 @@ ALTER TABLE ONLY trending_label_suggestion
 
 
 --
--- TOC entry 2455 (class 2606 OID 22539)
+-- TOC entry 2420 (class 2606 OID 66720)
 -- Name: user_annotation_blacklist user_annotation_blacklist_account_id_image_validation_id_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1503,7 +1587,7 @@ ALTER TABLE ONLY user_annotation_blacklist
 
 
 --
--- TOC entry 2465 (class 2606 OID 22541)
+-- TOC entry 2430 (class 2606 OID 66722)
 -- Name: user_image_annotation user_annotation_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1512,7 +1596,7 @@ ALTER TABLE ONLY user_image_annotation
 
 
 --
--- TOC entry 2333 (class 2606 OID 22543)
+-- TOC entry 2289 (class 2606 OID 66724)
 -- Name: account user_email_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1521,7 +1605,7 @@ ALTER TABLE ONLY account
 
 
 --
--- TOC entry 2335 (class 2606 OID 22545)
+-- TOC entry 2291 (class 2606 OID 66726)
 -- Name: account user_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1530,7 +1614,7 @@ ALTER TABLE ONLY account
 
 
 --
--- TOC entry 2457 (class 2606 OID 22547)
+-- TOC entry 2422 (class 2606 OID 66728)
 -- Name: user_annotation_blacklist user_image_blacklist_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1539,7 +1623,7 @@ ALTER TABLE ONLY user_annotation_blacklist
 
 
 --
--- TOC entry 2461 (class 2606 OID 22549)
+-- TOC entry 2426 (class 2606 OID 66730)
 -- Name: user_image user_image_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1548,7 +1632,7 @@ ALTER TABLE ONLY user_image
 
 
 --
--- TOC entry 2469 (class 2606 OID 22551)
+-- TOC entry 2434 (class 2606 OID 66732)
 -- Name: user_image_validation user_image_validation_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1557,7 +1641,7 @@ ALTER TABLE ONLY user_image_validation
 
 
 --
--- TOC entry 2337 (class 2606 OID 22553)
+-- TOC entry 2293 (class 2606 OID 66734)
 -- Name: account user_name_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1566,7 +1650,7 @@ ALTER TABLE ONLY account
 
 
 --
--- TOC entry 2471 (class 2606 OID 22555)
+-- TOC entry 2436 (class 2606 OID 66736)
 -- Name: validations_per_app validations_per_app_app_identifier_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1575,7 +1659,7 @@ ALTER TABLE ONLY validations_per_app
 
 
 --
--- TOC entry 2473 (class 2606 OID 22557)
+-- TOC entry 2438 (class 2606 OID 66738)
 -- Name: validations_per_app validations_per_app_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1584,7 +1668,7 @@ ALTER TABLE ONLY validations_per_app
 
 
 --
--- TOC entry 2475 (class 2606 OID 22559)
+-- TOC entry 2440 (class 2606 OID 66740)
 -- Name: validations_per_country validations_per_country_country_code_unique; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1593,7 +1677,7 @@ ALTER TABLE ONLY validations_per_country
 
 
 --
--- TOC entry 2477 (class 2606 OID 22561)
+-- TOC entry 2442 (class 2606 OID 66742)
 -- Name: validations_per_country validations_per_country_id_pkey; Type: CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1602,7 +1686,7 @@ ALTER TABLE ONLY validations_per_country
 
 
 --
--- TOC entry 2331 (class 1259 OID 22562)
+-- TOC entry 2287 (class 1259 OID 66743)
 -- Name: fki_access_token_user_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1610,7 +1694,7 @@ CREATE INDEX fki_access_token_user_id_fkey ON access_token USING btree (user_id)
 
 
 --
--- TOC entry 2480 (class 1259 OID 22789)
+-- TOC entry 2296 (class 1259 OID 66744)
 -- Name: fki_account_permission_account_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1618,7 +1702,7 @@ CREATE INDEX fki_account_permission_account_id_fkey ON account_permission USING 
 
 
 --
--- TOC entry 2338 (class 1259 OID 22563)
+-- TOC entry 2297 (class 1259 OID 66745)
 -- Name: fki_annotation_data_annotation_type_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1626,7 +1710,15 @@ CREATE INDEX fki_annotation_data_annotation_type_fkey ON annotation_data USING b
 
 
 --
--- TOC entry 2358 (class 1259 OID 22564)
+-- TOC entry 2298 (class 1259 OID 66746)
+-- Name: fki_annotation_data_image_annotation_revision_id_fkey; Type: INDEX; Schema: public; Owner: monkey
+--
+
+CREATE INDEX fki_annotation_data_image_annotation_revision_id_fkey ON annotation_data USING btree (image_annotation_revision_id);
+
+
+--
+-- TOC entry 2318 (class 1259 OID 66747)
 -- Name: fki_api_token_account_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1634,7 +1726,7 @@ CREATE INDEX fki_api_token_account_id_fkey ON api_token USING btree (account_id)
 
 
 --
--- TOC entry 2339 (class 1259 OID 22565)
+-- TOC entry 2299 (class 1259 OID 66748)
 -- Name: fki_image_annotation_data_annotation_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1642,7 +1734,7 @@ CREATE INDEX fki_image_annotation_data_annotation_id_fkey ON annotation_data USI
 
 
 --
--- TOC entry 2378 (class 1259 OID 22566)
+-- TOC entry 2338 (class 1259 OID 66749)
 -- Name: fki_image_annotation_label_id_key; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1650,7 +1742,15 @@ CREATE INDEX fki_image_annotation_label_id_key ON image_annotation USING btree (
 
 
 --
--- TOC entry 2391 (class 1259 OID 22567)
+-- TOC entry 2351 (class 1259 OID 66750)
+-- Name: fki_image_annotation_revision_image_annotation_id_fkey; Type: INDEX; Schema: public; Owner: monkey
+--
+
+CREATE INDEX fki_image_annotation_revision_image_annotation_id_fkey ON image_annotation_revision USING btree (image_annotation_id);
+
+
+--
+-- TOC entry 2354 (class 1259 OID 66751)
 -- Name: fki_image_label_suggestion_image_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1658,7 +1758,7 @@ CREATE INDEX fki_image_label_suggestion_image_id_fkey ON image_label_suggestion 
 
 
 --
--- TOC entry 2392 (class 1259 OID 22568)
+-- TOC entry 2355 (class 1259 OID 66752)
 -- Name: fki_image_label_suggestion_label_suggestion_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1666,7 +1766,7 @@ CREATE INDEX fki_image_label_suggestion_label_suggestion_id_fkey ON image_label_
 
 
 --
--- TOC entry 2367 (class 1259 OID 22569)
+-- TOC entry 2327 (class 1259 OID 66753)
 -- Name: fki_image_provider_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1674,7 +1774,7 @@ CREATE INDEX fki_image_provider_id_fkey ON image USING btree (image_provider_id)
 
 
 --
--- TOC entry 2399 (class 1259 OID 22570)
+-- TOC entry 2362 (class 1259 OID 66754)
 -- Name: fki_image_quarantine_image_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1682,7 +1782,7 @@ CREATE INDEX fki_image_quarantine_image_id_fkey ON image_quarantine USING btree 
 
 
 --
--- TOC entry 2385 (class 1259 OID 22571)
+-- TOC entry 2345 (class 1259 OID 66755)
 -- Name: fki_image_quiz_image_annotation_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1690,7 +1790,7 @@ CREATE INDEX fki_image_quiz_image_annotation_id_fkey ON image_annotation_refinem
 
 
 --
--- TOC entry 2386 (class 1259 OID 22572)
+-- TOC entry 2346 (class 1259 OID 66756)
 -- Name: fki_image_quiz_label_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1698,7 +1798,7 @@ CREATE INDEX fki_image_quiz_label_id_fkey ON image_annotation_refinement USING b
 
 
 --
--- TOC entry 2404 (class 1259 OID 22573)
+-- TOC entry 2367 (class 1259 OID 66757)
 -- Name: fki_image_report_image_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1706,7 +1806,7 @@ CREATE INDEX fki_image_report_image_id_fkey ON image_report USING btree (image_i
 
 
 --
--- TOC entry 2407 (class 1259 OID 22574)
+-- TOC entry 2370 (class 1259 OID 66758)
 -- Name: fki_image_source_image_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1714,7 +1814,7 @@ CREATE INDEX fki_image_source_image_id_fkey ON image_source USING btree (image_i
 
 
 --
--- TOC entry 2410 (class 1259 OID 22575)
+-- TOC entry 2373 (class 1259 OID 66759)
 -- Name: fki_image_validation_image_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1722,7 +1822,7 @@ CREATE INDEX fki_image_validation_image_id_fkey ON image_validation USING btree 
 
 
 --
--- TOC entry 2411 (class 1259 OID 22576)
+-- TOC entry 2374 (class 1259 OID 66760)
 -- Name: fki_image_validation_label_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1730,7 +1830,7 @@ CREATE INDEX fki_image_validation_label_id_fkey ON image_validation USING btree 
 
 
 --
--- TOC entry 2418 (class 1259 OID 22577)
+-- TOC entry 2381 (class 1259 OID 66761)
 -- Name: fki_image_validation_source_image_source_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1738,7 +1838,7 @@ CREATE INDEX fki_image_validation_source_image_source_id_fkey ON image_validatio
 
 
 --
--- TOC entry 2419 (class 1259 OID 22578)
+-- TOC entry 2382 (class 1259 OID 66762)
 -- Name: fki_image_validation_source_image_validation_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1746,7 +1846,7 @@ CREATE INDEX fki_image_validation_source_image_validation_id_fkey ON image_valid
 
 
 --
--- TOC entry 2429 (class 1259 OID 22579)
+-- TOC entry 2392 (class 1259 OID 66763)
 -- Name: fki_label_accessor_label_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1754,7 +1854,7 @@ CREATE INDEX fki_label_accessor_label_id_fkey ON label_accessor USING btree (lab
 
 
 --
--- TOC entry 2434 (class 1259 OID 22580)
+-- TOC entry 2397 (class 1259 OID 66764)
 -- Name: fki_label_example_label_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1762,7 +1862,7 @@ CREATE INDEX fki_label_example_label_id_fkey ON label_example USING btree (label
 
 
 --
--- TOC entry 2422 (class 1259 OID 22581)
+-- TOC entry 2385 (class 1259 OID 66765)
 -- Name: fki_label_parent_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1770,7 +1870,7 @@ CREATE INDEX fki_label_parent_id_fkey ON label USING btree (parent_id);
 
 
 --
--- TOC entry 2435 (class 1259 OID 22582)
+-- TOC entry 2398 (class 1259 OID 66766)
 -- Name: fki_label_suggestion_proposed_by_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1778,7 +1878,7 @@ CREATE INDEX fki_label_suggestion_proposed_by_fkey ON label_suggestion USING btr
 
 
 --
--- TOC entry 2440 (class 1259 OID 22583)
+-- TOC entry 2403 (class 1259 OID 66767)
 -- Name: fki_quiz_label_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1786,7 +1886,7 @@ CREATE INDEX fki_quiz_label_id_fkey ON quiz_answer USING btree (label_id);
 
 
 --
--- TOC entry 2444 (class 1259 OID 22584)
+-- TOC entry 2407 (class 1259 OID 66768)
 -- Name: fki_quiz_question_refines_label_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1794,7 +1894,7 @@ CREATE INDEX fki_quiz_question_refines_label_id_fkey ON quiz_question USING btre
 
 
 --
--- TOC entry 2441 (class 1259 OID 22585)
+-- TOC entry 2404 (class 1259 OID 66769)
 -- Name: fki_quiz_quiz_question_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1802,7 +1902,7 @@ CREATE INDEX fki_quiz_quiz_question_id_fkey ON quiz_answer USING btree (quiz_que
 
 
 --
--- TOC entry 2447 (class 1259 OID 22586)
+-- TOC entry 2412 (class 1259 OID 66770)
 -- Name: fki_trending_label_suggestion_label_suggestion_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1810,7 +1910,7 @@ CREATE INDEX fki_trending_label_suggestion_label_suggestion_id_fkey ON trending_
 
 
 --
--- TOC entry 2452 (class 1259 OID 22587)
+-- TOC entry 2417 (class 1259 OID 66771)
 -- Name: fki_user_annotation_blacklist_account_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1818,7 +1918,7 @@ CREATE INDEX fki_user_annotation_blacklist_account_id_fkey ON user_annotation_bl
 
 
 --
--- TOC entry 2453 (class 1259 OID 22588)
+-- TOC entry 2418 (class 1259 OID 66772)
 -- Name: fki_user_annotation_blacklist_image_validation_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1826,7 +1926,7 @@ CREATE INDEX fki_user_annotation_blacklist_image_validation_id_fkey ON user_anno
 
 
 --
--- TOC entry 2458 (class 1259 OID 22589)
+-- TOC entry 2423 (class 1259 OID 66773)
 -- Name: fki_user_image_account_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1834,7 +1934,7 @@ CREATE INDEX fki_user_image_account_id_fkey ON user_image USING btree (account_i
 
 
 --
--- TOC entry 2462 (class 1259 OID 22590)
+-- TOC entry 2427 (class 1259 OID 66774)
 -- Name: fki_user_image_annotation_image_annotation_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1842,7 +1942,7 @@ CREATE INDEX fki_user_image_annotation_image_annotation_id_fkey ON user_image_an
 
 
 --
--- TOC entry 2463 (class 1259 OID 22591)
+-- TOC entry 2428 (class 1259 OID 66775)
 -- Name: fki_user_image_annotation_user_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1850,7 +1950,7 @@ CREATE INDEX fki_user_image_annotation_user_id_fkey ON user_image_annotation USI
 
 
 --
--- TOC entry 2459 (class 1259 OID 22592)
+-- TOC entry 2424 (class 1259 OID 66776)
 -- Name: fki_user_image_image_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1858,7 +1958,7 @@ CREATE INDEX fki_user_image_image_id_fkey ON user_image USING btree (image_id);
 
 
 --
--- TOC entry 2466 (class 1259 OID 22593)
+-- TOC entry 2431 (class 1259 OID 66777)
 -- Name: fki_user_image_validation_acccount_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1866,7 +1966,7 @@ CREATE INDEX fki_user_image_validation_acccount_id_fkey ON user_image_validation
 
 
 --
--- TOC entry 2467 (class 1259 OID 22594)
+-- TOC entry 2432 (class 1259 OID 66778)
 -- Name: fki_user_image_validation_account_id_fkey; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1874,7 +1974,7 @@ CREATE INDEX fki_user_image_validation_account_id_fkey ON user_image_validation 
 
 
 --
--- TOC entry 2381 (class 1259 OID 22595)
+-- TOC entry 2341 (class 1259 OID 66779)
 -- Name: image_annotation_image_id_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1882,7 +1982,7 @@ CREATE INDEX image_annotation_image_id_index ON image_annotation USING btree (im
 
 
 --
--- TOC entry 2384 (class 1259 OID 22596)
+-- TOC entry 2344 (class 1259 OID 66780)
 -- Name: image_annotation_uuid_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1890,7 +1990,7 @@ CREATE INDEX image_annotation_uuid_index ON image_annotation USING btree (uuid);
 
 
 --
--- TOC entry 2368 (class 1259 OID 22597)
+-- TOC entry 2328 (class 1259 OID 66781)
 -- Name: image_hash_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1898,7 +1998,7 @@ CREATE INDEX image_hash_index ON image USING btree (hash);
 
 
 --
--- TOC entry 2373 (class 1259 OID 22598)
+-- TOC entry 2333 (class 1259 OID 66782)
 -- Name: image_image_provider_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1906,7 +2006,7 @@ CREATE INDEX image_image_provider_index ON image USING btree (image_provider_id)
 
 
 --
--- TOC entry 2374 (class 1259 OID 22599)
+-- TOC entry 2334 (class 1259 OID 66783)
 -- Name: image_key_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1914,7 +2014,7 @@ CREATE INDEX image_key_index ON image USING btree (key);
 
 
 --
--- TOC entry 2377 (class 1259 OID 22600)
+-- TOC entry 2337 (class 1259 OID 66784)
 -- Name: image_unlocked_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1922,7 +2022,7 @@ CREATE INDEX image_unlocked_index ON image USING btree (unlocked);
 
 
 --
--- TOC entry 2414 (class 1259 OID 22601)
+-- TOC entry 2377 (class 1259 OID 66785)
 -- Name: image_validation_image_id_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1930,7 +2030,7 @@ CREATE INDEX image_validation_image_id_index ON image_validation USING btree (im
 
 
 --
--- TOC entry 2417 (class 1259 OID 22602)
+-- TOC entry 2380 (class 1259 OID 66786)
 -- Name: image_validation_label_id_index; Type: INDEX; Schema: public; Owner: monkey
 --
 
@@ -1938,23 +2038,7 @@ CREATE INDEX image_validation_label_id_index ON image_validation USING btree (la
 
 
 --
--- TOC entry 2516 (class 2620 OID 22603)
--- Name: image_annotation image_annotation_versioning_trigger; Type: TRIGGER; Schema: public; Owner: monkey
---
-
-CREATE TRIGGER image_annotation_versioning_trigger BEFORE INSERT OR DELETE OR UPDATE ON image_annotation FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'image_annotation_history', 'true');
-
-
---
--- TOC entry 2517 (class 2620 OID 22604)
--- Name: image_validation image_validation_versioning_trigger; Type: TRIGGER; Schema: public; Owner: monkey
---
-
-CREATE TRIGGER image_validation_versioning_trigger BEFORE INSERT OR DELETE OR UPDATE ON image_validation FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'image_validation_history', 'true');
-
-
---
--- TOC entry 2481 (class 2606 OID 22605)
+-- TOC entry 2443 (class 2606 OID 66787)
 -- Name: access_token access_token_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1963,7 +2047,7 @@ ALTER TABLE ONLY access_token
 
 
 --
--- TOC entry 2515 (class 2606 OID 22784)
+-- TOC entry 2444 (class 2606 OID 66792)
 -- Name: account_permission account_permission_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1972,7 +2056,7 @@ ALTER TABLE ONLY account_permission
 
 
 --
--- TOC entry 2482 (class 2606 OID 22610)
+-- TOC entry 2445 (class 2606 OID 66797)
 -- Name: annotation_data annotation_data_annotation_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1981,7 +2065,16 @@ ALTER TABLE ONLY annotation_data
 
 
 --
--- TOC entry 2484 (class 2606 OID 22615)
+-- TOC entry 2446 (class 2606 OID 66802)
+-- Name: annotation_data annotation_data_image_annotation_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
+--
+
+ALTER TABLE ONLY annotation_data
+    ADD CONSTRAINT annotation_data_image_annotation_revision_id_fkey FOREIGN KEY (image_annotation_revision_id) REFERENCES image_annotation_revision(id);
+
+
+--
+-- TOC entry 2448 (class 2606 OID 66807)
 -- Name: api_token api_token_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1990,7 +2083,7 @@ ALTER TABLE ONLY api_token
 
 
 --
--- TOC entry 2483 (class 2606 OID 22620)
+-- TOC entry 2447 (class 2606 OID 66812)
 -- Name: annotation_data image_annotation_data_annotation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -1999,7 +2092,7 @@ ALTER TABLE ONLY annotation_data
 
 
 --
--- TOC entry 2486 (class 2606 OID 22625)
+-- TOC entry 2450 (class 2606 OID 66817)
 -- Name: image_annotation image_annotation_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2008,7 +2101,7 @@ ALTER TABLE ONLY image_annotation
 
 
 --
--- TOC entry 2487 (class 2606 OID 22630)
+-- TOC entry 2451 (class 2606 OID 66822)
 -- Name: image_annotation image_annotation_label_id_key; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2017,7 +2110,7 @@ ALTER TABLE ONLY image_annotation
 
 
 --
--- TOC entry 2488 (class 2606 OID 22635)
+-- TOC entry 2452 (class 2606 OID 66827)
 -- Name: image_annotation_refinement image_annotation_refinement_annotation_data_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2026,7 +2119,7 @@ ALTER TABLE ONLY image_annotation_refinement
 
 
 --
--- TOC entry 2489 (class 2606 OID 22640)
+-- TOC entry 2453 (class 2606 OID 66832)
 -- Name: image_annotation_refinement image_annotation_refinement_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2035,7 +2128,16 @@ ALTER TABLE ONLY image_annotation_refinement
 
 
 --
--- TOC entry 2485 (class 2606 OID 22645)
+-- TOC entry 2454 (class 2606 OID 66837)
+-- Name: image_annotation_revision image_annotation_revision_image_annotation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
+--
+
+ALTER TABLE ONLY image_annotation_revision
+    ADD CONSTRAINT image_annotation_revision_image_annotation_id_fkey FOREIGN KEY (image_annotation_id) REFERENCES image_annotation(id);
+
+
+--
+-- TOC entry 2449 (class 2606 OID 66842)
 -- Name: image image_image_provider_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2044,7 +2146,7 @@ ALTER TABLE ONLY image
 
 
 --
--- TOC entry 2490 (class 2606 OID 22650)
+-- TOC entry 2455 (class 2606 OID 66847)
 -- Name: image_label_suggestion image_label_suggestion_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2053,7 +2155,7 @@ ALTER TABLE ONLY image_label_suggestion
 
 
 --
--- TOC entry 2491 (class 2606 OID 22655)
+-- TOC entry 2456 (class 2606 OID 66852)
 -- Name: image_label_suggestion image_label_suggestion_label_suggestion_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2062,7 +2164,7 @@ ALTER TABLE ONLY image_label_suggestion
 
 
 --
--- TOC entry 2492 (class 2606 OID 22660)
+-- TOC entry 2457 (class 2606 OID 66857)
 -- Name: image_quarantine image_quarantine_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2071,7 +2173,7 @@ ALTER TABLE ONLY image_quarantine
 
 
 --
--- TOC entry 2493 (class 2606 OID 22665)
+-- TOC entry 2458 (class 2606 OID 66862)
 -- Name: image_report image_report_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2080,7 +2182,7 @@ ALTER TABLE ONLY image_report
 
 
 --
--- TOC entry 2494 (class 2606 OID 22670)
+-- TOC entry 2459 (class 2606 OID 66867)
 -- Name: image_source image_source_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2089,7 +2191,7 @@ ALTER TABLE ONLY image_source
 
 
 --
--- TOC entry 2495 (class 2606 OID 22675)
+-- TOC entry 2460 (class 2606 OID 66872)
 -- Name: image_validation image_validation_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2098,7 +2200,7 @@ ALTER TABLE ONLY image_validation
 
 
 --
--- TOC entry 2496 (class 2606 OID 22680)
+-- TOC entry 2461 (class 2606 OID 66877)
 -- Name: image_validation image_validation_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2107,7 +2209,7 @@ ALTER TABLE ONLY image_validation
 
 
 --
--- TOC entry 2497 (class 2606 OID 22685)
+-- TOC entry 2462 (class 2606 OID 66882)
 -- Name: image_validation_source image_validation_source_image_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2116,7 +2218,7 @@ ALTER TABLE ONLY image_validation_source
 
 
 --
--- TOC entry 2498 (class 2606 OID 22690)
+-- TOC entry 2463 (class 2606 OID 66887)
 -- Name: image_validation_source image_validation_source_image_validation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2125,7 +2227,7 @@ ALTER TABLE ONLY image_validation_source
 
 
 --
--- TOC entry 2500 (class 2606 OID 22695)
+-- TOC entry 2465 (class 2606 OID 66892)
 -- Name: label_accessor label_accessor_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2134,7 +2236,7 @@ ALTER TABLE ONLY label_accessor
 
 
 --
--- TOC entry 2501 (class 2606 OID 22700)
+-- TOC entry 2466 (class 2606 OID 66897)
 -- Name: label_example label_example_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2143,7 +2245,7 @@ ALTER TABLE ONLY label_example
 
 
 --
--- TOC entry 2499 (class 2606 OID 22705)
+-- TOC entry 2464 (class 2606 OID 66902)
 -- Name: label label_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2152,7 +2254,7 @@ ALTER TABLE ONLY label
 
 
 --
--- TOC entry 2502 (class 2606 OID 22710)
+-- TOC entry 2467 (class 2606 OID 66907)
 -- Name: label_suggestion label_suggestion_proposed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2161,7 +2263,7 @@ ALTER TABLE ONLY label_suggestion
 
 
 --
--- TOC entry 2503 (class 2606 OID 22715)
+-- TOC entry 2468 (class 2606 OID 66912)
 -- Name: quiz_answer quiz_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2170,7 +2272,7 @@ ALTER TABLE ONLY quiz_answer
 
 
 --
--- TOC entry 2505 (class 2606 OID 22720)
+-- TOC entry 2470 (class 2606 OID 66917)
 -- Name: quiz_question quiz_question_refines_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2179,7 +2281,7 @@ ALTER TABLE ONLY quiz_question
 
 
 --
--- TOC entry 2504 (class 2606 OID 22725)
+-- TOC entry 2469 (class 2606 OID 66922)
 -- Name: quiz_answer quiz_quiz_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2188,7 +2290,7 @@ ALTER TABLE ONLY quiz_answer
 
 
 --
--- TOC entry 2506 (class 2606 OID 22730)
+-- TOC entry 2471 (class 2606 OID 66927)
 -- Name: trending_label_suggestion trending_label_suggestion_label_suggestion_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2197,7 +2299,7 @@ ALTER TABLE ONLY trending_label_suggestion
 
 
 --
--- TOC entry 2507 (class 2606 OID 22735)
+-- TOC entry 2472 (class 2606 OID 66932)
 -- Name: user_annotation_blacklist user_annotation_blacklist_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2206,7 +2308,7 @@ ALTER TABLE ONLY user_annotation_blacklist
 
 
 --
--- TOC entry 2508 (class 2606 OID 22740)
+-- TOC entry 2473 (class 2606 OID 66937)
 -- Name: user_annotation_blacklist user_annotation_blacklist_image_validation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2215,7 +2317,7 @@ ALTER TABLE ONLY user_annotation_blacklist
 
 
 --
--- TOC entry 2509 (class 2606 OID 22745)
+-- TOC entry 2474 (class 2606 OID 66942)
 -- Name: user_image user_image_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2224,7 +2326,7 @@ ALTER TABLE ONLY user_image
 
 
 --
--- TOC entry 2511 (class 2606 OID 22750)
+-- TOC entry 2476 (class 2606 OID 66947)
 -- Name: user_image_annotation user_image_annotation_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2233,7 +2335,7 @@ ALTER TABLE ONLY user_image_annotation
 
 
 --
--- TOC entry 2512 (class 2606 OID 22755)
+-- TOC entry 2477 (class 2606 OID 66952)
 -- Name: user_image_annotation user_image_annotation_image_annotation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2242,7 +2344,7 @@ ALTER TABLE ONLY user_image_annotation
 
 
 --
--- TOC entry 2510 (class 2606 OID 22760)
+-- TOC entry 2475 (class 2606 OID 66957)
 -- Name: user_image user_image_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2251,7 +2353,7 @@ ALTER TABLE ONLY user_image
 
 
 --
--- TOC entry 2513 (class 2606 OID 22765)
+-- TOC entry 2478 (class 2606 OID 66962)
 -- Name: user_image_validation user_image_validation_acccount_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2260,7 +2362,7 @@ ALTER TABLE ONLY user_image_validation
 
 
 --
--- TOC entry 2514 (class 2606 OID 22770)
+-- TOC entry 2479 (class 2606 OID 66967)
 -- Name: user_image_validation user_image_validation_image_validation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: monkey
 --
 
@@ -2269,8 +2371,8 @@ ALTER TABLE ONLY user_image_validation
 
 
 --
--- TOC entry 2640 (class 0 OID 0)
--- Dependencies: 7
+-- TOC entry 2603 (class 0 OID 0)
+-- Dependencies: 4
 -- Name: public; Type: ACL; Schema: -; Owner: postgres
 --
 
@@ -2278,7 +2380,7 @@ REVOKE ALL ON SCHEMA public FROM postgres;
 GRANT ALL ON SCHEMA public TO monkey;
 
 
--- Completed on 2018-06-24 22:49:52
+-- Completed on 2018-07-04 19:21:16
 
 --
 -- PostgreSQL database dump complete
