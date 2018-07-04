@@ -125,6 +125,23 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 	}
 }
 
+func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
+	for _, quizEntry := range val.Quiz {
+		_, err := tx.Exec(`INSERT INTO quiz_question(question, refines_label_id, recommended_control, 
+														allow_unknown, allow_other, browse_by_example, multiselect, uuid)
+							SELECT $1, id, $2, $3, $4, $5, $6, $8 FROM label WHERE uuid = $7
+							ON CONFLICT(uuid) DO NOTHING`, 
+							quizEntry.Question, quizEntry.ControlType, quizEntry.AllowUnknown, 
+							quizEntry.AllowOther, quizEntry.BrowseByExample, quizEntry.Multiselect,
+							parentLabelUuid, quizEntry.Uuid)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal("Couldn't add quiz question ", err.Error())
+			panic(err)
+		}
+	}
+}
+
 func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
 	//quiz answers
 	for _, quizEntry := range val.Quiz {
@@ -260,8 +277,10 @@ func main(){
 
 		}
 
+		addQuizQuestion(tx, val.Uuid, val)
 		addQuizAnswers(tx, val.Uuid, val)
 		addAccessors(tx, k, val)
+
 	} 
 
 	if ! *dryRun {

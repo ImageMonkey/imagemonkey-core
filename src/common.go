@@ -84,20 +84,21 @@ type LabelMapQuizAnswerEntry struct {
 
 type LabelMapQuizEntry struct {
     Question string `json:"question"`
-    Accessors []string `json:accessors"`
-    Answers []LabelMapQuizAnswerEntry `json:answers"`
-    AllowUnknown bool `json:allow_unknown"`
-    AllowOther bool `json:allow_other"`
-    BrowseByExample bool `json:browse_by_example"`
-    Multiselect bool `json:multiselect"`
-    ControlType string `json:control_type"`
+    Accessors []string `json:"accessors"`
+    Answers []LabelMapQuizAnswerEntry `json:"answers"`
+    AllowUnknown bool `json:"allow_unknown"`
+    AllowOther bool `json:"allow_other"`
+    BrowseByExample bool `json:"browse_by_example"`
+    Multiselect bool `json:"multiselect"`
+    ControlType string `json:"control_type"`
+    Uuid string `json:"uuid"`
 }
 
 type LabelMapEntry struct {
     Description string  `json:"description"`
     LabelMapEntries map[string]LabelMapEntry  `json:"has"`
-    Accessors []string `json:accessors"`
-    Quiz []LabelMapQuizEntry `json:quiz"`
+    Accessors []string `json:"accessors"`
+    Quiz []LabelMapQuizEntry `json:"quiz"`
     Uuid string `json:"uuid"`
 }
 
