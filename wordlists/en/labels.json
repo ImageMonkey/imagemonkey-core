@@ -48,6 +48,7 @@
 			"quiz": [
 				{
 					"question": "What's the size of the dog",
+					"uuid": "1e52541f-9a47-463d-b0cb-e32e1d3441f3",
 					"accessors": [".size"],
 					"answers": [
 						{
@@ -71,6 +72,7 @@
 				},
 				{
 					"question": "It's a...",
+					"uuid": "66cf612f-dd80-4732-b7de-3f3d2055588d",
 					"accessors": [".type"],
 					"answers": [
 						{
@@ -90,6 +92,7 @@
 				},
 				{
 					"question": "What am I?",
+					"uuid": "ceb2275b-4948-4d20-8cad-b0677259193e",
 					"accessors": [".breed"],
 					"answers": [
 						{
@@ -293,6 +296,7 @@
 			"quiz": [
 				{
 					"question": "The apple's color is...",
+					"uuid": "a4bcc81f-bebb-4c03-9950-eb92decccfba",
 					"accessors": [".color"],
 					"answers": [
 						{
@@ -330,6 +334,7 @@
 			"quiz": [
 				{
 					"question": "It's a...",
+					"uuid": "e6d01e97-d53b-4da5-9c71-5f3fe36a10b9",
 					"accessors": [".brand"],
 					"answers": [
 						{
@@ -477,6 +482,7 @@
 				},
 				{
 					"question": "The color of the car is...",
+					"uuid": "f39743c8-f1ce-4750-b7ab-f57d15ac7270",
 					"accessors": [".color"],
 					"answers": [
 						{
@@ -710,6 +716,46 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "e15d84c5-1afa-439e-b089-ba1ce8b32d0f"
+		},
+		"house": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "22bbce9a-9f50-4f38-ba11-6f2963d19809"
+		},
+		"van": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1849f4b6-f6a9-4ee1-8422-9662d4daccf9"
+		},
+		"sky": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "459c447b-2919-475b-b6db-b5dfc3d3d676"
+		},
+		"truck": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "60c08783-9869-4d56-804f-14e14152b02f"
+		},
+		"motorbike": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "3ec690a8-0f00-4bb1-851b-51739bffc95d"
+		},
+		"sofa": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "3d186e64-38e5-404c-9452-30ba5173db45"
+		},
+		"traffic light": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1cf4fbe3-f381-4d10-af4d-5ac5199c94b8"
+		},
+		"cabbage": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ae65d146-6428-453b-9f80-ddfadcd49e5e"
 		}
 	}
 }
