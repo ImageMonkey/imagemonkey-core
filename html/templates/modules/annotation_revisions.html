@@ -1,0 +1,33 @@
+<script>
+  function populateRevisionsDropdown(numRevisions, currentRevision) {
+    $("#annotationRevisionsDropdownMenu").empty();
+    for(var i = 1; i <= numRevisions; i++) {
+      var d = '<div class="' + ((i === currentRevision) ? 'active ' : '') + 'item" data-index="' + i 
+              + '" onclick="onRevisionDropdownClicked(this);">Revision ' 
+              + i +'</div>';
+      $("#annotationRevisionsDropdownMenu").append(d);
+    }
+  }
+
+  function showHideRevisionsDropdown() {
+    if($("#annotationRevisionsDropdownMenu").children().length === 0)
+      $("#annotationRevisionsDropdown").hide();
+    else
+      $("#annotationRevisionsDropdown").show();
+  }
+
+  function onRevisionDropdownClicked(e) {
+    window.location.href = "annotate?annotation_id=" + annotationInfo.annotationId + "&rev=" + $(e).attr("data-index");
+  }
+</script>
+
+<div class="row">
+  <div class="ui compact menu" id="annotationRevisionsDropdown">
+    <div class="ui simple dropdown item">
+      Revisions
+      <i class="dropdown icon"></i>
+      <div class="menu" id="annotationRevisionsDropdownMenu">
+      </div>
+    </div>
+  </div>
+</div>

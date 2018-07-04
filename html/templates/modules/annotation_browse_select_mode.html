@@ -22,9 +22,11 @@
   var defaultBatchSize = 50;
   var currentAnnotatedImageGridElement;
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
+  var browseAnnotationsOnlyMode = false;
+  var imageGridCanvases = {};
 
   var clearImageGrid = function() {
-    //imageGridItems = [];
+    imageGridCanvases = {};
     justifiedLayoutGeometry = null;
     imageGridData = null;
     numOfLastFetchedImg = 0;
@@ -52,6 +54,34 @@
     $("#label").attr("label", "");
     $("#sublabel").attr("sublabel", "");
   }
+  function handleRes(d) {
+    $("#imageGrid").show();
+
+    if(d !== null) {
+      imageGridData = d;
+      sizes = [];
+
+      for(var i = 0; i < imageGridData.length; i++){
+        sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
+      }
+
+      var justifiedLayout = require('justified-layout');
+      justifiedLayoutGeometry = justifiedLayout(sizes, {
+        "fullWidthBreakoutRowCadence": false,
+        "containerWidth": document.getElementById("imageGrid").clientWidth
+      });
+
+      loadNextImagesInImageGrid();
+      infiniteScroll.activate();
+      $('#browseAnnotationsErrorMessage').hide();
+    }
+    else{
+      $('#browseAnnotationsErrorMessage').text("There are currently no annotation tasks for that label - please try another label!");
+      $('#browseAnnotationsErrorMessage').show(200);
+    }
+
+    $('#browseAnnotationsLoadingSpinner').hide();
+  }
 
   function populateImageGrid() {
     $('#browseAnnotationsLoadingSpinner').show();
@@ -59,41 +89,21 @@
     $("#imageGrid").hide();
     clearImageGrid();
 
+    browseAnnotationsOnlyMode = $("#annotationsOnlyCheckbox").checkbox("is checked");
+    var url = '{{ .apiBaseUrl }}/v1/validations/unannotated';
+    if(browseAnnotationsOnlyMode)
+      url = '{{ .apiBaseUrl }}/v1/annotations';
+
     var query = $("#annotationQuery").val();
     $.ajax({
-          url: '{{ .apiBaseUrl }}/v1/validation/unannotated',
+          url: url,
           dataType: 'json',
           data: {query: encodeURIComponent(query), shuffle: true},
           beforeSend: function(xhr) {
             xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
           },
           success: function(d) {
-            $("#imageGrid").show();
-
-            if(d !== null) {
-              imageGridData = d;
-              sizes = [];
-
-              for(var i = 0; i < imageGridData.length; i++){
-                sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
-              }
-
-              var justifiedLayout = require('justified-layout');
-              justifiedLayoutGeometry = justifiedLayout(sizes, {
-                "fullWidthBreakoutRowCadence": false,
-                "containerWidth": document.getElementById("imageGrid").clientWidth
-              });
-
-              loadNextImagesInImageGrid();
-              infiniteScroll.activate();
-              $('#browseAnnotationsErrorMessage').hide();
-            }
-            else{
-              $('#browseAnnotationsErrorMessage').text("There are currently no annotation tasks for that label - please try another label!");
-              $('#browseAnnotationsErrorMessage').show(200);
-            }
-
-            $('#browseAnnotationsLoadingSpinner').hide();
+            handleRes(d);
           }, 
           error: function(xhr, status, error) {
             var err = JSON.parse(xhr.responseText)["error"];
@@ -119,6 +129,15 @@
     getUnannotatedImage(validationId);
   }
 
+  function onImageGridCanvasClicked(data) {
+    var annotationId = data["annotationId"];
+    $("#annotationQuerySearchContainer").hide();
+    infiniteScroll.pause();
+    infiniteScroll.saveScrollPosition();
+    $("#imageGrid").hide();
+    getAnnotatedImage(annotationId);
+  }
+
   function newImageItem(id, url, validationId, top, left, width, height){
     var d = ('<div class="justified-layout-item" style="width: ' + width 
             +'px; height: ' + height + 'px; top: ' 
@@ -127,8 +146,27 @@
     return d;
   }
 
+  function newCanvasItem(id, url, validationId, top, left, width, height){
+    var d = ('<div class="justified-layout-item" style="width: ' + width 
+            +'px; height: ' + height + 'px; top: ' 
+            + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
+    return d;
+  }
+
+  function updateAnnotationsForImage(annotationId, annotations) {
+    if(annotationId in imageGridCanvases) {
+      var scaleFactor = imageGridCanvases[annotationId].fabric().backgroundImage.scaleX;
+      imageGridCanvases[annotationId].drawAnnotations(annotations, scaleFactor);
+    }
+  }
+
   function getUrlFromImageId(imageId){
     return "{{ .apiBaseUrl }}/v1/donation/" + imageId;
+  }
+
+  function drawAnnotationsCallback(canvas, annotations, scaleFactor){
+    if(annotations !== undefined)
+      canvas.drawAnnotations(annotations, scaleFactor);
   }
 
   function loadNextImagesInImageGrid() {
@@ -143,14 +181,36 @@
 
     var imageUrl;
     var annotationsScaleFactor;
+    var item;
     for(var i = from; i < (from + n); i++){
-      var imageId = ("galleryItem" + i.toString());
       var url = getUrlFromImageId(imageGridData[i]["image"]["uuid"]) + "?width=" + 
                                   Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
                                   "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
+      
+      if(browseAnnotationsOnlyMode) {
+        var itemId = imageGridData[i]["uuid"];
+        annotationsScaleFactor = justifiedLayoutGeometry.boxes[i].width / imageGridData[i]["image"]["width"];
 
-      $("#imageGrid").append(newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
-                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height)); 
+        item = newCanvasItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+
+        $("#imageGrid").append(item); 
+
+        imageGridCanvases[itemId] = new CanvasDrawer(itemId, justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+        imageGridCanvases[itemId].setData({"annotationId" : imageGridData[i]["uuid"]});
+        imageGridCanvases[itemId].makeClickable(onImageGridCanvasClicked);
+        imageUrl = getUrlFromImageId(imageGridData[i]["image"]["uuid"]) 
+                                      + "?width=" + justifiedLayoutGeometry.boxes[i].width 
+                                      + "&height=" + justifiedLayoutGeometry.boxes[i].height;
+        imageGridCanvases[itemId].setCanvasBackgroundImageUrl(imageUrl, drawAnnotationsCallback.bind(null, imageGridCanvases[itemId], imageGridData[i]["annotations"], annotationsScaleFactor));
+
+      }
+      else {
+        var imageId = ("galleryItem" + i.toString());
+        item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+        $("#imageGrid").append(item); 
+      }
 
       document.getElementById("imageGrid").style.height = (justifiedLayoutGeometry.boxes[(from + n - 1)].top 
                                                             + justifiedLayoutGeometry.boxes[(from + n - 1)].height)  + "px";
@@ -221,6 +281,15 @@
        <p>Search for annotation tasks you are interested in</p>
        <input placeholder="Query..." type="text" id="annotationQuery">
      </div>
+
+     <div class="inline fields">
+        <div class="field">
+          <div class="ui checkbox" id="annotationsOnlyCheckbox">
+            <input type="checkbox">
+            <label>Annotations only</label>
+          </div>
+        </div>
+      </div>
 
     <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
     </form>

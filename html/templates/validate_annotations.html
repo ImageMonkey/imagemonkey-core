@@ -70,13 +70,13 @@
         dataType: 'json',
         type: 'GET',
         success: function(data){
-          $("#canvas").attr("imageId", data.image_uuid);
-          $("#canvas").attr("annotationId", data.annotation_uuid);
+          $("#canvas").attr("imageId", data.image.uuid);
+          $("#canvas").attr("annotationId", data.uuid);
           canvas.clear();
-          setLabel(data.label, data.sublabel);
-          setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
+          setLabel(data.validation.label, data.validation.sublabel);
+          setPollData(data["num_yes"], data["num_no"]);
 
-          setCanvasBackgroundImageUrl(canvas, ('{{ .apiBaseUrl }}/v1/donation/' + data.image_uuid), function() {
+          setCanvasBackgroundImageUrl(canvas, ('{{ .apiBaseUrl }}/v1/donation/' + data.image.uuid), function() {
             drawAnnotations(canvas, data.annotations, canvas.backgroundImage.scaleX);
             showHideControls(true);
           });
@@ -85,11 +85,11 @@
     }
 
     $(document).ready(function(){
-      setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
+      setLabel({{ .randomImage.Validation.Label }}, {{ .randomImage.Validation.Sublabel }});
       var browserFingerprint = null;
 
       canvas = new fabric.Canvas('canvas');
-      setCanvasBackgroundImageUrl(canvas, '{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.ImageId }}', function() {
+      setCanvasBackgroundImageUrl(canvas, '{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Image.Id }}', function() {
         drawAnnotations(canvas, {{ .randomImage.Annotations }}, canvas.backgroundImage.scaleX);
       });
 
@@ -167,7 +167,7 @@
 
     <div class="eight wide center aligned column">
       <div class="ui center aligned basic segment" id="validationContainer">
-          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.ImageId }}" annotationId="{{ .randomImage.AnnotationId }}"></canvas> 
+          <canvas id="canvas" style="border:1px solid #000000;" imageId="{{ .randomImage.Image.Id }}" annotationId="{{ .randomImage.Id }}"></canvas> 
           <p></p>
           <button class="negative ui button center aligned" id="noButton">NO</button>
           <button class="positive ui button center aligned" id="yesButton">YES</button>

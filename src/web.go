@@ -116,6 +116,13 @@ func main() {
 	        }
 	        return dict, nil
 	    },
+	    "loop": func(min int32, n int32) []int32 {
+            arr := make([]int32, n-min+1)
+		    for i := range arr {
+		        arr[i] = int32(min) + int32(i)
+		    }
+		    return arr
+        },
 		/*"executeTemplate": func(name string) string {
     		buf := &bytes.Buffer{}
     		_ = tmpl.ExecuteTemplate(buf, name, nil)
@@ -249,31 +256,55 @@ func main() {
 
 			mode := getParamFromUrlParams(c, "mode", "default")
 
-			var img UnannotatedImage
+			var unannotatedImage UnannotatedImage
+			var annotatedImage AnnotatedImage
 			if mode == "default" {
-				validationId := getValidationIdFromUrlParams(params)
-				if validationId != "" {
-					//it doesn't make sene to use the validation id and the label id for querying - so we
-					//give the validation id preference.
-					labelId = ""
-				}
 
-				img, err = getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
-				if err != nil {
-					c.JSON(422, gin.H{"error": "err"})
-					return
-				}
+				annotationId := getParamFromUrlParams(c, "annotation_id", "")
+				if annotationId != "" {
+					mode = "refine"
 
-				//if we query a certain annotation per validation id and got no result set
-				if img.Id == "" && validationId != "" {
-					ShowErrorPage(c)
-					return
+					revisionStr := getParamFromUrlParams(c, "rev", "-1")
+					revision, err := strconv.ParseInt(revisionStr, 10, 32)
+					if err != nil {
+						ShowErrorPage(c)
+						return
+					}
+
+
+					annotatedImage, err = getAnnotatedImage(annotationId, false, int32(revision))
+					if err != nil {
+						ShowErrorPage(c)
+						return
+					}
+
+				} else {
+					validationId := getValidationIdFromUrlParams(params)
+					if validationId != "" {
+						//it doesn't make sene to use the validation id and the label id for querying - so we
+						//give the validation id preference.
+						labelId = ""
+					}
+
+					unannotatedImage, err = getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
+					if err != nil {
+						c.JSON(422, gin.H{"error": "err"})
+						return
+					}
+
+					//if we query a certain annotation per validation id and got no result set
+					if unannotatedImage.Id == "" && validationId != "" {
+						ShowErrorPage(c)
+						return
+					}
 				}
 			}
 
+			
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
-				"randomImage": img,
+				"unannotatedImage": unannotatedImage,
+				"annotatedImage": annotatedImage,
 				"activeMenuNr": 4,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
@@ -365,7 +396,7 @@ func main() {
 		router.GET("/verify_annotation", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "validate_annotations.html", gin.H{
 				"title": "Validate Annotations",
-				"randomImage": pick(getRandomAnnotatedImage(false))[0],
+				"randomImage": pick(getAnnotatedImage("", false, -1))[0],
 				"activeMenuNr": 6,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
