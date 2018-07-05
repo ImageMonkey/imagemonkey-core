@@ -255,6 +255,8 @@ func main() {
 			}
 
 			mode := getParamFromUrlParams(c, "mode", "default")
+			onlyOnce := false
+			showSkipAnnotationButtons := true
 
 			var unannotatedImage UnannotatedImage
 			var annotatedImage AnnotatedImage
@@ -263,6 +265,9 @@ func main() {
 				annotationId := getParamFromUrlParams(c, "annotation_id", "")
 				if annotationId != "" {
 					mode = "refine"
+					onlyOnce = true
+					showSkipAnnotationButtons = false //if there are already annotations, 
+													 //then we do not need to show the blacklist annotation and unannotatable buttons
 
 					revisionStr := getParamFromUrlParams(c, "rev", "-1")
 					revision, err := strconv.ParseInt(revisionStr, 10, 32)
@@ -278,12 +283,18 @@ func main() {
 						return
 					}
 
+					if annotatedImage.Image.Id == "" {
+						ShowErrorPage(c)
+						return
+					}
+
 				} else {
 					validationId := getValidationIdFromUrlParams(params)
 					if validationId != "" {
 						//it doesn't make sene to use the validation id and the label id for querying - so we
 						//give the validation id preference.
 						labelId = ""
+						onlyOnce = true
 					}
 
 					unannotatedImage, err = getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
@@ -312,6 +323,8 @@ func main() {
 				"labelId": labelId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"annotationMode": mode,
+				"onlyOnce": onlyOnce,
+				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"labelAccessors": pick(getLabelAccessors())[0],
 			})
 		})

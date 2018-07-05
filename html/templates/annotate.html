@@ -30,6 +30,7 @@
   <script src="js/mousetrap.min.js"></script>
   <script src="js/huebee.min.js"></script>
   <link rel="stylesheet" href="css/huebee.min.css"/>
+  <script src="js/lodash.core.min.js"></script>
 
   <style>
   /*.justified {
@@ -241,6 +242,10 @@
       type: 'GET',
       success: function(data){
         handleAnnotatedImageResponse(data);
+
+        //if there are already annotations, do not show blacklist or unannotatable button
+        $("#blacklistButton").hide();
+        $("#notAnnotableButton").hide();
       }
     });
   }
@@ -552,8 +557,13 @@
     if(isSmartAnnotationEnabled())
       populateDetailedCanvas();
 
-    if(existingAnnotations !== null) 
+    if(existingAnnotations !== null) {
       drawAnnotations(canvas.fabric(), existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      existingAnnotations = annotator.toJSON(); //export JSON after loading annotations 
+                                                //due to rounding we might end up with slightly different values, so we
+                                                //export them in order to make sure that we don't accidentially detect 
+                                                //a rounding errors as changes.
+    }
   }
 
   function isLoadingIndicatorVisible(){
@@ -608,7 +618,27 @@
     $("#annotationArea").attr("validationId", annotationInfo.validationId);
   }
 
+  function handleUpdateAnnotationsRes(res) {
+    {{ if eq .annotationMode "browse" }}
+    $("#loadingSpinner").hide();
+    updateAnnotationsForImage(annotationInfo.annotationId, res);
+    showBrowseAnnotationImageGrid();
+    {{ end }}
+
+    {{ if eq .onlyOnce true }}
+    $("#onlyOnceDoneMessage").fadeIn("slow");
+    showHideControls(false);
+    $("#loadingSpinner").hide();
+    {{ end }}
+  }
+
   function updateAnnotations(res) {
+    
+    if(_.isEqual(res, existingAnnotations)) {
+      handleUpdateAnnotationsRes(existingAnnotations);
+      return;
+    }
+
     var postData = {}
     postData["annotations"] = res;
 
@@ -632,11 +662,7 @@
         xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
       },
       success: function(data){
-        {{ if eq .annotationMode "browse" }}
-        $("#loadingSpinner").hide();
-        updateAnnotationsForImage(annotationInfo.annotationId, res);
-        showBrowseAnnotationImageGrid();
-        {{ end }}
+        handleUpdateAnnotationsRes(res);
       }
     });
   }
@@ -673,6 +699,12 @@
         {{ else }}
         $("#loadingSpinner").hide();
         showBrowseAnnotationImageGrid();
+        {{ end }}
+
+        {{ if eq .onlyOnce true }}
+        $("#onlyOnceDoneMessage").fadeIn("slow");
+        showHideControls(false);
+        $("#loadingSpinner").hide();
         {{ end }}
       }
     });
@@ -1024,6 +1056,16 @@
           <div class="sk-rect sk-rect5"></div>
         </div>
       </div>
+
+      <div class="row" style="display: none;">
+        <div class="sixteen wide center aligned column">
+          <div hidden id="onlyOnceDoneMessage">
+            <i class="massive check circle outline icon"></i>
+            <h1 class="ui header">Done</h1>
+          </div>
+        </div>
+      </div>
+
       <div class="row" style="display: none;" id="annotationControls">
         <div class="sixteen wide center aligned column">
           {{ template "annotation_revisions.html" .}}
@@ -1059,13 +1101,19 @@
 
       <div class="row" style="display: none;" id="annotationButtons">
         <div class="sixteen wide center aligned column">
+
+          {{ if eq .showSkipAnnotationButtons true }}
           <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
+          {{ end }}
+
           <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
 
+          {{ if eq .showSkipAnnotationButtons true }}
           {{ if (eq .sessionInformation.LoggedIn true) }}
           <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
           {{ else }}
           <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
+          {{ end }}
           {{ end }}
 
           <div hidden class="ui warning message" id="warningMsg">
@@ -1076,6 +1124,7 @@
         </div>
       </div>
       <div class="row"></div>
+
   </div>
 </div>
   {{ template "footer.html" .}}
