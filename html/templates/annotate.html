@@ -20,7 +20,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=8"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=12"></script>
+  <script src="js/annotate.js?v=13"></script>
   <script src="js/simplify.js"></script>
   <script src="js/justified-layout.min.js"></script>
   <script src="js/infinitescroll.js?v=2"></script>
@@ -635,6 +635,9 @@
   function updateAnnotations(res) {
     
     if(_.isEqual(res, existingAnnotations)) {
+      showHideControls(false);
+      clearDetailedCanvas();
+      canvas.clear();
       handleUpdateAnnotationsRes(existingAnnotations);
       return;
     }
