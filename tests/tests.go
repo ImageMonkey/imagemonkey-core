@@ -12,20 +12,73 @@ import (
 	"time"
 	"os/exec"
 	"bytes"
+	"encoding/json"
+	"reflect"
 )
 
 
 const BASE_URL string = "http://127.0.0.1:8081/"
 const API_VERSION string = "v1"
 
+type AnnotatedImage struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Provider string `json:"provider"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+    } `json:"image"`
+
+    Validation struct {
+        Label string `json:"label"`
+        Sublabel string `json:"sublabel"`
+    } `json:"validation"`
+    
+
+    Id string `json:"uuid"`
+    NumOfValid int32 `json:"num_yes"`
+    NumOfInvalid int32 `json:"num_no"`
+    Annotations []json.RawMessage `json:"annotations"`
+    NumRevisions int32 `json:"num_revisions"`
+    Revision int32 `json:"revision"`
+}
+
+type AnnotationRow struct {
+	Image struct {
+		Id string `json:"uuid"`
+	} `json:"image"`
+
+	Validation struct {
+		Id string `json:"uuid"`
+		Label string `json:"label"`
+		Sublabel string `json:"sublabel"`
+	} `json:"validation"`
+}
+
 func random(min, max int) int {
     rand.Seed(time.Now().Unix())
     return rand.Intn(max - min) + min
 }
 
-
 func randomBool() bool {
     return rand.Float32() < 0.5
+}
+
+
+func equalJson(s1, s2 string) (bool, error) {
+	var o1 interface{}
+	var o2 interface{}
+
+	var err error
+	err = json.Unmarshal([]byte(s1), &o1)
+	if err != nil {
+		return false, fmt.Errorf("Error mashalling string 1 :: %s", err.Error())
+	}
+	err = json.Unmarshal([]byte(s2), &o2)
+	if err != nil {
+		return false, fmt.Errorf("Error mashalling string 2 :: %s", err.Error())
+	}
+
+	return reflect.DeepEqual(o1, o2), nil
 }
 
 func loadSchema() error {
@@ -157,29 +210,10 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
-	/*_, err = localDb.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s", pq.QuoteIdentifier("uuid-ossp")))
-	if err != nil {
-		return err
-	}*/
-
 	err = installUuidExtension()
 	if err != nil {
 		return err
 	}
-
-	/*_, err = localDb.Exec("GRANT ALL PRIVILEGES ON DATABASE imagemonkey to monkey")
-	if err != nil {
-		return err
-	}
-
-	_, err = localDb.Exec("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO monkey")
-	if err != nil {
-		return err
-	}
-
-	_, err = localDb.Exec("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO monkey")
-	*/
-
 	
 	err = loadSchema()
 	if err != nil {
@@ -195,12 +229,17 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 	if err != nil {
 		return err
 	}
-	
-
-	
-
 
 	return err
+}
+
+func (p *ImageMonkeyDatabase) UnlockAllImages() error {
+	_, err := p.db.Exec(`UPDATE image SET unlocked = true`)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
@@ -282,11 +321,90 @@ func (p *ImageMonkeyDatabase) GetValidationCount(uuid string) (int32, int32, err
 	var numOfNo int32
 	err := p.db.QueryRow(`SELECT num_of_valid, num_of_invalid 
 						  FROM image_validation WHERE uuid = $1`, uuid).Scan(&numOfYes, &numOfNo)
+
+	return numOfYes, numOfNo, err
+}
+
+func (p *ImageMonkeyDatabase) GetAnnotationRevision(annotationId string) (int32, error) {
+	var revision int32
+	err := p.db.QueryRow(`SELECT revision 
+						  FROM image_annotation WHERE uuid = $1`, annotationId).Scan(&revision)
+
+	return revision, err
+}
+
+func (p *ImageMonkeyDatabase) GetOldAnnotationDataIds(annotationId string, revision int32) ([]int64, error) {
+	var ids []int64
+
+	rows, err := p.db.Query(`SELECT d.id
+							FROM annotation_data d
+							JOIN image_annotation_revision r ON d.image_annotation_revision_id = r.id
+							JOIN image_annotation a ON r.image_annotation_id = a.id
+							WHERE a.uuid = $1 AND r.revision = $2`, annotationId, revision)
 	if err != nil {
-		return numOfYes, numOfNo, err
+		return ids, err
 	}
 
-	return numOfYes, numOfNo, nil
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		err = rows.Scan(&id)
+		if err != nil {
+			return ids, err
+		}
+
+		ids = append(ids, id) 
+	}
+
+	return ids, nil
+}
+
+func (p *ImageMonkeyDatabase) GetAnnotationDataIds(annotationId string) ([]int64, error) {
+	var ids []int64
+	rows, err := p.db.Query(`SELECT d.id 
+							FROM annotation_data d
+							JOIN image_annotation a ON d.image_annotation_id = a.id
+							WHERE a.uuid = $1`, annotationId)
+	if err != nil {
+		return ids, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		err = rows.Scan(&id)
+		if err != nil {
+			return ids, err
+		}
+
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
+func (p *ImageMonkeyDatabase) GetRandomImageForAnnotation() (AnnotationRow, error) {
+	var annotationRow AnnotationRow
+	err := p.db.QueryRow(`SELECT i.key, v.uuid, l.name, COALESCE(pl.name, '')
+			      	 		FROM image i 
+				  	 		JOIN image_validation v ON v.image_id = i.id 
+				  	 		JOIN label l ON v.label_id = l.id
+				  	 		LEFT JOIN label pl ON pl.id = l.parent_id 
+				  	 		WHERE NOT EXISTS (
+				  	 			SELECT 1 FROM image_annotation a 
+				  	 			WHERE a.label_id = l.id AND a.image_id = i.id
+				  	 		) LIMIT 1`).Scan(&annotationRow.Image.Id, &annotationRow.Validation.Id,
+				  	 			&annotationRow.Validation.Label, &annotationRow.Validation.Sublabel)
+
+	return annotationRow, err
+}
+
+func (p *ImageMonkeyDatabase) GetRandomAnnotationId() (string, error) {
+	var annotationId string
+	err := p.db.QueryRow(`SELECT a.uuid FROM image_annotation a LIMIT 1`).Scan(&annotationId)
+	return annotationId, err
 }
 
 
@@ -395,6 +513,9 @@ func testDonate(path string, label string) error {
 		return errors.New("number of image entries in database is off by one!")
 	} 
 
+	//after image donation, unlock all images
+    err = db.UnlockAllImages()
+
     return err
 }
 
@@ -409,7 +530,7 @@ func testMultipleDonate() error {
         if err := testDonate(dirname + f.Name(), "apple"); err != nil {
         	return err
         }
-    } 
+    }
 
     return nil
 }
@@ -521,6 +642,148 @@ func testRandomModeratedImageValidation(num int, token string) error {
 	return nil
 }
 
+func testRandomAnnotate(num int, annotations string) error {
+	type Annotation struct {
+		Annotations []json.RawMessage `json:"annotations"`
+		Label string `json:"label"`
+		Sublabel string `json:"sublabel"`
+	}
+
+	for i := 0; i < num; i++ {
+		annotationRow, err := db.GetRandomImageForAnnotation()
+		if err != nil {
+			return err
+		}
+
+		annotationEntry := Annotation{Label: annotationRow.Validation.Label, 
+										Sublabel: annotationRow.Validation.Sublabel}
+
+		err = json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
+		if err != nil {
+			return err
+		}
+
+		url := BASE_URL + API_VERSION + "/annotate/" + annotationRow.Image.Id
+
+		 resp, err := resty.R().
+					SetHeader("Content-Type", "application/json").
+					SetBody(annotationEntry).
+					Post(url)
+		if err != nil {
+			return err
+		}
+
+		if resp.StatusCode() != 201 {
+			return errors.New("Couldn't annotate image " + annotationRow.Image.Id)
+		}
+
+		//export annotations again
+		url = resp.Header().Get("Location")
+		resp, err = resty.R().
+					SetHeader("Content-Type", "application/json").
+					SetResult(&AnnotatedImage{}).
+					Get(url)
+		if err != nil {
+			return err
+		}
+
+		if resp.StatusCode() != 200 {
+			return errors.New("Couldn't verify annotate image " + annotationRow.Image.Id)
+		}
+
+		j, err := json.Marshal(&resp.Result().(*AnnotatedImage).Annotations)
+	    if err != nil {
+	        return err
+	    }
+
+		equal, err := equalJson(string(j), annotations)
+		if !equal {
+			return errors.New("Exported annotations do not match!")
+		}
+
+		if err != nil {
+			return err
+		}
+
+		/*j, err := json.Marshal(&resp.Result().(*AnnotatedImage).Annotations)
+	    if err != nil {
+	        return err
+	    }
+
+	    if string(j) != annotations {
+	    	return errors.New("Exported annotations do not match!")
+	    }*/
+	}
+
+	return nil
+}
+
+func testRandomAnnotationRework(num int, annotations string) error {
+	type Annotation struct {
+		Annotations []json.RawMessage `json:"annotations"`
+	}
+
+	for i := 0; i < num; i++ {
+		annotationId, err := db.GetRandomAnnotationId()
+		if err != nil {
+			return err
+		}
+
+		oldAnnotationRevision, err := db.GetAnnotationRevision(annotationId)
+		if err != nil {
+			return err
+		}
+
+		oldAnnotationDataIds, err := db.GetAnnotationDataIds(annotationId)
+		if err != nil {
+			return err
+		}
+
+		annotationEntry := Annotation{}
+
+		err = json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
+		if err != nil {
+			return err
+		}
+
+		url := BASE_URL + API_VERSION + "/annotation/" + annotationId
+		resp, err := resty.R().
+					SetHeader("Content-Type", "application/json").
+					SetBody(annotationEntry).
+					Put(url)
+		if err != nil {
+			return err
+		}
+
+		if resp.StatusCode() != 201 {
+			return errors.New("Couldn't rework annotation entry")
+		}
+
+		newAnnotationRevision, err := db.GetAnnotationRevision(annotationId)
+		if err != nil {
+			return err
+		}
+
+		newAnnotationDataIds, err := db.GetOldAnnotationDataIds(annotationId, oldAnnotationRevision)
+		if err != nil {
+			return err
+		}
+
+		if newAnnotationRevision != (oldAnnotationRevision + 1) {
+			return errors.New("annotation revision does not match expected value!")
+		}
+
+		equal := reflect.DeepEqual(oldAnnotationDataIds, newAnnotationDataIds)
+
+		if !equal {
+			return errors.New("annotation data ids changed, although they shouldn't!")
+		}
+
+	}
+
+	return nil
+}
+
 func main(){
 	db = NewImageMonkeyDatabase()
 
@@ -606,6 +869,31 @@ func main(){
 		fmt.Printf("[FAIL] Random moderated Image validation test failed %s\n", err.Error())
 		return
 	}
+
+
+
+	err = testRandomAnnotate(2, `[{"top":100,"left":200,"type":"rect","angle":0,"width":40,"height":60,"stroke":{"color":"red","width":1}}]`)
+	if err == nil {
+		fmt.Printf("[SUCCESS] Random annotate test succeeded\n")
+	} else {
+		fmt.Printf("[FAIL] Random annotate test failed %s\n", err.Error())
+		return
+	}
+
+
+	err = testRandomAnnotationRework(2, `[{"top":200,"left":300,"type":"rect","angle":10,"width":50,"height":30,"stroke":{"color":"blue","width":3}}]`)
+	if err == nil {
+		fmt.Printf("[SUCCESS] Random annotate rework test succeeded\n")
+	} else {
+		fmt.Printf("[FAIL] Random annotate rework test failed %s\n", err.Error())
+		return
+	}
+
+
+
+
+
+
 
 
 
