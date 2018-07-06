@@ -92,7 +92,8 @@ var Polygon = (function () {
       hasControls: false,
       originX:'center',
       originY:'center',
-      index: this.index
+      index: this.index,
+      id: generateRandomId()
     });
 
     this.index += 1;
@@ -962,7 +963,7 @@ var Annotator = (function () {
       }
 
       if(inst.type === 'Polygon'){
-        if(o.target && o.target.id == this.polygon.firstId()){
+        if(o.target && o.target.id === this.polygon.firstId()){
           this.polygon.generatePolygon();
           this.polygon.clear();
         }
