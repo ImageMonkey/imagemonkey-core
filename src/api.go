@@ -1689,7 +1689,7 @@ func main(){
 				return
 			}
 
-			c.JSON(403, nil)
+			c.JSON(401, nil)
 		})
 
 		router.POST("/v1/logout", func(c *gin.Context) {
