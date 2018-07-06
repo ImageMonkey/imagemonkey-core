@@ -482,7 +482,8 @@
   function onAddLabelSuggestion() {
     var labels = $("#labelSuggestion").val();
     if(labels !== ""){
-      var splittedLabels = labels.split(new Settings().getLabelSeparator());
+      var splittedLabels = labels.split(new Settings().getLabelSeparator()).map(item => item.trim()); //split by delimiter and 
+                                                                                                      //remove surrouding spaces around each label
       var label = "";
       for(var i = 0; i < splittedLabels.length; i++) { 
         label = splittedLabels[i];
