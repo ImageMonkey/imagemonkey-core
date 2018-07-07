@@ -20,7 +20,7 @@
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=8"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=13"></script>
+  <script src="js/annotate.js?v=14"></script>
   <script src="js/simplify.js"></script>
   <script src="js/justified-layout.min.js"></script>
   <script src="js/infinitescroll.js?v=2"></script>
@@ -558,7 +558,8 @@
       populateDetailedCanvas();
 
     if(existingAnnotations !== null) {
-      drawAnnotations(canvas.fabric(), existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      annotator.loadAnnotations(existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      //drawAnnotations(canvas.fabric(), existingAnnotations, canvas.fabric().backgroundImage.scaleX);
       existingAnnotations = annotator.toJSON(); //export JSON after loading annotations 
                                                 //due to rounding we might end up with slightly different values, so we
                                                 //export them in order to make sure that we don't accidentially detect 
@@ -626,8 +627,9 @@
     {{ end }}
 
     {{ if eq .onlyOnce true }}
-    $("#onlyOnceDoneMessage").fadeIn("slow");
     showHideControls(false);
+    $("#onlyOnceDoneMessageContainer").show();
+    $("#onlyOnceDoneMessage").fadeIn("slow");
     $("#loadingSpinner").hide();
     {{ end }}
   }
@@ -1060,7 +1062,7 @@
         </div>
       </div>
 
-      <div class="row" style="display: none;">
+      <div class="row" style="display: none;" id="onlyOnceDoneMessageContainer">
         <div class="sixteen wide center aligned column">
           <div hidden id="onlyOnceDoneMessage">
             <i class="massive check circle outline icon"></i>

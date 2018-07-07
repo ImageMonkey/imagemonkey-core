@@ -1248,11 +1248,25 @@ var Annotator = (function () {
     }
   }
 
+  Annotator.prototype._handleLoadedAnnotation = function(obj) {
+    if(obj.type === "polygon"){
+      obj.id = generateRandomId();
+      obj.objectCaching = false;
+      this.polygon.addPolygon(obj);
+      this.polygon.showPolyPoints(obj.id);
+    }
+  }
+
   Annotator.prototype._simplifyAutoAnnotations = function(autoAnnotations) {
     for(var i = 0; i < autoAnnotations.length; i++){
       autoAnnotations[i].points = simplify(autoAnnotations[i].points, 4.0, false);
     }
     return autoAnnotations;
+  }
+
+  Annotator.prototype.loadAnnotations = function(annotations, scaleFactor = 1.0) {
+    this.deleteAll();
+    drawAnnotations(this.canvas, annotations, scaleFactor, this._handleLoadedAnnotation.bind(this));
   }
 
   Annotator.prototype.loadAutoAnnotations = function(autoAnnotations, scaleFactor = 1.0) {
