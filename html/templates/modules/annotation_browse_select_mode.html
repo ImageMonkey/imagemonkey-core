@@ -155,6 +155,7 @@
 
   function updateAnnotationsForImage(annotationId, annotations) {
     if(annotationId in imageGridCanvases) {
+      imageGridCanvases[annotationId].clearObjects();
       var scaleFactor = imageGridCanvases[annotationId].fabric().backgroundImage.scaleX;
       imageGridCanvases[annotationId].drawAnnotations(annotations, scaleFactor);
     }
