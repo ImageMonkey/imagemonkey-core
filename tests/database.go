@@ -56,6 +56,25 @@ func loadDefaults() error {
 	return nil
 } 
 
+
+func installTriggers() error {
+	var out, stderr bytes.Buffer
+	triggersPath := "../env/postgres/triggers.sql"
+
+	//load defaults
+	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+	    fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+	    return err
+	}
+
+	return nil
+} 
+
 func populateLabels() error {
 	var out, stderr bytes.Buffer
 	cmd := exec.Command("go", "run", "populate_labels.go", "common.go", "api_secrets.go", "--dryrun=false")
@@ -74,6 +93,24 @@ func populateLabels() error {
 
 func installUuidExtension() error {
 	query := "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""
+	var out, stderr bytes.Buffer
+
+	//load defaults
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+	    fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+	    return err
+	}
+
+	return nil
+} 
+
+func installTemporalTablesExtension() error {
+	query := "CREATE EXTENSION IF NOT EXISTS temporal_tables"
 	var out, stderr bytes.Buffer
 
 	//load defaults
@@ -142,7 +179,7 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
-	_, err = localDb.Exec("CREATE EXTENSION IF NOT EXISTS temporal_tables")
+	err = installTemporalTablesExtension()
 	if err != nil {
 		return err
 	}
@@ -163,6 +200,11 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 	}
 
 	err = populateLabels()
+	if err != nil {
+		return err
+	}
+
+	err = installTriggers()
 	if err != nil {
 		return err
 	}
