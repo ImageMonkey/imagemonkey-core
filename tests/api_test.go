@@ -7,6 +7,7 @@ import (
 	//"errors"
 	"io/ioutil"
 	"reflect"
+	"strconv"
 )
 
 type LoginResult struct {
@@ -288,7 +289,35 @@ func testRandomModeratedImageValidation(t *testing.T, num int, token string) {
 	}
 }
 
+func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId int64, labelId int64) {
+	type AnnotationRefinementEntry struct {
+    	LabelId int64 `json:"label_id"`
+	}
+	var annotationRefinementEntries []AnnotationRefinementEntry
 
+	annotationRefinementEntry := AnnotationRefinementEntry{LabelId:labelId}
+	annotationRefinementEntries = append(annotationRefinementEntries, annotationRefinementEntry)
+
+	url := BASE_URL + API_VERSION + "/annotation/" + annotationId + "/refine/" + strconv.Itoa(int(annotationDataId))
+	resp, err := resty.R().
+				SetBody(annotationRefinementEntries).
+				Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), 201)
+}
+
+func testRandomAnnotationRefinement(t *testing.T, num int) {
+	for i := 0; i < num; i++ {
+		annotationId, annotationDataId, err := db.GetRandomAnnotationData()
+		ok(t, err)
+
+		labelId, err := db.GetRandomLabelId()
+		ok(t, err)
+
+		testImageAnnotationRefinement(t, annotationId, annotationDataId, labelId)
+	}
+}
 
 
 
@@ -365,4 +394,13 @@ func TestRandomModeratedImageValidation(t *testing.T) {
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
 	db.GiveUserModeratorRights("moderator") //give user moderator rights
 	testRandomModeratedImageValidation(t, 100, moderatorToken)
+}
+
+func TestRandomImageAnnotationRefinement(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+	testRandomAnnotate(t, 5, `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+	testRandomAnnotationRefinement(t, 4)
 }

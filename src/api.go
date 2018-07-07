@@ -1584,7 +1584,7 @@ func main(){
 				return
 			}
 
-			c.JSON(http.StatusOK, nil)
+			c.JSON(201, nil)
 		})
 
 		router.POST("/v1/blog/subscribe", func(c *gin.Context) {
