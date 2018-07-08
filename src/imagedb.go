@@ -3434,6 +3434,7 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
                                      JOIN image_provider p ON i.image_provider_id = p.id
                                      JOIN label_accessor a ON a.label_id = an.label_id
                                      WHERE i.unlocked = true AND p.name = 'donation' AND %s
+                                     AND an.auto_generated = false
                                      
                                      
                                    ) q1
