@@ -68,7 +68,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var left = (annotations[i]["left"] * scaleFactor);
         var height = (annotations[i]["height"] * scaleFactor);
         var width = (annotations[i]["width"] * scaleFactor);
-        var angle = annotations[i]["angle"];
+
+        var angle = 0;
+        if("angle" in annotations[i]) 
+            angle = annotations[i]["angle"];
 
         var strokeWidth = 5;
         var strokeColor = "red";
@@ -77,7 +80,6 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             strokeWidth = strokeInfo["width"];
         if(strokeInfo && "color" in strokeInfo)
             strokeColor = strokeInfo["color"];
-
 
         var rect = new fabric.Rect({
             left: left,
@@ -103,7 +105,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var left = (annotations[i]["left"] * scaleFactor);
         var rx = (annotations[i]["rx"] * scaleFactor);
         var ry = (annotations[i]["ry"] * scaleFactor);
-        var angle = annotations[i]["angle"];
+        
+        var angle = 0;
+        if("angle" in annotations[i]) 
+            angle = annotations[i]["angle"];
 
         var strokeWidth = 5;
         var strokeColor = "red";
@@ -142,7 +147,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         if(annotations[i]["left"] !== undefined)
             left = (annotations[i]["left"] * scaleFactor);
         
-        var angle = annotations[i]["angle"];
+        var angle = 0;
+        if("angle" in annotations[i]) 
+            angle = annotations[i]["angle"];
+        
         var points = annotations[i]["points"];
 
         var strokeWidth = 5;

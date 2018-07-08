@@ -887,13 +887,13 @@ var Annotator = (function () {
 
   Annotator.prototype.deleteAll = function () {
     //remove all objects from canvas
-    var objects = canvas.fabric().getObjects();
+    var objects = this.canvas.getObjects();
     while(objects.length != 0 ){
       this.canvas.remove(objects[0]);
       this.canvas.discardActiveGroup();
     }
-
     this.polygon.reset();
+    this.canvas.renderAll();
   };
 
   Annotator.prototype.deleteSelected = function (o) {
