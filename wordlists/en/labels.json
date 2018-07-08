@@ -756,6 +756,87 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "ae65d146-6428-453b-9f80-ddfadcd49e5e"
+		},
+		"bus": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8d1c1663-1569-4c8f-a72b-5def6695a942"
+		},
+		"excavator": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e2a19fe2-9b15-49cd-83d2-3110d2b9d1ea"
+		},
+		"backhoe loader": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8cc8ae96-6a8e-4221-aa10-9ef2059ac678"
+		},
+		"bulldozer": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "39a47c82-a0f2-4b9c-8f22-00028b88004f"
+		},
+		"tractor": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4ecf2dcf-cf95-46f5-b2fa-5f7ccdb3a4cd"
+		},
+		"horse": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6cdadd8b-6dd1-4ebb-bf7e-ae388ec9cdf2"
+		},
+		"sheep": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "297932ac-5f16-4164-8997-a9d3343b2648"
+		},
+		"cow": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "04f9c653-b660-4471-8541-aaf0f33958a0"
+		},
+		"fork lift": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4d0d2782-ce7d-489c-8038-60dcace23ce7"
+		},
+		"crane": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e9a3970e-6627-47e0-84f3-29a9c5e9161a"
+		},
+		"helicopter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e37f1c27-f188-4423-9ffc-f975b9890932"
+		},
+		"boat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "86bf68c3-31af-41fa-8e35-29fbe6ecda27"
+		},
+		"ship": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "574aeaa2-7136-4e9c-a748-9b35446779de"
+		},
+		"table": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "61db30b9-9903-4255-b878-f23679401c90"
+		},
+		"desk": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "bba7aae9-3892-4367-9859-dbfdd05b9ab5"
+		},
+		"jet airliner": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e6870b75-9413-4e9f-8059-1e746732007e"
 		}
+
 	}
 }
