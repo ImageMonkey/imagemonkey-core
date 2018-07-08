@@ -11,7 +11,8 @@ var db *sql.DB
 func trendingLabelExists(label string, tx *sql.Tx) (bool, error) {
 	var numOfRows int32
 	err := tx.QueryRow(`SELECT COUNT(*) FROM trending_label_suggestion t 
-			  			JOIN label_suggestion l ON t.label_suggestion_id = l.id`).Scan(&numOfRows)
+			  			RIGHT JOIN label_suggestion l ON t.label_suggestion_id = l.id
+			  			WHERE l.name = $1`, label).Scan(&numOfRows)
 	if err != nil {
 		return false, err
 	}
@@ -53,14 +54,14 @@ func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 }
 
 
-func makeTrendingLabelProductive(label LabelMeEntry, tx *sql.Tx) error {
+func makeTrendingLabelProductive(label LabelMeEntry, renameToLabel string, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
 	}
 
-    rows, err := tx.Query(`SELECT i.key, annotatable FROM trending_label_suggestion t 
-			  			   JOIN label_suggestion l ON t.label_suggestion_id = l.id
+    rows, err := tx.Query(`SELECT i.key, annotatable 
+			  			   FROM label_suggestion l
 			  			   JOIN image_label_suggestion isg on isg.label_suggestion_id =l.id
 			  			   JOIN image i on i.id = isg.image_id
 			  			   WHERE l.name = $1`, label.Label)
@@ -88,7 +89,11 @@ func makeTrendingLabelProductive(label LabelMeEntry, tx *sql.Tx) error {
     rows.Close()
 
     var labels []LabelMeEntry
+    if renameToLabel != "" {
+    	label.Label = renameToLabel
+    }
 	labels = append(labels, label)
+
     for _, elem := range results {
     	if elem.Annotatable {
 			_, err = _addLabelsToImage("", elem.ImageId, labels, 0, 0, tx)  
@@ -107,7 +112,7 @@ func makeTrendingLabelProductive(label LabelMeEntry, tx *sql.Tx) error {
     return nil
 }
 
-func makeLabelMeEntry(name string, annotatable bool, sublabels []string) LabelMeEntry {
+func makeLabelMeEntry(name string, annotatable bool, sublabels []Sublabel) LabelMeEntry {
 	var label LabelMeEntry
 	label.Label = name 
     label.Annotatable = annotatable
@@ -125,6 +130,7 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	trendingLabel := flag.String("trendinglabel", "", "The name of the trending label that should be made productive")
+	renameTo := flag.String("renameto", "", "Rename the label")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
 	dryRun := flag.Bool("dryrun", true, "Specifies whether this is a dryrun or not")
 	flag.Parse()
@@ -172,7 +178,12 @@ func main() {
 		return
 	}
 
-	exists, err = labelExists(*trendingLabel, tx)
+	
+	labelToCheck := *trendingLabel
+	if *renameTo != "" {
+		labelToCheck = *renameTo
+	}
+	exists, err = labelExists(labelToCheck, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't determine whether label exists: ", err.Error())
@@ -185,14 +196,14 @@ func main() {
 	}
 
 
-	labelMeEntry := makeLabelMeEntry(*trendingLabel, true, []string{})
-	if !isLabelInLabelsMap(labelMap, labelMeEntry) {
+	labelMeEntry := makeLabelMeEntry(*trendingLabel, true, []Sublabel{})
+	if !isLabelInLabelsMap(labelMap, labelMeEntry) && *renameTo == "" {
 		tx.Rollback()
 		log.Error("[Main] Label doesn't exist in labels map - please add it first!")
 		return
 	}
 
-	err = makeTrendingLabelProductive(labelMeEntry, tx)
+	err = makeTrendingLabelProductive(labelMeEntry, *renameTo, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't make trending label ", *trendingLabel, " productive: ", err.Error())
@@ -221,6 +232,10 @@ func main() {
 			return
 		}
 
-		log.Info("[Main] Label ", *trendingLabel, " was successfully made productive. You can now close the corresponding github issue!")
+		if *renameTo == "" {
+			log.Info("[Main] Label ", *trendingLabel, " was successfully made productive. You can now close the corresponding github issue!")
+		} else {
+			log.Info("[Main] Label ", *trendingLabel, " was renamed to ", *renameTo  ," successfully made productive. You can now close the corresponding github issue!")
+		}
 	}
 }
