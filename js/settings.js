@@ -30,5 +30,14 @@ var Settings = (function () {
     return this.set("labelseparator", value);
   }
 
+  //annotation mode is set in AnnotationSettings()
+  Settings.prototype.getAnnotationMode = function() {
+    return this.get("annotationmode", "default")
+  }
+
+  Settings.prototype.setAnnotationMode = function(value) {
+    return this.set("annotationmode", value)
+  }
+
   return Settings;
 }());

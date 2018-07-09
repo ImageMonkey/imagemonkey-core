@@ -1,3 +1,6 @@
+<script src="/js/cookies.min.js"></script>
+<script src="js/settings.js"></script>
+
 <!-- Following Menu -->
 <!-- when changing here, change it also in pointing-menu.html-->
 <div class="ui large top fixed hidden menu">
@@ -5,7 +8,7 @@
     <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
     <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
     <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Add Labels</a>
-    <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" href="/annotate">Annotate</a>
+    <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationNavigationMenuItem" href="/annotate">Annotate</a>
     <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
     <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
     <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
@@ -44,7 +47,7 @@
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
   <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Add Labels</a>
-  <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" href="/annotate">Annotate</a>
+  <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationSidebarMenuItem" href="/annotate">Annotate</a>
   <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
   <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
   <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
@@ -64,5 +67,12 @@
   $(document).ready(function(){
     $('#developersMenuDropdown').dropdown();
     $('#datasetMenuDropdown').dropdown();
-  })
+
+    //switch to browse mode when annotation mode is set to browse
+    var settings = new Settings();
+    if(settings.getAnnotationMode() === "browse") {
+      $("#annotationNavigationMenuItem").attr("href", "/annotate?mode=browse");
+      $("#annotationSidebarMenuItem").attr("href", "/annotate?mode=browse");
+    }
+  });
 </script>

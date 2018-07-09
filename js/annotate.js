@@ -1366,16 +1366,32 @@ var AnnotationSettings = (function () {
     return "small";
   }
 
+  AnnotationSettings.prototype.getAnnotationMode = function() {
+    var radioButtonId = $("#annotationModeCheckboxes :radio:checked").attr('id');
+    if(radioButtonId === "annotationDefaultModeCheckboxInput") {
+      return "default";
+    }
+    if(radioButtonId === "annotationBrowseModeCheckboxInput") {
+      return "browse";
+    }
+    return "default";
+  }
+
   AnnotationSettings.prototype.persistAll = function() {
+    var settings = new Settings();
+
     var preferedAnnotationTool = this.getPreferedAnnotationTool();
     localStorage.setItem('preferedAnnotationTool', preferedAnnotationTool); //store in local storage
     var workspaceSize = this.getWorkspaceSize();
     localStorage.setItem('annotationWorkspaceSize', workspaceSize);
+    var annotationMode = this.getAnnotationMode();
+    settings.setAnnotationMode(annotationMode);
   }
 
   AnnotationSettings.prototype.setAll = function() {
     this.setPreferedAnnotationTool();
     this.setWorkspaceSize();
+    this.setAnnotationMode();
   }
 
   AnnotationSettings.prototype.setWorkspaceSize = function() {
@@ -1412,6 +1428,19 @@ var AnnotationSettings = (function () {
       $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
       $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
       $("#preferedPolygonAnnotationToolCheckbox").checkbox("set checked");
+    }
+  }
+
+  AnnotationSettings.prototype.setAnnotationMode = function() {
+    var settings = new Settings();
+    annotationMode = settings.getAnnotationMode();
+    if(annotationMode === "default") {
+      $("#annotationBrowseModeCheckbox").checkbox("set unchecked");
+      $("#annotationDefaultModeCheckbox").checkbox("set checked");
+    }
+    else if(annotationMode === "browse") {
+      $("#annotationDefaultModeCheckbox").checkbox("set unchecked");
+      $("#annotationBrowseModeCheckbox").checkbox("check");
     }
   }
 
