@@ -1393,7 +1393,9 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
     q3 := fmt.Sprintf("AND v.num_of_not_annotatable < $%d", (posNum +1))
 
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, q1.auto_annotations FROM
+    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, 
+                        json_agg(q1.annotation || ('{"type":"' || q1.annotation_type || '"}')::jsonb)::jsonb as auto_annotations 
+                        FROM
                         (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, 
                             width as image_width, height as image_height, v.uuid as validation_uuid
                             FROM image i 
@@ -1433,13 +1435,13 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
                         ) q
                         LEFT JOIN 
                         (
-                            SELECT a.label_id as label_id, a.image_id as image_id, json_agg(d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as auto_annotations
+                            SELECT a.label_id as label_id, a.image_id as image_id, d.annotation as annotation, t.name as annotation_type
                             FROM image_annotation a 
                             JOIN annotation_data d ON d.image_annotation_id = a.id
                             JOIN annotation_type t on d.annotation_type_id = t.id
                             WHERE a.auto_generated = true 
-                            GROUP BY d.image_annotation_id, a.label_id, a.image_id
-                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id`, q1, q2, q3, q1, q2, q3)
+                        ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id
+                        GROUP BY q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid`, q1, q2, q3, q1, q2, q3)
 
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
     var rows *sql.Rows
