@@ -163,7 +163,7 @@
         var s = [];
         if(sublabels !== undefined && sublabels !== null) {
           for(var j = 0; j < sublabels.length; j++) {
-            s.push({name: sublabels[j]["name"]});
+            s.push(sublabels[j]);
           }
           oldLabelMap[escapedLabel] = s;
         } 
