@@ -3358,19 +3358,28 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
                                 SELECT 1 FROM user_annotation_blacklist bl 
                                 JOIN account acc ON acc.id = bl.account_id
                                 WHERE bl.image_validation_id = v.id AND acc.name = $%d
-                           )`, len(parseResult.queryValues) + 1)
+                           )`, len(parseResult.queryValues) + 2)
     }
 
-    q := fmt.Sprintf(`SELECT i.key, i.width, i.height, v.uuid
-                      FROM image i 
-                      JOIN image_validation v ON v.image_id = i.id 
-                      JOIN label l ON l.id = v.label_id
-                      JOIN label_accessor a ON l.id = a.label_id
-                      WHERE i.unlocked = true AND (%s) AND NOT EXISTS
-                      ( 
-                        SELECT 1 FROM image_annotation a 
-                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                      )%s%s`, parseResult.query, q2, q1)
+    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, q.validation_uuid
+                      FROM
+                      (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
+                          array_to_string(array_agg(CASE WHEN a.accessor = $1 THEN v.uuid ELSE NULL END), ',') as validation_uuid, 
+                          array_agg(a.accessor)::text[] as accessors
+                          FROM image i 
+                          JOIN image_validation v ON v.image_id = i.id 
+                          JOIN label l ON l.id = v.label_id
+                          JOIN label_accessor a ON l.id = a.label_id
+                          WHERE i.unlocked = true AND NOT EXISTS
+                          ( 
+                            SELECT 1 FROM image_annotation a 
+                            WHERE a.label_id = v.label_id AND a.image_id = v.image_id
+                          )%s
+                          GROUP BY i.key, i.width, i.height
+                       ) q WHERE %s%s`, q2, parseResult.query, q1)
+
+    //first item in query value is the label we want to annotate
+    parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)
 
     var rows *sql.Rows
     var err error
@@ -3396,6 +3405,10 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
             log.Debug("[Annotation Tasks] Couldn't get available annotation tasks: ", err.Error())
             raven.CaptureError(err, nil)
             return annotationTasks, err
+        }
+
+        if annotationTask.Id == "" {
+            continue
         }
 
         annotationTasks = append(annotationTasks, annotationTask)

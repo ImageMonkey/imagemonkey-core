@@ -999,7 +999,7 @@ func main(){
 			}
 
 			queryParser := NewQueryParser(query)
-	        parseResult, err := queryParser.Parse()
+	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
@@ -1248,8 +1248,8 @@ func main(){
 					return
 		        }
 
-		        queryParser := NewQueryParser(query)
-		        parseResult, err := queryParser.Parse()
+		        queryParser := NewQueryParserV2(query)
+		        parseResult, err := queryParser.Parse(2)
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
 		            return
@@ -1505,7 +1505,7 @@ func main(){
 	        }
 
 			queryParser := NewQueryParser(query)
-	        parseResult, err := queryParser.Parse()
+	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
