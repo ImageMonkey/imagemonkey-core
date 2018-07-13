@@ -6,6 +6,7 @@ import(
 	"strconv"
     "github.com/satori/go.uuid"
 	"regexp"
+    "strings"
 )
 
 type Token int
@@ -24,6 +25,17 @@ func IsLetter(s string) bool {
         if !unicode.IsLetter(r) {
             return false
         }
+    }
+    return true
+}
+
+func IsLetterOrSpace(s string) bool {
+    for _, r := range s {
+        if unicode.IsLetter(r) || unicode.IsSpace(r) {
+            continue
+        }
+
+        return false
     }
     return true
 }
@@ -52,7 +64,7 @@ func StrToToken(str string) Token {
 		case ")":
 			return RPAR
 		default:
-			if IsAssignment(str) || IsLetter(str) || IsUuid(str) {
+			if IsAssignment(str) || IsLetterOrSpace(str) || IsUuid(str) {
 				return LABEL
 			}
 	}
@@ -63,17 +75,17 @@ func StrToToken(str string) Token {
 func IsTokenValid(currentToken Token, lastToken Token) bool {
 	switch currentToken {
 		case AND:
-			if lastToken == LABEL {
+			if (lastToken == LABEL) || (lastToken == RPAR)  {
 				return true
 			}
 			return false
 		case OR:
-			if lastToken == LABEL {
+			if (lastToken == LABEL) || (lastToken == RPAR) {
 				return true
 			}
 			return false
 		case LABEL:
-			if (lastToken == OR) || (lastToken == AND) {
+			if (lastToken == OR) || (lastToken == AND) || (lastToken == LPAR) {
 				return true
 			}
 			return false
@@ -134,8 +146,9 @@ func GetBaseLabel(s string) string {
     return s
 }
 
-func StripWhitespaces(s string) string {
+func StripWhitespacesExceptWithinQuotes(s string) string {
     output := ""
+
     insideAssignment := false
     for _, r := range s {
         if r == '\'' {
@@ -146,6 +159,46 @@ func StripWhitespaces(s string) string {
             output += string(r)
         } else if (insideAssignment) {
             output += string(r)
+        }
+    }
+
+    return output
+}
+
+func StripWhitespaces(s string) string {
+    output := ""
+    temp := ""
+    potentialMultiWordString := false
+    for _, r := range s {
+
+        if unicode.IsLetter(r) || unicode.IsSpace(r) || r == '\'' || r == '.' || r == '=' {
+            potentialMultiWordString = true
+        } else {
+            potentialMultiWordString = false
+
+            if temp != "" {
+                if strings.Contains(temp, ".") && strings.Contains(temp, "=") { //is it a label assignment?(e.q dog.has='mouth')
+                    output += StripWhitespacesExceptWithinQuotes(temp) //remove whitespaces except within the quotes
+                } else {
+                    output += temp
+                }
+            }
+
+            output += string(r)
+
+            temp = ""
+        }
+
+        if potentialMultiWordString {
+            temp += string(r)
+        }
+    }
+
+    if temp != "" {
+        if strings.Contains(temp, ".") && strings.Contains(temp, "=") { //is it a label assignment?(e.q dog.has='mouth')
+            output += StripWhitespacesExceptWithinQuotes(temp) //remove whitespaces except within the quotes
+        } else {
+            output += temp
         }
     }
 
@@ -163,6 +216,7 @@ type QueryParser struct {
 	isFirst bool
 	brackets int32
     isUuidQuery bool
+    version int32
 }
 
 type ParseResult struct {
@@ -177,10 +231,19 @@ func NewQueryParser(query string) *QueryParser {
     return &QueryParser {
         query: query,
         isFirst: true,
+        version: 1,
     } 
 }
 
-func (p *QueryParser) Parse() (ParseResult, error) {
+func NewQueryParserV2(query string) *QueryParser {
+    return &QueryParser {
+        query: query,
+        isFirst: true,
+        version: 2,
+    } 
+}
+
+func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 	parseResult := ParseResult{}
 	parseResult.query = ""
     parseResult.isUuidQuery = p.isUuidQuery
@@ -190,17 +253,20 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     tokens := Tokenize(p.query)
 
     var temp []string
-    i := 1
+    i := offset
     numOfLabels := 1
     for _, token := range tokens {
-    	if token == "" {
-    		continue
-    	}
+        //strip tailing and leading white spaces
+        token = strings.TrimSpace(token)
+
+        if token == "" {
+            continue
+        }
 
     	t := StrToToken(token)
     	if p.isFirst {
-    		if t != LABEL {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|' "
+    		if !((t == LABEL) || (t == LPAR)) {
+    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog) or 'ASSIGNMENT' (e.q dog.breed='Labrador') "
     			return parseResult, errors.New(e)
     		}
 
@@ -212,16 +278,22 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     		p.isFirst = false
     	} else {
     		if !IsTokenValid(t, p.lastToken) {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|' "
+    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|' or '&' "
     			return parseResult, errors.New(e)
     		}
     	}
 
     	if t == LABEL {
-            if parseResult.isUuidQuery {
-                parseResult.query += ("l.uuid = $" + strconv.Itoa(i))
+            if p.version == 1 {
+                if parseResult.isUuidQuery {
+                    parseResult.query += ("l.uuid = $" + strconv.Itoa(i))
+                } else {
+                    parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+                }
             } else {
-                parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+                if !parseResult.isUuidQuery {
+                    parseResult.query += ("q.accessors @> ARRAY[$" + strconv.Itoa(i) + "]::text[]")
+                }
             }
     		parseResult.queryValues = append(parseResult.queryValues, token)
     		i += 1
