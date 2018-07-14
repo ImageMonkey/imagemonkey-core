@@ -17,6 +17,7 @@ const (
 	OR
 	LPAR
 	RPAR 
+    NOT
 	UNKNOWN
 )
 
@@ -63,6 +64,8 @@ func StrToToken(str string) Token {
 			return LPAR
 		case ")":
 			return RPAR
+        case "~":
+            return NOT
 		default:
 			if IsAssignment(str) || IsLetterOrSpace(str) || IsUuid(str) {
 				return LABEL
@@ -85,7 +88,7 @@ func IsTokenValid(currentToken Token, lastToken Token) bool {
 			}
 			return false
 		case LABEL:
-			if (lastToken == OR) || (lastToken == AND) || (lastToken == LPAR) {
+			if (lastToken == OR) || (lastToken == AND) || (lastToken == LPAR) || (lastToken == NOT) {
 				return true
 			}
 			return false
@@ -95,10 +98,15 @@ func IsTokenValid(currentToken Token, lastToken Token) bool {
 			}
 			return false
 		case LPAR:
-			if (lastToken == LABEL) || (lastToken == AND) || (lastToken == OR) {
+			if (lastToken == LABEL) || (lastToken == AND) || (lastToken == OR) || (lastToken == NOT) {
 				return true
 			}
 			return false
+        case NOT:
+            if (lastToken == LABEL) || (lastToken == AND) || (lastToken == OR) || (lastToken == LPAR) {
+                return true
+            }
+            return false
 	}
 
 	return false
@@ -118,7 +126,7 @@ func Tokenize(input string) []string {
     label := ""
     in := StripWhitespaces(input)
     for _, ch := range in {
-        if ch == '&' || ch == '|' || ch == '(' || ch == ')' {
+        if ch == '&' || ch == '|' || ch == '(' || ch == ')' || ch == '~' {
             if label != "" {
                 output = append(output, label)
                 label = ""
@@ -222,6 +230,7 @@ type QueryParser struct {
 type ParseResult struct {
 	input string
 	query string
+    subquery string
     isUuidQuery bool
 	//validationQuery string
 	queryValues []interface{}
@@ -252,7 +261,6 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 
     tokens := Tokenize(p.query)
 
-    var temp []string
     i := offset
     numOfLabels := 1
     for _, token := range tokens {
@@ -265,7 +273,7 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 
     	t := StrToToken(token)
     	if p.isFirst {
-    		if !((t == LABEL) || (t == LPAR)) {
+    		if !((t == LABEL) || (t == LPAR) || (t == NOT)) {
     			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog) or 'ASSIGNMENT' (e.q dog.breed='Labrador') "
     			return parseResult, errors.New(e)
     		}
@@ -278,7 +286,7 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
     		p.isFirst = false
     	} else {
     		if !IsTokenValid(t, p.lastToken) {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|' or '&' "
+    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|', '&' or '~' "
     			return parseResult, errors.New(e)
     		}
     	}
@@ -293,6 +301,7 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
             } else {
                 if !parseResult.isUuidQuery {
                     parseResult.query += ("q.accessors @> ARRAY[$" + strconv.Itoa(i) + "]::text[]")
+                    parseResult.subquery += ("a.accessor = $" + strconv.Itoa(i))
                 }
             }
     		parseResult.queryValues = append(parseResult.queryValues, token)
@@ -300,15 +309,19 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
     		numOfLabels += 1
     	} else if t == AND {
     		parseResult.query += "AND"
-    		temp = append(temp, "AND")
+            parseResult.subquery += "OR"
     	} else if t == OR {
     		parseResult.query += "OR"
-    		temp = append(temp, "OR")
+            parseResult.subquery += "OR"
+        } else if t == NOT {
+            parseResult.query += "NOT"
+            parseResult.subquery += "NOT"
     	} else {
     		parseResult.query += token
-    		temp = append(temp, "token")
+            parseResult.subquery += token
     	}
     	parseResult.query += " "
+        parseResult.subquery += " "
 
 
     	if t == LPAR {

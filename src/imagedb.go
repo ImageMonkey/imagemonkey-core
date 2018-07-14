@@ -10,7 +10,6 @@ import (
     "errors"
     "time"
     "github.com/dgrijalva/jwt-go"
-    "strconv"
 )
 
 type AnnotationStroke struct {
@@ -3362,14 +3361,6 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
                            )`, len(parseResult.queryValues) + 1)
     }
 
-    q3 := ""
-    for i,_ := range parseResult.queryValues {
-        q3 += "a.accessor = $" + strconv.Itoa(i+1)
-        if i != (len(parseResult.queryValues) - 1) {
-            q3 += " OR "
-        }
-    }
-
     q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid
                       FROM
                       (
@@ -3395,7 +3386,7 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
                       WHERE NOT EXISTS (
                         SELECT 1 FROM image_annotation a 
                         WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                      )%s%s`, q3, parseResult.query, q2, q1)
+                      )%s%s`, parseResult.subquery, parseResult.query, q2, q1)
 
     //first item in query value is the label we want to annotate
     //parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)

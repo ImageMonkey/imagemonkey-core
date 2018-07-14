@@ -123,3 +123,59 @@ func TestResultSetComplexQuery1(t *testing.T) {
 	ref := []string{"a", "string with spaces", "c", "d"}
 	reflect.DeepEqual(parseResult.queryValues, ref)
 }
+
+func TestNotOperator(t *testing.T) {
+	queryParser := NewQueryParserV2("a & ~b")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}
+
+func TestNotOperator1(t *testing.T) {
+	queryParser := NewQueryParserV2("~a & b")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}
+
+func TestNotOperator2(t *testing.T) {
+	queryParser := NewQueryParserV2("~(a | b)")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}
+
+func TestNotOperator3(t *testing.T) {
+	queryParser := NewQueryParserV2("~~a | b)")
+	_, err := queryParser.Parse(1)
+	if err == nil {
+		t.Errorf("Expected not nil, but got nil: %s", err.Error())
+	}
+}
+
+func TestNotOperator4(t *testing.T) {
+	queryParser := NewQueryParserV2("~&a | b)")
+	_, err := queryParser.Parse(1)
+	if err == nil {
+		t.Errorf("Expected not nil, but got nil: %s", err.Error())
+	}
+}
+
+func TestNotOperator5(t *testing.T) {
+	queryParser := NewQueryParserV2("~a")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}
+
+func TestNotOperator6(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}

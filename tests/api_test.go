@@ -209,14 +209,18 @@ func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
 	}
 }
 
-func testMultipleDonate(t *testing.T) {
+func testMultipleDonate(t *testing.T) int {
 	dirname := "./images/apples/"
 	files, err := ioutil.ReadDir(dirname)
     ok(t, err)
 
+    num := 0
     for _, f := range files {
         testDonate(t, dirname + f.Name(), "apple")
+        num += 1
     }
+
+    return num
 }
 
 func testLabelImage(t *testing.T, imageId string, label string) {
@@ -529,5 +533,30 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 
 	//there is still one cat left
 	testBrowseAnnotation(t, "cat", 1)
+
+}
+
+
+func TestBrowseAnnotationQuery1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	num := testMultipleDonate(t)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testBrowseAnnotation(t, "~tree", num)
+	testBrowseAnnotation(t, "apple", num)
+
+	testBrowseAnnotation(t, "~tree | apple", num)
+	testBrowseAnnotation(t, "~tree & apple", num)
+	testBrowseAnnotation(t, "~tree & car", 0)
+
+	
+	testAnnotate(t, imageIds[0], "apple", "", `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+
+	testBrowseAnnotation(t, "~tree", num-1)
+	testBrowseAnnotation(t, "apple", num-1)	
 
 }
