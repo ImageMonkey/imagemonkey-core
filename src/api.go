@@ -850,7 +850,7 @@ func main(){
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 			}
-			c.JSON(http.StatusOK, nil)
+			c.JSON(200, nil)
 		})
 
 		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
@@ -1249,7 +1249,7 @@ func main(){
 		        }
 
 		        queryParser := NewQueryParserV2(query)
-		        parseResult, err := queryParser.Parse(2)
+		        parseResult, err := queryParser.Parse(1)
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
 		            return
@@ -1264,6 +1264,11 @@ func main(){
 		        var apiUser APIUser
 				apiUser.ClientFingerprint = getBrowserFingerprint(c)
 				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+				if len(parseResult.queryValues) == 0 {
+					c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid query!"})
+					return	
+				}
 
 		        annotationTasks, err := getAvailableAnnotationTasks(apiUser, parseResult, orderRandomly)
 		        if err != nil {

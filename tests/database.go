@@ -402,6 +402,47 @@ func (p *ImageMonkeyDatabase) GetRandomAnnotationData() (string, int64, error) {
 	return annotationId, annotationDataId, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabel(label string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image_validation v 
+						   JOIN label l ON v.label_id = l.id
+						   WHERE l.name = $1 AND l.parent_id is null`, label).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
+	var label string
+	err := p.db.QueryRow(`SELECT l.name
+						   FROM label l
+						   WHERE l.parent_id is null
+						   ORDER BY random() LIMIT 1`).Scan(&label)
+	return label, err
+}
+
+func (p *ImageMonkeyDatabase) GetAllImageIds() ([]string, error) {
+	var imageIds []string
+
+	rows, err := p.db.Query(`SELECT i.key FROM image i ORDER BY random()`)
+	if err != nil {
+		return imageIds, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var imageId string
+		err = rows.Scan(&imageId)
+		if err != nil {
+			return imageIds, err
+		}
+
+		imageIds = append(imageIds, imageId)
+	}
+
+	return imageIds, nil
+}
+
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
 }

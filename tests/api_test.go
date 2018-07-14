@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strconv"
+	//"fmt"
 )
 
 type LoginResult struct {
@@ -90,51 +91,55 @@ func testLogin(t *testing.T, username string, password string, requiredStatusCod
     return resp.Result().(*LoginResult).Token
 }
 
-
-func testRandomAnnotate(t *testing.T, num int, annotations string) {
+func testAnnotate(t *testing.T, imageId string, label string, sublabel string, annotations string) {
 	type Annotation struct {
 		Annotations []json.RawMessage `json:"annotations"`
 		Label string `json:"label"`
 		Sublabel string `json:"sublabel"`
 	}
 
+	annotationEntry := Annotation{Label: label, Sublabel: sublabel}
+
+	err := json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
+	ok(t, err)
+
+	url := BASE_URL + API_VERSION + "/annotate/" + imageId
+
+	resp, err := resty.R().
+					SetHeader("Content-Type", "application/json").
+					SetBody(annotationEntry).
+					Post(url)
+	ok(t, err)
+
+	equals(t, resp.StatusCode(), 201)
+
+	//export annotations again
+	url = resp.Header().Get("Location")
+	resp, err = resty.R().
+					SetHeader("Content-Type", "application/json").
+					SetResult(&AnnotatedImage{}).
+					Get(url)
+	ok(t, err)
+
+	equals(t, resp.StatusCode(), 200)
+
+	j, err := json.Marshal(&resp.Result().(*AnnotatedImage).Annotations)
+	ok(t, err)
+
+	equal, err := equalJson(string(j), annotations)
+	equals(t, equal, true)
+
+	ok(t, err)
+}
+
+
+func testRandomAnnotate(t *testing.T, num int, annotations string) {
 	for i := 0; i < num; i++ {
 		annotationRow, err := db.GetRandomImageForAnnotation()
 		ok(t, err)
 
-		annotationEntry := Annotation{Label: annotationRow.Validation.Label, 
-										Sublabel: annotationRow.Validation.Sublabel}
-
-		err = json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
-		ok(t, err)
-
-		url := BASE_URL + API_VERSION + "/annotate/" + annotationRow.Image.Id
-
-		 resp, err := resty.R().
-					SetHeader("Content-Type", "application/json").
-					SetBody(annotationEntry).
-					Post(url)
-		ok(t, err)
-
-		equals(t, resp.StatusCode(), 201)
-
-		//export annotations again
-		url = resp.Header().Get("Location")
-		resp, err = resty.R().
-					SetHeader("Content-Type", "application/json").
-					SetResult(&AnnotatedImage{}).
-					Get(url)
-		ok(t, err)
-
-		equals(t, resp.StatusCode(), 200)
-
-		j, err := json.Marshal(&resp.Result().(*AnnotatedImage).Annotations)
-	    ok(t, err)
-
-		equal, err := equalJson(string(j), annotations)
-		equals(t, equal, true)
-
-		ok(t, err)
+		testAnnotate(t, annotationRow.Image.Id, annotationRow.Validation.Label, 
+						annotationRow.Validation.Sublabel, annotations)
 	}
 }
 
@@ -212,6 +217,33 @@ func testMultipleDonate(t *testing.T) {
     for _, f := range files {
         testDonate(t, dirname + f.Name(), "apple")
     }
+}
+
+func testLabelImage(t *testing.T, imageId string, label string) {
+	type LabelMeEntry struct {
+		Label string `json:"label"`
+	}
+
+	oldNum, err := db.GetNumberOfImagesWithLabel(label)
+	ok(t, err)
+
+	var labelMeEntries []LabelMeEntry
+	labelMeEntry := LabelMeEntry{Label: label}
+	labelMeEntries = append(labelMeEntries, labelMeEntry)
+
+	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
+	resp, err := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetBody(labelMeEntries).
+			Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
+
+	newNum, err := db.GetNumberOfImagesWithLabel(label)
+	ok(t, err)
+
+	equals(t, oldNum+1, newNum)
 }
 
 
@@ -319,6 +351,53 @@ func testRandomAnnotationRefinement(t *testing.T, num int) {
 	}
 }
 
+func testRandomLabel(t *testing.T, num int) {
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	if num > len(imageIds) {
+		t.Errorf("num can't be greater than the number of available images!")
+	}
+
+
+	for i := 0; i < num; i++ {
+		image := imageIds[i]
+		label, err := db.GetRandomLabelName()
+		ok(t, err)
+
+		testLabelImage(t, image, label)
+	}
+}
+
+func testBrowseAnnotation(t *testing.T, query string, requiredNumOfResults int) {
+	type AnnotationTask struct {
+	    Image struct {
+	        Id string `json:"uuid"`
+	        Width int32 `json:"width"`
+	        Height int32 `json:"height"`
+	    } `json:"image"`
+
+	    Id string `json:"uuid"`
+	}
+
+	var annotationTasks []AnnotationTask
+
+	url := BASE_URL + API_VERSION + "/validations/unannotated"
+	resp, err := resty.R().
+			    SetQueryParams(map[string]string{
+		          "query": query,
+		        }).
+				SetResult(&annotationTasks).
+				Get(url)
+
+	ok(t, err)
+    equals(t, resp.StatusCode(), 200)
+
+    //fmt.Printf("b=%d\n",len(annotationTasks))
+    //fmt.Printf("a=%d\n",requiredNumOfResults)
+    equals(t, len(annotationTasks), requiredNumOfResults)
+}
+
 
 
 func TestMultipleDonate(t *testing.T) {
@@ -403,4 +482,52 @@ func TestRandomImageAnnotationRefinement(t *testing.T) {
 	testMultipleDonate(t)
 	testRandomAnnotate(t, 5, `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
 	testRandomAnnotationRefinement(t, 4)
+}
+
+
+func TestRandomLabel(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+	testRandomLabel(t, 7)
+}
+
+func TestBrowseAnnotationQuery(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	//give first image the labels cat and dog
+	testLabelImage(t, imageIds[0], "dog")
+	testLabelImage(t, imageIds[0], "cat")
+
+	//add label 'cat' to second image
+	testLabelImage(t, imageIds[1], "cat")
+
+	testBrowseAnnotation(t, "cat&dog", 2)
+	testBrowseAnnotation(t, "cat|dog", 3)
+	testBrowseAnnotation(t, "cat|cat", 2)
+
+	//annotate image with label dog
+	testAnnotate(t, imageIds[0], "dog", "", `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+
+	//now we expect just one result 
+	testBrowseAnnotation(t, "cat&dog", 1)
+	testBrowseAnnotation(t, "cat", 2)
+
+	//annotate image with label cat
+	testAnnotate(t, imageIds[0], "cat", "", `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+
+	//now we should get no result
+	testBrowseAnnotation(t, "cat&dog", 0)
+	testBrowseAnnotation(t, "dog", 0)
+
+	//there is still one cat left
+	testBrowseAnnotation(t, "cat", 1)
+
 }

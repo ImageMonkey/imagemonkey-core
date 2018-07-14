@@ -10,6 +10,7 @@ import (
     "errors"
     "time"
     "github.com/dgrijalva/jwt-go"
+    "strconv"
 )
 
 type AnnotationStroke struct {
@@ -3358,28 +3359,46 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
                                 SELECT 1 FROM user_annotation_blacklist bl 
                                 JOIN account acc ON acc.id = bl.account_id
                                 WHERE bl.image_validation_id = v.id AND acc.name = $%d
-                           )`, len(parseResult.queryValues) + 2)
+                           )`, len(parseResult.queryValues) + 1)
     }
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, q.validation_uuid
+    q3 := ""
+    for i,_ := range parseResult.queryValues {
+        q3 += "a.accessor = $" + strconv.Itoa(i+1)
+        if i != (len(parseResult.queryValues) - 1) {
+            q3 += " OR "
+        }
+    }
+
+    q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid
                       FROM
-                      (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
-                          array_to_string(array_agg(CASE WHEN a.accessor = $1 THEN v.uuid ELSE NULL END), ',') as validation_uuid, 
-                          array_agg(a.accessor)::text[] as accessors
-                          FROM image i 
-                          JOIN image_validation v ON v.image_id = i.id 
-                          JOIN label l ON l.id = v.label_id
-                          JOIN label_accessor a ON l.id = a.label_id
-                          WHERE i.unlocked = true AND NOT EXISTS
-                          ( 
-                            SELECT 1 FROM image_annotation a 
-                            WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                          )%s
-                          GROUP BY i.key, i.width, i.height
-                       ) q WHERE %s%s`, q2, parseResult.query, q1)
+                      (
+                        SELECT qq.image_key, qq.image_width, qq.image_height, unnest(string_to_array(qq.validation_uuids, ',')) as validation_uuid
+                        FROM
+                        (    
+                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids
+                              FROM
+                              (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
+                                  array_to_string(array_agg(CASE WHEN (%s) THEN v.uuid ELSE NULL END), ',') as validation_uuids, 
+                                  array_agg(a.accessor)::text[] as accessors
+                                  FROM image i 
+                                  JOIN image_validation v ON v.image_id = i.id 
+                                  JOIN label l ON l.id = v.label_id
+                                  JOIN label_accessor a ON l.id = a.label_id
+                                  WHERE i.unlocked = true
+
+                                  GROUP BY i.key, i.width, i.height
+                              ) q WHERE %s
+                        )qq
+                      ) qqq
+                      JOIN image_validation v ON v.uuid::text = qqq.validation_uuid
+                      WHERE NOT EXISTS (
+                        SELECT 1 FROM image_annotation a 
+                        WHERE a.label_id = v.label_id AND a.image_id = v.image_id
+                      )%s%s`, q3, parseResult.query, q2, q1)
 
     //first item in query value is the label we want to annotate
-    parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)
+    //parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)
 
     var rows *sql.Rows
     var err error
