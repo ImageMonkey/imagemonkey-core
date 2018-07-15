@@ -299,6 +299,10 @@ var CanvasDrawer = (function () {
         this.data = data;
     }
 
+    CanvasDrawer.prototype.getData = function() {
+        return this.data;
+    }
+
 
     CanvasDrawer.prototype.drawAnnotations = function(annotations, scaleFactor = 1.0){
         drawAnnotations(this.canvas, annotations, scaleFactor);

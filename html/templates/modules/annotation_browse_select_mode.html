@@ -156,7 +156,7 @@
   function updateAnnotationsForImage(annotationId, annotations) {
     if(annotationId in imageGridCanvases) {
       imageGridCanvases[annotationId].clearObjects();
-      var scaleFactor = imageGridCanvases[annotationId].fabric().backgroundImage.scaleX;
+      var scaleFactor = imageGridCanvases[annotationId].getData()["annotationsScaleFactor"];
       imageGridCanvases[annotationId].drawAnnotations(annotations, scaleFactor);
     }
   }
@@ -198,7 +198,7 @@
         $("#imageGrid").append(item); 
 
         imageGridCanvases[itemId] = new CanvasDrawer(itemId, justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
-        imageGridCanvases[itemId].setData({"annotationId" : imageGridData[i]["uuid"]});
+        imageGridCanvases[itemId].setData({"annotationId" : imageGridData[i]["uuid"], "annotationsScaleFactor": annotationsScaleFactor});
         imageGridCanvases[itemId].makeClickable(onImageGridCanvasClicked);
         imageUrl = getUrlFromImageId(imageGridData[i]["image"]["uuid"]) 
                                       + "?width=" + justifiedLayoutGeometry.boxes[i].width 
