@@ -143,17 +143,30 @@ func testRandomAnnotate(t *testing.T, num int, annotations string) {
 	}
 }
 
-func testDonate(t *testing.T, path string, label string) {
+func testDonate(t *testing.T, path string, label string, unlockImage bool, token string) {
 	numBefore, err := db.GetNumberOfImages()
 	ok(t, err)
 
 	url := BASE_URL + API_VERSION + "/donate"
-	resp, err := resty.R().
-      SetFile("image", path).
-      SetFormData(map[string]string{
-        "label": label,
-      }).
-      Post(url)
+
+	req := resty.R()
+
+	if label == "" {
+		req.
+	      SetFile("image", path)
+	} else {
+		req.
+	      SetFile("image", path).
+	      SetFormData(map[string]string{
+	        "label": label,
+	      })
+	}
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Post(url)
 
     equals(t, resp.StatusCode(), 200)
 
@@ -162,9 +175,11 @@ func testDonate(t *testing.T, path string, label string) {
 
     equals(t, numAfter, numBefore + 1)
 
-	//after image donation, unlock all images
-    err = db.UnlockAllImages()
-    ok(t, err)
+    if(unlockImage) {
+		//after image donation, unlock all images
+	    err = db.UnlockAllImages()
+	    ok(t, err)
+	}
 }
 
 func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
@@ -216,7 +231,7 @@ func testMultipleDonate(t *testing.T) int {
 
     num := 0
     for _, f := range files {
-        testDonate(t, dirname + f.Name(), "apple")
+        testDonate(t, dirname + f.Name(), "apple", true, "")
         num += 1
     }
 
@@ -325,6 +340,26 @@ func testRandomModeratedImageValidation(t *testing.T, num int, token string) {
 	}
 }
 
+func testGetImageForAnnotation(t *testing.T, imageId string, token string, requiredStatusCode int) {
+	url := BASE_URL + API_VERSION + "/annotate"
+	req := resty.R()
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	if imageId != "" {
+		req.SetQueryParams(map[string]string{
+		    "image_id": imageId,
+		})
+	}
+
+	resp, err := req.Get(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+}
+
 func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId int64, labelId int64) {
 	type AnnotationRefinementEntry struct {
     	LabelId int64 `json:"label_id"`
@@ -400,6 +435,78 @@ func testBrowseAnnotation(t *testing.T, query string, requiredNumOfResults int) 
     //fmt.Printf("b=%d\n",len(annotationTasks))
     //fmt.Printf("a=%d\n",requiredNumOfResults)
     equals(t, len(annotationTasks), requiredNumOfResults)
+}
+
+func testGetImageToLabel(t *testing.T, imageId string, token string, requiredStatusCode int) {
+	url := BASE_URL + API_VERSION + "/labelme"
+
+	req := resty.R()
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	if imageId != "" {
+		req.SetQueryParams(map[string]string{
+		      "image_id": imageId,
+		    })
+	}
+
+	resp, err := req.
+				Get(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+}
+
+func testGetImageToValidate(t *testing.T, imageId string, token string, labelId string, requiredStatusCode int) {
+	url := BASE_URL + API_VERSION + "/validation"
+
+	req := resty.R()
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	if imageId != "" {
+		req.SetQueryParams(map[string]string{
+		      "image_id": imageId,
+		    })
+	}
+
+	if labelId != "" {
+		req.SetQueryParams(map[string]string{
+		      "label_id": labelId,
+		    })
+	}
+
+	resp, err := req.Get(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+}
+
+func testMarkValidationAsNotAnnotatable(t *testing.T, validationId string, num int) {
+	for i := 0; i < num; i++ {
+		url := BASE_URL + API_VERSION + "/validation/" + validationId + "/not-annotatable"
+
+		resp, err := resty.R().
+						Post(url)
+
+		ok(t, err)
+		equals(t, resp.StatusCode(), 200)
+	}
+}
+
+func testBlacklistAnnotation(t *testing.T, validationId string, token string) {
+	url := BASE_URL + API_VERSION + "/validation/" + validationId + "/blacklist-annotation"
+
+	resp, err := resty.R().
+					SetAuthToken(token).
+					Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
 }
 
 
@@ -559,4 +666,637 @@ func TestBrowseAnnotationQuery1(t *testing.T) {
 	testBrowseAnnotation(t, "~tree", num-1)
 	testBrowseAnnotation(t, "apple", num-1)	
 
+}
+
+func TestGetImageToLabel(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testGetImageToLabel(t, "", "", 200)
+}
+
+func TestGetImageToLabel1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, "")
+	testGetImageToLabel(t, "", "", 200)
+}
+
+func TestGetImageToLabelNotUnlocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+	testGetImageToLabel(t, "", "", 422)
+}
+
+func TestGetImageToLabelNotUnlocked1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, "")
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, "")
+	testGetImageToLabel(t, "", "", 422)
+}
+
+func TestGetImageToLabelLockedButOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, token)
+
+	testGetImageToLabel(t, "", token, 200)
+}
+
+func TestGetImageToLabelLockedButOwnDonation1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, token)
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, token)
+
+	testGetImageToLabel(t, "", token, 200)
+}
+
+
+func TestGetImageToLabelLockedAndForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, userToken)
+
+	testGetImageToLabel(t, "", userToken1, 422)
+}
+
+func TestGetImageByImageId(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	//testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	//userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageToLabel(t, imageId, "", 200)
+
+}
+
+func TestGetImageByImageIdForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageToLabel(t, imageId, userToken1, 422)
+
+}
+
+func TestGetImageByImageIdOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageToLabel(t, imageId, userToken, 200)
+}
+
+
+func TestGetImageOwnDonationButPutInQuarantine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageId)
+	ok(t, err)
+
+	testGetImageToLabel(t, "", userToken, 422)
+}
+
+func TestGetImageByIdOwnDonationButPutInQuarantine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageId)
+	ok(t, err)
+
+	testGetImageToLabel(t, imageId, userToken, 422)
+}
+
+func TestGetImageToValidate(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	testGetImageToValidate(t, "", "", "", 200)
+}
+
+func TestGetImageToValidateById(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageToValidate(t, imageId, "", "", 200)
+}
+
+func TestGetImageToValidateAuthenticated(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken)
+
+	testGetImageToValidate(t, "", userToken, "", 200)
+}
+
+func TestGetImageToValidateByIdAuthenticated(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+
+	testGetImageToValidate(t, imageId, userToken, "", 200)
+}
+
+func TestGetImageToValidateLocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+
+	testGetImageToValidate(t, "", "", "", 422)
+}
+
+func TestGetImageToValidateLockedButOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	testGetImageToValidate(t, "", userToken, "", 200)
+}
+
+func TestGetImageToValidateByLabel(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	uuid, err := db.GetLabelUuidFromName("apple")
+	ok(t, err)
+
+	testGetImageToValidate(t, "", "", uuid, 200)
+}
+
+func TestGetImageToValidateByLabelMoreThanOne(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", true, "")
+
+	uuid, err := db.GetLabelUuidFromName("apple")
+	ok(t, err)
+
+	testGetImageToValidate(t, "", "", uuid, 200)
+}
+
+func TestGetImageToValidateByLabelLocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+
+	uuid, err := db.GetLabelUuidFromName("apple")
+	ok(t, err)
+
+	testGetImageToValidate(t, "", "", uuid, 422)
+}
+
+func TestGetImageToValidateByLabelLockedButOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	uuid, err := db.GetLabelUuidFromName("apple")
+	ok(t, err)
+
+	testGetImageToValidate(t, "", userToken, uuid, 200)
+}
+
+func TestGetImageToValidateByLabelLockedButForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	uuid, err := db.GetLabelUuidFromName("apple")
+	ok(t, err)
+
+	testGetImageToValidate(t, "", userToken1, uuid, 422)
+}
+
+
+func TestGetImageToAnnotateButNotEnoughValidation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	testGetImageForAnnotation(t, "", "", 422)
+}
+
+func TestGetImageToAnnotate(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+	
+
+	testGetImageForAnnotation(t, "", "", 200)
+}
+
+func TestGetImageToAnnotateButLocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, "", "", 422)
+}
+
+func TestGetImageToAnnotateUnlockedButBlacklistedBySignedUpUser(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testBlacklistAnnotation(t, validationIds[0], userToken)
+
+	testGetImageForAnnotation(t, "", "", 200)
+}
+
+func TestGetImageToAnnotateUnlockedButBlacklistedByOtherUser(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+	testBlacklistAnnotation(t, validationIds[0], userToken1)
+
+	testGetImageForAnnotation(t, "", userToken, 200)
+}
+
+func TestGetImageToAnnotateUnlockedButBlacklistedByOwnUser(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testBlacklistAnnotation(t, validationIds[0], userToken)
+
+	testGetImageForAnnotation(t, "", userToken, 422)
+}
+
+
+func TestGetImageToAnnotateUnlockedButNotAnnotateable(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	//we need 3 not-annotatable votes until a annotation task won't show up anymore
+	//(that's an arbitrary number that's set in the imagemonkey sourcecode)
+	testMarkValidationAsNotAnnotatable(t, validationIds[0], 3)
+
+	testGetImageForAnnotation(t, "", userToken, 422)
+}
+
+func TestGetImageToAnnotateLockedButOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, "", userToken, 200)
+}
+
+func TestGetImageToAnnotateLockedButForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, "", userToken1, 422)
+}
+
+
+func TestGetImageToAnnotateLockedOwnDonationButQuarantine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageId)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, "", userToken, 422)
+}
+
+
+func TestGetImageToAnnotateById(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageForAnnotation(t, imageId, "", 200)
+}
+
+func TestGetImageToAnnotateByIdAuthenticated(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageForAnnotation(t, imageId, userToken, 200)
+}
+
+
+func TestGetImageToAnnotateByIdButLocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageForAnnotation(t, imageId, "", 422)
+}
+
+
+func TestGetImageToAnnotateByIdLockedButOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageForAnnotation(t, imageId, userToken, 200)
+}
+
+func TestGetImageToAnnotateByIdLockedAndForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageForAnnotation(t, imageId, userToken1, 422)
+}
+
+
+func TestGetImageToAnnotateByIdLockedOwnDonationButQuarantine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageId)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, imageId, userToken, 422)
 }
