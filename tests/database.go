@@ -443,6 +443,33 @@ func (p *ImageMonkeyDatabase) GetAllImageIds() ([]string, error) {
 	return imageIds, nil
 }
 
+func (p *ImageMonkeyDatabase) GetLatestDonatedImageId() (string,error) {
+	var imageId string 
+	err := p.db.QueryRow(`SELECT i.key FROM image i ORDER BY id DESC LIMIT 1`).Scan(&imageId)
+	return imageId, err
+}
+
+func (p *ImageMonkeyDatabase) PutImageInQuarantine(imageId string) error { 
+	_, err := p.db.Exec(`INSERT INTO image_quarantine(image_id)
+							SELECT id FROM image WHERE key = $1`, imageId)
+	return err
+}
+
+func (p *ImageMonkeyDatabase) GetLabelUuidFromName(label string) (string, error) {
+	var uuid string 
+	err := p.db.QueryRow(`SELECT l.uuid 
+							FROM label l 
+							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&uuid)
+	return uuid, err
+}
+
+func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) error {
+	_, err := p.db.Exec(`UPDATE image_validation 
+							SET num_of_valid = $2 
+							WHERE uuid = $1`, validationId, num)
+	return err
+}
+
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
 }

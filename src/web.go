@@ -203,12 +203,14 @@ func main() {
 		router.GET("/label", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
 			imageId := ""
 			if temp, ok := params["image_id"]; ok {
 				imageId = temp[0]
 			}
 
-			img, err := getImageToLabel(imageId)
+			img, err := getImageToLabel(imageId, sessionInformation.Username)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid image id"})
 				return 
@@ -220,7 +222,6 @@ func main() {
 			}
 
 			isModerator := false
-			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			if sessionInformation.LoggedIn {
 				userInfo, _ := getUserInfo(sessionInformation.Username)
 				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanRemoveLabel {

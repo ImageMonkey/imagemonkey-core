@@ -917,20 +917,46 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
 }
 
 
-func getImageToValidate(imageId string, labelId string) (ValidationImage, error) {
+func getImageToValidate(imageId string, labelId string, username string) (ValidationImage, error) {
 	var image ValidationImage
 
 	image.Id = ""
 	image.Label = ""
 	image.Provider = "donation"
 
+    nextParam := 1
     labelIdStr := ""
     if labelId != "" {
         if imageId == "" {
             labelIdStr = " AND l.uuid = $1"
+            nextParam = 2
         } else {
             labelIdStr = " AND l.uuid = $2"
+            nextParam = 3
         }
+    } else {
+        if imageId != "" {
+            nextParam = 2
+        }
+    }
+
+    includeOwnImageDonations := ""
+    if username != "" {
+        includeOwnImageDonations = fmt.Sprintf(`OR (
+                                                EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM user_image u
+                                                        JOIN account a ON a.id = u.account_id
+                                                        WHERE u.image_id = i.id AND a.name = $%d
+                                                    )
+                                                AND NOT EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM image_quarantine q 
+                                                        WHERE q.image_id = i.id 
+                                                    )
+                                               )`, nextParam)
     }
 
     //either select a specific image with a given image id or try to select 
@@ -946,24 +972,25 @@ func getImageToValidate(imageId string, labelId string) (ValidationImage, error)
                         JOIN image_validation v ON v.image_id = i.id
                         JOIN label l ON v.label_id = l.id
                         LEFT JOIN label pl ON l.parent_id = pl.id
-                        WHERE ((i.unlocked = true) AND (p.name = 'donation') 
-                        AND %s%s) LIMIT 1`, imageIdStr, labelIdStr)
+                        WHERE ((i.unlocked = true %s) AND (p.name = 'donation') 
+                        AND %s%s) LIMIT 1`,includeOwnImageDonations, imageIdStr, labelIdStr)
 
 	var rows *sql.Rows
     var err error
-    if labelId != "" {
-        if imageId != "" {
-            rows, err = db.Query(q, imageId, labelId)
-        } else {
-            rows, err = db.Query(q, labelId)
-        }
-    } else {
-        if imageId != "" {
-            rows, err = db.Query(q, imageId)
-        } else {
-            rows, err = db.Query(q)
-        }
+    var queryParams []interface{}
+    if imageId != "" {
+        queryParams = append(queryParams, imageId) 
     }
+
+    if labelId != "" {
+        queryParams = append(queryParams, labelId) 
+    }
+
+    if username != "" {
+        queryParams = append(queryParams, username) 
+    }
+
+    rows, err = db.Query(q, queryParams...)
 	
 
     if err != nil {
@@ -984,48 +1011,56 @@ func getImageToValidate(imageId string, labelId string) (ValidationImage, error)
 
         var otherRows *sql.Rows
 
-        offsetLabelIdStr := ""
-        if labelId != "" {
-            offsetLabelIdStr = " AND l.uuid = $2"
-        }
-
         q1 := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid, v.uuid
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
                             JOIN label l ON v.label_id = l.id
                             LEFT JOIN label pl ON l.parent_id = pl.id
-                            WHERE i.unlocked = true AND p.name = 'donation'%s 
+                            WHERE (i.unlocked = true %s) AND p.name = 'donation'%s 
                             OFFSET floor(random() * 
                                 ( SELECT count(*) FROM image i 
                                   JOIN image_provider p ON i.image_provider_id = p.id 
                                   JOIN image_validation v ON v.image_id = i.id 
                                   JOIN label l ON v.label_id = l.id
-                                  WHERE i.unlocked = true AND p.name = 'donation'%s
+                                  WHERE (i.unlocked = true %s) AND p.name = 'donation'%s
                                 )
-                            ) LIMIT 1`, labelIdStr, offsetLabelIdStr)
+                            ) LIMIT 1`, includeOwnImageDonations, labelIdStr, includeOwnImageDonations, labelIdStr)
 
         if labelId != "" {
-            otherRows, err = db.Query(q1, labelId, labelId)
+            if username != "" {
+                otherRows, err = db.Query(q1, labelId, username)
+            } else {
+                otherRows, err = db.Query(q1, labelId)
+            }
         } else {
-            otherRows, err = db.Query(q1)
+            if username != "" {
+                otherRows, err = db.Query(q1, username)
+            } else {
+                otherRows, err = db.Query(q1)
+            }
         }
-        
-        if !otherRows.Next() {
-    		log.Debug("[Fetch random image] Missing result set")
-    		raven.CaptureMessage("[Fetch random image] Missing result set", nil)
-    		return image, errors.New("Missing result set")
-        }
-        defer otherRows.Close()
 
-        err = otherRows.Scan(&image.Id, &label1, &label2, &image.Validation.NumOfValid, &image.Validation.NumOfInvalid, &image.Validation.Id)
         if err != nil {
-            log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
+            log.Debug("[Fetch random image] Couldn't fetch random image: ", err.Error())
             raven.CaptureError(err, nil)
             return image, err
         }
+
+        defer otherRows.Close()
+        
+        if otherRows.Next() {
+            err = otherRows.Scan(&image.Id, &label1, &label2, &image.Validation.NumOfValid, 
+                                    &image.Validation.NumOfInvalid, &image.Validation.Id)
+            if err != nil {
+                log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
+                raven.CaptureError(err, nil)
+                return image, err
+            }
+        }
 	} else{
-        err = rows.Scan(&image.Id, &label1, &label2, &image.Validation.NumOfValid, &image.Validation.NumOfInvalid, &image.Validation.Id)
+        err = rows.Scan(&image.Id, &label1, &label2, &image.Validation.NumOfValid, 
+                            &image.Validation.NumOfInvalid, &image.Validation.Id)
         if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1291,14 +1326,30 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     return annotationId, nil
 }
 
-func _getImageForAnnotationFromValidationId(validationId string, addAutoAnnotations bool) (UnannotatedImage, error) {
+func _getImageForAnnotationFromValidationId(username string, validationId string, addAutoAnnotations bool) (UnannotatedImage, error) {
     var unannotatedImage UnannotatedImage
 
-    //we do not check, whether there already exists a annotation for the given validation id. 
-    //there is anyway only one annotation per validation allowed, so if someone tries to push another annotation, the corresponding POST request 
-    //would fail 
+    includeOwnImageDonations := ""
+    if username != "" {
+        includeOwnImageDonations = `OR (
+                                        EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM user_image u
+                                            JOIN account a ON a.id = u.account_id
+                                            WHERE u.image_id = i.id AND a.name = $2
+                                        )
+                                        AND NOT EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM image_quarantine q 
+                                            WHERE q.image_id = i.id 
+                                        )
+                                       )`
+        
+    }
 
-    rows, err := db.Query(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, i.width, i.height, v.uuid, 
+    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, i.width, i.height, v.uuid, 
                            json_agg(q1.annotation || ('{"type":"' || q1.name || '"}')::jsonb)::jsonb as auto_annotations
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
@@ -1314,8 +1365,20 @@ func _getImageForAnnotationFromValidationId(validationId string, addAutoAnnotati
                                 JOIN annotation_type t on d.annotation_type_id = t.id
                                 WHERE a.auto_generated = true
                             ) q1 ON l.id = q1.label_id AND i.id = q1.image_id 
-                            WHERE i.unlocked = true AND p.name = 'donation' AND v.uuid::text = $1
-                            GROUP BY i.key, l.name, pl.name, width, height, v.uuid`, validationId)
+                            WHERE (i.unlocked = true %s) AND p.name = 'donation' AND v.uuid::text = $1
+                            GROUP BY i.key, l.name, pl.name, width, height, v.uuid`, includeOwnImageDonations)
+
+    //we do not check, whether there already exists a annotation for the given validation id. 
+    //there is anyway only one annotation per validation allowed, so if someone tries to push another annotation, the corresponding POST request 
+    //would fail 
+    var rows *sql.Rows
+    var err error
+
+    if username != "" {
+        rows, err = db.Query(q, validationId)
+    } else {
+        rows, err = db.Query(q, validationId, username)
+    }
 
     if err != nil {
         log.Debug("[Get specific Image for Annotation] Couldn't get annotation ", err.Error())
@@ -1367,7 +1430,7 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
     //selecting a single image given a validation id is totally different from selecting a random image
     //so it makes sense to use a different code path here. 
     if validationId != "" {
-        return _getImageForAnnotationFromValidationId(validationId, addAutoAnnotations)
+        return _getImageForAnnotationFromValidationId(username, validationId, addAutoAnnotations)
     }
 
 
@@ -1383,14 +1446,36 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
         posNum = 2
     }
 
-    q2 := fmt.Sprintf(`AND NOT EXISTS
-                       (
-                            SELECT 1 FROM user_annotation_blacklist bl 
-                            JOIN account acc ON acc.id = bl.account_id
-                            WHERE bl.image_validation_id = v.id AND acc.name = $%d
-                       )`, posNum)
+    q3 := fmt.Sprintf("AND v.num_of_not_annotatable < $%d", posNum)
+    posNum += 1
 
-    q3 := fmt.Sprintf("AND v.num_of_not_annotatable < $%d", (posNum +1))
+    includeOwnImageDonations := ""
+    q2 := ""
+    if username != "" {
+        q2 = fmt.Sprintf(`AND NOT EXISTS
+                           (
+                                SELECT 1 FROM user_annotation_blacklist bl 
+                                JOIN account acc ON acc.id = bl.account_id
+                                WHERE bl.image_validation_id = v.id AND acc.name = $%d
+                           )`, posNum)
+
+        includeOwnImageDonations = fmt.Sprintf(`OR (
+                                                    EXISTS 
+                                                        (
+                                                            SELECT 1 
+                                                            FROM user_image u
+                                                            JOIN account a ON a.id = u.account_id
+                                                            WHERE u.image_id = i.id AND a.name = $%d
+                                                        )
+                                                    AND NOT EXISTS 
+                                                        (
+                                                            SELECT 1 
+                                                            FROM image_quarantine q 
+                                                            WHERE q.image_id = i.id 
+                                                        )
+                                                   )`, posNum) 
+        
+    }
 
 
     q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, 
@@ -1403,7 +1488,7 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
                             JOIN image_validation v ON v.image_id = i.id
                             JOIN label l ON v.label_id = l.id
                             LEFT JOIN label pl ON l.parent_id = pl.id
-                            WHERE i.unlocked = true AND p.name = 'donation' AND 
+                            WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
                             CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                             %s
                             AND NOT EXISTS
@@ -1420,7 +1505,7 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
                                     JOIN image_provider p ON i.image_provider_id = p.id
                                     JOIN image_validation v ON v.image_id = i.id
                                     JOIN label l ON v.label_id = l.id
-                                    WHERE i.unlocked = true AND p.name = 'donation' AND 
+                                    WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
                                     CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                                     %s
                                     AND NOT EXISTS
@@ -1441,25 +1526,31 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
                             JOIN annotation_type t on d.annotation_type_id = t.id
                             WHERE a.auto_generated = true 
                         ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id
-                        GROUP BY q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid`, q1, q2, q3, q1, q2, q3)
+                        GROUP BY q.image_key, q.label, q.parent_label, 
+                        q.image_width, q.image_height, q.validation_uuid`, 
+                        includeOwnImageDonations, q1, q2, q3, includeOwnImageDonations, q1, q2, q3)
 
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
     var rows *sql.Rows
     var err error
     if labelId == "" {
-        rows, err = db.Query(q, username, maxNumNotAnnotatable)
-        if err != nil {
-            log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
-            raven.CaptureError(err, nil)
-            return unannotatedImage, err
-        }
+        if username != "" {
+            rows, err = db.Query(q, maxNumNotAnnotatable, username)
+        } else {
+            rows, err = db.Query(q, maxNumNotAnnotatable)
+        } 
     } else {
-        rows, err = db.Query(q, labelId, username, maxNumNotAnnotatable)
-        if err != nil {
-            log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
-            raven.CaptureError(err, nil)
-            return unannotatedImage, err
+        if username != "" {
+            rows, err = db.Query(q, labelId, maxNumNotAnnotatable, username)
+        } else {
+            rows, err = db.Query(q, labelId, maxNumNotAnnotatable)
         }
+    }
+
+    if err != nil {
+        log.Debug("[Get Random Un-annotated Image] Couldn't fetch result: ", err.Error())
+        raven.CaptureError(err, nil)
+        return unannotatedImage, err
     }
 
     defer rows.Close()
@@ -1931,7 +2022,7 @@ func updateContributionsPerApp(contributionType string, appIdentifier string) er
 
 
 
-func getImageToLabel(imageId string) (Image, error) {
+func getImageToLabel(imageId string, username string) (Image, error) {
     var image Image
     var labelMeEntries []LabelMeEntry
     image.Provider = "donation"
@@ -1943,14 +2034,44 @@ func getImageToLabel(imageId string) (Image, error) {
         return image, err
     }
 
+
+    includeOwnImageDonations := ""
+    if username != "" {
+        includeOwnImageDonations = `OR (
+                                        EXISTS 
+                                            (
+                                                SELECT 1 
+                                                FROM user_image u
+                                                JOIN account a ON a.id = u.account_id
+                                                WHERE u.image_id = i.id AND a.name = $1
+                                            )
+                                        AND NOT EXISTS 
+                                            (
+                                                SELECT 1 
+                                                FROM image_quarantine q 
+                                                WHERE q.image_id = i.id 
+                                            )
+                                       )` 
+    }
+
+
     var unlabeledRows *sql.Rows 
     if imageId == "" {
-        unlabeledRows, err = tx.Query(`SELECT i.key from image i 
-                                        WHERE i.unlocked = true AND i.id NOT IN (
-                                            SELECT image_id FROM image_validation
-                                        ) AND i.id NOT IN (
-                                            SELECT image_id FROM image_label_suggestion
-                                        ) LIMIT 1`)
+        q := fmt.Sprintf(`SELECT i.key from image i 
+                            WHERE (i.unlocked = true %s)
+
+                            AND i.id NOT IN (
+                                SELECT image_id FROM image_validation
+                            ) AND i.id NOT IN (
+                                SELECT image_id FROM image_label_suggestion
+                            ) LIMIT 1`, includeOwnImageDonations)
+
+        if username == "" {
+            unlabeledRows, err = tx.Query(q)
+        } else {
+            unlabeledRows, err = tx.Query(q, username)
+        }
+
         if err != nil {
             tx.Rollback()
             raven.CaptureError(err, nil)
@@ -1962,11 +2083,23 @@ func getImageToLabel(imageId string) (Image, error) {
     }
 
     if imageId != "" || !unlabeledRows.Next() {
-        //either get a random image or image with specific id
-        q1 := `SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true 
-               OFFSET floor(random() * (SELECT count(*) FROM image i WHERE unlocked = true)) LIMIT 1`
-        if imageId != "" {
-            q1 = `SELECT i.id as id, i.key as key FROM image i WHERE i.unlocked = true AND i.key = $1`
+        q1 := ""
+        if imageId == "" {
+            //either get a random image or image with specific id
+            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key FROM image i WHERE (i.unlocked = true %s)
+                               OFFSET floor(random() * (
+                                                        SELECT count(*) FROM image i WHERE (unlocked = true %s)
+                                                       )
+                                           ) LIMIT 1`, includeOwnImageDonations, includeOwnImageDonations)
+        } else {
+            paramPos := 1
+            if username != "" {
+                paramPos = 2
+            }
+
+            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key 
+                              FROM image i 
+                              WHERE (i.unlocked = true %s) AND i.key = $%d`, includeOwnImageDonations, paramPos)
         } 
 
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
@@ -1998,9 +2131,17 @@ func getImageToLabel(imageId string) (Image, error) {
 
         var rows *sql.Rows
         if imageId == "" {
-            rows, err = tx.Query(q)
+            if username == ""  {
+                rows, err = tx.Query(q)
+            } else {
+                rows, err = tx.Query(q, username)
+            }
         } else {
-            rows, err = tx.Query(q, imageId)
+            if username == "" {
+                rows, err = tx.Query(q, imageId)
+            } else {
+                rows, err = tx.Query(q, username, imageId)
+            }
         }
 
         if err != nil {

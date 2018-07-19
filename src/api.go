@@ -773,6 +773,10 @@ func main(){
 		router.GET("/v1/validation", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
 			grouped := false
 			if temp, ok := params["grouped"]; ok {
 				if temp[0] == "true" {
@@ -816,12 +820,17 @@ func main(){
 					return
 				}
 
-				image, err := getImageToValidate(imageId, labelId)
+				image, err := getImageToValidate(imageId, labelId, apiUser.Name)
 				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
 				}
 
+				if image.Id == "" {
+					c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
+					return
+				}
+				
 				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, "provider": image.Provider }, "label": image.Label, "sublabel": image.Sublabel, 
 											"num_yes": image.Validation.NumOfValid, "num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
 			}
@@ -856,7 +865,7 @@ func main(){
 		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			img, err := getImageToLabel(imageId)
+			img, err := getImageToLabel(imageId, "")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -944,13 +953,21 @@ func main(){
 		})
 
 		router.GET("/v1/labelme", func(c *gin.Context) {
-			image, err := getImageToLabel("")
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			image, err := getImageToLabel("", apiUser.Name)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 			}
 
-			c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
+			if image.Id == "" {
+				c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
+			} else {
+				c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
+			}
 		})
 
 		router.PATCH("/v1/validation/validate", func(c *gin.Context) {
@@ -1495,6 +1512,11 @@ func main(){
 			img, err := getImageForAnnotation(apiUser.Name, addAutoAnnotations, validationId, labelId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			if img.Id == "" {
+				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
 				return
 			}
 			
