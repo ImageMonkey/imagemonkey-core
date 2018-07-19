@@ -334,6 +334,8 @@ func main() {
 			params := c.Request.URL.Query()
 
 			appIdentifier := webAppIdentifier
+
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			
 			showHeader := true
 			if temp, ok := params["show_header"]; ok {
@@ -380,7 +382,7 @@ func main() {
 				return
 			}
 
-			img, err := getImageToValidate(imageId, labelId)
+			img, err := getImageToValidate(imageId, labelId, sessionInformation.Username)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid image id"})
 				return 

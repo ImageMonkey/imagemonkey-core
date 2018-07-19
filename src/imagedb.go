@@ -2542,9 +2542,11 @@ func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
                         JOIN (
                                 SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"id":'||d.id||'}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
                                 FROM image_annotation a
+                                JOIN image i ON i.id = a.image_id
                                 JOIN annotation_data d ON d.image_annotation_id = a.id
                                 JOIN annotation_type t ON d.annotation_type_id = t.id
                                 WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
+                                AND i.unlocked = true
                                 GROUP BY a.label_id, a.image_id, a.uuid
                              ) as s1
                         ON s1.label_id =  s.refines_label_id 
