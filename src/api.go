@@ -36,6 +36,17 @@ import (
 var db *sql.DB
 var geoipDb *geoip2.Reader
 
+func GetImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) string {
+	imageUrl := apiBaseUrl
+	if unlocked {
+		imageUrl += "v1/donation/" + imageId
+	} else {
+		imageUrl += "v1/unverified-donation/" + imageId
+	}
+
+	return imageUrl
+}
+
 
 func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
 	buf := new(bytes.Buffer) 
@@ -895,8 +906,13 @@ func main(){
 					return
 				}
 				
-				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, "provider": image.Provider }, "label": image.Label, "sublabel": image.Sublabel, 
-											"num_yes": image.Validation.NumOfValid, "num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
+				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, 
+															 "provider": image.Provider, 
+															 "unlocked": image.Unlocked, 
+															 "url": GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked),
+														   }, 
+											"label": image.Label, "sublabel": image.Sublabel, "num_yes": image.Validation.NumOfValid, 
+											"num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
 			}
 		})
 
@@ -1032,15 +1048,10 @@ func main(){
 			if image.Id == "" {
 				c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
 			} else {
-				imageUrl := *apiBaseUrl
-				if image.Unlocked {
-					imageUrl += "v1/donation/" + image.Id
-				} else {
-					imageUrl += "v1/unverified-donation/" + image.Id
-				}
+				imageUrl := GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked)
 
 				c.JSON(http.StatusOK, gin.H{"image": gin.H{"uuid": image.Id, "provider": image.Provider, 
-															"url": imageUrl}, 
+															"url": imageUrl, "unlocked": image.Unlocked}, 
 											"all_labels": image.AllLabels})
 			}
 		})

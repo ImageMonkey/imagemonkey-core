@@ -77,6 +77,7 @@ type Image struct {
 type ValidationImage struct {
     Id string `json:"uuid"`
     Provider string `json:"provider"`
+    Unlocked bool `json:"unlocked"`
 
     Label string `json:"label"`
     Sublabel string `json:"sublabel"`
@@ -967,7 +968,7 @@ func getImageToValidate(imageId string, labelId string, username string) (Valida
         imageIdStr = "i.key = $1"
     }
 
-    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid, v.uuid
+    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid, v.uuid, i.unlocked
                         FROM image i 
                         JOIN image_provider p ON i.image_provider_id = p.id 
                         JOIN image_validation v ON v.image_id = i.id
@@ -1004,15 +1005,15 @@ func getImageToValidate(imageId string, labelId string, username string) (Valida
     var label1 string
     var label2 string
 	if !rows.Next() {
-        //if we provided a image id, but we get no result, its an error.
+        //if we provided a image id, but we get no result, its an error. So return here
         if imageId != "" {
-            return image, errors.New("No image with that identifier")
+            return image, nil
         }
 
 
         var otherRows *sql.Rows
 
-        q1 := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid, v.uuid
+        q1 := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid, v.uuid, i.unlocked
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
@@ -1052,7 +1053,7 @@ func getImageToValidate(imageId string, labelId string, username string) (Valida
         
         if otherRows.Next() {
             err = otherRows.Scan(&image.Id, &label1, &label2, &image.Validation.NumOfValid, 
-                                    &image.Validation.NumOfInvalid, &image.Validation.Id)
+                                    &image.Validation.NumOfInvalid, &image.Validation.Id, &image.Unlocked)
             if err != nil {
                 log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
                 raven.CaptureError(err, nil)
@@ -1061,7 +1062,7 @@ func getImageToValidate(imageId string, labelId string, username string) (Valida
         }
 	} else{
         err = rows.Scan(&image.Id, &label1, &label2, &image.Validation.NumOfValid, 
-                            &image.Validation.NumOfInvalid, &image.Validation.Id)
+                            &image.Validation.NumOfInvalid, &image.Validation.Id, &image.Unlocked)
         if err != nil {
             log.Debug("[Fetch random image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)

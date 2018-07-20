@@ -114,8 +114,12 @@
         var token = Cookies.get("imagemonkey");
         if(token === "")
           downloadingImage.src = data.image.url;
-        else
-          downloadingImage.src = data.image.url + "?token=" + token;
+        else{
+          if(data.image.unlocked)
+            downloadingImage.src = data.image.url;
+          else //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
+            downloadingImage.src = data.image.url + "?token=" + token;
+        }
 
         addOldLabels(data["all_labels"]);
 

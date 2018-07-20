@@ -323,8 +323,6 @@ func main() {
 			params := c.Request.URL.Query()
 
 			appIdentifier := webAppIdentifier
-
-			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			
 			showHeader := true
 			if temp, ok := params["show_header"]; ok {
@@ -371,22 +369,9 @@ func main() {
 				return
 			}
 
-			img, err := getImageToValidate(imageId, labelId, sessionInformation.Username)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "invalid image id"})
-				return 
-			}
-
-			//if we query a specific type of validation and got no result set
-			if img.Id == "" && (imageId != "" || labelId != "") {
-				ShowErrorPage(c)
-				return
-			}
-
-
 			c.HTML(http.StatusOK, "validate.html", gin.H{
 				"title": "Validate Label",
-				"randomImage": img,
+				"imageId": imageId,
 				"activeMenuNr": 5,
 				"showHeader": showHeader,
 				"showFooter": showFooter,
