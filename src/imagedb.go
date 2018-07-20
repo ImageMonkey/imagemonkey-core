@@ -69,6 +69,7 @@ type Image struct {
     Probability float32 `json:"probability"`
     NumOfValid int32 `json:"num_yes"`
     NumOfInvalid int32 `json:"num_no"`
+    Unlocked bool `json:"unlocked,omitempty"`
     Annotations []json.RawMessage `json:"annotations"`
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
@@ -2057,7 +2058,8 @@ func getImageToLabel(imageId string, username string) (Image, error) {
 
     var unlabeledRows *sql.Rows 
     if imageId == "" {
-        q := fmt.Sprintf(`SELECT i.key from image i 
+        q := fmt.Sprintf(`SELECT i.key, i.unlocked 
+                            FROM image i 
                             WHERE (i.unlocked = true %s)
 
                             AND i.id NOT IN (
@@ -2086,7 +2088,8 @@ func getImageToLabel(imageId string, username string) (Image, error) {
         q1 := ""
         if imageId == "" {
             //either get a random image or image with specific id
-            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key FROM image i WHERE (i.unlocked = true %s)
+            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, i.unlocked as image_unlocked
+                               FROM image i WHERE (i.unlocked = true %s)
                                OFFSET floor(random() * (
                                                         SELECT count(*) FROM image i WHERE (unlocked = true %s)
                                                        )
@@ -2097,7 +2100,7 @@ func getImageToLabel(imageId string, username string) (Image, error) {
                 paramPos = 2
             }
 
-            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key 
+            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, i.unlocked as image_unlocked
                               FROM image i 
                               WHERE (i.unlocked = true %s) AND i.key = $%d`, includeOwnImageDonations, paramPos)
         } 
@@ -2105,7 +2108,7 @@ func getImageToLabel(imageId string, username string) (Image, error) {
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
                           COALESCE(q1.label_uuid, '') as label_uuid, q1.validation_uuid as validation_uuid, 
-                          q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid
+                          q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, q.image_unlocked
                                FROM 
                                 (
                                     SELECT v.image_id as image_id, l.name as label, 
@@ -2166,7 +2169,7 @@ func getImageToLabel(imageId string, username string) (Image, error) {
         temp := make(map[string]LabelMeEntry) 
         for rows.Next() {
             err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
-                            &validationUuid, &numOfValid, &numOfInvalid)
+                            &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked)
             if err != nil {
                 tx.Rollback()
                 raven.CaptureError(err, nil)
@@ -2229,7 +2232,7 @@ func getImageToLabel(imageId string, username string) (Image, error) {
         }
 
     } else {
-        err = unlabeledRows.Scan(&image.Id)
+        err = unlabeledRows.Scan(&image.Id, &image.Unlocked)
         if err != nil {
             tx.Rollback()
             raven.CaptureError(err, nil)
@@ -3664,4 +3667,46 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
 
     }
     return annotatedImages, nil
+}
+
+func isOwnDonation(imageId string, username string) (bool, error) {
+    isOwnDonation := false
+    rows, err := db.Query(`SELECT count(*)
+                            FROM image i 
+                            WHERE i.key = $1 AND EXISTS 
+                                                        (
+                                                            SELECT 1 
+                                                            FROM user_image u
+                                                            JOIN account a ON a.id = u.account_id
+                                                            WHERE u.image_id = i.id AND a.name = $2
+                                                        )
+                                                        AND NOT EXISTS 
+                                                        (
+                                                            SELECT 1 
+                                                            FROM image_quarantine q 
+                                                            WHERE q.image_id = i.id 
+                                                        )`, imageId, username)
+    if err != nil {
+        log.Debug("[Is Own Donation] Couldn't retrieve information: ", err.Error())
+        raven.CaptureError(err, nil)
+        return isOwnDonation, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var num int32
+        err = rows.Scan(&num)
+        if err != nil {
+            log.Debug("[Is Own Donation] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return isOwnDonation, err
+        }
+
+        if num > 0 {
+            isOwnDonation = true
+        }
+    }
+
+    return isOwnDonation, nil
 }

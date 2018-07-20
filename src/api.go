@@ -592,6 +592,70 @@ func main(){
 	        }
 		})
 
+
+		//serve images in "donations" directory with the possibility to scale images
+		//before serving them
+		router.GET("/v1/unverified-donation/:imageid", func(c *gin.Context) {
+			params := c.Request.URL.Query()
+			imageId := c.Param("imageid")
+
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfoFromUrl(c).Username
+
+			var width uint
+			width = 0
+			if temp, ok := params["width"]; ok {
+				n, err := strconv.ParseUint(temp[0], 10, 32)
+			    if err == nil {
+			        width = uint(n)
+			    }
+			}
+
+			var height uint
+			height = 0
+			if temp, ok := params["height"]; ok {
+				n, err := strconv.ParseUint(temp[0], 10, 32)
+			    if err == nil {
+	            	height = uint(n)
+			    }
+			}
+
+			if !IsFilenameValid(imageId) {
+				c.String(404, "Invalid filename")
+				return
+			} 
+
+			unlocked, err := isOwnDonation(imageId, apiUser.Name) 
+			if err != nil {
+				c.String(500, "Couldn't process request, please try again later")
+				return
+			}
+			if !unlocked {
+				c.String(403, "You do not have the appropriate permissions to access the image")
+				return
+			}
+
+			imgBytes, format, err := ResizeImage((*unverifiedDonationsDir + imageId), width, height)
+			if err != nil {
+				log.Debug("[Serving unverified Donation] Couldn't serve donation: ", err.Error())
+				c.String(500, "Couldn't process request, please try again later")
+				return
+
+			}
+
+			c.Writer.Header().Set("Content-Type", ("image/" + format))
+	        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
+	        _, err = c.Writer.Write(imgBytes) 
+	        if err != nil {
+	            log.Debug("[Serving unverified Donation] Couldn't serve donation: ", err.Error())
+	            c.String(500, "Couldn't process request, please try again later")
+	            return
+	        }
+		})
+
+
+
 		//the following endpoints are secured with a client id + client secret. 
 		//that's mostly because currently each donation needs to be unlocked manually. 
 		//(as we want to make sure that we don't accidentally host inappropriate content, like nudity)
@@ -957,7 +1021,9 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			image, err := getImageToLabel("", apiUser.Name)
+			imageId := getParamFromUrlParams(c, "image_id", "")
+
+			image, err := getImageToLabel(imageId, apiUser.Name)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -966,7 +1032,16 @@ func main(){
 			if image.Id == "" {
 				c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
 			} else {
-				c.JSON(http.StatusOK, gin.H{"uuid": image.Id, "provider": image.Provider, "all_labels": image.AllLabels})
+				imageUrl := *apiBaseUrl
+				if image.Unlocked {
+					imageUrl += "v1/donation/" + image.Id
+				} else {
+					imageUrl += "v1/unverified-donation/" + image.Id
+				}
+
+				c.JSON(http.StatusOK, gin.H{"image": gin.H{"uuid": image.Id, "provider": image.Provider, 
+															"url": imageUrl}, 
+											"all_labels": image.AllLabels})
 			}
 		})
 

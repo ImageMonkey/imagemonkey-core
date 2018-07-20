@@ -210,17 +210,6 @@ func main() {
 				imageId = temp[0]
 			}
 
-			img, err := getImageToLabel(imageId, sessionInformation.Username)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "invalid image id"})
-				return 
-			}
-
-			if img.Id == "" && imageId != "" {
-				ShowErrorPage(c)
-				return
-			}
-
 			isModerator := false
 			if sessionInformation.LoggedIn {
 				userInfo, _ := getUserInfo(sessionInformation.Username)
@@ -232,7 +221,7 @@ func main() {
 
 			c.HTML(http.StatusOK, "label.html", gin.H{
 				"title": "Add Labels",
-				"image": img,
+				"imageId": imageId,
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,

@@ -78,7 +78,7 @@
     return false;
   }
 
-  function getNextImage(){
+  function getNextImage(imageId){
     clearSelectedLabel(); //clear current label
     removeAllLabels();
     $('#mostPopularLabelsContainer').hide();
@@ -86,22 +86,36 @@
     oldLabelMap = {}
     newlyAddedLabels = {}
 
+    showHideControls(false);
+
 
     var url = '{{ .apiBaseUrl }}/v1/labelme';
+    if(imageId !== "") {
+      url += '?image_id=' + imageId;
+    }
+
     $.ajax({
       url: url,
       dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      },
       complete: function(data){
       },
       success: function(data){
-        $("#image").attr("imageId", data.uuid);
+        $("#image").attr("imageId", data.image.uuid);
 
         var downloadingImage = new Image();
         downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
           showHideControls(true);
         }
-        downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/"+data.uuid;
+
+        var token = Cookies.get("imagemonkey");
+        if(token === "")
+          downloadingImage.src = data.image.url;
+        else
+          downloadingImage.src = data.image.url + "?token=" + token;
 
         addOldLabels(data["all_labels"]);
 
@@ -441,11 +455,9 @@
           headers['X-Browser-Fingerprint'] = browserFingerprint;
 
         if(newlyAddedLabels.length === 0){ //if no label was added, just load next image
-          showHideControls(false);
-          getNextImage();
+          getNextImage("");
         }
         else {
-          showHideControls(false);
           e.preventDefault();
           $.ajax({
             url: url,
@@ -459,7 +471,7 @@
             complete: function(data){
             },
             success: function(data){
-              getNextImage();
+              getNextImage("");
             }
           });
         }
@@ -542,6 +554,8 @@
     $('#labelSuggestion').autocomplete('close'); //close autocomplete dropdown
     onAddLabelSuggestion();
   });
+
+  getNextImage({{ .imageId }});
   
 
 });
@@ -585,7 +599,7 @@
 
     </div>
     <div class="eight wide center aligned column">
-      <img class="ui large image centered" src="{{ .apiBaseUrl}}/v1/donation/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
+      <img class="ui large image centered" src="" imageId="" id="image">
       
 
       <h2></h2>
