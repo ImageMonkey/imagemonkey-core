@@ -91,6 +91,8 @@ type ValidationImage struct {
 
 type UnannotatedImage struct {
     Id string `json:"uuid"`
+    Unlocked bool `json:"unlocked"`
+    Url string `json:"url"`
     Label string `json:"label"`
     Sublabel string `json:"sublabel"`
     Provider string `json:"provider"`
@@ -105,6 +107,8 @@ type UnannotatedImage struct {
 type AnnotatedImage struct {
     Image struct {
         Id string `json:"uuid"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
         Provider string `json:"provider"`
         Width int32 `json:"width"`
         Height int32 `json:"height"`
@@ -327,6 +331,7 @@ type APIToken struct {
 type AnnotationTask struct {
     Image struct {
         Id string `json:"uuid"`
+        Unlocked bool `json:"unlocked"`
         Width int32 `json:"width"`
         Height int32 `json:"height"`
     } `json:"image"`
@@ -1352,7 +1357,8 @@ func _getImageForAnnotationFromValidationId(username string, validationId string
     }
 
     q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, i.width, i.height, v.uuid, 
-                           json_agg(q1.annotation || ('{"type":"' || q1.name || '"}')::jsonb)::jsonb as auto_annotations
+                           json_agg(q1.annotation || ('{"type":"' || q1.name || '"}')::jsonb)::jsonb as auto_annotations,
+                           i.unlocked
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
@@ -1368,7 +1374,7 @@ func _getImageForAnnotationFromValidationId(username string, validationId string
                                 WHERE a.auto_generated = true
                             ) q1 ON l.id = q1.label_id AND i.id = q1.image_id 
                             WHERE (i.unlocked = true %s) AND p.name = 'donation' AND v.uuid::text = $1
-                            GROUP BY i.key, l.name, pl.name, width, height, v.uuid`, includeOwnImageDonations)
+                            GROUP BY i.key, l.name, pl.name, width, height, v.uuid, i.unlocked`, includeOwnImageDonations)
 
     //we do not check, whether there already exists a annotation for the given validation id. 
     //there is anyway only one annotation per validation allowed, so if someone tries to push another annotation, the corresponding POST request 
@@ -1397,7 +1403,7 @@ func _getImageForAnnotationFromValidationId(username string, validationId string
         unannotatedImage.Provider = "donation"
 
         err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, 
-                            &unannotatedImage.Validation.Id, &autoAnnotationBytes)
+                            &unannotatedImage.Validation.Id, &autoAnnotationBytes, &unannotatedImage.Unlocked)
         if err != nil {
             log.Debug("[Get specific Image for Annotation] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1481,10 +1487,11 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
 
 
     q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, 
-                        json_agg(q1.annotation || ('{"type":"' || q1.annotation_type || '"}')::jsonb)::jsonb as auto_annotations 
+                        json_agg(q1.annotation || ('{"type":"' || q1.annotation_type || '"}')::jsonb)::jsonb as auto_annotations,
+                        q.image_unlocked
                         FROM
                         (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, 
-                            width as image_width, height as image_height, v.uuid as validation_uuid
+                            width as image_width, height as image_height, v.uuid as validation_uuid, i.unlocked as image_unlocked
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
@@ -1529,7 +1536,7 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
                             WHERE a.auto_generated = true 
                         ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id
                         GROUP BY q.image_key, q.label, q.parent_label, 
-                        q.image_width, q.image_height, q.validation_uuid`, 
+                        q.image_width, q.image_height, q.validation_uuid, q.image_unlocked`, 
                         includeOwnImageDonations, q1, q2, q3, includeOwnImageDonations, q1, q2, q3)
 
     //select all images that aren't already annotated and have a label correctness probability of >= 0.8 
@@ -1564,7 +1571,7 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
         unannotatedImage.Provider = "donation"
 
         err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, 
-            &unannotatedImage.Validation.Id, &autoAnnotationBytes)
+            &unannotatedImage.Validation.Id, &autoAnnotationBytes, &unannotatedImage.Unlocked)
         if err != nil {
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1601,11 +1608,12 @@ func getAnnotatedImage(annotationId string, autoGenerated bool, revision int32) 
     if revision != -1 && annotationId != "" {
         q = `SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
                                 json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height 
+                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
                                    FROM (
                                      SELECT i.key as key, i.id as image_id, q2.label_id as label_id, 
                                      q2.id as entry_id, q2.annotation_uuid as annotation_uuid, q2.num_of_valid as num_of_valid, 
-                                     q2.num_of_invalid as num_of_invalid, i.width as width, i.height as height, q2.is_revision
+                                     q2.num_of_invalid as num_of_invalid, i.width as width, i.height as height, q2.is_revision,
+                                     i.unlocked as image_unlocked
                                      FROM image i
                                      JOIN image_provider p ON i.image_provider_id = p.id
                                      JOIN (
@@ -1639,7 +1647,7 @@ func getAnnotatedImage(annotationId string, autoGenerated bool, revision int32) 
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                    GROUP BY q1.key, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height`
+                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`
 
 
     } else {
@@ -1662,11 +1670,11 @@ func getAnnotatedImage(annotationId string, autoGenerated bool, revision int32) 
 
         q = fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
                                  json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height 
+                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
                                    FROM (
                                      SELECT i.key as key, i.id as image_id, a.label_id as label_id, 
                                      a.id as image_annotation_id, a.uuid as annotation_uuid, a.num_of_valid as num_of_valid, 
-                                     a.num_of_invalid as num_of_invalid, i.width as width, i.height as height
+                                     a.num_of_invalid as num_of_invalid, i.width as width, i.height as height, i.unlocked as image_unlocked
                                      FROM image i
                                      JOIN image_provider p ON i.image_provider_id = p.id
                                      JOIN image_annotation a ON a.image_id = i.id
@@ -1688,7 +1696,7 @@ func getAnnotatedImage(annotationId string, autoGenerated bool, revision int32) 
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                    GROUP BY q1.key, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height`, q1)
+                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, q1)
     }
 
     var err error
@@ -1729,7 +1737,7 @@ func getAnnotatedImage(annotationId string, autoGenerated bool, revision int32) 
 
         err = rows.Scan(&annotatedImage.Image.Id, &label1, &label2, &annotatedImage.Id, 
                         &annotations, &annotatedImage.NumOfValid, &annotatedImage.NumOfInvalid, 
-                        &annotatedImage.Image.Width, &annotatedImage.Image.Height)
+                        &annotatedImage.Image.Width, &annotatedImage.Image.Height, &annotatedImage.Image.Unlocked)
         if err != nil {
             tx.Rollback()
             log.Debug("[Get Annotated Image] Couldn't scan row: ", err.Error())
@@ -2108,8 +2116,8 @@ func getImageToLabel(imageId string, username string) (Image, error) {
 
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
-                          COALESCE(q1.label_uuid, '') as label_uuid, q1.validation_uuid as validation_uuid, 
-                          q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, q.image_unlocked
+                          COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
+                          COALESCE(q1.num_of_valid, 0) as num_of_valid, COALESCE(q1.num_of_invalid, 0) as num_of_invalid, q.image_unlocked
                                FROM 
                                 (
                                     SELECT v.image_id as image_id, l.name as label, 
@@ -3493,6 +3501,26 @@ func revokeApiToken(username string, apiToken string) (bool, error) {
 func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, orderRandomly bool) ([]AnnotationTask, error) {
     var annotationTasks []AnnotationTask
 
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = fmt.Sprintf(`OR (
+                                                EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM user_image u
+                                                        JOIN account a ON a.id = u.account_id
+                                                        WHERE u.image_id = i.id AND a.name = $%d
+                                                    )
+                                                AND NOT EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM image_quarantine q 
+                                                        WHERE q.image_id = i.id 
+                                                    )
+                                               )`, len(parseResult.queryValues) + 1)
+    }
+
     q1 := ""
     if orderRandomly {
         q1 = " ORDER BY RANDOM()"
@@ -3508,24 +3536,25 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
                            )`, len(parseResult.queryValues) + 1)
     }
 
-    q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid
+    q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid, qqq.image_unlocked
                       FROM
                       (
-                        SELECT qq.image_key, qq.image_width, qq.image_height, unnest(string_to_array(qq.validation_uuids, ',')) as validation_uuid
+                        SELECT qq.image_key, qq.image_width, qq.image_height, 
+                        unnest(string_to_array(qq.validation_uuids, ',')) as validation_uuid, qq.image_unlocked
                         FROM
                         (    
-                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids
+                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids, q.image_unlocked
                               FROM
                               (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
                                   array_to_string(array_agg(CASE WHEN (%s) THEN v.uuid ELSE NULL END), ',') as validation_uuids, 
-                                  array_agg(a.accessor)::text[] as accessors
+                                  array_agg(a.accessor)::text[] as accessors, i.unlocked as image_unlocked
                                   FROM image i 
                                   JOIN image_validation v ON v.image_id = i.id 
                                   JOIN label l ON l.id = v.label_id
                                   JOIN label_accessor a ON l.id = a.label_id
-                                  WHERE i.unlocked = true
+                                  WHERE (i.unlocked = true %s)
 
-                                  GROUP BY i.key, i.width, i.height
+                                  GROUP BY i.key, i.width, i.height, i.unlocked
                               ) q WHERE %s
                         )qq
                       ) qqq
@@ -3533,7 +3562,7 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
                       WHERE NOT EXISTS (
                         SELECT 1 FROM image_annotation a 
                         WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                      )%s%s`, parseResult.subquery, parseResult.query, q2, q1)
+                      )%s%s`, parseResult.subquery, includeOwnImageDonations, parseResult.query, q2, q1)
 
     //first item in query value is the label we want to annotate
     //parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)
@@ -3557,7 +3586,7 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
     for rows.Next() {
         var annotationTask AnnotationTask
         err = rows.Scan(&annotationTask.Image.Id, &annotationTask.Image.Width, &annotationTask.Image.Height, 
-                            &annotationTask.Id)
+                            &annotationTask.Id, &annotationTask.Image.Unlocked)
         if err != nil {
             log.Debug("[Annotation Tasks] Couldn't get available annotation tasks: ", err.Error())
             raven.CaptureError(err, nil)
@@ -3596,11 +3625,12 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
 
     q := fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
                              json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                             q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height 
+                             q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
                                    FROM (
                                      SELECT i.key as key, i.id as image_id, an.label_id as label_id, 
                                      an.id as entry_id, an.uuid as annotation_uuid, an.num_of_valid as num_of_valid, 
-                                     an.num_of_invalid as num_of_invalid, i.width as width, i.height as height
+                                     an.num_of_invalid as num_of_invalid, i.width as width, i.height as height,
+                                     i.unlocked as image_unlocked
                                      FROM image i
                                      JOIN image_annotation an ON i.id = an.image_id
                                      JOIN image_provider p ON i.image_provider_id = p.id
@@ -3622,7 +3652,7 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                    GROUP BY q1.key, q.annotation_id, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height`, parseResult.query)
+                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, parseResult.query)
 
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
@@ -3642,7 +3672,7 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
 
         err = rows.Scan(&annotatedImage.Image.Id, &label1, &label2, &annotatedImage.Id, 
                         &annotations, &annotatedImage.NumOfValid, &annotatedImage.NumOfInvalid, 
-                        &annotatedImage.Image.Width, &annotatedImage.Image.Height)
+                        &annotatedImage.Image.Width, &annotatedImage.Image.Height, &annotatedImage.Image.Unlocked)
         if err != nil {
             log.Debug("[Get Annotated Images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)

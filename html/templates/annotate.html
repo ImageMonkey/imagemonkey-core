@@ -70,45 +70,6 @@
   var existingAnnotations = null;
   var browserFingerprint = null;
 
-
-  function setUp(imageId, origImageWidth, origImageHeight, validationId, label, 
-                  sublabel, labelId, autoAnnotations, annotations, annotationId,
-                  numRevisions, currentRevision) {
-    annotationInfo.imageId = imageId;
-    annotationInfo.origImageWidth = origImageWidth;
-    annotationInfo.origImageHeight = origImageHeight;
-    annotationInfo.validationId = validationId;
-    annotationInfo.annotationId = annotationId;
-
-    existingAnnotations = annotations;
-
-    addMainCanvas();
-
-    showHideSmartAnnotationControls(false);
-
-    autoAnnotations = autoAnnotations;
-    showHideAutoAnnotationsLoadButton();
-
-    setLabel(label, sublabel);
-
-    labelId = labelId;
-    if(labelId === -1)
-      labelId = null;
-
-    canvas = new CanvasDrawer("annotationArea");
-    canvas.fabric().selection = false;
-    annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
-
-    populateCanvas(getUrlFromImageId(imageId), true, false);
-    changeControl(annotator);
-    showHideControls(true);
-
-    annotationSettings.loadPreferedAnnotationTool(annotator);
-
-    populateRevisionsDropdown(numRevisions, currentRevision);
-    showHideRevisionsDropdown();
-  }
-
   function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
     var ret = "";
     $("#annotatorMenu").children().each(function (){
@@ -142,22 +103,34 @@
     this.origImageWidth = 0;
     this.origImageHeight = 0;
     this.annotationId = "";
+    this.imageUrl = "";
   }
 
   function handleUnannotatedImageResponse(data) {
-    annotationInfo.imageId = data.uuid;
-    annotationInfo.origImageWidth = data.width;
-    annotationInfo.origImageHeight = data.height;
-    annotationInfo.validationId = data.validation.uuid;
-
     existingAnnotations = null;
-    if("auto_annotations" in data)
-      autoAnnotations = data["auto_annotations"];
-    else
-      autoAnnotations = null;
-    showHideAutoAnnotationsLoadButton();
+    autoAnnotations = null;
 
-    setLabel(data.label, data.sublabel);
+    if(data !== null) {
+      annotationInfo.imageId = data.uuid;
+      annotationInfo.origImageWidth = data.width;
+      annotationInfo.origImageHeight = data.height;
+      annotationInfo.validationId = data.validation.uuid;
+      annotationInfo.imageUrl = data.url;
+
+      if("auto_annotations" in data)
+        autoAnnotations = data["auto_annotations"];
+
+      setLabel(data.label, data.sublabel);
+    }
+    else {
+      annotationInfo.imageId = "";
+      annotationInfo.origImageWidth = 720; //width of the oops-no-annotation-left image
+      annotationInfo.origImageHeight = 720; //height of the oops-no-annotation-left image
+      annotationInfo.validationId = "";
+      annotationInfo.imageUrl = "";
+    }
+
+    showHideAutoAnnotationsLoadButton();
 
     if(canvas !== undefined && canvas !== null) {
       canvas.fabric().clear();
@@ -165,7 +138,7 @@
       canvas.fabric().absolutePan(new fabric.Point(0,0));
     }
     addMainCanvas();
-    populateCanvas(getUrlFromImageId(data.uuid), false);
+    populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl), false);
     changeControl(annotator);
     numOfPendingRequests = 0;
     showHideControls(true);
@@ -183,6 +156,7 @@
     annotationInfo.origImageWidth = data.image.width;
     annotationInfo.origImageHeight = data.image.height;
     annotationInfo.annotationId = data.uuid;
+    annotationInfo.imageUrl = data.image.url;
 
     autoAnnotations = null;
     existingAnnotations = data["annotations"];
@@ -196,7 +170,7 @@
       canvas.fabric().absolutePan(new fabric.Point(0,0));
     }
     addMainCanvas();
-    populateCanvas(getUrlFromImageId(data.image.uuid), false);
+    populateCanvas(getUrlFromImageUrl(data.image.url), false);
     changeControl(annotator);
     numOfPendingRequests = 0;
     showHideControls(true);
@@ -225,14 +199,23 @@
       url: url,
       dataType: 'json',
       type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      },
       success: function(data){
         handleUnannotatedImageResponse(data);
+      },
+      error: function (xhr, options, err) {
+        handleUnannotatedImageResponse(null);
       }
     });
   }
 
-  function getAnnotatedImage(annotationId) {
+  function getAnnotatedImage(annotationId, annotationRevision) {
     var url = '{{ .apiBaseUrl }}/v1/annotation?annotation_id=' + annotationId;
+
+    if(annotationRevision !== -1)
+      url += '&rev=' + annotationRevision;
 
     showHideControls(false);
 
@@ -240,6 +223,9 @@
       url: url,
       dataType: 'json',
       type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      },
       success: function(data){
         handleAnnotatedImageResponse(data);
 
@@ -294,8 +280,8 @@
     });
   }
 
-  function getUrlFromImageId(imageId){
-    return (imageId === "" ? "img/oops-no-annotation-left.png" : ("{{ .apiBaseUrl }}/v1/donation/" + imageId))
+  function getUrlFromImageUrl(imageUrl){
+    return (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl)
   }
 
   function isTrashMenuButtonEnabled(){
@@ -748,7 +734,7 @@
           }
 
           addMainCanvas();
-          populateCanvas(getUrlFromImageId(annotationInfo.imageId), false);
+          populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl), false);
 
           showHideSmartAnnotationControls(enabled);
           showHideAutoAnnotationsLoadButton();
@@ -766,25 +752,6 @@
           }
         }
       });
-
-
-      {{ if eq .annotationMode "default" }}
-
-      setUp({{ .unannotatedImage.Id }}, {{ .unannotatedImage.Width }}, {{ .unannotatedImage.Height }}, 
-            {{ .unannotatedImage.Validation.Id }}, {{ .unannotatedImage.Label }}, 
-            {{ .unannotatedImage.Sublabel }}, {{ .labelId }}, {{ .unannotatedImage.AutoAnnotations }}, null, "",
-            0, 0);
-
-      {{ end }}
-
-      {{ if eq .annotationMode "refine" }}
-
-      setUp({{ .annotatedImage.Image.Id }}, {{ .annotatedImage.Image.Width }}, {{ .annotatedImage.Image.Height }}, 
-            "", {{ .annotatedImage.Validation.Label }}, 
-            {{ .annotatedImage.Validation.Sublabel }}, {{ .labelId }}, null, {{ .annotatedImage.Annotations }}, 
-            {{ .annotatedImage.Id }}, {{ .annotatedImage.NumRevisions }}, {{ .annotatedImage.Revision }});
-
-      {{ end }}
 
       {{ if eq .annotationMode "browse" }}
       showHideSmartAnnotationControls(false);
@@ -1022,6 +989,21 @@
         else
           addAnnotations(res);
       });
+
+
+      {{ if eq .annotationMode "default" }}
+        {{ if eq .validationId "" }}
+        getUnannotatedImage();
+        {{ else }}
+        getUnannotatedImage({{ .validationId }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "refine" }}
+        {{ if ne .annotationId "" }}
+        getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
+        {{ end }}
+      {{ end }}
 
       new Fingerprint2().get(function(result, components){
         browserFingerprint = result;

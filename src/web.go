@@ -235,7 +235,7 @@ func main() {
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+			//sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			
 
 			labelId, err := getLabelIdFromUrlParams(params)
@@ -246,13 +246,15 @@ func main() {
 
 			mode := getParamFromUrlParams(c, "mode", "default")
 			onlyOnce := false
+			var revision int64
+			revision = -1
 			showSkipAnnotationButtons := true
+			validationId := ""
+			annotationId := ""
 
-			var unannotatedImage UnannotatedImage
-			var annotatedImage AnnotatedImage
 			if mode == "default" {
 
-				annotationId := getParamFromUrlParams(c, "annotation_id", "")
+				annotationId = getParamFromUrlParams(c, "annotation_id", "")
 				if annotationId != "" {
 					mode = "refine"
 					onlyOnce = true
@@ -260,43 +262,19 @@ func main() {
 													 //then we do not need to show the blacklist annotation and unannotatable buttons
 
 					revisionStr := getParamFromUrlParams(c, "rev", "-1")
-					revision, err := strconv.ParseInt(revisionStr, 10, 32)
+					revision, err = strconv.ParseInt(revisionStr, 10, 32)
 					if err != nil {
-						ShowErrorPage(c)
-						return
-					}
-
-
-					annotatedImage, err = getAnnotatedImage(annotationId, false, int32(revision))
-					if err != nil {
-						ShowErrorPage(c)
-						return
-					}
-
-					if annotatedImage.Image.Id == "" {
 						ShowErrorPage(c)
 						return
 					}
 
 				} else {
-					validationId := getValidationIdFromUrlParams(params)
+					validationId = getValidationIdFromUrlParams(params)
 					if validationId != "" {
 						//it doesn't make sene to use the validation id and the label id for querying - so we
 						//give the validation id preference.
 						labelId = ""
 						onlyOnce = true
-					}
-
-					unannotatedImage, err = getImageForAnnotation(sessionInformation.Username, true, validationId, labelId)
-					if err != nil {
-						c.JSON(422, gin.H{"error": "err"})
-						return
-					}
-
-					//if we query a certain annotation per validation id and got no result set
-					if unannotatedImage.Id == "" && validationId != "" {
-						ShowErrorPage(c)
-						return
 					}
 				}
 			}
@@ -304,13 +282,14 @@ func main() {
 			
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
-				"unannotatedImage": unannotatedImage,
-				"annotatedImage": annotatedImage,
 				"activeMenuNr": 4,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
 				"playgroundBaseUrl": playgroundBaseUrl,
 				"labelId": labelId,
+				"annotationRevision": revision,
+				"validationId": validationId,
+				"annotationId": annotationId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"annotationMode": mode,
 				"onlyOnce": onlyOnce,
