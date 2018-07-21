@@ -104,6 +104,7 @@
     this.origImageHeight = 0;
     this.annotationId = "";
     this.imageUrl = "";
+    this.imageUnlocked = false;
   }
 
   function handleUnannotatedImageResponse(data) {
@@ -116,9 +117,12 @@
       annotationInfo.origImageHeight = data.height;
       annotationInfo.validationId = data.validation.uuid;
       annotationInfo.imageUrl = data.url;
+      annotationInfo.imageUnlocked = data.unlocked;
 
-      if("auto_annotations" in data)
-        autoAnnotations = data["auto_annotations"];
+      if("auto_annotations" in data) {
+        if(data["auto_annotations"].length !== 0)
+          autoAnnotations = data["auto_annotations"];
+      }
 
       setLabel(data.label, data.sublabel);
     }
@@ -128,6 +132,7 @@
       annotationInfo.origImageHeight = 720; //height of the oops-no-annotation-left image
       annotationInfo.validationId = "";
       annotationInfo.imageUrl = "";
+      annotationInfo.imageUnlocked = false;
     }
 
     showHideAutoAnnotationsLoadButton();
@@ -138,7 +143,7 @@
       canvas.fabric().absolutePan(new fabric.Point(0,0));
     }
     addMainCanvas();
-    populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl), false);
+    populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
     changeControl(annotator);
     numOfPendingRequests = 0;
     showHideControls(true);
@@ -157,6 +162,7 @@
     annotationInfo.origImageHeight = data.image.height;
     annotationInfo.annotationId = data.uuid;
     annotationInfo.imageUrl = data.image.url;
+    annotationInfo.imageUnlocked = data.image.unlocked;
 
     autoAnnotations = null;
     existingAnnotations = data["annotations"];
@@ -170,7 +176,7 @@
       canvas.fabric().absolutePan(new fabric.Point(0,0));
     }
     addMainCanvas();
-    populateCanvas(getUrlFromImageUrl(data.image.url), false);
+    populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked), false);
     changeControl(annotator);
     numOfPendingRequests = 0;
     showHideControls(true);
@@ -200,7 +206,7 @@
       dataType: 'json',
       type: 'GET',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
         handleUnannotatedImageResponse(data);
@@ -224,7 +230,7 @@
       dataType: 'json',
       type: 'GET',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
         handleAnnotatedImageResponse(data);
@@ -243,7 +249,7 @@
       url: url,
       type: 'POST',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data, status, xhr){
         {{ if eq .annotationMode "default" }}
@@ -265,7 +271,7 @@
       url: url,
       type: 'POST',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data, status, xhr){
         {{ if eq .annotationMode "default" }}
@@ -280,8 +286,16 @@
     });
   }
 
-  function getUrlFromImageUrl(imageUrl){
-    return (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl)
+  function getUrlFromImageUrl(imageUrl, imageUnlocked){
+    var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
+
+    if(imageUrl !== ""){
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+    }
+
+    return url;
   }
 
   function isTrashMenuButtonEnabled(){
@@ -354,6 +368,11 @@
       $("#annotationControls").show();
       $("#annotationButtons").show();
       $("#loadingSpinner").hide();
+
+      if(annotationInfo.imageUnlocked)
+        $("#imageLockedLabel").hide();
+      else
+        $("#imageLockedLabel").show();
     }
     else{
       $("#doneButton").hide();
@@ -365,6 +384,7 @@
       $("#annotationControls").hide();
       $("#annotationButtons").hide();
       $("#loadingSpinner").show();
+      $("#imageLockedLabel").hide();
     }
   }
 
@@ -650,7 +670,7 @@
       data: JSON.stringify(postData),
       headers: headers,
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
         handleUpdateAnnotationsRes(res);
@@ -682,7 +702,7 @@
       data: JSON.stringify(postData),
       headers: headers,
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
         {{ if eq .annotationMode "default" }}
@@ -734,7 +754,7 @@
           }
 
           addMainCanvas();
-          populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl), false);
+          populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
 
           showHideSmartAnnotationControls(enabled);
           showHideAutoAnnotationsLoadButton();
@@ -1022,7 +1042,7 @@
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer">
       <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
-      <!--<h2>Annotate all occurences of the above.</h2>-->
+      <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
     </div>
   </div>
 

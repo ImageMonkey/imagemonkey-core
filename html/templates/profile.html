@@ -154,7 +154,7 @@
         data: JSON.stringify({"description" : description}),
         type: 'POST', 
         beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
           addApiTokenToTable(data.description, data.token, data.issued_at);
@@ -168,7 +168,7 @@
         url: '{{ .apiBaseUrl }}/v1/user/' + {{ .sessionInformation.Username }} + '/api-token/' + apiToken + '/revoke',
         type: 'POST', 
         beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
           $(('#revokedColumn' + id)).html('<i class="red close icon"></i>');
@@ -211,7 +211,7 @@
         contentType: false,
         processData: false, 
         beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
         }

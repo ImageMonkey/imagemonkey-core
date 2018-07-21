@@ -86,7 +86,7 @@
     oldLabelMap = {}
     newlyAddedLabels = {}
 
-    showHideControls(false);
+    showHideControls(false, false);
 
 
     var url = '{{ .apiBaseUrl }}/v1/labelme';
@@ -98,7 +98,7 @@
       url: url,
       dataType: 'json',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       complete: function(data){
       },
@@ -108,10 +108,10 @@
         var downloadingImage = new Image();
         downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
-          showHideControls(true);
+          showHideControls(true, data.image.unlocked);
         }
 
-        var token = Cookies.get("imagemonkey");
+        var token = getCookie("imagemonkey");
         if(token === "")
           downloadingImage.src = data.image.url;
         else{
@@ -150,7 +150,7 @@
     return true;
   }
 
-  function showHideControls(show){
+  function showHideControls(show, imageUnlocked){
     if(show){
       $('#image').show();
       $('#doneButton').show();
@@ -159,6 +159,11 @@
       $('#loadingIndicator').hide();
       $('#labelForm').show();
       $('#objectsWithoutLabelText').show();
+
+      if(imageUnlocked)
+        $("#imageLockedLabel").hide();
+      else
+        $("#imageLockedLabel").show();
     }
     else{
       $('#image').hide();
@@ -168,6 +173,7 @@
       $('#loadingIndicator').show();
       $('#labelForm').hide();
       $('#objectsWithoutLabelText').hide();
+      $("#imageLockedLabel").hide();
     }
   }
 
@@ -575,6 +581,7 @@
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
        <h2 class="ui inverted header">Label all objects</h2>
+       <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
 

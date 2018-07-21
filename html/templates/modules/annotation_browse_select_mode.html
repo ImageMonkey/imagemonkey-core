@@ -161,10 +161,6 @@
     }
   }
 
-  function getUrlFromImageId(imageId){
-    return "{{ .apiBaseUrl }}/v1/donation/" + imageId;
-  }
-
   function drawAnnotationsCallback(canvas, annotations, scaleFactor){
     if(annotations !== undefined)
       canvas.drawAnnotations(annotations, scaleFactor);
@@ -184,7 +180,8 @@
     var annotationsScaleFactor;
     var item;
     for(var i = from; i < (from + n); i++){
-      var url = getUrlFromImageId(imageGridData[i]["image"]["uuid"]) + "?width=" + 
+      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
+                                  + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
                                   Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
                                   "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
       
@@ -200,10 +197,7 @@
         imageGridCanvases[itemId] = new CanvasDrawer(itemId, justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
         imageGridCanvases[itemId].setData({"annotationId" : imageGridData[i]["uuid"], "annotationsScaleFactor": annotationsScaleFactor});
         imageGridCanvases[itemId].makeClickable(onImageGridCanvasClicked);
-        imageUrl = getUrlFromImageId(imageGridData[i]["image"]["uuid"]) 
-                                      + "?width=" + justifiedLayoutGeometry.boxes[i].width 
-                                      + "&height=" + justifiedLayoutGeometry.boxes[i].height;
-        imageGridCanvases[itemId].setCanvasBackgroundImageUrl(imageUrl, drawAnnotationsCallback.bind(null, imageGridCanvases[itemId], imageGridData[i]["annotations"], annotationsScaleFactor));
+        imageGridCanvases[itemId].setCanvasBackgroundImageUrl(url, drawAnnotationsCallback.bind(null, imageGridCanvases[itemId], imageGridData[i]["annotations"], annotationsScaleFactor));
 
       }
       else {

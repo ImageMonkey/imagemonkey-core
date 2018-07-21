@@ -476,3 +476,14 @@ func getParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string
 
     return param
 }
+
+func getImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) string {
+    imageUrl := apiBaseUrl
+    if unlocked {
+        imageUrl += "v1/donation/" + imageId
+    } else {
+        imageUrl += "v1/unverified-donation/" + imageId
+    }
+
+    return imageUrl
+}

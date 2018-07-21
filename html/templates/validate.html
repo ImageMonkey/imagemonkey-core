@@ -75,7 +75,7 @@
   }
 
   function getRandomImages(){
-    showHideControls(false);
+    showHideControls(false, false);
 
     var multiValidationMode = isMultiValidationMode();
     var url = ("{{ .apiBaseUrl }}/v1/validation?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
@@ -86,7 +86,7 @@
       dataType: 'json',
       type: 'GET',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
         if(multiValidationMode){
@@ -101,11 +101,11 @@
           var downloadingImage = new Image();
           downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
-            showHideControls(true);
+            showHideControls(true, data.image.unlocked);
             $("#fullscreenDlgContentImage").attr("src", this.src);
           }
 
-          var token = Cookies.get("imagemonkey");
+          var token = getCookie("imagemonkey");
           if(token === "")
             downloadingImage.src = data.image.url;
           else{
@@ -185,7 +185,7 @@
     }
   }
 
-  function showHideControls(show){
+  function showHideControls(show, imageUnlocked){
     if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
       if(show){
         $('#validationContainerSegment').css('visibility','visible');
@@ -199,6 +199,11 @@
           $('#showMePollButton').show();
         
         $('#image').css('visibility','visible');
+
+        if(imageUnlocked)
+          $("#imageLockedLabel").hide();
+        else
+          $("#imageLockedLabel").show();
       }
       else {
         $('#poll-chart').hide();
@@ -207,6 +212,7 @@
         $('#loadingIndicator').show();
         $('#showMePollButton').hide();
         $('#image').css('visibility','hidden');
+        $("#imageLockedLabel").hide();
       }
     }
   }
@@ -227,7 +233,7 @@
     setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
     setPollData({{ .randomImage.Validation.NumOfValid }}, {{ .randomImage.Validation.NumOfInvalid }});
-    showHideControls(true);
+    showHideControls(false, false);
 
     //switch between multi-validation mode and single-validation mode with 'm'
     Mousetrap.bind('m', function() { 
@@ -295,7 +301,7 @@
       headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
       if(!isMultiValidationMode()){
-        showHideControls(false);
+        showHideControls(false, false);
         showHidePoll(false);
       }
 
@@ -308,7 +314,7 @@
         //data: JSON.stringify(data),
         headers: headers,
         beforeSend: function(xhr) {
-            xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+            xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
           {{ if .onlyOnce }}
@@ -373,6 +379,7 @@
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
        <h2 class="ui inverted header">What do you see?</h2>
+       <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
    {{ else }}

@@ -340,7 +340,7 @@ func testRandomModeratedImageValidation(t *testing.T, num int, token string) {
 	}
 }
 
-func testGetImageForAnnotation(t *testing.T, imageId string, token string, requiredStatusCode int) {
+func testGetImageForAnnotation(t *testing.T, imageId string, token string, validationId string, requiredStatusCode int) {
 	url := BASE_URL + API_VERSION + "/annotate"
 	req := resty.R()
 
@@ -351,6 +351,12 @@ func testGetImageForAnnotation(t *testing.T, imageId string, token string, requi
 	if imageId != "" {
 		req.SetQueryParams(map[string]string{
 		    "image_id": imageId,
+		})
+	}
+
+	if validationId != "" {
+		req.SetQueryParams(map[string]string{
+		    "validation_id": validationId,
 		})
 	}
 
@@ -1043,7 +1049,7 @@ func TestGetImageToAnnotateButNotEnoughValidation(t *testing.T) {
 
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
 
-	testGetImageForAnnotation(t, "", "", 422)
+	testGetImageForAnnotation(t, "", "", "", 422)
 }
 
 func TestGetImageToAnnotate(t *testing.T) {
@@ -1059,7 +1065,7 @@ func TestGetImageToAnnotate(t *testing.T) {
 	ok(t, err)
 	
 
-	testGetImageForAnnotation(t, "", "", 200)
+	testGetImageForAnnotation(t, "", "", "", 200)
 }
 
 func TestGetImageToAnnotateButLocked(t *testing.T) {
@@ -1074,7 +1080,7 @@ func TestGetImageToAnnotateButLocked(t *testing.T) {
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)
 
-	testGetImageForAnnotation(t, "", "", 422)
+	testGetImageForAnnotation(t, "", "", "", 422)
 }
 
 func TestGetImageToAnnotateUnlockedButBlacklistedBySignedUpUser(t *testing.T) {
@@ -1094,7 +1100,7 @@ func TestGetImageToAnnotateUnlockedButBlacklistedBySignedUpUser(t *testing.T) {
 
 	testBlacklistAnnotation(t, validationIds[0], userToken)
 
-	testGetImageForAnnotation(t, "", "", 200)
+	testGetImageForAnnotation(t, "", "", "", 200)
 }
 
 func TestGetImageToAnnotateUnlockedButBlacklistedByOtherUser(t *testing.T) {
@@ -1117,7 +1123,7 @@ func TestGetImageToAnnotateUnlockedButBlacklistedByOtherUser(t *testing.T) {
 
 	testBlacklistAnnotation(t, validationIds[0], userToken1)
 
-	testGetImageForAnnotation(t, "", userToken, 200)
+	testGetImageForAnnotation(t, "", userToken, "", 200)
 }
 
 func TestGetImageToAnnotateUnlockedButBlacklistedByOwnUser(t *testing.T) {
@@ -1137,7 +1143,7 @@ func TestGetImageToAnnotateUnlockedButBlacklistedByOwnUser(t *testing.T) {
 
 	testBlacklistAnnotation(t, validationIds[0], userToken)
 
-	testGetImageForAnnotation(t, "", userToken, 422)
+	testGetImageForAnnotation(t, "", userToken, "", 422)
 }
 
 
@@ -1160,7 +1166,7 @@ func TestGetImageToAnnotateUnlockedButNotAnnotateable(t *testing.T) {
 	//(that's an arbitrary number that's set in the imagemonkey sourcecode)
 	testMarkValidationAsNotAnnotatable(t, validationIds[0], 3)
 
-	testGetImageForAnnotation(t, "", userToken, 422)
+	testGetImageForAnnotation(t, "", userToken, "", 422)
 }
 
 func TestGetImageToAnnotateLockedButOwnDonation(t *testing.T) {
@@ -1178,7 +1184,7 @@ func TestGetImageToAnnotateLockedButOwnDonation(t *testing.T) {
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)
 
-	testGetImageForAnnotation(t, "", userToken, 200)
+	testGetImageForAnnotation(t, "", userToken, "", 200)
 }
 
 func TestGetImageToAnnotateLockedButForeignDonation(t *testing.T) {
@@ -1199,7 +1205,7 @@ func TestGetImageToAnnotateLockedButForeignDonation(t *testing.T) {
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)
 
-	testGetImageForAnnotation(t, "", userToken1, 422)
+	testGetImageForAnnotation(t, "", userToken1, "", 422)
 }
 
 
@@ -1224,7 +1230,7 @@ func TestGetImageToAnnotateLockedOwnDonationButQuarantine(t *testing.T) {
 	err = db.PutImageInQuarantine(imageId)
 	ok(t, err)
 
-	testGetImageForAnnotation(t, "", userToken, 422)
+	testGetImageForAnnotation(t, "", userToken, "", 422)
 }
 
 
@@ -1243,7 +1249,40 @@ func TestGetImageToAnnotateById(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testGetImageForAnnotation(t, imageId, "", 200)
+	testGetImageForAnnotation(t, imageId, "", "", 200)
+}
+
+func TestGetImageToAnnotateByValidationId(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, "", "", validationIds[0], 200)
+}
+
+func TestGetImageToAnnotateLockedButOwnDonationByValidationId(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	err = db.SetValidationValid(validationIds[0], 5)
+	ok(t, err)
+
+	testGetImageForAnnotation(t, "", userToken, validationIds[0], 200)
 }
 
 func TestGetImageToAnnotateByIdAuthenticated(t *testing.T) {
@@ -1264,7 +1303,7 @@ func TestGetImageToAnnotateByIdAuthenticated(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testGetImageForAnnotation(t, imageId, userToken, 200)
+	testGetImageForAnnotation(t, imageId, userToken, "", 200)
 }
 
 
@@ -1283,7 +1322,7 @@ func TestGetImageToAnnotateByIdButLocked(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testGetImageForAnnotation(t, imageId, "", 422)
+	testGetImageForAnnotation(t, imageId, "", "", 422)
 }
 
 
@@ -1305,7 +1344,7 @@ func TestGetImageToAnnotateByIdLockedButOwnDonation(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testGetImageForAnnotation(t, imageId, userToken, 200)
+	testGetImageForAnnotation(t, imageId, userToken, "", 200)
 }
 
 func TestGetImageToAnnotateByIdLockedAndForeignDonation(t *testing.T) {
@@ -1329,7 +1368,7 @@ func TestGetImageToAnnotateByIdLockedAndForeignDonation(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testGetImageForAnnotation(t, imageId, userToken1, 422)
+	testGetImageForAnnotation(t, imageId, userToken1, "", 422)
 }
 
 
@@ -1354,6 +1393,6 @@ func TestGetImageToAnnotateByIdLockedOwnDonationButQuarantine(t *testing.T) {
 	err = db.PutImageInQuarantine(imageId)
 	ok(t, err)
 
-	testGetImageForAnnotation(t, imageId, userToken, 422)
+	testGetImageForAnnotation(t, imageId, userToken, "", 422)
 }
 

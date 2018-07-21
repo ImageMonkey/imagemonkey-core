@@ -18,7 +18,7 @@ function validateNo(validationUuid) {
     type: 'POST',
     headers: headers,
     beforeSend: function(xhr) {
-      xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+      xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
     },
     success: function(data){
     }

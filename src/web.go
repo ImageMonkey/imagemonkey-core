@@ -365,7 +365,6 @@ func main() {
 		router.GET("/verify_annotation", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "validate_annotations.html", gin.H{
 				"title": "Validate Annotations",
-				"randomImage": pick(getAnnotatedImage("", false, -1))[0],
 				"activeMenuNr": 6,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
