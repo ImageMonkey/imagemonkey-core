@@ -4,12 +4,14 @@ import (
 	"testing"
 	"encoding/json"
 	"gopkg.in/resty.v1"
-	//"errors"
 	"io/ioutil"
 	"reflect"
 	"strconv"
-	//"fmt"
+	"os"
 )
+
+const UNVERIFIED_DONATIONS_DIR string = "../unverified_donations/"
+const DONATIONS_DIR string = "../donations/"
 
 type LoginResult struct {
 	Token string `json:"token"`
@@ -178,6 +180,12 @@ func testDonate(t *testing.T, path string, label string, unlockImage bool, token
     if(unlockImage) {
 		//after image donation, unlock all images
 	    err = db.UnlockAllImages()
+	    ok(t, err)
+
+	    imageId, err := db.GetLatestDonatedImageId()
+	    ok(t, err)
+
+	    err = os.Rename(UNVERIFIED_DONATIONS_DIR + imageId, DONATIONS_DIR + imageId)
 	    ok(t, err)
 	}
 }
@@ -490,6 +498,27 @@ func testGetImageToValidate(t *testing.T, imageId string, token string, labelId 
 		      "label_id": labelId,
 		    })
 	}
+
+	resp, err := req.Get(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+}
+
+func testGetImageDonation(t *testing.T, imageId string, imageUnlocked bool, token string, requiredStatusCode int) {
+	url := "" 
+
+	if imageUnlocked {
+		url = BASE_URL + API_VERSION + "/donation/" + imageId
+	} else {
+		url = BASE_URL + API_VERSION + "/unverified-donation/" + imageId
+
+		if token != "" {
+			url += "?token=" + token
+		}
+	}
+
+	req := resty.R()
 
 	resp, err := req.Get(url)
 
@@ -1396,3 +1425,63 @@ func TestGetImageToAnnotateByIdLockedOwnDonationButQuarantine(t *testing.T) {
 	testGetImageForAnnotation(t, imageId, userToken, "", 422)
 }
 
+func TestGetUnlockedImageDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i := 0; i < len(imageIds); i++ {
+		testGetImageDonation(t, imageIds[i], true, "", 200)
+	}
+}
+
+func TestGetLockedImageDonationWithoutValidToken(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageDonation(t, imageId, false, "", 403)
+}
+
+func TestGetLockedImageDonationOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageDonation(t, imageId, false, userToken, 200)
+}
+
+
+func TestGetLockedImageDonationForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testGetImageDonation(t, imageId, false, userToken1, 403)
+}
