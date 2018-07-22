@@ -76,7 +76,7 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 			return err
 		}
 
-		if !issueClosed {
+		//if !issueClosed {
 			ctx := context.Background()
 			ts := oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: GITHUB_API_TOKEN},
@@ -107,7 +107,7 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 			} else {
 				log.Info("[Main] Couldn't close github issue, please close manually!")
 			}
-		}
+		//}
 	}
 
 	return nil
