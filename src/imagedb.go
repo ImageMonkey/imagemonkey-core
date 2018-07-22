@@ -3665,8 +3665,27 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
 }*/
 
 
-func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
+func getAnnotations(apiUser APIUser, parseResult ParseResult, apiBaseUrl string) ([]AnnotatedImage, error) {
     var annotatedImages []AnnotatedImage
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = fmt.Sprintf(`OR (
+                                                EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM user_image u
+                                                        JOIN account a ON a.id = u.account_id
+                                                        WHERE u.image_id = i.id AND a.name = $%d
+                                                    )
+                                                AND NOT EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM image_quarantine q 
+                                                        WHERE q.image_id = i.id 
+                                                    )
+                                               )`, len(parseResult.queryValues) + 1)
+    }
 
     q := fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
                              json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
@@ -3680,7 +3699,7 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
                                      JOIN image_annotation an ON i.id = an.image_id
                                      JOIN image_provider p ON i.image_provider_id = p.id
                                      JOIN label_accessor a ON a.label_id = an.label_id
-                                     WHERE i.unlocked = true AND p.name = 'donation' AND %s
+                                     WHERE (i.unlocked = true %s) AND p.name = 'donation' AND %s
                                      AND an.auto_generated = false
                                      
                                      
@@ -3697,7 +3716,11 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                    GROUP BY q1.key, q.annotation_id, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, parseResult.query)
+                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations, parseResult.query)
+
+    if apiUser.Name != "" {
+        parseResult.queryValues = append(parseResult.queryValues, apiUser.Name)
+    }
 
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
@@ -3738,6 +3761,8 @@ func getAnnotations(parseResult ParseResult) ([]AnnotatedImage, error) {
             annotatedImage.Validation.Label = label2
             annotatedImage.Validation.Sublabel = label1
         }
+
+        annotatedImage.Image.Url = getImageUrlFromImageId(apiBaseUrl, annotatedImage.Image.Id, annotatedImage.Image.Unlocked)
 
         annotatedImages = append(annotatedImages, annotatedImage)
 

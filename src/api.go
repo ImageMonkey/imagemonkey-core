@@ -1600,6 +1600,10 @@ func main(){
 		})
 
 		router.GET("/v1/annotations", func(c *gin.Context) {
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
 			query := getParamFromUrlParams(c, "query", "")
 			query, err = url.QueryUnescape(query)
 	        if err != nil {
@@ -1614,7 +1618,7 @@ func main(){
 	            return
 	        }
 
-			annotatedImages, err := getAnnotations(parseResult)
+			annotatedImages, err := getAnnotations(apiUser, parseResult, *apiBaseUrl)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 				return
