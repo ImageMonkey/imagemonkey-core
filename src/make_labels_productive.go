@@ -4,6 +4,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"flag"
 	"database/sql"
+	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
+	"context"
 )
 
 var db *sql.DB
@@ -51,6 +54,63 @@ func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 				 	  WHERE label_suggestion_id = l.id AND l.name = $1`, trendingLabel)
 	
 	return err
+}
+
+func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error {
+	rows, err := tx.Query(`SELECT t.github_issue_id, t.closed
+							FROM trending_label_suggestion t
+							JOIN label_suggestion l ON t.label_suggestion_id = l.id
+							WHERE l.name = $1`, trendingLabel)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var githubIssueId int
+		var issueClosed bool
+
+		err = rows.Scan(&githubIssueId, &issueClosed)
+		if err != nil {
+			return err
+		}
+
+		if !issueClosed {
+			ctx := context.Background()
+			ts := oauth2.StaticTokenSource(
+				&oauth2.Token{AccessToken: GITHUB_API_TOKEN},
+			)
+			tc := oauth2.NewClient(ctx, ts)
+
+			client := github.NewClient(tc)
+
+			body := "label is now productive."
+
+			//create a new comment
+			commentRequest := &github.IssueComment{
+				Body:    github.String(body),
+			}
+
+			//we do not care whether we can successfully close the github issue..if it doesn't work, one can always close it
+			//manually.
+			_, _, err = client.Issues.CreateComment(ctx, GITHUB_PROJECT_OWNER, repository, githubIssueId, commentRequest)
+			if err == nil { //if comment was successfully created, close issue
+				issueRequest := &github.IssueRequest{
+					State: github.String("closed"),
+				}
+
+				_, _, err = client.Issues.Edit(ctx, GITHUB_PROJECT_OWNER, repository, githubIssueId, issueRequest)
+				if err != nil {
+					log.Info("[Main] Couldn't close github issue, please close manually!")
+				}
+			} else {
+				log.Info("[Main] Couldn't close github issue, please close manually!")
+			}
+		}
+	}
+
+	return nil
 }
 
 
@@ -133,7 +193,15 @@ func main() {
 	renameTo := flag.String("renameto", "", "Rename the label")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
 	dryRun := flag.Bool("dryrun", true, "Specifies whether this is a dryrun or not")
+	autoCloseIssue := flag.Bool("autoclose", true, "Automatically close issue")
+	githubRepository := flag.String("repository", "", "Github repository")
+
 	flag.Parse()
+
+	if *githubRepository == "" {
+		log.Fatal("Please set a valid repository!")
+	}
+
 
 	labelMap, _, err := getLabelMap(*wordlistPath)
 	if err != nil {
@@ -226,6 +294,17 @@ func main() {
 
 		log.Info("[Main] This was just a dry run - rolling back everything")
     } else {
+    	//only handle autoclose, in case it's not a dry run
+    	if *autoCloseIssue {
+    		err := closeGithubIssue(*trendingLabel, *githubRepository, tx)
+    		if err != nil {
+    			log.Error("[Main] Couldn't get github issue id to close issue!")
+    			tx.Rollback()
+    			return
+    		}
+    	}
+
+
 		err = tx.Commit()
 		if err != nil {
 			log.Error("[Main] Couldn't commit transaction: ", err.Error())
