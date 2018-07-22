@@ -20,6 +20,8 @@ type LoginResult struct {
 type AnnotatedImage struct {
     Image struct {
         Id string `json:"uuid"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
         Provider string `json:"provider"`
         Width int32 `json:"width"`
         Height int32 `json:"height"`
@@ -93,7 +95,7 @@ func testLogin(t *testing.T, username string, password string, requiredStatusCod
     return resp.Result().(*LoginResult).Token
 }
 
-func testAnnotate(t *testing.T, imageId string, label string, sublabel string, annotations string) {
+func testAnnotate(t *testing.T, imageId string, label string, sublabel string, annotations string, token string) {
 	type Annotation struct {
 		Annotations []json.RawMessage `json:"annotations"`
 		Label string `json:"label"`
@@ -107,20 +109,31 @@ func testAnnotate(t *testing.T, imageId string, label string, sublabel string, a
 
 	url := BASE_URL + API_VERSION + "/annotate/" + imageId
 
-	resp, err := resty.R().
-					SetHeader("Content-Type", "application/json").
-					SetBody(annotationEntry).
-					Post(url)
+	req := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetBody(annotationEntry)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Post(url)
+
 	ok(t, err)
 
 	equals(t, resp.StatusCode(), 201)
 
 	//export annotations again
 	url = resp.Header().Get("Location")
-	resp, err = resty.R().
+	req = resty.R().
 					SetHeader("Content-Type", "application/json").
-					SetResult(&AnnotatedImage{}).
-					Get(url)
+					SetResult(&AnnotatedImage{})
+					
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err = req.Get(url)
 	ok(t, err)
 
 	equals(t, resp.StatusCode(), 200)
@@ -141,7 +154,7 @@ func testRandomAnnotate(t *testing.T, num int, annotations string) {
 		ok(t, err)
 
 		testAnnotate(t, annotationRow.Image.Id, annotationRow.Validation.Label, 
-						annotationRow.Validation.Sublabel, annotations)
+						annotationRow.Validation.Sublabel, annotations, "")
 	}
 }
 
@@ -230,6 +243,28 @@ func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
 		equal := reflect.DeepEqual(oldAnnotationDataIds, newAnnotationDataIds)
 		equals(t, equal, true)
 	}
+}
+
+func testGetExistingAnnotations(t *testing.T, query string, token string, requiredStatusCode int, requiredNumOfResults int) {
+	url := BASE_URL +API_VERSION + "/annotations"
+
+	var annotatedImages []AnnotatedImage
+
+	req := resty.R().
+			SetQueryParams(map[string]string{
+				"query": query,
+		   }).
+		   SetResult(&annotatedImages)
+	
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Get(url)
+	
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+	equals(t, len(annotatedImages), requiredNumOfResults)
 }
 
 func testMultipleDonate(t *testing.T) int {
@@ -665,14 +700,16 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	testBrowseAnnotation(t, "cat|cat", 2, "")
 
 	//annotate image with label dog
-	testAnnotate(t, imageIds[0], "dog", "", `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+	testAnnotate(t, imageIds[0], "dog", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
 
 	//now we expect just one result 
 	testBrowseAnnotation(t, "cat&dog", 1, "")
 	testBrowseAnnotation(t, "cat", 2, "")
 
 	//annotate image with label cat
-	testAnnotate(t, imageIds[0], "cat", "", `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+	testAnnotate(t, imageIds[0], "cat", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
 
 	//now we should get no result
 	testBrowseAnnotation(t, "cat&dog", 0, "")
@@ -752,7 +789,8 @@ func TestBrowseAnnotationQuery1(t *testing.T) {
 	testBrowseAnnotation(t, "~tree & car", 0, "")
 
 	
-	testAnnotate(t, imageIds[0], "apple", "", `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
+	testAnnotate(t, imageIds[0], "apple", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
 
 	testBrowseAnnotation(t, "~tree", num-1, "")
 	testBrowseAnnotation(t, "apple", num-1, "")	
@@ -1485,3 +1523,69 @@ func TestGetLockedImageDonationForeignDonation(t *testing.T) {
 
 	testGetImageDonation(t, imageId, false, userToken1, 403)
 }
+
+
+func TestGetExistingAnnotations(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+
+	testGetExistingAnnotations(t, "apple", "", 200, 0)
+}
+
+func TestGetExistingAnnotations1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i := 0; i < len(imageIds); i++ {
+		//annotate image with label apple
+		testAnnotate(t, imageIds[i], "apple", "", 
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+
+	}
+
+	testGetExistingAnnotations(t, "apple", "", 200, 13)
+}
+
+func TestGetExistingAnnotationsLockedAndAnnotatedByForeignUser(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "apple", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken)
+
+	testGetExistingAnnotations(t, "apple", "", 200, 0)
+}
+
+func TestGetExistingAnnotationsLockedAndAnnotatedByOwnUser(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "apple", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken)
+
+	testGetExistingAnnotations(t, "apple", userToken, 200, 1)
+}
+
