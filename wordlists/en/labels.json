@@ -836,7 +836,61 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "e6870b75-9413-4e9f-8059-1e746732007e"
+		},
+		"tree trunk": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2af2b428-f5dc-4998-af0f-6a4ed5ade8cc"
+		},
+		"pillar": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a90f30ae-50bc-478d-9fec-c8f8f62f16b9"
+		},
+		"vegetation": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6d321ba0-a0ab-48de-ae42-feaf75035708"
+		},
+		"woman": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "eecd25ba-8ae1-43e5-b3a5-e43f3e7cdd67"
+		},
+		"man": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "57d71782-fcb6-49bc-aac4-3122de81b89b"
+		},
+		"shelf": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2722232d-2e5a-408b-bff7-f4c5e1b280b5"
+		},
+		"bench": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "773fcfc8-5a91-4a3e-900d-ba7f03828b93"
+		},
+		"park bench": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "70a063a4-fed4-49fb-988f-cd40276cfb76"
+		},
+		"stool": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6e720002-2a85-42b9-ac91-a4792000c2da"
+		},
+		"cupboard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9ee04fe2-4012-4a37-a97b-235af0519099"
+		},
+		"shop front": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1f887b33-d1ab-4559-ac30-f595831cd1d7"
 		}
-
 	}
 }
