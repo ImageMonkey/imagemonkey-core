@@ -945,11 +945,15 @@ func main(){
 		router.GET("/v1/donation/:imageid/annotations", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
 			params := c.Request.URL.Query()
 
 			if temp, ok := params["only_missing"]; ok {
 				if temp[0] == "true" {
-					ids, err := getUnannotatedValidations(imageId)
+					ids, err := getUnannotatedValidations(apiUser, imageId)
 					if err != nil {
 						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 						return

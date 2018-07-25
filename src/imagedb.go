@@ -2506,16 +2506,46 @@ func getAllImageLabels() ([]string, error) {
     return labels, nil
 }
 
-func getUnannotatedValidations(imageId string) ([]UnannotatedValidation, error) {
+func getUnannotatedValidations(apiUser APIUser, imageId string) ([]UnannotatedValidation, error) {
     var unannotatedValidations []UnannotatedValidation
-    rows, err := db.Query(`SELECT v.uuid::text, l.name, COALESCE(pl.name, '') FROM image_validation v 
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = `OR (
+                                        EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM user_image u
+                                            JOIN account a ON a.id = u.account_id
+                                            WHERE u.image_id = i.id AND a.name = $2
+                                        )
+                                        AND NOT EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM image_quarantine q 
+                                            WHERE q.image_id = i.id 
+                                        )
+                                    )`
+    }
+
+    q := fmt.Sprintf(`SELECT v.uuid::text, l.name, COALESCE(pl.name, '') 
+                             FROM image_validation v 
                              JOIN label l ON v.label_id = l.id 
                              JOIN image i ON v.image_id = i.id
                              LEFT JOIN label pl on l.parent_id = pl.id
-                             WHERE i.key = $1 AND NOT exists (
+                             WHERE i.key = $1 AND (i.unlocked = true %s) AND NOT exists (
                                 SELECT 1 FROM image_annotation a WHERE
                                 a.image_id = i.id AND a.label_id = l.id
-                             )`, imageId)
+                             )`, includeOwnImageDonations)
+    var rows *sql.Rows
+    var err error
+
+    if apiUser.Name == "" {
+        rows, err = db.Query(q, imageId)
+    } else {
+        rows, err = db.Query(q, imageId, apiUser.Name)
+    }
+    
     if err != nil {
         log.Debug("[Get unannotated validation ids] Couldn't get validation ids: ", err.Error())
         raven.CaptureError(err, nil)
