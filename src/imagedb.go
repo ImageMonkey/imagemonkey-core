@@ -104,6 +104,25 @@ type UnannotatedImage struct {
     AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
 }
 
+type ImageLabel struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+        Provider string `json:"provider"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+    } `json:"image"`
+
+    Labels[] struct {
+        Name string `json:"name"`
+        Unlocked bool `json:"unlocked"`
+        Sublabels[] struct {
+            Name string `json:"name"`
+        } `json:"sublabels"`
+    } `json:"labels"`
+}
+
 type AnnotatedImage struct {
     Image struct {
         Id string `json:"uuid"`
@@ -2243,7 +2262,6 @@ func getImageToLabel(imageId string, username string) (Image, error) {
                 if parentLabel != "" {
                     var validation *LabelMeValidation
                     validation = nil
-                    fmt.Printf(label)
                     if validationUuid != "" {
                         validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
                     }
@@ -3840,4 +3858,179 @@ func isOwnDonation(imageId string, username string) (bool, error) {
     }
 
     return isOwnDonation, nil
+}
+
+func getImages(apiUser APIUser, parseResult ParseResult, apiBaseUrl string, shuffle bool) ([]ImageLabel, error) {
+    var imageLabels []ImageLabel
+
+    shuffleStr := ""
+    if shuffle {
+        shuffleStr = "ORDER BY RANDOM()"
+    }
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = fmt.Sprintf(`OR (
+                                                EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM user_image u
+                                                        JOIN account a ON a.id = u.account_id
+                                                        WHERE u.image_id = i.id AND a.name = $%d
+                                                    )
+                                                AND NOT EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM image_quarantine q 
+                                                        WHERE q.image_id = i.id 
+                                                    )
+                                               )`, len(parseResult.queryValues) + 1)
+    }
+
+    q := fmt.Sprintf(`WITH 
+                        image_productive_labels AS (
+                                           SELECT i.id as image_id, a.accessor as accessor, a.label_id as label_id
+                                                                FROM image_validation v 
+                                                                JOIN label_accessor a ON v.label_id = a.label_id
+                                                                JOIN image i ON v.image_id = i.id
+                                                                WHERE (i.unlocked = true %s)
+                        ),image_trending_labels AS (
+
+                                                            SELECT i.id as image_id, s.name as label
+                                                                FROM image_label_suggestion ils
+                                                                JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                                                JOIN image i ON ils.image_id = i.id
+                                                                WHERE (i.unlocked = true %s)
+                        ),
+                        image_ids AS (
+                            SELECT image_id
+                            FROM
+                            (
+                                SELECT image_id, array_agg(label)::text[] as accessors
+                                FROM 
+                                (
+                                    SELECT image_id, accessor as label
+                                    FROM image_productive_labels p 
+
+                                    UNION ALL
+
+                                    SELECT image_id, label as label
+                                    FROM image_trending_labels t
+                                ) q1
+                                GROUP BY image_id
+                            ) q
+                            WHERE %s
+                        )
+
+
+                        SELECT i.key, i.width, i.height, i.unlocked, 
+                        json_agg(json_build_object('name', q4.label, 'sublabels', q4.sublabels))
+                        FROM
+                        (
+                            SELECT q3.image_id, q3.label, coalesce(json_agg(json_build_object('name', q3.sublabel)) 
+                                                                        FILTER (WHERE q3.sublabel is not null), '[]'::json) as sublabels
+                            FROM
+                            (
+                                SELECT ii.image_id, CASE WHEN pl.name is not null then pl.name else l.name end as label, 
+                                       COALESCE(CASE WHEN l.parent_id is not null then l.name else null end, null) as sublabel 
+                                FROM
+                                image_ids ii
+                                JOIN image_productive_labels p on p.image_id = ii.image_id
+                                JOIN label l on l.id = p.label_id
+                                LEFT JOIN label pl on pl.id = l.parent_id
+
+                                UNION ALL
+
+                                SELECT ii.image_id, s.name as label, null as sublabel
+                                FROM image_ids ii
+                                JOIN image_label_suggestion ils on ii.image_id = ils.image_id
+                                JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                            ) q3
+                            GROUP BY image_id, label
+                        ) q4
+                        JOIN image i on q4.image_id = i.id
+                        GROUP BY i.key, i.width, i.height, i.unlocked
+                        %s`, 
+                      includeOwnImageDonations, includeOwnImageDonations, parseResult.query, shuffleStr)
+
+    /*q := fmt.Sprintf(`WITH image_ids AS (
+                        SELECT q1.image_id, q1.image_key, q1.image_unlocked
+                        FROM
+                            (
+                            SELECT i.id as image_id, i.key as image_key, i.unlocked as image_unlocked, 
+                            array_agg(a.accessor)::text[] as accessors
+                            FROM image_validation v 
+                            JOIN label_accessor a ON v.label_id = a.label_id
+                            JOIN image i ON v.image_id = i.id
+                            WHERE (i.unlocked = true %s)
+                            GROUP BY i.id, i.key, i.unlocked
+                        ) q1
+                        WHERE $1
+                    )
+
+                    SELECT q1.image_key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
+                      COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
+                      COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
+                      COALESCE(q1.num_of_valid, 0) as num_of_valid, COALESCE(q1.num_of_invalid, 0) as num_of_invalid, q1.image_unlocked
+                           FROM (
+
+                            SELECT v.image_id as image_id, l.name as label, 
+                            COALESCE(pl.name, '') as parent_label, true as unlocked, true as annotatable,
+                            l.uuid::text as label_uuid, v.uuid::text as validation_uuid, v.num_of_valid as num_of_valid,
+                            v.num_of_invalid as num_of_invalid, ii.image_key as image_key, ii.image_unlocked as image_unlocked
+                            FROM image_validation v
+                            JOIN image_ids ii ON ii.image_id = v.image_id
+                            JOIN label l on v.label_id = l.id 
+                            LEFT JOIN label pl on l.parent_id = pl.id
+
+
+                            UNION ALL
+
+                            SELECT ils.image_id as image_id, s.name as label, 
+                            '' as parent_label, false as unlocked, ils.annotatable as annotatable,
+                            '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid,
+                            ii.image_key as image_key, ii.image_unlocked as image_unlocked
+                            FROM image_label_suggestion ils
+                            JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                            JOIN image_ids ii ON ii.image_id = ils.image_id
+                          ) q1`, includeOwnImageDonations)*/
+
+    var rows *sql.Rows
+    if apiUser.Name != "" {
+        parseResult.queryValues = append(parseResult.queryValues, apiUser.Name)
+    }
+
+    rows, err := db.Query(q, parseResult.queryValues...)
+    if err != nil {
+        log.Debug("[Get Image Labels] Couldn't get image labels: ", err.Error())
+        raven.CaptureError(err, nil)
+        return imageLabels, err
+    }
+
+    defer rows.Close()
+
+
+    for rows.Next() {
+        var imageLabel ImageLabel
+        var labels []byte
+        err = rows.Scan(&imageLabel.Image.Id, &imageLabel.Image.Width, &imageLabel.Image.Height, &imageLabel.Image.Unlocked, &labels)
+        if err != nil {
+            log.Debug("[Get Image Labels] Couldn't scan rows: ", err.Error())
+            raven.CaptureError(err, nil)
+            return imageLabels, err
+        }
+
+        err := json.Unmarshal(labels, &imageLabel.Labels)
+        if err != nil {
+            log.Debug("[Export] Couldn't unmarshal image labels: ", err.Error())
+            raven.CaptureError(err, nil)
+            return nil, err
+        }
+
+        imageLabel.Image.Url = getImageUrlFromImageId(apiBaseUrl, imageLabel.Image.Id, imageLabel.Image.Unlocked)
+
+        imageLabels = append(imageLabels, imageLabel)
+    }
+
+    return imageLabels, nil
 }

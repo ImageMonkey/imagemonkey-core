@@ -1048,6 +1048,48 @@ func main(){
 			}
 		})
 
+		router.GET("/v1/donations", func(c *gin.Context) {
+			query := getParamFromUrlParams(c, "query", "")
+
+			orderRandomly := false
+			shuffle := getParamFromUrlParams(c, "shuffle", "")
+		    if shuffle == "true" {
+		    	orderRandomly = true
+		    }
+
+			var apiUser APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if query == "" {
+	        	c.JSON(422, gin.H{"error": "Couldn't process request - query missing"})
+				return
+	        }
+
+			query, err = url.QueryUnescape(query)
+		    if err != nil {
+		        c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid query"})
+				return
+		    }
+
+			queryParser := NewQueryParserV2(query)
+	        parseResult, err := queryParser.Parse(1)
+	        if err != nil {
+	            c.JSON(422, gin.H{"error": err.Error()})
+	            return
+	        }
+
+			imageInfos, err := getImages(apiUser, parseResult, *apiBaseUrl, orderRandomly)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			c.JSON(http.StatusOK, imageInfos)
+
+			
+		})
+
 		router.PATCH("/v1/validation/validate", func(c *gin.Context) {
 			var imageValidationBatch ImageValidationBatch
 			

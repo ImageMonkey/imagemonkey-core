@@ -17,6 +17,25 @@ type LoginResult struct {
 	Token string `json:"token"`
 }
 
+type ImageLabel struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+        Provider string `json:"provider"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+    } `json:"image"`
+
+    Labels[] struct {
+        Name string `json:"name"`
+        Unlocked bool `json:"unlocked"`
+        Sublabels[] struct {
+            Name string `json:"name"`
+        } `json:"sublabels"`
+    } `json:"labels"`
+}
+
 type AnnotatedImage struct {
     Image struct {
         Id string `json:"uuid"`
@@ -266,6 +285,27 @@ func testGetExistingAnnotations(t *testing.T, query string, token string, requir
 	equals(t, resp.StatusCode(), requiredStatusCode)
 	equals(t, len(annotatedImages), requiredNumOfResults)
 }
+
+func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResults int, requiredStatusCode int) {
+	url := BASE_URL + API_VERSION + "/donations"
+	var labeledImages []ImageLabel
+
+	req := resty.R().
+			SetQueryParams(map[string]string{
+				"query": query,
+		    }).
+		    SetResult(&labeledImages)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Get(url)
+	
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+	equals(t, len(labeledImages), requiredNumOfResults)
+} 
 
 func testMultipleDonate(t *testing.T) int {
 	dirname := "./images/apples/"
@@ -802,6 +842,14 @@ func TestGetImageToLabel(t *testing.T) {
 	defer teardownTestCase(t)
 
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testGetImageToLabel(t, "", "", 200)
+}
+
+func TestGetUnlabeledImageToLabel(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "")
 	testGetImageToLabel(t, "", "", 200)
 }
 
@@ -1589,3 +1637,90 @@ func TestGetExistingAnnotationsLockedAndAnnotatedByOwnUser(t *testing.T) {
 	testGetExistingAnnotations(t, "apple", userToken, 200, 1)
 }
 
+func TestBrowseLabel(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	testBrowseLabel(t, "apple", "", 1, 200)
+}
+
+func TestBrowseLabel1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg")
+
+	testBrowseLabel(t, "apple&egg", "", 1, 200)
+	testBrowseLabel(t, "apple|egg", "", 1, 200)
+	testBrowseLabel(t, "apple&~egg", "", 0, 200)
+}
+
+func TestBrowseLabel2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	testBrowseLabel(t, "apple&egg", "", 0, 200)
+}
+
+func TestBrowseLabelLocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+
+	testBrowseLabel(t, "apple", "", 0, 200)
+}
+
+func TestBrowseLabelLockedAndOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	testBrowseLabel(t, "apple", userToken, 1, 200)
+}
+
+func TestBrowseLabelLockedButForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	userToken1 := testLogin(t, "user1", "pwd1", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	testBrowseLabel(t, "apple", userToken1, 0, 200)
+}
+
+func TestBrowseLabelLockedAndOwnDonationButInQuarantine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageId)
+	ok(t, err)
+
+	testBrowseLabel(t, "apple", userToken, 0, 200)
+}

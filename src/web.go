@@ -201,13 +201,13 @@ func main() {
 		})
 
 		router.GET("/label", func(c *gin.Context) {
-			params := c.Request.URL.Query()
-
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
+			mode := getParamFromUrlParams(c, "mode", "default")
+
 			imageId := ""
-			if temp, ok := params["image_id"]; ok {
-				imageId = temp[0]
+			if mode == "default" {
+				imageId = getParamFromUrlParams(c, "image_id", "")
 			}
 
 			isModerator := false
@@ -222,12 +222,14 @@ func main() {
 			c.HTML(http.StatusOK, "label.html", gin.H{
 				"title": "Add Labels",
 				"imageId": imageId,
+				"mode": mode,
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
 				"labelSuggestions": pick(getLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
+				"labelAccessors": pick(getLabelAccessors())[0],
 			})
 		})
 

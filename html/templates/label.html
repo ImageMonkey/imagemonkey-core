@@ -21,13 +21,15 @@
   <script src="js/label.js"></script>
   <script src="js/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="css/jquery-ui.css">
+  <script src="js/justified-layout.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
   <script src="js/mousetrap-record.min.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/contextjs/context.js"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
-
+  <script src="js/infinitescroll.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
+  <link rel="stylesheet" href="css/balloon/balloon.min.css">
 
   <script type="text/javascript">
   var browserFingerprint = null;
@@ -124,9 +126,15 @@
         addOldLabels(data["all_labels"]);
 
         //get suggested labels
-        getMostPopularLabels();
+        //getMostPopularLabels();
       }
     });
+
+    $("#mainContainer").show();
+    $("#imgInfo").show();
+    $("#mostPopularLabelsContainer").show();
+    $("#labelInfo").show();
+    $("#gotoModeContainer").show();
   }
 
   function showHideNoLabelsDefined(){
@@ -446,18 +454,24 @@
 
   $('#doneButton').click(function(e) {
     var labelsLst = [];
+    var strLabelsLst = "";
 
         //dict to list
         for (var key in newlyAddedLabels){
           if (newlyAddedLabels.hasOwnProperty(key)) {
             var sublabels = newlyAddedLabels[key];
             var s = [];
+            strLabelsLst += (escapeHtml(key) + ", ");
             for(var i = 0; i < sublabels.length; i++) {
               s.push({"name": sublabels[i]});
+              strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
             }
             labelsLst.push({label: key, annotatable: true, sublabels: s});
           }
         }
+
+        if(strLabelsLst.length > 2)
+          strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
 
         var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/labelme";
         var headers = {}
@@ -481,7 +495,13 @@
             complete: function(data){
             },
             success: function(data){
+              {{ if eq .mode "default" }}
               getNextImage("");
+              {{ else }}
+              updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
+              showBrowseLabelImageGrid();
+              {{ end }}
+              
             }
           });
         }
@@ -565,7 +585,9 @@
     onAddLabelSuggestion();
   });
 
+  {{ if eq .mode "default" }}
   getNextImage({{ .imageId }});
+  {{ end }}
   
 
 });
@@ -586,13 +608,17 @@
    </div>
 
    <div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-8em;">
+    {{ if eq .mode "browse" }}
+    {{ template "label_browse_select_mode.html" .}}
+    {{ end }}
 
-    {{ template "goto_mode.html" dict "validation" 1 "annotation" 1 "labeling" 0 "currentScreen" "labeling" }}
+
+    {{ template "goto_mode.html" dict "validation" 1 "annotation" 1 "labeling" 0 "currentScreen" "labeling" "visible" false}}
 
     <div class="one wide column">
     </div>
 
-    <div class="three wide center aligned column">
+    <div class="three wide center aligned column" style="display: none;" id="labelInfo">
       <p><h2 id="labelsHeader">Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
@@ -601,7 +627,7 @@
 
       <h1></h1>
       <h1></h1>
-      <div id="mostPopularLabelsContainer" hidden>
+      <div id="mostPopularLabelsContainer" hidden style="display: none;">
         <h2 style="margin-bottom:0px;">Most Popular Labels:</h2>
         <p style="font-size:12px; margin-bottom:20px;">These are the most popular labels in the whole dataset</p>
         <div class="ui labels" id="mostPopularLabels">
@@ -609,7 +635,7 @@
       </div>
 
     </div>
-    <div class="eight wide center aligned column">
+    <div class="eight wide center aligned column" style="display: none;" id="mainContainer">
       <img class="ui large image centered" src="" imageId="" id="image">
       
 
@@ -683,7 +709,7 @@
     </div>
 
 
-    <div class="four wide center aligned computer only column">
+    <div class="four wide center aligned computer only column" style="display: none;" id="imgInfo">
       {{ template "img_info.html" .}}
     </div>
   </div>
