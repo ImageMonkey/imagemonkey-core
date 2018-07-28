@@ -408,13 +408,11 @@
     } 
 
     var labelSuggestions = {{ .labelSuggestions }};
-    for (var key in labelSuggestions) {
-      if (labelSuggestions.hasOwnProperty(key)) { 
-        var escapedLabelSuggestion = escapeHtml(labelSuggestions[key]);
-        if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
-          availableLabelsLookupTable[escapedLabelSuggestion] = true;
-          availableLabels.push(escapedLabelSuggestion);
-        }
+    for (var i = 0; i < labelSuggestions.length; i++) { 
+      var escapedLabelSuggestion = escapeHtml(labelSuggestions[i]);
+      if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
+        availableLabelsLookupTable[escapedLabelSuggestion] = true;
+        availableLabels.push(escapedLabelSuggestion);
       }
     }
 

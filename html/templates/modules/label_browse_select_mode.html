@@ -199,10 +199,15 @@
 
   $(document).ready(function(){
     var availableLabels = [];
-    {{ range $val := .labelAccessors }}
-    availableLabels.push({{ $val }});
-    {{ end }}
+    var labelAccessors = {{ .labelAccessors }};
+    for(var i = 0; i < labelAccessors.length; i++) {
+      availableLabels.push(labelAccessors[i]);
+    }
 
+    labelSuggestions = {{ .labelSuggestions }};
+    for(var i = 0; i < labelSuggestions.length; i++) {
+      availableLabels.push(labelSuggestions[i]);
+    }
 
     $("#labelQuery")
       // don't navigate away from the field on tab when selecting an item
