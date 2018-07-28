@@ -81,7 +81,7 @@
     $("#imageGrid").hide();
     clearImageGrid();
     var query = $("#labelQuery").val();
-    var url = '{{ .apiBaseUrl }}/v1/donations';
+    var url = '{{ .apiBaseUrl }}/v1/donations/labels';
     $.ajax({
           url: url,
           dataType: 'json',

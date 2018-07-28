@@ -1048,7 +1048,7 @@ func main(){
 			}
 		})
 
-		router.GET("/v1/donations", func(c *gin.Context) {
+		router.GET("/v1/donations/labels", func(c *gin.Context) {
 			query := getParamFromUrlParams(c, "query", "")
 
 			orderRandomly := false

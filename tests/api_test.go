@@ -287,7 +287,7 @@ func testGetExistingAnnotations(t *testing.T, query string, token string, requir
 }
 
 func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResults int, requiredStatusCode int) {
-	url := BASE_URL + API_VERSION + "/donations"
+	url := BASE_URL + API_VERSION + "/donations/labels"
 	var labeledImages []ImageLabel
 
 	req := resty.R().
