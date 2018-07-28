@@ -10,7 +10,7 @@
 
   .grey-out {
     opacity: 0.4;
-    filter: alpha(opacity=40); /* msie */
+    filter: alpha(opacity=40);
   }
 
 </style>
@@ -116,15 +116,6 @@
     getNextImage(imageId);
   }
 
-  /*function onImageGridCanvasClicked(data) {
-    var annotationId = data["annotationId"];
-    $("#annotationQuerySearchContainer").hide();
-    infiniteScroll.pause();
-    infiniteScroll.saveScrollPosition();
-    $("#imageGrid").hide();
-    getAnnotatedImage(annotationId, -1);
-  }*/
-
   function newImageItem(id, url, imageId, top, left, width, height, tooltip){
     var d = ('<div class="justified-layout-item"' + ' id="' + (id + "container") 
             + '" data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"' + ' style="width: ' + width 
@@ -133,13 +124,6 @@
             + '" data-imageid="' + imageId + '" onclick="onImageGridItemClicked(this);" style="cursor: pointer;"></div>');
     return d;
   }
-
-  /*function newCanvasItem(id, url, validationId, top, left, width, height){
-    var d = ('<div class="justified-layout-item" style="width: ' + width 
-            +'px; height: ' + height + 'px; top: ' 
-            + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
-    return d;
-  }*/
 
   function updateLabelsForImage(imageId, labels) {
     if(labels !== "") {

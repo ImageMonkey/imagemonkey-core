@@ -3953,48 +3953,6 @@ func getImages(apiUser APIUser, parseResult ParseResult, apiBaseUrl string, shuf
                         %s`, 
                       includeOwnImageDonations, includeOwnImageDonations, parseResult.query, shuffleStr)
 
-    /*q := fmt.Sprintf(`WITH image_ids AS (
-                        SELECT q1.image_id, q1.image_key, q1.image_unlocked
-                        FROM
-                            (
-                            SELECT i.id as image_id, i.key as image_key, i.unlocked as image_unlocked, 
-                            array_agg(a.accessor)::text[] as accessors
-                            FROM image_validation v 
-                            JOIN label_accessor a ON v.label_id = a.label_id
-                            JOIN image i ON v.image_id = i.id
-                            WHERE (i.unlocked = true %s)
-                            GROUP BY i.id, i.key, i.unlocked
-                        ) q1
-                        WHERE $1
-                    )
-
-                    SELECT q1.image_key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
-                      COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
-                      COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
-                      COALESCE(q1.num_of_valid, 0) as num_of_valid, COALESCE(q1.num_of_invalid, 0) as num_of_invalid, q1.image_unlocked
-                           FROM (
-
-                            SELECT v.image_id as image_id, l.name as label, 
-                            COALESCE(pl.name, '') as parent_label, true as unlocked, true as annotatable,
-                            l.uuid::text as label_uuid, v.uuid::text as validation_uuid, v.num_of_valid as num_of_valid,
-                            v.num_of_invalid as num_of_invalid, ii.image_key as image_key, ii.image_unlocked as image_unlocked
-                            FROM image_validation v
-                            JOIN image_ids ii ON ii.image_id = v.image_id
-                            JOIN label l on v.label_id = l.id 
-                            LEFT JOIN label pl on l.parent_id = pl.id
-
-
-                            UNION ALL
-
-                            SELECT ils.image_id as image_id, s.name as label, 
-                            '' as parent_label, false as unlocked, ils.annotatable as annotatable,
-                            '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid,
-                            ii.image_key as image_key, ii.image_unlocked as image_unlocked
-                            FROM image_label_suggestion ils
-                            JOIN label_suggestion s on ils.label_suggestion_id = s.id
-                            JOIN image_ids ii ON ii.image_id = ils.image_id
-                          ) q1`, includeOwnImageDonations)*/
-
     var rows *sql.Rows
     if apiUser.Name != "" {
         parseResult.queryValues = append(parseResult.queryValues, apiUser.Name)
