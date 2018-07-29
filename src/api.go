@@ -663,15 +663,16 @@ func main(){
 		clientAuth.Use(ClientAuthMiddleware())
 		{
 			clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
-			clientAuth.GET("/v1/unverified/donation", func(c *gin.Context) {
-				params := c.Request.URL.Query()
+			clientAuth.GET("/v1/internal/unverified-donations", func(c *gin.Context) {
 
-				imageProvider := ""
-				if temp, ok := params["image_provider"]; ok {
-					imageProvider = temp[0]
+				imageProvider := getParamFromUrlParams(c, "image_provider", "")
+				shuffle := getParamFromUrlParams(c, "shuffle", "")
+				orderRandomly := false
+				if shuffle == "true" {
+					orderRandomly = true
 				}
 
-				images, err := getAllUnverifiedImages(imageProvider)
+				images, err := getAllUnverifiedImages(imageProvider, orderRandomly)
 				use(images)
 				if err != nil {
 					c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"}) 

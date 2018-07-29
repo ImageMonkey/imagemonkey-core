@@ -1947,8 +1947,13 @@ func getNumOfValidatedImages() (int64, error){
     return num, nil
 }
 
-func getAllUnverifiedImages(imageProvider string) ([]Image, error){
+func getAllUnverifiedImages(imageProvider string, shuffle bool) ([]Image, error){
     var images []Image
+
+    orderRandomly := ""
+    if shuffle {
+        orderRandomly = "ORDER BY RANDOM()"
+    }
 
     q1 := "WHERE q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
     params := false
@@ -1979,7 +1984,8 @@ func getAllUnverifiedImages(imageProvider string) ([]Image, error){
                      ) q
                     JOIN image_provider p ON p.id = q.image_provider_id
                     %s
-                    GROUP BY image_key`, q1)
+                    GROUP BY image_key
+                    %s`, q1, orderRandomly)
 
     var err error
     var rows *sql.Rows
