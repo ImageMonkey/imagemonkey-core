@@ -145,6 +145,17 @@
     return url;
   }
 
+  //strikethrough text using unicode char
+  function strikethroughText(text) {
+    var t = '';
+    for (var i = 0; i < text.length; i++) {
+      t += text.charAt(i) 
+      if(i !== text.length - 1)
+        t += '\u0336';
+    }
+    return t;
+  }
+
   function loadNextImagesInImageGrid() {
     var from = numOfLastFetchedImg;
     var n = defaultBatchSize;
@@ -167,11 +178,14 @@
       var labels = imageGridData[i]["labels"];
       var tooltipText = "";
       for(var j = 0; j < labels.length; j++) {
-        var labelName = escapeHtml(labels[j]["name"]);
+        var labelName = (isLabelValid(labels[j]["num_yes"], labels[j]["num_no"]) 
+                          ? escapeHtml(labels[j]["name"]) : strikethroughText(escapeHtml(labels[j]["name"])));
         tooltipText += labelName + ", ";
         var sublabels = labels[j]["sublabels"];
         for(k = 0; k < sublabels.length; k++) {
-          tooltipText += (escapeHtml(sublabels[k]["name"]) + "/" + escapeHtml(labelName));
+          tooltipText += (isLabelValid(sublabels[k]["num_yes"], sublabels[k]["num_no"]) 
+                            ? (escapeHtml(sublabels[k]["name"]) + "/" + escapeHtml(labels[j]["name"]))
+                            : strikethroughText(escapeHtml(sublabels[k]["name"]) + "/" + escapeHtml(labels[j]["name"])));
           tooltipText += ", ";
         }
       }

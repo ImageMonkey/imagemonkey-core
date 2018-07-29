@@ -117,8 +117,12 @@ type ImageLabel struct {
     Labels[] struct {
         Name string `json:"name"`
         Unlocked bool `json:"unlocked"`
+        NumOfValid int32 `json:"num_yes"`
+        NumOfInvalid int32 `json:"num_no"`
         Sublabels[] struct {
             Name string `json:"name"`
+            NumOfValid int32 `json:"num_yes"`
+            NumOfInvalid int32 `json:"num_no"`
         } `json:"sublabels"`
     } `json:"labels"`
 }
@@ -3860,7 +3864,7 @@ func isOwnDonation(imageId string, username string) (bool, error) {
     return isOwnDonation, nil
 }
 
-func getImages(apiUser APIUser, parseResult ParseResult, apiBaseUrl string, shuffle bool) ([]ImageLabel, error) {
+func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string, shuffle bool) ([]ImageLabel, error) {
     var imageLabels []ImageLabel
 
     shuffleStr := ""
@@ -3923,30 +3927,34 @@ func getImages(apiUser APIUser, parseResult ParseResult, apiBaseUrl string, shuf
                         )
 
 
-                        SELECT i.key, i.width, i.height, i.unlocked, 
-                        json_agg(json_build_object('name', q4.label, 'sublabels', q4.sublabels))
+                        SELECT i.key, i.width, i.height, i.unlocked,
+                        json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels))
                         FROM
                         (
-                            SELECT q3.image_id, q3.label, coalesce(json_agg(json_build_object('name', q3.sublabel)) 
-                                                                        FILTER (WHERE q3.sublabel is not null), '[]'::json) as sublabels
+                            SELECT q3.image_id, q3.label, q3.num_of_valid, q3.num_of_invalid,
+                            coalesce(json_agg(json_build_object('name', q3.sublabel, 'num_yes', q3.num_of_valid, 'num_no', q3.num_of_invalid)) 
+                                                FILTER (WHERE q3.sublabel is not null), '[]'::json) as sublabels
                             FROM
                             (
                                 SELECT ii.image_id, CASE WHEN pl.name is not null then pl.name else l.name end as label, 
-                                       COALESCE(CASE WHEN l.parent_id is not null then l.name else null end, null) as sublabel 
+                                       COALESCE(CASE WHEN l.parent_id is not null then l.name else null end, null) as sublabel,
+                                       v.num_of_valid as num_of_valid, v.num_of_invalid as num_of_invalid
                                 FROM
                                 image_ids ii
                                 JOIN image_productive_labels p on p.image_id = ii.image_id
                                 JOIN label l on l.id = p.label_id
                                 LEFT JOIN label pl on pl.id = l.parent_id
+                                JOIN image_validation v ON ii.image_id = v.image_id AND v.label_id = l.id
 
                                 UNION ALL
 
-                                SELECT ii.image_id, s.name as label, null as sublabel
+                                SELECT ii.image_id, s.name as label, null as sublabel, 
+                                0 as num_of_valid, 0 as num_of_invalid
                                 FROM image_ids ii
                                 JOIN image_label_suggestion ils on ii.image_id = ils.image_id
                                 JOIN label_suggestion s on ils.label_suggestion_id = s.id
                             ) q3
-                            GROUP BY image_id, label
+                            GROUP BY image_id, label, num_of_valid, num_of_invalid
                         ) q4
                         JOIN image i on q4.image_id = i.id
                         GROUP BY i.key, i.width, i.height, i.unlocked

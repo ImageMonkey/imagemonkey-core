@@ -125,8 +125,33 @@
 
         addOldLabels(data["all_labels"]);
 
-        //get suggested labels
-        //getMostPopularLabels();
+
+        {{ if eq .isModerator true }}
+        context.init({preventDoubleContext: false});
+        context.attach('.existing-label', [
+
+          {header: 'Moderator'},
+          {text: 'Remove', action: function(e, selector) {
+                              e.preventDefault();
+                              
+                              if(selector.css("text-decoration").startsWith("line-through")) {
+                                $("#moderatorLabelAlreadyRemovedInfoDlg").modal("show");
+                              } else {
+                                var validationUuid = selector.attr("data-validation-uuid");
+
+                                if(validationUuid !== "") {
+                                  $("#moderatorRemoveLabelDlg").attr("data-remove-label-id", selector.attr("id"));
+                                  $("#moderatorRemoveLabelDlg").attr("data-validation-uuid", validationUuid);
+                                  $("#moderatorRemoveLabelDlg").modal("show");
+                                } else {
+                                  $("#moderatorOnlyRemoveProductiveLabelsInfoDlg").modal("show");
+                                }
+                              }
+                           }
+          }
+        ]);
+        {{ end }}
+
       }
     });
 
@@ -417,32 +442,6 @@
     }
 
     getMostPopularLabels();
-
-    {{ if eq .isModerator true }}
-    context.init({preventDoubleContext: false});
-    context.attach('.existing-label', [
-
-      {header: 'Moderator'},
-      {text: 'Remove', action: function(e, selector) {
-                          e.preventDefault();
-                          
-                          if(selector.css("text-decoration").startsWith("line-through")) {
-                            $("#moderatorLabelAlreadyRemovedInfoDlg").modal("show");
-                          } else {
-                            var validationUuid = selector.attr("data-validation-uuid");
-
-                            if(validationUuid !== "") {
-                              $("#moderatorRemoveLabelDlg").attr("data-remove-label-id", selector.attr("id"));
-                              $("#moderatorRemoveLabelDlg").attr("data-validation-uuid", validationUuid);
-                              $("#moderatorRemoveLabelDlg").modal("show");
-                            } else {
-                              $("#moderatorOnlyRemoveProductiveLabelsInfoDlg").modal("show");
-                            }
-                          }
-                       }
-      }
-    ]);
-    {{ end }}
 
     $('#addLabelButton').click(function(e){
       var selectedLabel = getSelectedLabel();

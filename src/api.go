@@ -1079,7 +1079,7 @@ func main(){
 	            return
 	        }
 
-			imageInfos, err := getImages(apiUser, parseResult, *apiBaseUrl, orderRandomly)
+			imageInfos, err := getImagesLabels(apiUser, parseResult, *apiBaseUrl, orderRandomly)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
