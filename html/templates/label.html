@@ -81,10 +81,11 @@
   }
 
   function getNextImage(imageId){
+    showHideMainArea(true);
     clearSelectedLabel(); //clear current label
     removeAllLabels();
     $('#mostPopularLabelsContainer').hide();
-    removeAllMostPopularLabels();
+    //removeAllMostPopularLabels();
     oldLabelMap = {}
     newlyAddedLabels = {}
 
@@ -111,6 +112,7 @@
         downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
           showHideControls(true, data.image.unlocked);
+          showHideMainArea(true);
         }
 
         var token = getCookie("imagemonkey");
@@ -154,12 +156,6 @@
 
       }
     });
-
-    $("#mainContainer").show();
-    $("#imgInfo").show();
-    $("#mostPopularLabelsContainer").show();
-    $("#labelInfo").show();
-    $("#gotoModeContainer").show();
   }
 
   function showHideNoLabelsDefined(){
@@ -181,6 +177,22 @@
 
     //images with no validations are always seen as valid
     return true;
+  }
+  function showHideMainArea(show) {
+    if(show) {
+      $("#mainContainer").show();
+      $("#imgInfo").show();
+      $("#labelInfo").show();
+      $("#mostPopularLabelsContainer").fadeIn("slow");
+      $("#gotoModeContainer").show();
+    } 
+    else {
+      $("#mainContainer").hide();
+      $("#imgInfo").hide();
+      $("#mostPopularLabelsContainer").hide();
+      $("#labelInfo").hide();
+      $("#gotoModeContainer").hide();
+    }
   }
 
   function showHideControls(show, imageUnlocked){
@@ -294,11 +306,11 @@
     })
   }
 
-  var removeAllMostPopularLabels = function(){
+  /*var removeAllMostPopularLabels = function(){
     $('#mostPopularLabels').children().each(function (){
       $(this).remove();
     })
-  }
+  }*/
 
 
   function addOldLabel(data){
@@ -501,6 +513,7 @@
               {{ if eq .mode "default" }}
               getNextImage("");
               {{ else }}
+              showHideMainArea(false);
               updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
               showBrowseLabelImageGrid();
               {{ end }}
@@ -630,7 +643,7 @@
 
       <h1></h1>
       <h1></h1>
-      <div id="mostPopularLabelsContainer" hidden style="display: none;">
+      <div id="mostPopularLabelsContainer" hidden>
         <h2 style="margin-bottom:0px;">Most Popular Labels:</h2>
         <p style="font-size:12px; margin-bottom:20px;">These are the most popular labels in the whole dataset</p>
         <div class="ui labels" id="mostPopularLabels">
