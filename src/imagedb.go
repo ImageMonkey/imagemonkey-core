@@ -320,12 +320,6 @@ type UserInfo struct {
     Permissions *UserPermissions `json:"permissions,omitempty"`
 }
 
-/*type MonthlyStatistics struct {
-    Annotations []int32 `json:"annotations"`
-    Validations []int32 `json:"validations"`
-    Dates []string `json:"dates"`
-}*/
-
 type DataPoint struct {
     Value int32 `json:"value"`
     Date string `json:"date"`
@@ -361,6 +355,21 @@ type AnnotationTask struct {
     } `json:"image"`
 
     Id string `json:"uuid"`
+}
+
+type AnnotationRefinementTask struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+    } `json:"image"`
+
+    Annotation struct{
+        Id string `json:"uuid"`
+        Data json.RawMessage `json:"data"`
+    } `json:"annotation"`
 }
 
 func sublabelsToStringlist(sublabels []Sublabel) []string {
@@ -1246,8 +1255,8 @@ func updateAnnotation(apiUser APIUser, annotationId string, annotations Annotati
     }
 
     //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, annotation, annotation_type_id)
-                            SELECT $1, ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, imageAnnotationId, byt)
+    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, imageAnnotationId, byt)
     if err != nil {
         tx.Rollback()
         log.Debug("[Update Annotation] Couldn't add new annotation data: ", err.Error())
@@ -1317,8 +1326,8 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     }
 
     //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, annotation, annotation_type_id)
-                            SELECT $1, ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, insertedId, byt)
+    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, insertedId, byt)
     if err != nil {
         tx.Rollback()
         log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
@@ -2629,7 +2638,7 @@ func getMostPopularLabels(limit int32) ([]string, error) {
     return labels, nil
 }
 
-func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
+func getRandomAnnotationForQuizRefinement() (AnnotationRefinement, error) {
     var bytes []byte
     var annotationBytes []byte
     var refinement AnnotationRefinement
@@ -4005,4 +4014,72 @@ func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string
     }
 
     return imageLabels, nil
+}
+
+func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string) ([]AnnotationRefinementTask, error) {
+    var annotationRefinementTasks []AnnotationRefinementTask
+
+    q := fmt.Sprintf(`WITH 
+                        image_productive_labels AS (
+                            SELECT q.image_id, array_agg(q.label)::text[] as accessors
+                            FROM
+                            (
+                                SELECT v.image_id as image_id, a.accessor as label
+                                FROM image_validation v
+                                JOIN label_accessor a ON a.label_id = v.label_id
+
+                                UNION ALL
+                                SELECT v.image_id, pl.name as label
+                                FROM image_validation v
+                                JOIN label l ON v.label_id = l.id
+                                JOIN label pl ON pl.id = l.parent_id
+                                WHERE pl.label_type = 'refinement_category'
+                            ) q
+                            JOIN image i ON q.image_id = i.id
+                            WHERE i.unlocked = true
+                            GROUP BY q.image_id
+                        ), 
+                        image_ids AS (
+                            SELECT image_id 
+                            FROM image_productive_labels q
+                            WHERE %s
+                        )
+                        SELECT i.key, i.unlocked, i.width, i.height, a.uuid,
+                        (d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation
+                        FROM image_ids ii
+                        JOIN image i ON i.id = ii.image_id
+                        JOIN image_annotation a ON i.id = a.image_id
+                        JOIN annotation_data d ON d.image_annotation_id = a.id
+                        JOIN annotation_type t ON d.annotation_type_id = t.id`, parseResult.query)
+
+    rows, err := db.Query(q, parseResult.queryValues...)
+    if err != nil {
+        log.Debug("[Get Annotations For Refinement] Couldn't get annotations for refinement: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationRefinementTasks, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var annotationBytes []byte
+        var annotationRefinementTask AnnotationRefinementTask
+        rows.Scan(&annotationRefinementTask.Image.Id, &annotationRefinementTask.Image.Unlocked, 
+                    &annotationRefinementTask.Image.Width, &annotationRefinementTask.Image.Height, 
+                    &annotationRefinementTask.Annotation.Id, &annotationBytes)
+
+        err = json.Unmarshal(annotationBytes, &annotationRefinementTask.Annotation.Data)
+        if err != nil {
+            log.Debug("[Get Annotations For Refinement] Couldn't unmarshal annotations: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationRefinementTasks, err
+        }
+
+        annotationRefinementTask.Image.Url = getImageUrlFromImageId(apiBaseUrl, annotationRefinementTask.Image.Id, 
+                                                                        annotationRefinementTask.Image.Unlocked)
+
+        annotationRefinementTasks = append(annotationRefinementTasks, annotationRefinementTask)
+    }
+
+    return annotationRefinementTasks, nil
 }

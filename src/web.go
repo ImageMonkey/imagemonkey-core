@@ -377,12 +377,23 @@ func main() {
 			c.HTML(http.StatusOK, "quiz.html", gin.H{
 				"title": "Quiz",
 				"randomQuiz": "",
-				"randomAnnotatedImage": pick(getRandomAnnotationForRefinement())[0],
+				"randomAnnotatedImage": pick(getRandomAnnotationForQuizRefinement())[0],
 				"activeMenuNr": 7,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})	
+		router.GET("/refinement", func(c *gin.Context) {
+			mode := getParamFromUrlParams(c, "mode", "default")
+
+			c.HTML(http.StatusOK, "refinement.html", gin.H{
+				"title": "Refinement",
+				"activeMenuNr": -1,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"apiBaseUrl": apiBaseUrl,
+				"mode": mode,
+			})
+		})
 		router.GET("/statistics", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "statistics.html", gin.H{
 				"title": "Statistics",

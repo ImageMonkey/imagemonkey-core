@@ -142,6 +142,17 @@ type APIUser struct {
     ClientFingerprint string `json:"client_fingerprint"`
 }
 
+type LabelMapRefinementValue struct {
+    Uuid string `json:"uuid"`
+    Description string `json:"description"`
+    Accessors []string `json:"accessors"`
+}
+
+type LabelMapRefinementEntry struct {
+     Values map[string]LabelMapRefinementValue `json:"values"`
+     Uuid string `json:"uuid"`
+}
+
 
 func use(vals ...interface{}) {
     for _, val := range vals {
@@ -298,6 +309,22 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     }
 
     return labelMap.LabelMapEntries, words, nil
+}
+
+func getLabelMapRefinements(path string) (map[string]LabelMapRefinementEntry, error) {
+    var labelMapRefinementEntries map[string]LabelMapRefinementEntry
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return labelMapRefinementEntries, err
+    }
+
+    err = json.Unmarshal(data, &labelMapRefinementEntries)
+    if err != nil {
+        return labelMapRefinementEntries, err
+    }
+
+    return labelMapRefinementEntries, nil
 }
 
 func GetSampleExportQueries() []string {

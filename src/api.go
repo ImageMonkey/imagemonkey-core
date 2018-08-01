@@ -1674,6 +1674,30 @@ func main(){
 			c.JSON(200, annotatedImages)
 		})
 
+		router.GET("/v1/annotations/refine", func(c *gin.Context) {
+			query := getParamFromUrlParams(c, "query", "")
+			query, err = url.QueryUnescape(query)
+	        if err != nil {
+	            c.JSON(422, gin.H{"error": "invalid query"})
+	            return
+	        }
+
+			queryParser := NewQueryParserV2(query)
+	        parseResult, err := queryParser.Parse(1)
+	        if err != nil {
+	            c.JSON(422, gin.H{"error": err.Error()})
+	            return
+	        }
+
+	        annotationRefinementTaks, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl)
+	        if err != nil {
+	        	c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+	        }
+
+	        c.JSON(200, annotationRefinementTaks)
+		})
+
 		router.GET("/v1/annotation", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
@@ -1718,7 +1742,7 @@ func main(){
 		})
 
 		router.GET("/v1/annotation/refine", func(c *gin.Context) {
-			randomImage,_ := getRandomAnnotationForRefinement()
+			randomImage,_ := getRandomAnnotationForQuizRefinement()
 			c.JSON(200, randomImage)
 		})
 
