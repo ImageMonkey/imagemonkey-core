@@ -271,7 +271,7 @@ type AnnotationRefinement struct {
 }
 
 type AnnotationRefinementEntry struct {
-    LabelId int64 `json:"label_id"`
+    LabelId string `json:"label_uuid"`
 }
 
 type ExportedImage struct {
@@ -2647,7 +2647,7 @@ func getRandomAnnotationForQuizRefinement() (AnnotationRefinement, error) {
                         s.allow_other, s.browse_by_example, s.multiselect
                         FROM ( 
                                 SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
-                                json_agg(json_build_object('id', l.id, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
+                                json_agg(json_build_object('uuid', l.uuid, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
                                 qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
                                 qq.browse_by_example as browse_by_example, qq.multiselect
     
@@ -2662,7 +2662,7 @@ func getRandomAnnotationForQuizRefinement() (AnnotationRefinement, error) {
                                 GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
                              ) as s
                         JOIN (
-                                SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"id":'||d.id||'}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
+                                SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
                                 FROM image_annotation a
                                 JOIN image i ON i.id = a.image_id
                                 JOIN annotation_data d ON d.image_annotation_id = a.id
@@ -2679,8 +2679,9 @@ func getRandomAnnotationForQuizRefinement() (AnnotationRefinement, error) {
                               WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
                             )
                         ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, 
-                            &refinement.Metainfo.AllowOther, &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, 
+                            &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, &refinement.Metainfo.AllowOther, 
+                            &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
     if err != nil {
         log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
         raven.CaptureError(err, nil)
@@ -2711,7 +2712,8 @@ func getRandomAnnotationForQuizRefinement() (AnnotationRefinement, error) {
     return refinement, nil
 }
 
-func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annotationRefinementEntries []AnnotationRefinementEntry, clientFingerprint string) error {
+func addOrUpdateRefinements(annotationUuid string, annotationDataId string, annotationRefinementEntries []AnnotationRefinementEntry, 
+                                clientFingerprint string) error {
     var err error
 
     tx, err := db.Begin()
@@ -2724,10 +2726,12 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annot
     for _, item := range annotationRefinementEntries {
 
         _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
-                            SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
+                            SELECT d.id, (SELECT l.id FROM label l WHERE l.uuid = $2), $3, $4 
+                            FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.uuid = $1
                           ON CONFLICT (annotation_data_id, label_id)
                           DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
-                          WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
+                          WHERE image_annotation_refinement.annotation_data_id = (SELECT d.id FROM annotation_data d WHERE d.uuid = $1) 
+                          AND image_annotation_refinement.label_id = (SELECT l.id FROM label l WHERE l.uuid = $2)`, 
                                annotationDataId, item.LabelId, 1, clientFingerprint, annotationUuid)
         
         if err != nil {

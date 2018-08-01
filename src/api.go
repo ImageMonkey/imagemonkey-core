@@ -1753,19 +1753,11 @@ func main(){
 				return
 			}
 
-			temp := c.Param("annotationdataid")
-			if temp == "" {
+			annotationDataId := c.Param("annotationdataid")
+			if annotationDataId == "" {
 				c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation data id"})
 				return
 			}
-
-			var annotationDataId int64
-			annotationDataId, err = strconv.ParseInt(temp, 10, 64)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "Invalid request - please provide a valid annotation data id"})
-				return
-			}
-
 
 			var annotationRefinementEntries []AnnotationRefinementEntry
 			if c.BindJSON(&annotationRefinementEntries) != nil {

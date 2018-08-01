@@ -59,21 +59,21 @@
     }
 
     function getSelectedLabelIds(){
-      var labelId;
-      var labelIdStr;
+      var labelIdStr = "";
+      var labelIds = [];
       if(currentControlsType === "radio"){
         labelIdStr = $('#answersRadioButtonGroup :radio:checked').attr('labelId');
-        labelId = [parseInt(labelIdStr, 10)];
+        labelIds.push(labelIdStr);
       }
       else if(currentControlsType === "dropdown"){
         labelIdStr = $('#labelDropdown' ).dropdown('get value').toString();
-        labelId = [parseInt(labelIdStr, 10)];
+        labelIds.push(labelIdStr);
       }
       else if(currentControlsType === "color tags"){
-        labelId = currentSelectedColorTags;
+        labelIds = currentSelectedColorTags;
       }
 
-      return labelId;
+      return labelIds;
     }
 
     function setImageAnnotation(canvas, imageUuid, annotation){
@@ -158,8 +158,7 @@
     }
 
     var colorTagSelected = function(e){
-      var selected = $(e).attr("labelId");
-      var currentSelectedColorTag = parseInt(selected, 10); 
+      var currentSelectedColorTag = $(e).attr("labelId");
 
       //check if we already have 'don't know' or 'other' selected;
       //if so, clear all selected
@@ -202,7 +201,7 @@
         }
       }
   
-      if(currentSelectedColorTag === -2){
+      if(currentSelectedColorTag === "-2"){
         $("#answersOtherContainer").show();
       }
       else
@@ -212,7 +211,7 @@
     var addAnswers = function(allowOther, allowUnknown, answers, controlsType){
       if(controlsType === "radio"){
         for(var i = 0; i < answers.length; i++){
-          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="' + answers[i]["id"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
+          var d = '<div class="field"><div class="ui radio checkbox"><input type="radio" name="quiz" labelId="' + answers[i]["uuid"] + '"><label>' + answers[i]["label"] + '</label></div></div>';
           $('#answersRadioButtonGroup').append($(d));
         }
         if(allowOther){
@@ -227,7 +226,7 @@
       }
       else if(controlsType === "dropdown"){
         for(var i = 0; i < answers.length; i++){
-          var d = '<div class="item" data-value="' + answers[i]["id"] + '">' + answers[i]["label"] + '</div>';
+          var d = '<div class="item" data-value="' + answers[i]["uuid"] + '">' + answers[i]["label"] + '</div>';
           $('#labelMenuItems').append($(d));
         }
         if(allowOther){
@@ -247,7 +246,7 @@
           if(answers[i]["label"] === "white")
             isBasic = true;
 
-          var d = '<a class="ui ' + ((isBasic) ? "basic " : " ") +  answers[i]["label"] + ' label" labelId="' + answers[i]["id"] + '" onclick="colorTagSelected(this)">' + answers[i]["label"] + '</a>';
+          var d = '<a class="ui ' + ((isBasic) ? "basic " : " ") +  answers[i]["label"] + ' label" labelId="' + answers[i]["uuid"] + '" onclick="colorTagSelected(this)">' + answers[i]["label"] + '</a>';
           $('#colorTags').append($(d));
         }
 
@@ -284,17 +283,12 @@
         showHideBrowseByExample(false);
       }
 
-      setIds(data["image"]["uuid"], data["annotation"]["uuid"], data["annotation"]["annotation"]["id"]);
+      setIds(data["image"]["uuid"], data["annotation"]["uuid"], data["annotation"]["annotation"]["uuid"]);
       removeAllAnswers(data["question"]["recommended_control"]);
       addAnswers(data["metainfo"]["allow_other"], data["metainfo"]["allow_unknown"], data["answers"], data["question"]["recommended_control"]);
       setImageAnnotation(canvas, data["image"]["uuid"], data["annotation"]["annotation"]);
       $("#question").text(data["question"]["question"]);
     }
-
-    function onColorChanged(hexColor){
-      console.log("hex color = " +hexColor)
-    }
-
 
     $(document).ready(function(){
       $('#labelDropdown').dropdown({ 
@@ -312,7 +306,7 @@
 
 
       $('#answersRadioButtonGroup').on("change", function(event){
-        if(event.target.getAttribute("labelId") == -2)
+        if(event.target.getAttribute("labelId") == "-2")
           $("#answersOtherContainer").show();
         else
           $("#answersOtherContainer").hide();
@@ -330,23 +324,10 @@
           }).modal('show');
       });
 
-      /*$('#labelDropdown').on("change", function(event){
-        console.log("changed")
-        if(event.target.getAttribute("labelId") == -2)
-          $("#answersOtherContainer").show();
-        else
-          $("#answersOtherContainer").hide();
-      });*/
-
       var browserFingerprint = null;
 
       var canvas = new fabric.Canvas('canvas');
       populate(canvas, {{ .randomAnnotatedImage }})
-
-      //var canvasElement = document.getElementById('canvas');
-      //var canvasContext = canvasElement.getContext("2d");
-      //registerColorPickerOnMove(canvas, canvasContext, onColorChanged);
-      
 
       new Fingerprint2().get(function(result, components){
         browserFingerprint = result;
@@ -364,17 +345,16 @@
           if(browserFingerprint !== null)
             headers['X-Browser-Fingerprint'] = browserFingerprint;
 
-          if(labelIds[0] === -1){ //if "don't know" is selected, just get a new quiz
+          if(labelIds[0] === "-1"){ //if "don't know" is selected, just get a new quiz
             getNextQuiz(canvas);
           }
-          else if(labelIds[0] == -2){ //if "other is selected"
+          else if(labelIds[0] === "-2"){ //if "other is selected"
             var suggestedLabel = $("#suggestedLabel").val();
             if(suggestedLabel === ""){
               $('#nothingSelectedMessage').show(200).delay(1500).hide(200);
               return;
             }
             url = '{{ .apiBaseUrl }}/v1/label/suggest';
-            data.push({"label" : suggestedLabel});
 
             showHideControls(false);
 
@@ -383,7 +363,7 @@
               url: url,
               dataType: 'json',
               type: 'POST',
-              data: JSON.stringify(data),
+              data: JSON.stringify({"label" : suggestedLabel}),
               headers: headers,
               complete: function(data){
               },
@@ -396,7 +376,7 @@
             url = '{{ .apiBaseUrl }}/v1/annotation/' + $("#canvas").attr("annotationId") + "/refine/" + $("#canvas").attr("annotationDataId");
             
             for(var i = 0; i < labelIds.length; i++)
-              data.push({"label_id" : labelIds[i]});
+              data.push({"label_uuid" : labelIds[i]});
 
             showHideControls(false);
 

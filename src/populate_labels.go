@@ -16,7 +16,6 @@ func getLabelId(tx *sql.Tx, label string, sublabel string) int64 {
 		if err != nil {
 			tx.Rollback()
 			log.Fatal("Couldn't get label id: ", err)
-			panic(err)
 		}
 	} else {
 		err := tx.QueryRow(`SELECT l.id FROM label l 
@@ -25,7 +24,6 @@ func getLabelId(tx *sql.Tx, label string, sublabel string) int64 {
 		if err != nil {
 			tx.Rollback()
 			log.Fatal("Couldn't get label id: ", label, sublabel)
-			panic(err)
 		}
 	}
 
@@ -65,7 +63,6 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 		if err != nil {
 			tx.Rollback()
 			log.Fatal("Couldn't add accessor: ", err.Error())
-			panic(err)
 		}
 
 
@@ -87,7 +84,6 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 					if err != nil {
 						tx.Rollback()
 						log.Fatal("Couldn't add accessor for sublabel: ", err.Error())
-						panic(err)
 					}
 				}
 			}
@@ -116,7 +112,6 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 					if err != nil {
 						tx.Rollback()
 						log.Fatal("Couldn't add accessor for quiz entry: ", err.Error())
-						panic(err)
 					}
 
 				}
@@ -137,7 +132,6 @@ func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
 		if err != nil {
 			tx.Rollback()
 			log.Fatal("Couldn't add quiz question ", err.Error())
-			panic(err)
 		}
 	}
 }
@@ -146,14 +140,39 @@ func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
 	//quiz answers
 	for _, quizEntry := range val.Quiz {
 		for _, answer := range quizEntry.Answers {
-			_, err := tx.Exec(`INSERT INTO label(name, parent_id, uuid)
-								SELECT $1, id, $3 FROM label WHERE uuid = $2
-								ON CONFLICT(uuid) DO NOTHING`, answer.Name, parentLabelUuid, answer.Uuid)
+			rows, err := tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type)
+								SELECT $1, id, $3, 'refinement' FROM label WHERE uuid = $2
+								ON CONFLICT(uuid) DO NOTHING RETURNING id`, answer.Name, parentLabelUuid, answer.Uuid)
 			if err != nil {
 				tx.Rollback()
-				log.Fatal("Couldn't add quiz answer ", err.Error())
-				panic(err)
+				log.Fatal("Couldn't add quiz answer label ", err.Error())
 			}
+
+			defer rows.Close()
+
+			if rows.Next() {
+				log.Info("Added quiz answer label ", answer.Name)
+			}
+
+			rows.Close()
+
+			rows, err = tx.Query(`INSERT INTO quiz_answer(quiz_question_id, label_id)
+									SELECT (SELECT q.id FROM quiz_question q WHERE q.uuid = $1),
+									   	   (SELECT l.id FROM label l WHERE l.uuid = $2)
+								   ON CONFLICT DO NOTHING RETURNING id`, quizEntry.Uuid, answer.Uuid)
+
+			if err != nil {
+				tx.Rollback()
+				log.Fatal("Couldn't add quiz answer entry ", err.Error())
+			}
+
+			defer rows.Close()
+				
+			if rows.Next() {
+				log.Info("Added quiz answer entry for label ", answer.Name)
+			}
+
+			rows.Close()
 		}
 	}
 }
@@ -163,12 +182,10 @@ func addLabel(tx *sql.Tx, uuid string, label string) {
 	if err != nil {
 		tx.Rollback()
 		log.Fatal(err)
-		panic(err)
 	}
 	if !rows.Next() {
 		tx.Rollback()
 		log.Fatal(err)
-		panic(err)
 	}
 
 	numOfLabels := 0
@@ -176,18 +193,16 @@ func addLabel(tx *sql.Tx, uuid string, label string) {
 	if err != nil {
 		tx.Rollback()
 		log.Fatal(err)
-		panic(err)
 	}
 
 	rows.Close()
 
 	if numOfLabels == 0 {
 		log.Info("Adding label ", label)
-		_,err := tx.Exec("INSERT INTO label(name, uuid) VALUES($1, $2)", label, uuid)
+		_,err := tx.Exec("INSERT INTO label(name, uuid, label_type) VALUES($1, $2, 'normal')", label, uuid)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
-			panic(err)
 		}
 	} else {
 		log.Debug("Skipping label ", label, " as it already exists")
@@ -199,12 +214,10 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) {
 	if err != nil {
 		tx.Rollback()
 		log.Fatal(err)
-		panic(err)
 	}
 	if !rows.Next() {
 		tx.Rollback()
 		log.Fatal(err)
-		panic(err)
 	}
 
 	numOfLabels := 0
@@ -212,15 +225,14 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) {
 	if err != nil {
 		tx.Rollback()
 		log.Fatal(err)
-		panic(err)
 	}
 
 	rows.Close()
 
 	if numOfLabels == 0 {
 		log.Info("Adding label ", sublabel, " (parent: ", label, " )")
-		_,err := tx.Exec(`INSERT INTO label(name, parent_id, uuid)
-			SELECT $1, l.id, $3 FROM label l WHERE l.name = $2 AND l.parent_id is null`,
+		_,err := tx.Exec(`INSERT INTO label(name, parent_id, uuid, label_type)
+			SELECT $1, l.id, $3, 'normal' FROM label l WHERE l.name = $2 AND l.parent_id is null`,
 			sublabel, label, uuid)
 		if err != nil {
 			tx.Rollback()
@@ -232,6 +244,81 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) {
 	}
 }
 
+func addLabelRefinements(tx *sql.Tx, labelMapRefinementEntries map[string]LabelMapRefinementEntry) {
+	for k, v := range labelMapRefinementEntries {
+		if v.Uuid == "" {
+			tx.Rollback()
+			log.Fatal("refinement type uuid is empty!")
+		}
+
+		rows, err := tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type) VALUES ($1, null, $2, 'refinement_category')
+				                   ON CONFLICT DO NOTHING RETURNING id`, k, v.Uuid)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
+
+		defer rows.Close()
+
+		if rows.Next() {
+			log.Info("Inserted refinement type ", k, "(uuid: ", v.Uuid, ")")
+		}
+
+		rows.Close()
+
+		for k1, v1 := range v.Values {
+			if v1.Uuid == "" {
+				tx.Rollback()
+				log.Fatal("refinement label uuid is empty!")
+			}
+
+			//insert label if not exists
+			rows, err = tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type)
+									SELECT $1, l.id, $2, 'refinement' FROM label l WHERE l.uuid = $3
+				                   ON CONFLICT DO NOTHING RETURNING id`, k1, v1.Uuid, v.Uuid)
+
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+
+			defer rows.Close()
+
+			if rows.Next() {
+				log.Info("Inserted label ", k1, "(uuid: ", v1.Uuid, ")")
+			}
+
+			rows.Close()
+
+			addLabelRefinementAccessors(tx, v1.Uuid, k1, v1.Accessors)
+		}
+	}
+}
+
+func addLabelRefinementAccessors(tx *sql.Tx, labelUuid string, label string, accessors []string) {
+	for _, acc := range accessors {
+		accessor := acc
+		if accessor == "." {
+			accessor = label
+		}
+
+		rows, err := tx.Query(`INSERT INTO label_accessor(label_id, accessor)
+								SELECT l.id, $2 FROM label l WHERE uuid = $1
+								ON CONFLICT DO NOTHING RETURNING id`, labelUuid, accessor)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
+
+		defer rows.Close()
+
+		if rows.Next() {
+			log.Info("Added label accessor ", accessor, " for label with uuid ", labelUuid)
+		}
+
+		rows.Close()
+	}
+}
 
 func main(){
 	dryRun := flag.Bool("dryrun", true, "dry run")
@@ -265,6 +352,12 @@ func main(){
 		log.Fatal("Couldn't get label map: ", err.Error())
 	}
 
+	labelMapRefinements, err := getLabelMapRefinements("../wordlists/en/label-refinements.json")
+	if err != nil {
+		log.Fatal("Couldn't get label map refinements: ", err.Error())
+	}
+
+	//add labels
 	for k := range labelMap {
 		val := labelMap[k]
 
@@ -282,6 +375,10 @@ func main(){
 		addAccessors(tx, k, val)
 
 	} 
+
+
+	//add label refinements
+	addLabelRefinements(tx, labelMapRefinements)
 
 	if ! *dryRun {
 		err = tx.Commit()
