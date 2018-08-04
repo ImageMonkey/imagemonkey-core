@@ -3152,48 +3152,6 @@ func changeProfilePicture(username string, uuid string) (string, error) {
     return existingProfilePicture, nil
 }
 
-/*func getMonthlyStatistics() (MonthlyStatistics, error) {
-    var monthlyStatistics MonthlyStatistics
-
-    rows, err := db.Query(`WITH dates AS (
-                            SELECT *
-                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
-                           ),
-                           num_of_annotations AS (
-                            SELECT * FROM image_annotation_history h
-                           )
-                          SELECT date,
-                           ( SELECT count(*) FROM num_of_annotations s
-                             WHERE date(lower(s.sys_period)) = date(date) 
-                           ) as num
-                           FROM dates
-                           GROUP BY date
-                           ORDER BY date`)
-    if err != nil {
-        log.Debug("[Get Statistics] Couldn't get monthly statistics: ", err.Error())
-        raven.CaptureError(err, nil)
-        return monthlyStatistics, err
-    }
-
-    defer rows.Close()
-
-    for rows.Next() {
-        var numOfAnnotations int32
-        //var numOfValidations int32
-        var date string
-        err = rows.Scan(&date, &numOfAnnotations)
-        if err != nil {
-            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
-            raven.CaptureError(err, nil)
-            return monthlyStatistics, err
-        }
-
-        monthlyStatistics.Dates = append(monthlyStatistics.Dates, date)
-        monthlyStatistics.Annotations = append(monthlyStatistics.Annotations, numOfAnnotations)
-    }
-
-    return monthlyStatistics, nil
-}*/
 
 func getAnnotationStatistics(period string) ([]DataPoint, error) {
     var annotationStatistics []DataPoint
@@ -4022,17 +3980,6 @@ func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string
     return imageLabels, nil
 }
 
-/*func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string) 
-        ([]AnnotationRefinementTask, error) {
-    return _getAnnotationsForRefinement(parseResult, apiBaseUrl, "")
-}
-
-func getSingleAnnotationForRefinement(parseResult ParseResult, apiBaseUrl string, 
-        annotationDataId string) ([]AnnotationRefinementTask, error) {
-    res, err := _getAnnotationsForRefinement(parseResult, apiBaseUrl, "")
-    return
-}*/
-
 func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string, 
         annotationDataId string) ([]AnnotationRefinementTask, error) {
     var annotationRefinementTasks []AnnotationRefinementTask
@@ -4046,44 +3993,6 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string,
     if len(parseResult.queryValues) > 0 {
         q2 = fmt.Sprintf("WHERE %s", parseResult.query)
     }
-
-    /*q := fmt.Sprintf(`WITH 
-                        image_productive_labels AS (
-                            SELECT q.image_id, array_agg(q.label)::text[] as accessors
-                            FROM
-                            (
-                                SELECT v.image_id as image_id, a.accessor as label
-                                FROM image_validation v
-                                JOIN label_accessor a ON a.label_id = v.label_id
-
-                                UNION ALL
-                                SELECT v.image_id, pl.name as label
-                                FROM image_validation v
-                                JOIN label l ON v.label_id = l.id
-                                JOIN label pl ON pl.id = l.parent_id
-                                WHERE pl.label_type = 'refinement_category'
-                            ) q
-                            JOIN image i ON q.image_id = i.id
-                            WHERE i.unlocked = true
-                            GROUP BY q.image_id
-                        ), 
-                        image_ids AS (
-                            SELECT image_id 
-                            FROM image_productive_labels q
-                            %s
-                        )
-                        SELECT i.key, i.unlocked, i.width, i.height, a.uuid,
-                        (d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation,
-                        COALESCE(json_agg(json_build_object('name', l.name, 'uuid', l.uuid)) FILTER (WHERE l.id is not null), '[]'::json) as labels
-                        FROM image_ids ii
-                        JOIN image i ON i.id = ii.image_id
-                        JOIN image_annotation a ON i.id = a.image_id
-                        JOIN annotation_data d ON d.image_annotation_id = a.id
-                        JOIN annotation_type t ON d.annotation_type_id = t.id
-                        LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
-                        LEFT JOIN label l ON l.id = r.label_id
-                        %s
-                        GROUP BY i.key, i.unlocked, i.width, i.height, a.uuid, d.annotation, d.uuid, t.name`, q2, q1)*/
 
     q := fmt.Sprintf(`WITH 
                         productive_image_annotation_data_entries AS (
