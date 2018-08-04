@@ -1,0 +1,24 @@
+{
+	"material": {
+		"uuid": "5abd2d73-7096-400b-bf5e-198f6f456a34",
+		"icon": "globe",
+		"values": {
+			"stone": {
+				"description": "",
+				"uuid": "82e3d5f1-47c7-4a22-bb13-48665416cae4",
+				"accessors": ["material='stone'"]
+			}
+		}
+	},
+	"color": {
+		"uuid": "fbeebee4-2caf-4ae3-b3a8-4fb5a12ec9df",
+		"icon": "tint",
+		"values": {
+			"blue": {
+				"description": "",
+				"uuid": "6bd612d9-a9a1-477a-95de-da37b611e5de",
+				"accessors": ["color='blue'"]
+			}
+		}
+	}
+}

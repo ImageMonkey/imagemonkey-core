@@ -370,6 +370,8 @@ type AnnotationRefinementTask struct {
         Id string `json:"uuid"`
         Data json.RawMessage `json:"data"`
     } `json:"annotation"`
+
+    Refinements json.RawMessage `json:"refinements"`
 }
 
 func sublabelsToStringlist(sublabels []Sublabel) []string {
@@ -4020,10 +4022,32 @@ func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string
     return imageLabels, nil
 }
 
-func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string) ([]AnnotationRefinementTask, error) {
+/*func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string) 
+        ([]AnnotationRefinementTask, error) {
+    return _getAnnotationsForRefinement(parseResult, apiBaseUrl, "")
+}
+
+func getSingleAnnotationForRefinement(parseResult ParseResult, apiBaseUrl string, 
+        annotationDataId string) ([]AnnotationRefinementTask, error) {
+    res, err := _getAnnotationsForRefinement(parseResult, apiBaseUrl, "")
+    return
+}*/
+
+func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string, 
+        annotationDataId string) ([]AnnotationRefinementTask, error) {
     var annotationRefinementTasks []AnnotationRefinementTask
 
-    q := fmt.Sprintf(`WITH 
+    q1 := ""
+    if annotationDataId != "" {
+        q1 = fmt.Sprintf("WHERE d.uuid::text = $%d", len(parseResult.queryValues) + 1)
+    }
+
+    q2 := ""
+    if len(parseResult.queryValues) > 0 {
+        q2 = fmt.Sprintf("WHERE %s", parseResult.query)
+    }
+
+    /*q := fmt.Sprintf(`WITH 
                         image_productive_labels AS (
                             SELECT q.image_id, array_agg(q.label)::text[] as accessors
                             FROM
@@ -4046,15 +4070,75 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string) ([]
                         image_ids AS (
                             SELECT image_id 
                             FROM image_productive_labels q
-                            WHERE %s
+                            %s
                         )
                         SELECT i.key, i.unlocked, i.width, i.height, a.uuid,
-                        (d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation
+                        (d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation,
+                        COALESCE(json_agg(json_build_object('name', l.name, 'uuid', l.uuid)) FILTER (WHERE l.id is not null), '[]'::json) as labels
                         FROM image_ids ii
                         JOIN image i ON i.id = ii.image_id
                         JOIN image_annotation a ON i.id = a.image_id
                         JOIN annotation_data d ON d.image_annotation_id = a.id
-                        JOIN annotation_type t ON d.annotation_type_id = t.id`, parseResult.query)
+                        JOIN annotation_type t ON d.annotation_type_id = t.id
+                        LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                        LEFT JOIN label l ON l.id = r.label_id
+                        %s
+                        GROUP BY i.key, i.unlocked, i.width, i.height, a.uuid, d.annotation, d.uuid, t.name`, q2, q1)*/
+
+    q := fmt.Sprintf(`WITH 
+                        productive_image_annotation_data_entries AS (
+                            SELECT q.annotation_data_id, array_agg(q.label)::text[] as accessors
+                            FROM (
+                                    SELECT d.id as annotation_data_id, an.image_id as image_id, a.accessor as label 
+                                    FROM image_annotation an
+                                    JOIN annotation_data d on d.image_annotation_id = an.id
+                                    JOIN label_accessor a on a.label_id = an.label_id
+
+                                    UNION ALL
+                                    
+                                    SELECT d.id as annotation_data_id, an.image_id as image_id, pl.name as label
+                                    FROM image_annotation an
+                                    JOIN annotation_data d on d.image_annotation_id = an.id
+                                    JOIN label l ON an.label_id = l.id
+                                    JOIN label pl ON pl.id = l.parent_id
+                                    WHERE pl.label_type = 'refinement_category'
+
+                                    UNION ALL
+
+                                    SELECT d.id as annotation_data_id, an.image_id as image_id, pl.name as accessor
+                                    FROM image_annotation an
+                                    JOIN annotation_data d on d.image_annotation_id = an.id
+                                    JOIN image_annotation_refinement r on r.annotation_data_id = d.id
+                                    JOIN label_accessor a on a.label_id = r.label_id
+                                    JOIN label l on l.id = r.label_id
+                                    LEFT JOIN label pl ON l.parent_id = pl.id
+                                    WHERE pl.label_type = 'refinement_category'
+                                ) q
+                                JOIN image i ON q.image_id = i.id
+                                WHERE i.unlocked = true
+                                GROUP BY q.annotation_data_id
+                        ), 
+                        filtered_image_annotation_data_entries AS (
+                            SELECT annotation_data_id 
+                            FROM productive_image_annotation_data_entries q
+                            %s
+                        )
+                        SELECT i.key, i.unlocked, i.width, i.height, a.uuid,
+                        (d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation,
+                        COALESCE(json_agg(json_build_object('name', l.name, 'uuid', l.uuid)) FILTER (WHERE l.id is not null), '[]'::json) as labels
+                        FROM filtered_image_annotation_data_entries f
+                        JOIN annotation_data d ON d.id = f.annotation_data_id
+                        JOIN image_annotation a ON a.id = d.image_annotation_id
+                        JOIN image i ON i.id = a.image_id
+                        JOIN annotation_type t ON d.annotation_type_id = t.id
+                        LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                        LEFT JOIN label l ON l.id = r.label_id
+                        %s
+                        GROUP BY i.key, i.unlocked, i.width, i.height, a.uuid, d.annotation, d.uuid, t.name`, q2, q1)
+
+    if annotationDataId != "" {
+        parseResult.queryValues = append(parseResult.queryValues, annotationDataId)
+    }
 
     rows, err := db.Query(q, parseResult.queryValues...)
     if err != nil {
@@ -4067,17 +4151,26 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string) ([]
 
     for rows.Next() {
         var annotationBytes []byte
+        var labelAccessorsBytes []byte
         var annotationRefinementTask AnnotationRefinementTask
         rows.Scan(&annotationRefinementTask.Image.Id, &annotationRefinementTask.Image.Unlocked, 
                     &annotationRefinementTask.Image.Width, &annotationRefinementTask.Image.Height, 
-                    &annotationRefinementTask.Annotation.Id, &annotationBytes)
+                    &annotationRefinementTask.Annotation.Id, &annotationBytes, &labelAccessorsBytes)
 
         err = json.Unmarshal(annotationBytes, &annotationRefinementTask.Annotation.Data)
         if err != nil {
-            log.Debug("[Get Annotations For Refinement] Couldn't unmarshal annotations: ", err.Error())
+            log.Debug("[Get Annotations For Refinement] Couldn't unmarshal annotation: ", err.Error())
             raven.CaptureError(err, nil)
             return annotationRefinementTasks, err
         }
+
+        err = json.Unmarshal(labelAccessorsBytes, &annotationRefinementTask.Refinements)
+        if err != nil {
+            log.Debug("[Get Annotations For Refinement] Couldn't unmarshal labels: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationRefinementTasks, err
+        }
+
 
         annotationRefinementTask.Image.Url = getImageUrlFromImageId(apiBaseUrl, annotationRefinementTask.Image.Id, 
                                                                         annotationRefinementTask.Image.Unlocked)

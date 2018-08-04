@@ -151,6 +151,7 @@ type LabelMapRefinementValue struct {
 type LabelMapRefinementEntry struct {
      Values map[string]LabelMapRefinementValue `json:"values"`
      Uuid string `json:"uuid"`
+     Icon string `json:"icon"`
 }
 
 
@@ -311,7 +312,7 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     return labelMap.LabelMapEntries, words, nil
 }
 
-func getLabelMapRefinements(path string) (map[string]LabelMapRefinementEntry, error) {
+func getLabelRefinementsMap(path string) (map[string]LabelMapRefinementEntry, error) {
     var labelMapRefinementEntries map[string]LabelMapRefinementEntry
 
     data, err := ioutil.ReadFile(path)

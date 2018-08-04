@@ -86,7 +86,7 @@
 
     function getNextQuiz(canvas){
       $.ajax({
-        url: '{{ .apiBaseUrl }}/v1/annotation/refine',
+        url: '{{ .apiBaseUrl }}/v1/quiz-refine',
         dataType: 'json',
         type: 'GET',
         complete: function(data){

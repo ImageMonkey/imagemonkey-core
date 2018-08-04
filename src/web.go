@@ -52,6 +52,7 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
+	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8082", "Playground Base URL")
@@ -130,10 +131,17 @@ func main() {
 		},*/
 	}
 
-	log.Debug("[Main] Reading Label Map")
+	log.Debug("[Main] Reading labels")
 	labelMap, words, err := getLabelMap(*wordlistPath)
 	if err != nil {
-		fmt.Printf("[Main] Couldn't read label map...terminating!")
+		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
+		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading label refinements")
+	labelRefinementsMap, err := getLabelRefinementsMap(*labelRefinementsPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
 		log.Fatal(err)
 	}
 
@@ -392,6 +400,7 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"apiBaseUrl": apiBaseUrl,
 				"mode": mode,
+				"labels": labelRefinementsMap,
 			})
 		})
 		router.GET("/statistics", func(c *gin.Context) {

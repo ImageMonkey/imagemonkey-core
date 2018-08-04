@@ -1674,7 +1674,7 @@ func main(){
 			c.JSON(200, annotatedImages)
 		})
 
-		router.GET("/v1/annotations/refine", func(c *gin.Context) {
+		/*router.GET("/v1/annotations/refine", func(c *gin.Context) {
 			query := getParamFromUrlParams(c, "query", "")
 			query, err = url.QueryUnescape(query)
 	        if err != nil {
@@ -1689,14 +1689,14 @@ func main(){
 	            return
 	        }
 
-	        annotationRefinementTaks, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl)
+	        annotationRefinementTaks, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl, "")
 	        if err != nil {
 	        	c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 	        }
 
 	        c.JSON(200, annotationRefinementTaks)
-		})
+		})*/
 
 		router.GET("/v1/annotation", func(c *gin.Context) {
 			params := c.Request.URL.Query()
@@ -1741,9 +1741,48 @@ func main(){
 			c.JSON(http.StatusOK, annotatedImage)
 		})
 
-		router.GET("/v1/annotation/refine", func(c *gin.Context) {
+		router.GET("/v1/quiz-refine", func(c *gin.Context) {
 			randomImage,_ := getRandomAnnotationForQuizRefinement()
 			c.JSON(200, randomImage)
+		})
+
+		router.GET("/v1/refine", func(c *gin.Context) {
+			annotationDataId := getParamFromUrlParams(c, "annotation_data_id", "")
+
+			var parseResult ParseResult
+			query := getParamFromUrlParams(c, "query", "")
+			if query != "" {
+				query, err = url.QueryUnescape(query)
+		        if err != nil {
+		            c.JSON(422, gin.H{"error": "invalid query"})
+		            return
+		        }
+
+				queryParser := NewQueryParserV2(query)
+		        parseResult, err = queryParser.Parse(1)
+		        if err != nil {
+		            c.JSON(422, gin.H{"error": err.Error()})
+		            return
+		        }
+		    }
+		    
+			annotations, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl, annotationDataId)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			if annotationDataId != "" {
+				if len(annotations) != 0 {
+					c.JSON(200, annotations[0]) 
+					return
+				} 
+
+				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
+				return
+			}
+
+			c.JSON(200, annotations) 
 		})
 
 		router.POST("/v1/annotation/:annotationid/refine/:annotationdataid", func(c *gin.Context) {
