@@ -17,14 +17,14 @@
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js?v=2"></script> 
-  <script src="js/jquery-ui.min.js"></script>
-  <link rel="stylesheet" href="css/jquery-ui.css">
   <script src="js/justified-layout.min.js"></script>
   <script src="js/infinitescroll.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
   <script src="js/fabric.min.js"></script>
   <script src="js/fabric_helper.js?v=11"></script>
   <link rel="stylesheet" href="css/balloon/balloon.min.css">
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
 
   <style>
     .canvas-container{margin: 0 auto;}
@@ -74,6 +74,8 @@
       delete newlyAddedLabels[labelUuid];
       //remove actual label...
       $(e).parent().remove();
+
+      showHideNoLabelsDefined();
     }
 
     function createLabel(displayedLabel, labelUuid, isHuge, addClose) {
@@ -128,8 +130,25 @@
             canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
               drawAnnotations(canvas.fabric(), [data.annotation.data], canvas.fabric().backgroundImage.scaleX);
             });
+
+            showHideNoLabelsDefined();
         }
       });
+    }
+
+    function onAddLabel(labelName, labelUuid) {
+      if(labelName !== ""){
+        if(!(labelUuid in oldLabels) && !(labelUuid in newlyAddedLabels)) {
+          $("#labels").append(createLabel(labelName, labelUuid, true, true));
+          $('#labelDropdown').dropdown('restore placeholder text'); //clear dropdown after add
+          newlyAddedLabels[labelUuid] = labelName;
+        }
+        else {
+          $('#labelAlreadyExistsMessage').show(200).delay(1500).hide(200);
+        }
+      }
+
+      showHideNoLabelsDefined();
     }
 
 
@@ -145,7 +164,7 @@
       return url;
     }
 
-    function refineAnnotation(labelUuids) {
+    function refineAnnotation(labelUuids, labelNames) {
       var url = ('{{ .apiBaseUrl }}/v1/annotation/' 
                   + $('#annotatedImage').attr('data-annotation-id') 
                   + '/refine/' + $("#annotatedImage").attr("data-annotation-data-id"));
@@ -161,6 +180,17 @@
 
       showHideMainControls(false);
 
+      if(data.length === 0) { //nothing to do
+        newlyAddedLabels = {};
+        oldLabels = {};
+        $("#labels").empty();
+
+        {{ if eq .mode "browse" }}
+        showBrowseAnnotationRefineImageGrid();
+        {{ end }}
+        return;
+      }
+
       $.ajax({
         url: url,
         dataType: 'json',
@@ -168,6 +198,9 @@
         data: JSON.stringify(data),
         headers: headers,
         success: function(data){
+          updateLabelsInImageGrid($("#annotatedImage").attr("data-annotation-data-id"), labelNames); 
+
+          $("#labels").empty();
           newlyAddedLabels = {};
           oldLabels = {};
 
@@ -201,36 +234,38 @@
         }
       }
 
+
       $('#doneButton').click(function(e) {
         e.preventDefault();
 
         var labelUuids = [];
+        var labelNames = [];
         for (key in newlyAddedLabels) {
-          if (newlyAddedLabels.hasOwnProperty(key))
+          if (newlyAddedLabels.hasOwnProperty(key)) {
             labelUuids.push(key);
+            labelNames.push(newlyAddedLabels[key]);
+          }
         }
 
-        refineAnnotation(labelUuids);
-        showBrowseAnnotationRefineImageGrid();
+        refineAnnotation(labelUuids, labelNames);
       });
 
-      $('#addLabelButton').click(function(e){
+      /*$('#addLabelButton').click(function(e){
         var labelName = $('#labelDropdown').dropdown('get text');
         var labelUuid = $('#labelDropdown').dropdown('get value');
-        if(labelName !== ""){
-          if(!(labelUuid in oldLabels) && !(labelUuid in newlyAddedLabels)) {
-            $("#labels").append(createLabel(labelName, labelUuid, true, true));
-            $('#labelDropdown').dropdown('restore placeholder text'); //clear dropdown after add
-            newlyAddedLabels[labelUuid] = labelName;
-          }
-          else {
-            $('#labelAlreadyExistsMessage').show(200).delay(1500).hide(200);
-          }
-        }
-      });
+        onAddLabel(labelName, labelUuid);
+      });*/
 
       canvas = new CanvasDrawer("annotatedImage");
       canvas.fabric().selection = false;
+
+      $('.dropdown').dropdown({
+        selectOnKeydown: false,
+        forceSelection: false,
+        onChange(value, text, choice) {
+          onAddLabel(choice[0]["innerText"], value);
+        }
+      });
 
       new Fingerprint2().get(function(result, components){
         browserFingerprint = result;
@@ -296,7 +331,7 @@
                         </div>
                       </div>
 
-                      <button class="ui button" id="addLabelButton">Add</button>
+                      <!--<button class="ui button" id="addLabelButton">Add</button>-->
                     </div>
                   </div>
                 </div>

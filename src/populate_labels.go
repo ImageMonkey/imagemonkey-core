@@ -352,7 +352,7 @@ func main(){
 		log.Fatal("Couldn't get label map: ", err.Error())
 	}
 
-	labelMapRefinements, err := getLabelMapRefinements("../wordlists/en/label-refinements.json")
+	labelMapRefinements, err := getLabelRefinementsMap("../wordlists/en/label-refinements.json")
 	if err != nil {
 		log.Fatal("Couldn't get label map refinements: ", err.Error())
 	}

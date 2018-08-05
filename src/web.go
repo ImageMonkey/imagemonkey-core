@@ -401,6 +401,8 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"mode": mode,
 				"labels": labelRefinementsMap,
+				"labelAccessors": pick(getLabelAccessors())[0],
+				"labelCategories": pick(getLabelCategories())[0],
 			})
 		})
 		router.GET("/statistics", func(c *gin.Context) {

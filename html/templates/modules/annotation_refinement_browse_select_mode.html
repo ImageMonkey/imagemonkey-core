@@ -36,11 +36,19 @@
       $(this).remove();
     })
   }
+  function updateLabelsInImageGrid(annotationDataId, labels) {
+    var id = "justified-item" + annotationDataId;
+    var tooltip = $("#"+id).attr("data-balloon");
+    for(var i = 0; i < labels.length; i++) {
+      if(tooltip.length !== 0)
+        tooltip += (", " + labels[i]);
+      else
+        tooltip += labels[i];
+    }
+    $("#"+id).attr("data-balloon", tooltip);
+  }
 
   function showBrowseAnnotationRefineImageGrid() {
-    //if the image grid gets shown again, the image in question was successfully annotated/blacklisted or marked
-    //as non-annotatable. We now grey the image out and change the mouse cursor to default again.
-
     $("#"+currentRefinedImageGridElement).addClass("grey-out");
     $("#"+currentRefinedImageGridElement).css('cursor', 'default');
 
@@ -121,6 +129,7 @@
 
   function newCanvasItem(id, top, left, width, height, tooltip){
     var d = ('<div class="justified-layout-item"' 
+            + ' id="' + ('justified-item' + id) + '"'
             + ' data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"' 
             + ' style="width: ' + width + 'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
@@ -154,7 +163,7 @@
       var tooltipText = '';
       var refinements = imageGridData[i]["refinements"];
       for(var j = 0; j < refinements.length; j++){
-        tooltipText += (refinements[j]["name"] + ' ,');
+        tooltipText += (refinements[j]["name"] + ', ');
       }
       if(tooltipText.length > 2)
         tooltipText = tooltipText.substring(0, tooltipText.length - 2); //remove last comma + space
@@ -188,18 +197,17 @@
   }
 
   $(document).ready(function(){
-    var availableLabels = [];
+    var searchLabels = [];
     var labelAccessors = {{ .labelAccessors }};
+    var labelCategories = {{ .labelCategories }};
     for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i]);
+      searchLabels.push(labelAccessors[i]);
+    }
+    for(var i = 0; i < labelCategories.length; i++) {
+      searchLabels.push(labelCategories[i]);
     }
 
-    labelSuggestions = {{ .labelSuggestions }};
-    for(var i = 0; i < labelSuggestions.length; i++) {
-      availableLabels.push(labelSuggestions[i]);
-    }
-
-    $("#labelQuery")
+    $("#annotationRefinementQuery")
       // don't navigate away from the field on tab when selecting an item
       .on("keydown", function(event) {
         if (event.keyCode === $.ui.keyCode.TAB &&
@@ -208,11 +216,12 @@
       }
     })
     .autocomplete({
-      minLength: 0,
+      minLength: 3,
+      delay: 700,
       source: function(request, response) {
         // delegate back to autocomplete, but extract the last term
         response($.ui.autocomplete.filter(
-          availableLabels, extractLast(request.term)));
+          searchLabels, extractLast(request.term)));
       },
       focus: function() {
         // prevent value inserted on focus

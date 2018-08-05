@@ -7,6 +7,26 @@
 				"description": "",
 				"uuid": "82e3d5f1-47c7-4a22-bb13-48665416cae4",
 				"accessors": ["material='stone'"]
+			},
+			"metal": {
+				"description": "",
+				"uuid": "ca16effd-b108-4dde-8391-85c6ed65006e",
+				"accessors": ["material='metal'"]
+			},
+			"glass": {
+				"description": "",
+				"uuid": "7feb5581-c97e-4ab8-8dd3-e56f2c730ac7",
+				"accessors": ["material='glass'"]
+			},
+			"wood": {
+				"description": "",
+				"uuid": "13496fb7-08af-42d3-9652-a15b30522f37",
+				"accessors": ["material='wood'"]
+			},
+			"ceramic": {
+				"description": "",
+				"uuid": "28879300-7cea-4c19-a68d-ec45dbe06fb5",
+				"accessors": ["material='ceramic'"]
 			}
 		}
 	},
@@ -18,6 +38,57 @@
 				"description": "",
 				"uuid": "6bd612d9-a9a1-477a-95de-da37b611e5de",
 				"accessors": ["color='blue'"]
+			},
+			"red": {
+				"description": "",
+				"uuid": "86485bae-04a1-43ef-a191-5f2a0464595a",
+				"accessors": ["color='red'"]
+			},
+			"green": {
+				"description": "",
+				"uuid": "ad4331c0-e459-4b57-8d6e-e3dcd1380a9c",
+				"accessors": ["color='green'"]
+			},
+			"yellow": {
+				"description": "",
+				"uuid": "07d13f17-3757-45c5-ba20-4f53c8a46334",
+				"accessors": ["color='yellow'"]
+			},
+			"white": {
+				"description": "",
+				"uuid": "fb2acbd4-5bd7-4438-bac3-0b13a60ef3a1",
+				"accessors": ["color='white'"]
+			},
+			"black": {
+				"description": "",
+				"uuid": "02dcb2e3-030e-4358-b0fa-674ef61b08c0",
+				"accessors": ["color='black'"]
+			},
+			"brown": {
+				"description": "",
+				"uuid": "6a3170eb-21cb-4b4c-83e7-e38a9bb1bbbd",
+				"accessors": ["color='brown'"]
+			},
+			"orange": {
+				"description": "",
+				"uuid": "e47660c1-3bf5-4124-ac16-b23c74e8bbdd",
+				"accessors": ["color='orange'"]
+			}
+		}
+	},
+	"gender": {
+		"uuid": "0a2bbf0c-e15c-4055-b620-372ad412a172",
+		"icon": "venus mars",
+		"values": {
+			"male": {
+				"description": "",
+				"uuid": "1eaa891f-9e5c-448d-ac90-78d5a4a189e9",
+				"accessors": ["gender='male'"]
+			},
+			"female": {
+				"description": "",
+				"uuid": "fc3e9f0d-fe21-4274-a3fa-7dc5d98329b6",
+				"accessors": ["gender='female'"]
 			}
 		}
 	}

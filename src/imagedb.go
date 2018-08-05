@@ -2766,11 +2766,14 @@ func addLabelSuggestion(suggestedLabel string) error {
     return nil
 } 
 
-func getLabelAccessors() ([]string, error) {
+func getLabelCategories() ([]string, error) {
     var labels []string
-    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    rows, err := db.Query(`SELECT pl.name 
+                            FROM label l 
+                            JOIN label pl on pl.id = l.parent_id
+                            WHERE pl.label_type = 'refinement_category'`)
     if err != nil {
-        log.Debug("[Get label accessor] Couldn't insert: ", err.Error())
+        log.Debug("[Get label categories] Couldn't get category: ", err.Error())
         raven.CaptureError(err, nil)
         return labels, err
     }
@@ -2780,7 +2783,32 @@ func getLabelAccessors() ([]string, error) {
     for rows.Next() {
         err = rows.Scan(&label)
         if err != nil {
-           log.Debug("[Get label accessor] Couldn't scan row: ", err.Error())
+           log.Debug("[Get label categories] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labels, err 
+        }
+
+        labels = append(labels, label)
+    }
+
+    return labels, nil
+}
+
+func getLabelAccessors() ([]string, error) {
+    var labels []string
+    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    if err != nil {
+        log.Debug("[Get label accessors] Couldn't get accessor: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labels, err
+    }
+    defer rows.Close()
+
+    var label string
+    for rows.Next() {
+        err = rows.Scan(&label)
+        if err != nil {
+           log.Debug("[Get label accessors] Couldn't scan row: ", err.Error())
            raven.CaptureError(err, nil)
            return labels, err 
         }
