@@ -50,7 +50,7 @@ func IsUuid(s string) bool {
 }
 
 func IsAssignment(s string) bool {
-	match, _ := regexp.MatchString("^[a-zA-Z]*\\.[a-zA-Z]*='[a-zA-Z\\s]*'$", s)
+	match, _ := regexp.MatchString("^([a-zA-Z]*\\.)?[a-zA-Z]*='[a-zA-Z\\s]*'$", s)
 	return match
 }
 
