@@ -2361,7 +2361,7 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId string, anno
 
     tx, err := db.Begin()
     if err != nil {
-        log.Debug("[Add or Update Random Quiz question] Couldn't begin transaction: ", err.Error())
+        log.Debug("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
@@ -2379,7 +2379,7 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId string, anno
         
         if err != nil {
             tx.Rollback()
-            log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
+            log.Debug("[Add or Update annotation refinement] Couldn't update: ", err.Error())
             raven.CaptureError(err, nil)
             return err
         }
@@ -2387,7 +2387,7 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId string, anno
 
     err = tx.Commit()
     if err != nil {
-        log.Debug("[Add or Update Random Quiz question] Couldn't commit transaction: ", err.Error())
+        log.Debug("[Add or Update annotation refinement] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }

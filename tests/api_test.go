@@ -6,8 +6,8 @@ import (
 	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"reflect"
-	"strconv"
 	"os"
+	"../src/datastructures"
 )
 
 const UNVERIFIED_DONATIONS_DIR string = "../unverified_donations/"
@@ -17,7 +17,7 @@ type LoginResult struct {
 	Token string `json:"token"`
 }
 
-type ImageLabel struct {
+/*type ImageLabel struct {
     Image struct {
         Id string `json:"uuid"`
         Unlocked bool `json:"unlocked"`
@@ -58,7 +58,7 @@ type AnnotatedImage struct {
     Annotations []json.RawMessage `json:"annotations"`
     NumRevisions int32 `json:"num_revisions"`
     Revision int32 `json:"revision"`
-}
+}*/
 
 type ValidateResult struct {
     Id string `json:"uuid"`
@@ -146,7 +146,7 @@ func testAnnotate(t *testing.T, imageId string, label string, sublabel string, a
 	url = resp.Header().Get("Location")
 	req = resty.R().
 					SetHeader("Content-Type", "application/json").
-					SetResult(&AnnotatedImage{})
+					SetResult(&datastructures.AnnotatedImage{})
 					
 	if token != "" {
 		req.SetAuthToken(token)
@@ -157,7 +157,7 @@ func testAnnotate(t *testing.T, imageId string, label string, sublabel string, a
 
 	equals(t, resp.StatusCode(), 200)
 
-	j, err := json.Marshal(&resp.Result().(*AnnotatedImage).Annotations)
+	j, err := json.Marshal(&resp.Result().(*datastructures.AnnotatedImage).Annotations)
 	ok(t, err)
 
 	equal, err := equalJson(string(j), annotations)
@@ -267,7 +267,7 @@ func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
 func testGetExistingAnnotations(t *testing.T, query string, token string, requiredStatusCode int, requiredNumOfResults int) {
 	url := BASE_URL +API_VERSION + "/annotations"
 
-	var annotatedImages []AnnotatedImage
+	var annotatedImages []datastructures.AnnotatedImage
 
 	req := resty.R().
 			SetQueryParams(map[string]string{
@@ -288,7 +288,7 @@ func testGetExistingAnnotations(t *testing.T, query string, token string, requir
 
 func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResults int, requiredStatusCode int) {
 	url := BASE_URL + API_VERSION + "/donations/labels"
-	var labeledImages []ImageLabel
+	var labeledImages []datastructures.ImageLabel
 
 	req := resty.R().
 			SetQueryParams(map[string]string{
@@ -449,16 +449,16 @@ func testGetImageForAnnotation(t *testing.T, imageId string, token string, valid
 	equals(t, resp.StatusCode(), requiredStatusCode)
 }
 
-func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId int64, labelId int64) {
+func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId string, labelUuid string) {
 	type AnnotationRefinementEntry struct {
-    	LabelId int64 `json:"label_id"`
+    	LabelUuid string `json:"label_uuid"`
 	}
 	var annotationRefinementEntries []AnnotationRefinementEntry
 
-	annotationRefinementEntry := AnnotationRefinementEntry{LabelId:labelId}
+	annotationRefinementEntry := AnnotationRefinementEntry{LabelUuid:labelUuid}
 	annotationRefinementEntries = append(annotationRefinementEntries, annotationRefinementEntry)
 
-	url := BASE_URL + API_VERSION + "/annotation/" + annotationId + "/refine/" + strconv.Itoa(int(annotationDataId))
+	url := BASE_URL + API_VERSION + "/annotation/" + annotationId + "/refine/" + annotationDataId
 	resp, err := resty.R().
 				SetBody(annotationRefinementEntries).
 				Post(url)
@@ -472,10 +472,10 @@ func testRandomAnnotationRefinement(t *testing.T, num int) {
 		annotationId, annotationDataId, err := db.GetRandomAnnotationData()
 		ok(t, err)
 
-		labelId, err := db.GetRandomLabelId()
+		labelUuid, err := db.GetRandomLabelUuid()
 		ok(t, err)
 
-		testImageAnnotationRefinement(t, annotationId, annotationDataId, labelId)
+		testImageAnnotationRefinement(t, annotationId, annotationDataId, labelUuid)
 	}
 }
 

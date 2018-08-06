@@ -1809,7 +1809,7 @@ func main(){
 
 			err := addOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
+				c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
 				return
 			}
 
