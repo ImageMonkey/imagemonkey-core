@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"encoding/json"
+	"./datastructures"
 )
 
 var db *sql.DB
@@ -71,7 +72,7 @@ func main(){
     	if err == nil {
     		retryImmediately = true
 
-    		var blogSubscribeRequest BlogSubscribeRequest
+    		var blogSubscribeRequest datastructures.BlogSubscribeRequest
 	    	err = json.Unmarshal(data, &blogSubscribeRequest)
 	    	if err == nil {
 	    		subscribe(blogSubscribeRequest.Email)

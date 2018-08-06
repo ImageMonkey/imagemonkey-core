@@ -30,6 +30,7 @@ import (
     "golang.org/x/crypto/bcrypt"
     "time"
     "github.com/getsentry/raven-go"
+    "./datastructures"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -145,7 +146,7 @@ func isModerationRequest(c *gin.Context) bool {
 }
 
 
-func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCountryRequest ContributionsPerCountryRequest) {
+func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest) {
 	serialized, err := json.Marshal(contributionsPerCountryRequest)
 	if err != nil { 
 		log.Debug("[Push Contributions per Country to Redis] Couldn't create contributions-per-country request: ", err.Error())
@@ -211,7 +212,7 @@ func annotationsValid(annotations []json.RawMessage) error{
 
         shapeType := obj["type"]
         if shapeType == "rect" {
-        	var rectangleAnnotation RectangleAnnotation 
+        	var rectangleAnnotation datastructures.RectangleAnnotation 
         	decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
         	err = decoder.Decode(&rectangleAnnotation)
@@ -220,7 +221,7 @@ func annotationsValid(annotations []json.RawMessage) error{
         		return err
         	}
         } else if shapeType == "ellipse" {
-        	var ellipsisAnnotation EllipsisAnnotation 
+        	var ellipsisAnnotation datastructures.EllipsisAnnotation 
 			decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
         	err = decoder.Decode(&ellipsisAnnotation)
@@ -229,7 +230,7 @@ func annotationsValid(annotations []json.RawMessage) error{
         		return err
         	}
         } else if shapeType == "polygon" {
-        	var polygonAnnotation PolygonAnnotation 
+        	var polygonAnnotation datastructures.PolygonAnnotation 
 			decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
         	err = decoder.Decode(&polygonAnnotation)
@@ -289,7 +290,7 @@ func getUsernameFromContext(c *gin.Context, authTokenHandler *AuthTokenHandler) 
 	return username, nil
 }
 
-func donate(c *gin.Context, username string, imageSource ImageSource, labelMap map[string]LabelMapEntry, dir string, 
+func donate(c *gin.Context, username string, imageSource datastructures.ImageSource, labelMap map[string]datastructures.LabelMapEntry, dir string, 
 				redisPool *redis.Pool, statisticsPusher *StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
 
@@ -336,7 +337,7 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
     }
 
     if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        if !isLabelValid(labelMap, label, []Sublabel{}) {
+        if !isLabelValid(labelMap, label, []datastructures.Sublabel{}) {
         	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
         	return
         }
@@ -353,12 +354,12 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
 	if !addSublabels {
 		labelMapEntry.LabelMapEntries = nil
 	}
-	var labelMeEntry LabelMeEntry
-	var labelMeEntries []LabelMeEntry
+	var labelMeEntry datastructures.LabelMeEntry
+	var labelMeEntries []datastructures.LabelMeEntry
 	labelMeEntry.Label = label
 	labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
 	for key, _ := range labelMapEntry.LabelMapEntries {
-		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, Sublabel{Name: key})
+		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: key})
 	}
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
@@ -387,7 +388,7 @@ func donate(c *gin.Context, username string, imageSource ImageSource, labelMap m
 	}
 
 	//get client IP address and try to determine country
-	var contributionsPerCountryRequest ContributionsPerCountryRequest
+	var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 	contributionsPerCountryRequest.Type = "donation"
 	contributionsPerCountryRequest.CountryCode = "--"
 	ip := net.ParseIP(getIPAddress(c.Request))
@@ -598,7 +599,7 @@ func main(){
 			params := c.Request.URL.Query()
 			imageId := c.Param("imageid")
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfoFromUrl(c).Username
 
@@ -684,7 +685,7 @@ func main(){
 			clientAuth.POST("/v1/internal/labelme/donate",  func(c *gin.Context) {
 				imageSourceUrl := c.PostForm("image_source_url")
 
-				var imageSource ImageSource
+				var imageSource datastructures.ImageSource
 				imageSource.Provider = "labelme"
 				imageSource.Url = imageSourceUrl
 				imageSource.Trusted = true
@@ -715,7 +716,7 @@ func main(){
 					return
 				}
 
-				var annotations Annotations
+				var annotations datastructures.Annotations
 				err := c.BindJSON(&annotations)
 				if err != nil {
 					c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
@@ -728,7 +729,7 @@ func main(){
 					return
 				}
 
-				var apiUser APIUser
+				var apiUser datastructures.APIUser
 				apiUser.ClientFingerprint = ""
 				apiUser.Name = ""
 
@@ -837,7 +838,7 @@ func main(){
 		router.GET("/v1/validation", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -908,13 +909,13 @@ func main(){
 		router.POST("/v1/donation/:imageid/labelme", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			var labels []LabelMeEntry
+			var labels []datastructures.LabelMeEntry
 			if c.BindJSON(&labels) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - labels missing"})
 				return
 			}
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 
 			apiUser.Name, err = getUsernameFromContext(c, authTokenHandler)
@@ -946,7 +947,7 @@ func main(){
 		router.GET("/v1/donation/:imageid/annotations", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -976,11 +977,11 @@ func main(){
 				return
 			}
 
-			var imageValidationBatch ImageValidationBatch 
-			imageValidationBatch.Validations = append(imageValidationBatch.Validations, ImageValidation {Uuid: validationId, Valid: param})
+			var imageValidationBatch datastructures.ImageValidationBatch 
+			imageValidationBatch.Validations = append(imageValidationBatch.Validations, datastructures.ImageValidation {Uuid: validationId, Valid: param})
 
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1006,7 +1007,7 @@ func main(){
 			} 
 
 			//get client IP address and try to determine country
-			var contributionsPerCountryRequest ContributionsPerCountryRequest
+			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "validation"
 			contributionsPerCountryRequest.CountryCode = "--"
 			ip := net.ParseIP(getIPAddress(c.Request))
@@ -1026,7 +1027,7 @@ func main(){
 		})
 
 		router.GET("/v1/labelme", func(c *gin.Context) {
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1058,7 +1059,7 @@ func main(){
 		    	orderRandomly = true
 		    }
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1092,14 +1093,14 @@ func main(){
 		})
 
 		router.PATCH("/v1/validation/validate", func(c *gin.Context) {
-			var imageValidationBatch ImageValidationBatch
+			var imageValidationBatch datastructures.ImageValidationBatch
 			
 			if c.BindJSON(&imageValidationBatch) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - invalid patch"})
 				return
 			}
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1110,7 +1111,7 @@ func main(){
 			}
 
 			//get client IP address and try to determine country
-			var contributionsPerCountryRequest ContributionsPerCountryRequest
+			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "validation"
 			contributionsPerCountryRequest.CountryCode = "--"
 			ip := net.ParseIP(getIPAddress(c.Request))
@@ -1343,7 +1344,7 @@ func main(){
 		})
 
 		router.POST("/v1/donate", func(c *gin.Context) {
-			var imageSource ImageSource
+			var imageSource datastructures.ImageSource
 			imageSource.Provider = "donation"
 			imageSource.Trusted = false
 
@@ -1360,7 +1361,7 @@ func main(){
 		router.POST("/v1/report/:imageid", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			var report Report
+			var report datastructures.Report
 			if(c.BindJSON(&report) != nil){
 				c.JSON(422, gin.H{"error": "reason missing - please provide a valid 'reason'"})
 				return
@@ -1399,7 +1400,7 @@ func main(){
 		        	orderRandomly = true
 		        }
 
-		        var apiUser APIUser
+		        var apiUser datastructures.APIUser
 				apiUser.ClientFingerprint = getBrowserFingerprint(c)
 				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1424,7 +1425,7 @@ func main(){
 		router.POST("/v1/validation/:validationid/blacklist-annotation", func(c *gin.Context) {
 			validationId := c.Param("validationid")
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1457,7 +1458,7 @@ func main(){
 		router.PUT("/v1/annotation/:annotationid", func(c *gin.Context) {
 			annotationId := c.Param("annotationid")
 
-			var annotations Annotations
+			var annotations datastructures.Annotations
 			err := c.BindJSON(&annotations)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
@@ -1470,7 +1471,7 @@ func main(){
 				return
 			}
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1482,7 +1483,7 @@ func main(){
 
 
 			//get client IP address and try to determine country
-			var contributionsPerCountryRequest ContributionsPerCountryRequest
+			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "annotation"
 			contributionsPerCountryRequest.CountryCode = "--"
 			ip := net.ParseIP(getIPAddress(c.Request))
@@ -1515,7 +1516,7 @@ func main(){
 				return
 			}
 
-			var labelValidationEntry LabelValidationEntry
+			var labelValidationEntry datastructures.LabelValidationEntry
 			if c.BindJSON(&labelValidationEntry) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide valid label(s)"})
 				return
@@ -1535,7 +1536,7 @@ func main(){
 			} 
 
 			//get client IP address and try to determine country
-			var contributionsPerCountryRequest ContributionsPerCountryRequest
+			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "validation"
 			contributionsPerCountryRequest.CountryCode = "--"
 			ip := net.ParseIP(getIPAddress(c.Request))
@@ -1561,7 +1562,7 @@ func main(){
 				return
 			}
 
-			var annotations Annotations
+			var annotations datastructures.Annotations
 			err := c.BindJSON(&annotations)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
@@ -1574,7 +1575,7 @@ func main(){
 				return
 			}
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1587,7 +1588,7 @@ func main(){
 
 
 			//get client IP address and try to determine country
-			var contributionsPerCountryRequest ContributionsPerCountryRequest
+			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "annotation"
 			contributionsPerCountryRequest.CountryCode = "--"
 			ip := net.ParseIP(getIPAddress(c.Request))
@@ -1610,7 +1611,7 @@ func main(){
 		router.GET("/v1/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 			
@@ -1647,7 +1648,7 @@ func main(){
 		})
 
 		router.GET("/v1/annotations", func(c *gin.Context) {
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1701,7 +1702,7 @@ func main(){
 		router.GET("/v1/annotation", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			var apiUser APIUser
+			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
@@ -1798,7 +1799,7 @@ func main(){
 				return
 			}
 
-			var annotationRefinementEntries []AnnotationRefinementEntry
+			var annotationRefinementEntries []datastructures.AnnotationRefinementEntry
 			if c.BindJSON(&annotationRefinementEntries) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid label id"})
 				return
@@ -1816,7 +1817,7 @@ func main(){
 		})
 
 		router.POST("/v1/blog/subscribe", func(c *gin.Context) {
-			var blogSubscribeRequest BlogSubscribeRequest
+			var blogSubscribeRequest datastructures.BlogSubscribeRequest
 			if c.BindJSON(&blogSubscribeRequest) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid email address"})
 				return
@@ -1932,7 +1933,7 @@ func main(){
 		})
 
 		router.POST("/v1/signup", func(c *gin.Context) {
-			var userSignupRequest UserSignupRequest
+			var userSignupRequest datastructures.UserSignupRequest
 			
 			if c.BindJSON(&userSignupRequest) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - invalid data"})

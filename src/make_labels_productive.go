@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 	"context"
+	"./datastructures"
 )
 
 var db *sql.DB
@@ -114,7 +115,7 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 }
 
 
-func makeTrendingLabelProductive(label LabelMeEntry, renameToLabel string, tx *sql.Tx) error {
+func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabel string, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
@@ -148,7 +149,7 @@ func makeTrendingLabelProductive(label LabelMeEntry, renameToLabel string, tx *s
 
     rows.Close()
 
-    var labels []LabelMeEntry
+    var labels []datastructures.LabelMeEntry
     if renameToLabel != "" {
     	label.Label = renameToLabel
     }
@@ -172,8 +173,8 @@ func makeTrendingLabelProductive(label LabelMeEntry, renameToLabel string, tx *s
     return nil
 }
 
-func makeLabelMeEntry(name string, annotatable bool, sublabels []Sublabel) LabelMeEntry {
-	var label LabelMeEntry
+func makeLabelMeEntry(name string, annotatable bool, sublabels []datastructures.Sublabel) datastructures.LabelMeEntry {
+	var label datastructures.LabelMeEntry
 	label.Label = name 
     label.Annotatable = annotatable
     label.Sublabels = sublabels
@@ -181,7 +182,7 @@ func makeLabelMeEntry(name string, annotatable bool, sublabels []Sublabel) Label
     return label
 }
 
-func isLabelInLabelsMap(labelMap map[string]LabelMapEntry, label LabelMeEntry) bool {
+func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, label datastructures.LabelMeEntry) bool {
 	return isLabelValid(labelMap, label.Label, label.Sublabels)
 }
 
@@ -264,7 +265,7 @@ func main() {
 	}
 
 
-	labelMeEntry := makeLabelMeEntry(*trendingLabel, true, []Sublabel{})
+	labelMeEntry := makeLabelMeEntry(*trendingLabel, true, []datastructures.Sublabel{})
 	if !isLabelInLabelsMap(labelMap, labelMeEntry) && *renameTo == "" {
 		tx.Rollback()
 		log.Error("[Main] Label doesn't exist in labels map - please add it first!")

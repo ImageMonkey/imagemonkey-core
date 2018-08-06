@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"errors"
+	"./datastructures"
 )
 
 var db *sql.DB
@@ -495,7 +496,7 @@ func main() {
 
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
-			var apiTokens []APIToken
+			var apiTokens []datastructures.APIToken
 			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
 				apiTokens, err = getApiTokens(username)
 				if err != nil {

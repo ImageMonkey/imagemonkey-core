@@ -5,6 +5,7 @@ import(
 	_ "github.com/lib/pq"
 	log "github.com/Sirupsen/logrus"
 	"flag"
+	"./datastructures"
 )
 
 
@@ -45,7 +46,7 @@ func addAccessor(tx *sql.Tx, labelId int64, accessor string) error {
 	return err
 }
 
-func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
+func addAccessors(tx *sql.Tx, label string, val datastructures.LabelMapEntry) {
 	for _, accessor := range val.Accessors {
 
 		labelId := getLabelId(tx, label, "")
@@ -120,7 +121,7 @@ func addAccessors(tx *sql.Tx, label string, val LabelMapEntry) {
 	}
 }
 
-func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
+func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val datastructures.LabelMapEntry) {
 	for _, quizEntry := range val.Quiz {
 		_, err := tx.Exec(`INSERT INTO quiz_question(question, refines_label_id, recommended_control, 
 														allow_unknown, allow_other, browse_by_example, multiselect, uuid)
@@ -136,7 +137,7 @@ func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
 	}
 }
 
-func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val LabelMapEntry) {
+func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val datastructures.LabelMapEntry) {
 	//quiz answers
 	for _, quizEntry := range val.Quiz {
 		for _, answer := range quizEntry.Answers {
@@ -244,7 +245,7 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) {
 	}
 }
 
-func addLabelRefinements(tx *sql.Tx, labelMapRefinementEntries map[string]LabelMapRefinementEntry) {
+func addLabelRefinements(tx *sql.Tx, labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry) {
 	for k, v := range labelMapRefinementEntries {
 		if v.Uuid == "" {
 			tx.Rollback()
