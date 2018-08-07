@@ -17,49 +17,6 @@ type LoginResult struct {
 	Token string `json:"token"`
 }
 
-/*type ImageLabel struct {
-    Image struct {
-        Id string `json:"uuid"`
-        Unlocked bool `json:"unlocked"`
-        Url string `json:"url"`
-        Provider string `json:"provider"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-    } `json:"image"`
-
-    Labels[] struct {
-        Name string `json:"name"`
-        Unlocked bool `json:"unlocked"`
-        Sublabels[] struct {
-            Name string `json:"name"`
-        } `json:"sublabels"`
-    } `json:"labels"`
-}
-
-type AnnotatedImage struct {
-    Image struct {
-        Id string `json:"uuid"`
-        Unlocked bool `json:"unlocked"`
-        Url string `json:"url"`
-        Provider string `json:"provider"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-    } `json:"image"`
-
-    Validation struct {
-        Label string `json:"label"`
-        Sublabel string `json:"sublabel"`
-    } `json:"validation"`
-    
-
-    Id string `json:"uuid"`
-    NumOfValid int32 `json:"num_yes"`
-    NumOfInvalid int32 `json:"num_no"`
-    Annotations []json.RawMessage `json:"annotations"`
-    NumRevisions int32 `json:"num_revisions"`
-    Revision int32 `json:"revision"`
-}*/
-
 type ValidateResult struct {
     Id string `json:"uuid"`
     Url string `json:"url"`
@@ -594,7 +551,16 @@ func testGetImageDonation(t *testing.T, imageId string, imageUnlocked bool, toke
 	}
 
 	req := resty.R()
+	resp, err := req.Get(url)
 
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+}
+
+func testGetRandomImageQuiz(t *testing.T, requiredStatusCode int) {
+	url := BASE_URL + API_VERSION + "/quiz-refine"
+
+	req := resty.R()
 	resp, err := req.Get(url)
 
 	ok(t, err)
@@ -1723,4 +1689,48 @@ func TestBrowseLabelLockedAndOwnDonationButInQuarantine(t *testing.T) {
 	ok(t, err)
 
 	testBrowseLabel(t, "apple", userToken, 0, 200)
+}
+
+
+func TestGetRandomImageQuiz(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "dog", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+	
+	annotationIds, err := db.GetAllAnnotationIds()
+	ok(t, err)
+
+	err = db.SetAnnotationValid(annotationIds[0], 5)
+	ok(t, err)
+
+	testGetRandomImageQuiz(t, 200)
+}
+
+func TestGetRandomImageQuizImageStillLocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", false, userToken)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "dog", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken)
+	
+	annotationIds, err := db.GetAllAnnotationIds()
+	ok(t, err)
+
+	err = db.SetAnnotationValid(annotationIds[0], 5)
+	ok(t, err)
+
+	testGetRandomImageQuiz(t, 422)
 }

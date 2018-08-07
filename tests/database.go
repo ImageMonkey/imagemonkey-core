@@ -476,6 +476,36 @@ func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) e
 	return err
 }
 
+func (p *ImageMonkeyDatabase) GetAllAnnotationIds() ([]string, error) {
+	var annotationIds []string
+
+	rows, err := p.db.Query("SELECT uuid FROM image_annotation")
+	if err != nil {
+		return annotationIds, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var annotationId string
+		err = rows.Scan(&annotationId)
+		if err != nil {
+			return annotationIds, err
+		}
+
+		annotationIds = append(annotationIds, annotationId)
+	}
+
+	return annotationIds, nil
+}
+
+func (p *ImageMonkeyDatabase) SetAnnotationValid(annotationId string, num int) error {
+	_, err := p.db.Exec(`UPDATE image_annotation 
+							SET num_of_valid = $2 
+							WHERE uuid = $1`, annotationId, num)
+	return err
+}
+
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
 }

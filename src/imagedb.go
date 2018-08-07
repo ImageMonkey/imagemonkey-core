@@ -2286,70 +2286,83 @@ func getRandomAnnotationForQuizRefinement() (datastructures.AnnotationRefinement
     var annotationBytes []byte
     var refinement datastructures.AnnotationRefinement
     var annotations []json.RawMessage
-    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, 
-                        s.allow_other, s.browse_by_example, s.multiselect
-                        FROM ( 
-                                SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
-                                json_agg(json_build_object('uuid', l.uuid, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
-                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
-                                qq.browse_by_example as browse_by_example, qq.multiselect
-    
-                                FROM quiz_question qq 
-                                JOIN quiz_answer q ON q.quiz_question_id = qq.id 
-                                JOIN label l ON q.label_id = l.id
-                                LEFT JOIN (
-                                    SELECT e.label_id, json_agg(json_build_object('filename', e.filename, 'attribution', e.attribution))::jsonb as examples
-                                    FROM label_example e GROUP BY label_id
-                                ) s2 
-                                ON s2.label_id = l.id 
-                                GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
-                             ) as s
-                        JOIN (
-                                SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
-                                FROM image_annotation a
-                                JOIN image i ON i.id = a.image_id
-                                JOIN annotation_data d ON d.image_annotation_id = a.id
-                                JOIN annotation_type t ON d.annotation_type_id = t.id
-                                WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
-                                AND i.unlocked = true
-                                GROUP BY a.label_id, a.image_id, a.uuid
-                             ) as s1
-                        ON s1.label_id =  s.refines_label_id 
-                        JOIN image i ON i.id = s1.image_id
-                        OFFSET floor(random() * 
-                            ( SELECT count(*) FROM image_annotation a 
-                              JOIN quiz_question q ON q.refines_label_id = a.label_id
-                              WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
-                            )
-                        ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, 
-                            &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, &refinement.Metainfo.AllowOther, 
-                            &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
+    rows, err := db.Query(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, 
+                            s1.uuid, s.allow_unknown, s.allow_other, s.browse_by_example, s.multiselect
+                            FROM ( 
+                                    SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
+                                    json_agg(json_build_object('uuid', l.uuid, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
+                                    qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
+                                    qq.browse_by_example as browse_by_example, qq.multiselect
+        
+                                    FROM quiz_question qq 
+                                    JOIN quiz_answer q ON q.quiz_question_id = qq.id 
+                                    JOIN label l ON q.label_id = l.id
+                                    LEFT JOIN (
+                                        SELECT e.label_id, json_agg(json_build_object('filename', e.filename, 'attribution', e.attribution))::jsonb as examples
+                                        FROM label_example e GROUP BY label_id
+                                    ) s2 
+                                    ON s2.label_id = l.id 
+                                    GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
+                                 ) as s
+                            JOIN (
+                                    SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
+                                    FROM image_annotation a
+                                    JOIN image i ON i.id = a.image_id
+                                    JOIN annotation_data d ON d.image_annotation_id = a.id
+                                    JOIN annotation_type t ON d.annotation_type_id = t.id
+                                    WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
+                                    AND i.unlocked = true
+                                    GROUP BY a.label_id, a.image_id, a.uuid
+                                 ) as s1
+                            ON s1.label_id =  s.refines_label_id 
+                            JOIN image i ON i.id = s1.image_id
+                            OFFSET floor(random() * 
+                                ( SELECT count(*) FROM image_annotation a 
+                                  JOIN quiz_question q ON q.refines_label_id = a.label_id
+                                  WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
+                                )
+                            ) LIMIT 1`)
+
     if err != nil {
-        log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
+        log.Debug("[Random Quiz question] Couldn't get random image quiz: ", err.Error())
         raven.CaptureError(err, nil)
         return refinement, err 
     }
 
-    err = json.Unmarshal(bytes, &refinement.Answers)
-    if err != nil {
-        log.Debug("[Random Quiz question] Couldn't unmarshal answers: ", err.Error())
-        raven.CaptureError(err, nil)
-        return refinement, err
-    }
+    defer rows.Close()
 
-    err = json.Unmarshal(annotationBytes, &annotations)
-    if err != nil {
-        log.Debug("[Random Quiz question] Couldn't unmarshal annotations: ", err.Error())
-        raven.CaptureError(err, nil)
-        return refinement, err
-    }
+    if rows.Next() {
+        err = rows.Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, 
+                            &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, &refinement.Metainfo.AllowOther, 
+                            &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
 
-    if len(annotations) == 1 {
-        refinement.Annotation.Annotation = annotations[0]
-    } else if len(annotations) > 1 {
-        randomVal := random(0, (len(annotations) - 1))
-        refinement.Annotation.Annotation = annotations[randomVal]
+        if err != nil {
+            log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return refinement, err
+        }
+
+        err = json.Unmarshal(bytes, &refinement.Answers)
+        if err != nil {
+            log.Debug("[Random Quiz question] Couldn't unmarshal answers: ", err.Error())
+            raven.CaptureError(err, nil)
+            return refinement, err
+        }
+
+        err = json.Unmarshal(annotationBytes, &annotations)
+        if err != nil {
+            log.Debug("[Random Quiz question] Couldn't unmarshal annotations: ", err.Error())
+            raven.CaptureError(err, nil)
+            return refinement, err
+        }
+
+        if len(annotations) == 1 {
+            refinement.Annotation.Annotation = annotations[0]
+        } else if len(annotations) > 1 {
+            randomVal := random(0, (len(annotations) - 1))
+            refinement.Annotation.Annotation = annotations[randomVal]
+        }
     }
 
     return refinement, nil
