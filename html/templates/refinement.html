@@ -37,6 +37,28 @@
     var oldLabels = {};
     var labelUuidIconLookupTable = {};
 
+    function populateLabelsDropdown(id) {
+      var labels = {{ .labels }}; 
+      for(key in labels) {
+        if(labels.hasOwnProperty(key)) {
+          var labelEntry = labels[key];
+          var labelValues = labelEntry.values;
+          var entry = '';
+          for(labelKey in labelValues) {
+            if(labelValues.hasOwnProperty(labelKey)) {
+              entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
+              if(labelEntry.icon !== "") {
+                entry += '<i class="' + labelEntry.icon + ' icon"></i>';
+                labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
+              }
+              entry += (labelKey + '</div>');
+              $(id).append(entry);
+            }
+          }
+        }
+      }
+    }
+
     function showHideMainControls(show) {
       if(show) {
         $("#mainContainer").show();
@@ -214,26 +236,7 @@
     $(document).ready(function(){
       $('.ui.dropdown').dropdown();
 
-      var labels = {{ .labels }}; 
-      for(key in labels) {
-        if(labels.hasOwnProperty(key)) {
-          var labelEntry = labels[key];
-          var labelValues = labelEntry.values;
-          var entry = '';
-          for(labelKey in labelValues) {
-            if(labelValues.hasOwnProperty(labelKey)) {
-              entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
-              if(labelEntry.icon !== "") {
-                entry += '<i class="' + labelEntry.icon + ' icon"></i>';
-                labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
-              }
-              entry += (labelKey + '</div>');
-              $("#labelDropdownMenu").append(entry);
-            }
-          }
-        }
-      }
-
+      populateLabelsDropdown("#labelDropdownMenu");
 
       $('#doneButton').click(function(e) {
         e.preventDefault();

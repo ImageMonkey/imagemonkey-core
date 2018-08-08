@@ -15,6 +15,18 @@
     filter: alpha(opacity=40);
   }
 
+  .item-selected { border: 5px solid #0000ff; }
+
+  #smartRefinementDoneButton{
+    /*display: none;*/ /* Hidden by default */
+    position: fixed; /* Fixed/sticky position */
+    bottom: 20px; /* Place the button at the bottom of the page */
+    /*right: 30px;*/ /* Place the button 30px from the right */
+    z-index: 99; /* Make sure it does not overlap */
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
 </style>
 
 <script>
@@ -25,12 +37,14 @@
   var currentRefinedImageGridElement;
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var imageGridCanvases = {};
+  var selectedItems = {};
 
   var clearImageGrid = function() {
     imageGridCanvases = {};
     justifiedLayoutGeometry = null;
     imageGridData = null;
     numOfLastFetchedImg = 0;
+    selectedItems = {};
     infiniteScroll.deactivate();
     $('#imageGrid').children().each(function () {
       $(this).remove();
@@ -80,14 +94,26 @@
       $('#browseAnnotationRefinementErrorMessage').hide();
     }
     else{
-      $('#browseAnnotationRefinementErrorMessage').text("There are currently no annotation tasks for that label - please try another label!");
+      $('#browseAnnotationRefinementErrorMessage').text("There are currently no annotations for that expression - please try another one!");
       $('#browseAnnotationRefinementErrorMessage').show(200);
     }
 
     $('#browseAnnotationRefinementLoadingSpinner').hide();
   }
 
-  function populateImageGrid() {
+  function isSmartRefinementModeActivated() {
+    return $("#smartRefinementModeCheckbox").checkbox("is checked");
+  }
+
+  function onGoButtonClicked() {
+    if(isSmartRefinementModeActivated()) {
+      if($("#smartRefinementLabelDropdown").dropdown("get value") === "") {
+        $('#browseAnnotationRefinementErrorMessage').text("Please select a label for refinement first!");
+        $('#browseAnnotationRefinementErrorMessage').show(200);
+        return;
+      }
+    }
+
     $('#browseAnnotationRefinementLoadingSpinner').show();
 
     $("#imageGrid").hide();
@@ -119,18 +145,40 @@
 
   function onImageGridCanvasClicked(data) {
     var annotationDataId = data["annotationDataId"];
-    currentRefinedImageGridElement = annotationDataId;
-    $("#annotationRefinementQuerySearchContainer").hide();
-    infiniteScroll.pause();
-    infiniteScroll.saveScrollPosition();
-    $("#imageGrid").hide();
-    getAnnotationRefinement(annotationDataId);
+    if(isSmartRefinementModeActivated()) {
+      if(!(annotationDataId in selectedItems)) {
+        $("#"+annotationDataId).addClass("item-selected");
+        selectedItems[annotationDataId] = true;
+      }
+      else {
+        delete selectedItems[annotationDataId];
+        $("#"+annotationDataId).removeClass("item-selected");
+      }
+
+      //enable disable button accordingly
+      if(Object.keys(selectedItems).length > 0)
+        $("#smartRefinementDoneButton").show();
+      else
+        $("#smartRefinementDoneButton").hide();
+
+    }
+    else {
+      currentRefinedImageGridElement = annotationDataId;
+      $("#annotationRefinementQuerySearchContainer").hide();
+      infiniteScroll.pause();
+      infiniteScroll.saveScrollPosition();
+      $("#imageGrid").hide();
+      getAnnotationRefinement(annotationDataId);
+    }
   }
 
   function newCanvasItem(id, top, left, width, height, tooltip){
+    var tooltipStr = '';
+    if(tooltip !== '')
+      tooltipStr = ' data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"'
+
     var d = ('<div class="justified-layout-item"' 
-            + ' id="' + ('justified-item' + id) + '"'
-            + ' data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"' 
+            + ' id="' + ('justified-item' + id) + '"' + tooltipStr 
             + ' style="width: ' + width + 'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
     return d;
@@ -162,11 +210,14 @@
 
       var tooltipText = '';
       var refinements = imageGridData[i]["refinements"];
-      for(var j = 0; j < refinements.length; j++){
-        tooltipText += (refinements[j]["name"] + ', ');
+      //only show tooltip text if we are not in smart refinement mode
+      if(!isSmartRefinementModeActivated()) {
+        for(var j = 0; j < refinements.length; j++){
+          tooltipText += (refinements[j]["name"] + ', ');
+        }
+        if(tooltipText.length > 2)
+          tooltipText = tooltipText.substring(0, tooltipText.length - 2); //remove last comma + space
       }
-      if(tooltipText.length > 2)
-        tooltipText = tooltipText.substring(0, tooltipText.length - 2); //remove last comma + space
       
       var itemId = imageGridData[i]["annotation"]["data"]["uuid"];
       annotationsScaleFactor = justifiedLayoutGeometry.boxes[i].width / imageGridData[i]["image"]["width"];
@@ -206,6 +257,17 @@
     for(var i = 0; i < labelCategories.length; i++) {
       searchLabels.push(labelCategories[i]);
     }
+
+    populateLabelsDropdown("#smartRefinementLabelDropdownMenu");
+
+    $("#smartRefinementModeCheckbox").checkbox({
+      onChecked: function() {
+        $("#smartRefinementLabelDropdown").show();
+      },
+      onUnchecked: function() {
+        $("#smartRefinementLabelDropdown").hide();
+      }
+    });
 
     $("#annotationRefinementQuery")
       // don't navigate away from the field on tab when selecting an item
@@ -250,12 +312,29 @@
   <div class="eight wide center aligned column">
     <form class="ui form segment">
       <div class="field">
-       <p>Search for images you are interested in</p>
+       <p>Search for annotations you want to refine</p>
        <input placeholder="Query..." type="text" id="annotationRefinementQuery">
-     </div>
+      </div>
+      <div class="inline fields">
+        <div class="field">
+          <div class="ui checkbox" id="smartRefinementModeCheckbox">
+            <input type="checkbox">
+            <label>Smart Refinement</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui search selection dropdown" id="smartRefinementLabelDropdown" style="display: none;">
+              <div class="default text">Select Label</div>
+              <div class="menu" id="smartRefinementLabelDropdownMenu">
+              </div>
+          </div>
+        </div>
+      </div>
 
-    <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
+    <div class="ui primary submit button" onclick="onGoButtonClicked();">Go</div>
     </form>
+
+    <button class="ui huge positive button" id="smartRefinementDoneButton" style="display: none;">Done</button>
 
     <div class="ui warning message" hidden id="browseAnnotationRefinementErrorMessage">
       <i class="close icon"></i>
