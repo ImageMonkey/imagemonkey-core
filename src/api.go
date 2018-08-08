@@ -1776,6 +1776,11 @@ func main(){
 		            return
 		        }
 		    }
+
+		    if query == "" && annotationDataId == "" {
+		    	c.JSON(422, gin.H{"error": "Couldn't process request - invalid request"})
+		    	return
+		    }
 		    
 			annotations, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl, annotationDataId)
 			if err != nil {
@@ -1783,13 +1788,15 @@ func main(){
 				return
 			}
 
-			if annotationDataId != "" {
-				if len(annotations) != 0 {
-					c.JSON(200, annotations[0]) 
+			if len(annotations) == 0 {
+				if annotationDataId != "" {
+					c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
 					return
-				} 
+				}
+			}
 
-				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
+			if annotationDataId != "" {
+				c.JSON(200, annotations[0]) 
 				return
 			}
 
