@@ -386,6 +386,12 @@ func (p *ImageMonkeyDatabase) GetRandomAnnotationId() (string, error) {
 	return annotationId, err
 }
 
+func (p *ImageMonkeyDatabase) GetLastAddedAnnotationDataId() (string, error) {
+	var annotationDataId string
+	err := p.db.QueryRow(`SELECT d.uuid FROM annotation_data d ORDER BY d.id DESC LIMIT 1`).Scan(&annotationDataId)
+	return annotationDataId, err
+}
+
 func (p *ImageMonkeyDatabase) GetRandomLabelId() (int64, error) {
 	var labelId int64
 	err := p.db.QueryRow(`SELECT l.id FROM label l ORDER BY random() LIMIT 1`).Scan(&labelId)
@@ -405,6 +411,16 @@ func (p *ImageMonkeyDatabase) GetRandomAnnotationData() (string, string, error) 
 						  FROM image_annotation a 
 						  JOIN annotation_data d ON d.image_annotation_id = a.id
 						  ORDER BY random() LIMIT 1`).Scan(&annotationId, &annotationDataId)
+	return annotationId, annotationDataId, err
+}
+
+func (p *ImageMonkeyDatabase) GetLastAddedAnnotationData() (string, string, error) {
+	var annotationId string
+	var annotationDataId string
+	err := p.db.QueryRow(`SELECT a.uuid, d.uuid
+						  FROM image_annotation a 
+						  JOIN annotation_data d ON d.image_annotation_id = a.id
+						  ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId, &annotationDataId)
 	return annotationId, annotationDataId, err
 }
 
