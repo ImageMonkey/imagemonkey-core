@@ -392,12 +392,12 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})	
-		router.GET("/refinement", func(c *gin.Context) {
+		router.GET("/refine", func(c *gin.Context) {
 			mode := getParamFromUrlParams(c, "mode", "default")
 
 			c.HTML(http.StatusOK, "refinement.html", gin.H{
 				"title": "Refinement",
-				"activeMenuNr": -1,
+				"activeMenuNr": 14,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"apiBaseUrl": apiBaseUrl,
 				"mode": mode,
