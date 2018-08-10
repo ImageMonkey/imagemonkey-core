@@ -9,7 +9,14 @@
   <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationPointingMenuItem" href="/annotate">Annotate</a>
   <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
   <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
-  <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
+  
+  <div class="ui dropdown item" id="refinementPointingMenuDropdown">
+      Refinement<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/refine?mode=browse';">Refinement</div>
+        <div class="center aligned item" onclick="window.location='/quiz';">Quiz</div>
+      </div>
+    </div>
 
   <div class="ui dropdown item" id="datasetPointingMenuDropdown">
     Dataset<i class="dropdown icon"></i>
@@ -53,6 +60,7 @@
     $('#mainMenuDropdown').dropdown();
     $('#developersPointingMenuDropdown').dropdown();
     $('#datasetPointingMenuDropdown').dropdown();
+    $('#refinementPointingMenuDropdown').dropdown();
 
     function parseJwt(token){
       var base64Url = token.split('.')[1];

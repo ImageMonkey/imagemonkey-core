@@ -20,127 +20,8 @@ import (
     "net/url"
     "errors"
     "github.com/gin-gonic/gin"
+    "./datastructures"
 )
-
-type Report struct {
-    Reason string `json:"reason"`
-}
-
-type Label struct {
-    Name string `json:"name"`
-}
-
-type LabelMeValidation struct {
-    Uuid string `json:"uuid"`
-    NumOfValid int32 `json:"num_yes"`
-    NumOfInvalid int32 `json:"num_no"` 
-}
-
-type Sublabel struct {
-    Name string `json:"name"`
-    Unlocked bool `json:"unlocked"`
-    Annotatable bool `json:"annotatable"`
-    Uuid string `json:"uuid"`
-    Validation *LabelMeValidation `json:"validation,omitempty"`
-}
-
-type LabelMeEntry struct {
-    Label string `json:"label"` 
-    Unlocked bool `json:"unlocked"` 
-    Annotatable bool `json:"annotatable"` 
-    Uuid string `json:"uuid"`
-    Validation *LabelMeValidation `json:"validation,omitempty"`
-    Sublabels []Sublabel `json:"sublabels"`
-}
-
-
-type ContributionsPerCountryRequest struct {
-    CountryCode string `json:"country_code"`
-    Type string `json:"type"`
-}
-
-type ContributionsPerAppRequest struct {
-    AppIdentifier string `json:"app_identifier"`
-    Type string `json:"type"`
-}
-
-
-type MetaLabelMapEntry struct {
-    Description string  `json:"description"`
-    Name string `json:"name"`
-}
-
-type LabelMapQuizExampleEntry struct {
-    Filename string `json:"filename"`
-    Attribution string `json:"attribution"`
-}
-
-type LabelMapQuizAnswerEntry struct {
-    Name string `json:"name"`
-    Examples []LabelMapQuizExampleEntry `json:"examples"`
-    Uuid string `json:"uuid"`
-}
-
-
-type LabelMapQuizEntry struct {
-    Question string `json:"question"`
-    Accessors []string `json:"accessors"`
-    Answers []LabelMapQuizAnswerEntry `json:"answers"`
-    AllowUnknown bool `json:"allow_unknown"`
-    AllowOther bool `json:"allow_other"`
-    BrowseByExample bool `json:"browse_by_example"`
-    Multiselect bool `json:"multiselect"`
-    ControlType string `json:"control_type"`
-    Uuid string `json:"uuid"`
-}
-
-type LabelMapEntry struct {
-    Description string  `json:"description"`
-    LabelMapEntries map[string]LabelMapEntry  `json:"has"`
-    Accessors []string `json:"accessors"`
-    Quiz []LabelMapQuizEntry `json:"quiz"`
-    Uuid string `json:"uuid"`
-}
-
-type LabelMap struct {
-    LabelMapEntries map[string]LabelMapEntry `json:"labels"`
-    MetaLabelMapEntries map[string]MetaLabelMapEntry  `json:"metalabels"`
-}
-
-type LabelValidationEntry struct {
-    Label string  `json:"label"`
-    Sublabel string `json:"sublabel"`
-}
-
-type BlogSubscribeRequest struct {
-    Email string `json:"email"`
-}
-
-type ImageSource struct {
-    Provider string
-    Url string
-    Trusted bool
-}
-
-type ImageInfo struct {
-    Hash uint64
-    Width int32
-    Height int32
-    Name string
-    Source ImageSource
-
-}
-
-type UserSignupRequest struct {
-    Username string `json:"username"`
-    Email string `json:"email"`
-    Password string `json:"password"`
-}
-
-type APIUser struct {
-    Name string `json:"name"`
-    ClientFingerprint string `json:"client_fingerprint"`
-}
 
 
 func use(vals ...interface{}) {
@@ -173,8 +54,8 @@ func hashImage(file io.Reader) (uint64, error){
     return imghash.Average(img), nil
 }
 
-func getImageInfo(file io.Reader) (ImageInfo, error){
-    var imageInfo ImageInfo
+func getImageInfo(file io.Reader) (datastructures.ImageInfo, error){
+    var imageInfo datastructures.ImageInfo
     imageInfo.Hash = 0
     imageInfo.Width = 0
     imageInfo.Height = 0
@@ -276,9 +157,9 @@ func getIPAddress(r *http.Request) string {
     return ""
 }
 
-func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
+func getLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
     var words []string
-    var labelMap LabelMap
+    var labelMap datastructures.LabelMap
 
     data, err := ioutil.ReadFile(path)
     if err != nil {
@@ -298,6 +179,22 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     }
 
     return labelMap.LabelMapEntries, words, nil
+}
+
+func getLabelRefinementsMap(path string) (map[string]datastructures.LabelMapRefinementEntry, error) {
+    var labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return labelMapRefinementEntries, err
+    }
+
+    err = json.Unmarshal(data, &labelMapRefinementEntries)
+    if err != nil {
+        return labelMapRefinementEntries, err
+    }
+
+    return labelMapRefinementEntries, nil
 }
 
 func GetSampleExportQueries() []string {
@@ -363,7 +260,7 @@ func (p *StatisticsPusher) Load() error {
 }
 
 func (p *StatisticsPusher) PushAppAction(appIdentifier string, actionType string) {
-    var contributionsPerAppRequest ContributionsPerAppRequest
+    var contributionsPerAppRequest datastructures.ContributionsPerAppRequest
     contributionsPerAppRequest.Type = actionType
     val, ok := p.registeredAppIdentifiers.Get(appIdentifier)
     if ok {
@@ -397,7 +294,7 @@ func isAlphaNumeric(s string) bool {
     return true
 }
 
-func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []Sublabel) bool {
+func isLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label string, sublabels []datastructures.Sublabel) bool {
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries

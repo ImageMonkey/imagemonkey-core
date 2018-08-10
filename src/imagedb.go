@@ -10,360 +10,10 @@ import (
     "errors"
     "time"
     "github.com/dgrijalva/jwt-go"
+    "./datastructures"
 )
 
-type AnnotationStroke struct {
-    Width float32 `json:"width"`
-    Color string `json:"color"`
-}
-
-type RectangleAnnotation struct {
-    //Id int64 `json:"id"`
-    Left float32 `json:"left"`
-    Top float32 `json:"top"`
-    Width float32 `json:"width"`
-    Height float32 `json:"height"`
-    Angle float32 `json:"angle"`
-    Type string `json:"type"`
-    Stroke AnnotationStroke `json:"stroke"`
-}
-
-type EllipsisAnnotation struct {
-    //Id int64 `json:"id"`
-    Left float32 `json:"left"`
-    Top float32 `json:"top"`
-    Rx float32 `json:"rx"`
-    Ry float32 `json:"ry"`
-    Angle float32 `json:"angle"`
-    Type string `json:"type"`
-    Stroke AnnotationStroke `json:"stroke"`
-}
-
-
-type PolygonPoint struct {
-    X float32 `json:"x"`
-    Y float32 `json:"y"`
-}
-
-type PolygonAnnotation struct {
-    //Id int64 `json:"id"`
-    Left float32 `json:"left"`
-    Top float32 `json:"top"`
-    Points []PolygonPoint `json:"points"`
-    Angle float32 `json:"angle"`
-    Type string `json:"type"`
-    Stroke AnnotationStroke `json:"stroke"`
-}
-
-type Annotations struct {
-    Annotations []json.RawMessage `json:"annotations"`
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
-}
-
-type Image struct {
-    Id string `json:"uuid"`
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
-    Provider string `json:"provider"`
-    Probability float32 `json:"probability"`
-    NumOfValid int32 `json:"num_yes"`
-    NumOfInvalid int32 `json:"num_no"`
-    Unlocked bool `json:"unlocked,omitempty"`
-    Annotations []json.RawMessage `json:"annotations"`
-    AllLabels []LabelMeEntry `json:"all_labels"`
-}
-
-type ValidationImage struct {
-    Id string `json:"uuid"`
-    Provider string `json:"provider"`
-    Unlocked bool `json:"unlocked"`
-
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
-
-    Validation struct {
-        Id string `json:"id"`
-        NumOfValid int32 `json:"num_yes"`
-        NumOfInvalid int32 `json:"num_no"`
-    }
-}
-
-type UnannotatedImage struct {
-    Id string `json:"uuid"`
-    Unlocked bool `json:"unlocked"`
-    Url string `json:"url"`
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
-    Provider string `json:"provider"`
-    Width int32 `json:"width"`
-    Height int32 `json:"height"`
-    Validation struct {
-        Id string `json:"uuid"`
-    } `json:"validation"`
-    AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
-}
-
-type ImageLabel struct {
-    Image struct {
-        Id string `json:"uuid"`
-        Unlocked bool `json:"unlocked"`
-        Url string `json:"url"`
-        Provider string `json:"provider"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-    } `json:"image"`
-
-    Labels[] struct {
-        Name string `json:"name"`
-        Unlocked bool `json:"unlocked"`
-        NumOfValid int32 `json:"num_yes"`
-        NumOfInvalid int32 `json:"num_no"`
-        Sublabels[] struct {
-            Name string `json:"name"`
-            NumOfValid int32 `json:"num_yes"`
-            NumOfInvalid int32 `json:"num_no"`
-        } `json:"sublabels"`
-    } `json:"labels"`
-}
-
-type AnnotatedImage struct {
-    Image struct {
-        Id string `json:"uuid"`
-        Unlocked bool `json:"unlocked"`
-        Url string `json:"url"`
-        Provider string `json:"provider"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-    } `json:"image"`
-
-    Validation struct {
-        Label string `json:"label"`
-        Sublabel string `json:"sublabel"`
-    } `json:"validation"`
-    
-
-    Id string `json:"uuid"`
-    NumOfValid int32 `json:"num_yes"`
-    NumOfInvalid int32 `json:"num_no"`
-    Annotations []json.RawMessage `json:"annotations"`
-    NumRevisions int32 `json:"num_revisions"`
-    Revision int32 `json:"revision"`
-}
-
-type ImageValidation struct {
-    Uuid string `json:"uuid"`
-    Valid string `json:"valid"`
-}
-
-type ImageValidationBatch struct {
-    Validations []ImageValidation `json:"validations"`
-}
-
-type GraphNode struct {
-	Group int `json:"group"`
-	Text string `json:"text"`
-	Size int `json:"size"`
-}
-
-type ValidationStat struct {
-    Label string `json:"label"`
-    Count int `json:"count"`
-    ErrorRate float32 `json:"error_rate"`
-    TotalValidations int `json:"total_validations"`
-}
-
-type DonationsPerCountryStat struct {
-    CountryCode string `json:"country_code"`
-    Count int64 `json:"num"`
-}
-
-type ValidationsPerCountryStat struct {
-    CountryCode string `json:"country_code"`
-    Count int64 `json:"num"`
-}
-
-type AnnotationsPerCountryStat struct {
-    CountryCode string `json:"country_code"`
-    Count int64 `json:"num"`
-}
-
-type DonationsPerAppStat struct {
-    AppIdentifier string `json:"app_identifier"`
-    Count int64 `json:"num"`
-}
-
-type ValidationsPerAppStat struct {
-    AppIdentifier string `json:"app_identifier"`
-    Count int64 `json:"num"`
-}
-
-type AnnotationsPerAppStat struct {
-    AppIdentifier string `json:"app_identifier"`
-    Count int64 `json:"num"`
-}
-
-type Statistics struct {
-    Validations []ValidationStat `json:"validations"`
-    DonationsPerCountry []DonationsPerCountryStat `json:"donations_per_country"`
-    ValidationsPerCountry []ValidationsPerCountryStat `json:"validations_per_country"`
-    AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
-    DonationsPerApp []DonationsPerAppStat `json:"donations_per_app"`
-    ValidationsPerApp []ValidationsPerAppStat `json:"validations_per_app"`
-    AnnotationsPerApp []AnnotationsPerAppStat `json:"annotations_per_app"`
-    NumOfUnlabeledDonations int64 `json:"num_of_unlabeled_donations"`
-}
-
-type UnannotatedValidation struct {
-    Validation struct {
-        Id string `json:"uuid"`
-        Label string `json:"label"`
-        Sublabel string `json:"sublabel"`
-    } `json:"validation"`
-}
-
-type LabelSearchItem struct {
-    Label string `json:"label"`
-    ParentLabel string `json:"parent_label"`
-}
-
-type LabelSearchResult struct {
-    Labels []LabelSearchItem `json:"items"`
-}
-
-type AnnotationRefinementQuestion struct {
-    Question string `json:"question"`
-    Uuid int64 `json:"uuid"`
-    RecommendedControl string `json:"recommended_control"`
-}
-
-type AnnotationRefinementAnswerExample struct {
-    Filename string `json:"filename"`
-    Attribution string `json:"attribution"`
-}
-
-type AnnotationRefinementAnswer struct {
-    Label string `json:"label"`
-    Id int64 `json:"id"`
-    Examples []AnnotationRefinementAnswerExample `json:"examples"`
-}
-
-type AnnotationRefinement struct {
-    Question AnnotationRefinementQuestion `json:"question"`
-    //Answers []AnnotationRefinementAnswer `json:"answers"`
-    Answers []json.RawMessage `json:"answers"`
-
-    Metainfo struct {
-        BrowseByExample bool `json:"browse_by_example"`
-        AllowOther bool `json:"allow_other"`
-        AllowUnknown bool `json:"allow_unknown"`
-        MultiSelect bool `json:"multiselect"`
-    } `json:"metainfo"`
-
-    Image struct {
-        Uuid string `json:"uuid"`
-    } `json:"image"`
-
-    Annotation struct{
-        Uuid string `json:"uuid"`
-        Annotation json.RawMessage `json:"annotation"`
-    } `json:"annotation"`
-}
-
-type AnnotationRefinementEntry struct {
-    LabelId int64 `json:"label_id"`
-}
-
-type ExportedImage struct {
-    Id string `json:"uuid"`
-    Provider string `json:"provider"`
-    Width int32 `json:"width"`
-    Height int32 `json:"height"`
-    Annotations []json.RawMessage `json:"annotations"`
-    Validations []json.RawMessage `json:"validations"`
-}
-
-type AutoAnnotationImage struct {
-    Image struct {
-        Id string `json:"uuid"`
-        Provider string `json:"provider"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-    } `json:"image"`
-
-    Labels []string `json:"labels"`
-}
-
-
-type UserStatistics struct {
-    Total struct {
-        Validations int32 `json:"validations"`
-        Annotations int32 `json:"annotations"`
-    } `json:"total"`
-
-    User struct {
-        Validations int32 `json:"validations"`
-        Annotations int32 `json:"annotations"`
-    } `json:"user"`
-}
-
-type UserPermissions struct {
-    CanRemoveLabel bool `json:"can_remove_label"`
-}
-
-type UserInfo struct {
-    Name string `json:"name"`
-    Created int64 `json:"created"`
-    ProfilePicture string `json:"profile_picture"`
-    IsModerator bool `json:"is_moderator"`
-
-    Permissions *UserPermissions `json:"permissions,omitempty"`
-}
-
-/*type MonthlyStatistics struct {
-    Annotations []int32 `json:"annotations"`
-    Validations []int32 `json:"validations"`
-    Dates []string `json:"dates"`
-}*/
-
-type DataPoint struct {
-    Value int32 `json:"value"`
-    Date string `json:"date"`
-}
-
-type Activity struct {
-    Name string `json:"name"`
-    Type string `json:"type"`
-    Date string `json:"date"`
-    Image struct {
-        Id string `json:"uuid"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-        Annotation json.RawMessage `json:"annotation"`
-        Label string `json:"label"`
-    } `json:"image"`
-}
-
-type APIToken struct {
-    IssuedAtUnixTimestamp int64 `json:"issued_at"`
-    Token string `json:"token"`
-    Description string `json:"description"`
-    Revoked bool `json:"revoked"`
-}
-
-type AnnotationTask struct {
-    Image struct {
-        Id string `json:"uuid"`
-        Unlocked bool `json:"unlocked"`
-        Url string `json:"url"`
-        Width int32 `json:"width"`
-        Height int32 `json:"height"`
-    } `json:"image"`
-
-    Id string `json:"uuid"`
-}
-
-func sublabelsToStringlist(sublabels []Sublabel) []string {
+func sublabelsToStringlist(sublabels []datastructures.Sublabel) []string {
     var s []string
     for _, sublabel := range sublabels {
         s = append(s, sublabel.Name)
@@ -373,7 +23,8 @@ func sublabelsToStringlist(sublabels []Sublabel) []string {
 }
 
 
-func addDonatedPhoto(username string, imageInfo ImageInfo, autoUnlock bool, clientFingerprint string, labels []LabelMeEntry) error{
+func addDonatedPhoto(username string, imageInfo datastructures.ImageInfo, autoUnlock bool, clientFingerprint string, 
+        labels []datastructures.LabelMeEntry) error{
 	tx, err := db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -451,7 +102,7 @@ func _addImageValidationSources(imageSourceId int64, imageValidationIds []int64,
     return nil
 }
 
-func _addImageSource(imageId int64, imageSource ImageSource, tx *sql.Tx) (int64, error) {
+func _addImageSource(imageId int64, imageSource datastructures.ImageSource, tx *sql.Tx) (int64, error) {
     var insertedId int64
     err := tx.QueryRow("INSERT INTO image_source(image_id, url) VALUES($1, $2) RETURNING id", imageId, imageSource.Url).Scan(&insertedId)
     if err != nil {
@@ -491,7 +142,7 @@ func imageExists(hash uint64) (bool, error){
     }
 }
 
-func validateImages(apiUser APIUser, imageValidationBatch ImageValidationBatch, moderatorAction bool) error {
+func validateImages(apiUser datastructures.APIUser, imageValidationBatch datastructures.ImageValidationBatch, moderatorAction bool) error {
     var validEntries []string
     var invalidEntries []string
     var updatedRowIds []int64
@@ -607,7 +258,7 @@ func validateImages(apiUser APIUser, imageValidationBatch ImageValidationBatch, 
     return nil
 }
 
-func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, error){
+func export(parseResult ParseResult, annotationsOnly bool) ([]datastructures.ExportedImage, error){
     joinType := "FULL OUTER JOIN"
     if annotationsOnly {
         joinType = "JOIN"
@@ -679,9 +330,9 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
     }
     defer rows.Close()
 
-    imageEntries := []ExportedImage{}
+    imageEntries := []datastructures.ExportedImage{}
     for rows.Next() {
-        var image ExportedImage
+        var image datastructures.ExportedImage
         var annotations []byte
         var validations []byte
         image.Provider = "donation"
@@ -716,11 +367,11 @@ func export(parseResult ParseResult, annotationsOnly bool) ([]ExportedImage, err
     return imageEntries, err
 }
 
-func explore(words []string) (Statistics, error) {
-    statistics := Statistics{}
+func explore(words []string) (datastructures.Statistics, error) {
+    statistics := datastructures.Statistics{}
 
     //use temporary map for faster lookup
-    temp := make(map[string]ValidationStat)
+    temp := make(map[string]datastructures.ValidationStat)
 
     tx, err := db.Begin()
     if err != nil {
@@ -745,7 +396,7 @@ func explore(words []string) (Statistics, error) {
     defer rows.Close()
 
     for rows.Next() {
-        var validationStat ValidationStat
+        var validationStat datastructures.ValidationStat
         err = rows.Scan(&validationStat.Label, &validationStat.Count, &validationStat.ErrorRate, &validationStat.TotalValidations)
         if err != nil {
             tx.Rollback()
@@ -761,7 +412,7 @@ func explore(words []string) (Statistics, error) {
     for _, value := range words {
         _, contains := temp[value]
         if !contains {
-            var validationStat ValidationStat
+            var validationStat datastructures.ValidationStat
             validationStat.Label = value
             validationStat.Count = 0
             temp[value] = validationStat
@@ -783,7 +434,7 @@ func explore(words []string) (Statistics, error) {
     defer donationsPerCountryRows.Close()
 
     for donationsPerCountryRows.Next() {
-        var donationsPerCountryStat DonationsPerCountryStat
+        var donationsPerCountryStat datastructures.DonationsPerCountryStat
         err = donationsPerCountryRows.Scan(&donationsPerCountryStat.CountryCode, &donationsPerCountryStat.Count)
         if err != nil {
             tx.Rollback()
@@ -807,7 +458,7 @@ func explore(words []string) (Statistics, error) {
     defer validationsPerCountryRows.Close()
 
     for validationsPerCountryRows.Next() {
-        var validationsPerCountryStat ValidationsPerCountryStat
+        var validationsPerCountryStat datastructures.ValidationsPerCountryStat
         err = validationsPerCountryRows.Scan(&validationsPerCountryStat.CountryCode, &validationsPerCountryStat.Count)
         if err != nil {
             tx.Rollback()
@@ -830,7 +481,7 @@ func explore(words []string) (Statistics, error) {
     defer annotationsPerCountryRows.Close()
 
     for annotationsPerCountryRows.Next() {
-        var annotationsPerCountryStat AnnotationsPerCountryStat
+        var annotationsPerCountryStat datastructures.AnnotationsPerCountryStat
         err = annotationsPerCountryRows.Scan(&annotationsPerCountryStat.CountryCode, &annotationsPerCountryStat.Count)
         if err != nil {
             tx.Rollback()
@@ -878,8 +529,8 @@ func explore(words []string) (Statistics, error) {
     return statistics, tx.Commit()
 }
 
-func _exploreAnnotationsPerApp(tx *sql.Tx) ([]AnnotationsPerAppStat, error) {
-    var annotationsPerApp []AnnotationsPerAppStat
+func _exploreAnnotationsPerApp(tx *sql.Tx) ([]datastructures.AnnotationsPerAppStat, error) {
+    var annotationsPerApp []datastructures.AnnotationsPerAppStat
 
     //get annotations grouped by app
     annotationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM annotations_per_app ORDER BY count DESC`)
@@ -889,7 +540,7 @@ func _exploreAnnotationsPerApp(tx *sql.Tx) ([]AnnotationsPerAppStat, error) {
     defer annotationsPerAppRows.Close()
 
     for annotationsPerAppRows.Next() {
-        var annotationsPerAppStat AnnotationsPerAppStat
+        var annotationsPerAppStat datastructures.AnnotationsPerAppStat
         err = annotationsPerAppRows.Scan(&annotationsPerAppStat.AppIdentifier, &annotationsPerAppStat.Count)
         if err != nil {
             return annotationsPerApp, err
@@ -901,8 +552,8 @@ func _exploreAnnotationsPerApp(tx *sql.Tx) ([]AnnotationsPerAppStat, error) {
     return annotationsPerApp, nil
 }
 
-func _exploreDonationsPerApp(tx *sql.Tx) ([]DonationsPerAppStat, error) {
-    var donationsPerApp []DonationsPerAppStat
+func _exploreDonationsPerApp(tx *sql.Tx) ([]datastructures.DonationsPerAppStat, error) {
+    var donationsPerApp []datastructures.DonationsPerAppStat
 
     //get donations grouped by app
     donationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM donations_per_app ORDER BY count DESC`)
@@ -912,7 +563,7 @@ func _exploreDonationsPerApp(tx *sql.Tx) ([]DonationsPerAppStat, error) {
     defer donationsPerAppRows.Close()
 
     for donationsPerAppRows.Next() {
-        var donationsPerAppStat DonationsPerAppStat
+        var donationsPerAppStat datastructures.DonationsPerAppStat
         err = donationsPerAppRows.Scan(&donationsPerAppStat.AppIdentifier, &donationsPerAppStat.Count)
         if err != nil {
             return donationsPerApp, err
@@ -924,8 +575,8 @@ func _exploreDonationsPerApp(tx *sql.Tx) ([]DonationsPerAppStat, error) {
     return donationsPerApp, nil
 }
 
-func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
-    var validationsPerApp []ValidationsPerAppStat
+func _exploreValidationsPerApp(tx *sql.Tx) ([]datastructures.ValidationsPerAppStat, error) {
+    var validationsPerApp []datastructures.ValidationsPerAppStat
 
     //get validations grouped by app
     validationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM validations_per_app ORDER BY count DESC`)
@@ -935,7 +586,7 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
     defer validationsPerAppRows.Close()
 
     for validationsPerAppRows.Next() {
-        var validationsPerAppStat ValidationsPerAppStat
+        var validationsPerAppStat datastructures.ValidationsPerAppStat
         err = validationsPerAppRows.Scan(&validationsPerAppStat.AppIdentifier, &validationsPerAppStat.Count)
         if err != nil {
             return validationsPerApp, err
@@ -948,8 +599,8 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]ValidationsPerAppStat, error) {
 }
 
 
-func getImageToValidate(imageId string, labelId string, username string) (ValidationImage, error) {
-	var image ValidationImage
+func getImageToValidate(imageId string, labelId string, username string) (datastructures.ValidationImage, error) {
+	var image datastructures.ValidationImage
 
 	image.Id = ""
 	image.Label = ""
@@ -1124,8 +775,8 @@ func reportImage(imageId string, reason string) error{
 }
 
 //returns a list of n - random images (n = limit) that were uploaded with the given label. 
-func getRandomGroupedImages(label string, limit int) ([]ValidationImage, error) {
-    var images []ValidationImage
+func getRandomGroupedImages(label string, limit int) ([]datastructures.ValidationImage, error) {
+    var images []datastructures.ValidationImage
 
     tx, err := db.Begin()
     if err != nil {
@@ -1180,7 +831,7 @@ func getRandomGroupedImages(label string, limit int) ([]ValidationImage, error) 
     defer rows.Close()
 
     for rows.Next() {
-        var image ValidationImage
+        var image datastructures.ValidationImage
         image.Provider = "donation"
         err = rows.Scan(&image.Id, &image.Label, &image.Validation.NumOfValid, &image.Validation.NumOfInvalid, &image.Validation.Id)
         if err != nil {
@@ -1196,7 +847,7 @@ func getRandomGroupedImages(label string, limit int) ([]ValidationImage, error) 
     return images, tx.Commit()
 }
 
-func updateAnnotation(apiUser APIUser, annotationId string, annotations Annotations) error {
+func updateAnnotation(apiUser datastructures.APIUser, annotationId string, annotations datastructures.Annotations) error {
     byt, err := json.Marshal(annotations.Annotations)
     if err != nil {
         log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
@@ -1246,8 +897,8 @@ func updateAnnotation(apiUser APIUser, annotationId string, annotations Annotati
     }
 
     //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, annotation, annotation_type_id)
-                            SELECT $1, ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, imageAnnotationId, byt)
+    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, imageAnnotationId, byt)
     if err != nil {
         tx.Rollback()
         log.Debug("[Update Annotation] Couldn't add new annotation data: ", err.Error())
@@ -1265,7 +916,7 @@ func updateAnnotation(apiUser APIUser, annotationId string, annotations Annotati
     return nil
 }
 
-func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, autoGenerated bool) (string, error) {
+func addAnnotations(apiUser datastructures.APIUser, imageId string, annotations datastructures.Annotations, autoGenerated bool) (string, error) {
     //currently there is a uniqueness constraint on the image_id column to ensure that we only have
     //one image annotation per image. That means that the below query can fail with a unique constraint error. 
     //at the moment the uniqueness constraint errors are handled gracefully - that means we return nil.
@@ -1317,8 +968,8 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     }
 
     //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, annotation, annotation_type_id)
-                            SELECT $1, ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, insertedId, byt)
+    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, insertedId, byt)
     if err != nil {
         tx.Rollback()
         log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
@@ -1357,8 +1008,8 @@ func addAnnotations(apiUser APIUser, imageId string, annotations Annotations, au
     return annotationId, nil
 }
 
-func _getImageForAnnotationFromValidationId(username string, validationId string, addAutoAnnotations bool) (UnannotatedImage, error) {
-    var unannotatedImage UnannotatedImage
+func _getImageForAnnotationFromValidationId(username string, validationId string, addAutoAnnotations bool) (datastructures.UnannotatedImage, error) {
+    var unannotatedImage datastructures.UnannotatedImage
 
     includeOwnImageDonations := ""
     if username != "" {
@@ -1457,7 +1108,7 @@ func _getImageForAnnotationFromValidationId(username string, validationId string
     return unannotatedImage, nil
 }
 
-func getImageForAnnotation(username string, addAutoAnnotations bool, validationId string, labelId string) (UnannotatedImage, error) {
+func getImageForAnnotation(username string, addAutoAnnotations bool, validationId string, labelId string) (datastructures.UnannotatedImage, error) {
     //if a validation id is provided, use a different code path. 
     //selecting a single image given a validation id is totally different from selecting a random image
     //so it makes sense to use a different code path here. 
@@ -1466,7 +1117,7 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
     }
 
 
-    var unannotatedImage UnannotatedImage
+    var unannotatedImage datastructures.UnannotatedImage
 
     //specify the max. number of not-annotatables before we skip the annotation task
     maxNumNotAnnotatable := 3
@@ -1625,8 +1276,8 @@ func getImageForAnnotation(username string, addAutoAnnotations bool, validationI
     return unannotatedImage, nil
 }
 
-func getAnnotatedImage(apiUser APIUser, annotationId string, autoGenerated bool, revision int32) (AnnotatedImage, error) {
-    var annotatedImage AnnotatedImage
+func getAnnotatedImage(apiUser datastructures.APIUser, annotationId string, autoGenerated bool, revision int32) (datastructures.AnnotatedImage, error) {
+    var annotatedImage datastructures.AnnotatedImage
 
     includeOwnImageDonations := ""
     includeOwnImageDonationsStr := `OR (
@@ -1854,7 +1505,7 @@ func getAnnotatedImage(apiUser APIUser, annotationId string, autoGenerated bool,
     return annotatedImage, nil
 }
 
-func validateAnnotatedImage(clientFingerprint string, annotationId string, labelValidationEntry LabelValidationEntry, valid bool) error {
+func validateAnnotatedImage(clientFingerprint string, annotationId string, labelValidationEntry datastructures.LabelValidationEntry, valid bool) error {
     if valid {
         var err error
         if labelValidationEntry.Sublabel == "" {
@@ -1947,8 +1598,8 @@ func getNumOfValidatedImages() (int64, error){
     return num, nil
 }
 
-func getAllUnverifiedImages(imageProvider string, shuffle bool) ([]Image, error){
-    var images []Image
+func getAllUnverifiedImages(imageProvider string, shuffle bool) ([]datastructures.Image, error){
+    var images []datastructures.Image
 
     orderRandomly := ""
     if shuffle {
@@ -2004,7 +1655,7 @@ func getAllUnverifiedImages(imageProvider string, shuffle bool) ([]Image, error)
     defer rows.Close()
 
     for rows.Next() {
-        var image Image
+        var image datastructures.Image
         err = rows.Scan(&image.Id, &image.Label, &image.Provider)
         if err != nil {
             log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
@@ -2104,9 +1755,9 @@ func updateContributionsPerApp(contributionType string, appIdentifier string) er
 
 
 
-func getImageToLabel(imageId string, username string) (Image, error) {
-    var image Image
-    var labelMeEntries []LabelMeEntry
+func getImageToLabel(imageId string, username string) (datastructures.Image, error) {
+    var image datastructures.Image
+    var labelMeEntries []datastructures.LabelMeEntry
     image.Provider = "donation"
 
     tx, err := db.Begin()
@@ -2247,7 +1898,7 @@ func getImageToLabel(imageId string, username string) (Image, error) {
         var validationUuid string
         var numOfValid int32
         var numOfInvalid int32
-        temp := make(map[string]LabelMeEntry) 
+        temp := make(map[string]datastructures.LabelMeEntry) 
         for rows.Next() {
             err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
                             &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked)
@@ -2270,33 +1921,33 @@ func getImageToLabel(imageId string, username string) (Image, error) {
 
             if val, ok := temp[baseLabel]; ok {
                 if parentLabel != "" {
-                    var validation *LabelMeValidation
+                    var validation *datastructures.LabelMeValidation
                     validation = nil
                     if validationUuid != "" {
-                        validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+                        validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
                     }
 
-                    val.Sublabels = append(val.Sublabels, Sublabel {Name: label, Unlocked: labelUnlocked, 
+                    val.Sublabels = append(val.Sublabels, datastructures.Sublabel {Name: label, Unlocked: labelUnlocked, 
                                                                     Annotatable: labelAnnotatable, Uuid: labelUuid,
                                                                     Validation: validation})
                 }
                 temp[baseLabel] = val
             } else {
-                var labelMeEntry LabelMeEntry
+                var labelMeEntry datastructures.LabelMeEntry
                 labelMeEntry.Label = baseLabel
                 labelMeEntry.Unlocked = labelUnlocked
                 labelMeEntry.Annotatable = labelAnnotatable
                 labelMeEntry.Uuid = labelUuid
-                labelMeEntry.Validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+                labelMeEntry.Validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
                 if parentLabel != "" {
-                    var validation *LabelMeValidation
+                    var validation *datastructures.LabelMeValidation
                     validation = nil
                     if validationUuid != "" {
-                        validation = &LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+                        validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
                     }
 
 
-                    labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, Sublabel {Name: label, Unlocked: labelUnlocked, 
+                    labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel {Name: label, Unlocked: labelUnlocked, 
                                                                                       Annotatable: labelAnnotatable, Uuid: labelUuid,
                                                                                       Validation: validation})
                 }
@@ -2334,7 +1985,8 @@ func getImageToLabel(imageId string, username string) (Image, error) {
     return image, nil
 }
 
-func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageId string, labels []LabelMeEntry) error {
+func addLabelsToImage(apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
+                        imageId string, labels []datastructures.LabelMeEntry) error {
     tx, err := db.Begin()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
@@ -2342,7 +1994,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
         return err
     }
 
-    var knownLabels []LabelMeEntry
+    var knownLabels []datastructures.LabelMeEntry
     for _, item := range labels {
         if !isLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
             if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
@@ -2377,7 +2029,7 @@ func addLabelsToImage(apiUser APIUser, labelMap map[string]LabelMapEntry, imageI
     return err
 }
 
-func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {
+func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {
     var labelSuggestionId int64
 
     labelSuggestionId = -1
@@ -2425,7 +2077,7 @@ func _addLabelSuggestionToImage(apiUser APIUser, label string, imageId string, a
     return nil
 }
 
-func _addLabelsToImage(clientFingerprint string, imageId string, labels []LabelMeEntry, numOfValid int, numOfNotAnnotatable int, tx *sql.Tx) ([]int64, error) {
+func _addLabelsToImage(clientFingerprint string, imageId string, labels []datastructures.LabelMeEntry, numOfValid int, numOfNotAnnotatable int, tx *sql.Tx) ([]int64, error) {
     var insertedIds []int64
     for _, item := range labels {
         rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
@@ -2534,8 +2186,8 @@ func getAllImageLabels() ([]string, error) {
     return labels, nil
 }
 
-func getUnannotatedValidations(apiUser APIUser, imageId string) ([]UnannotatedValidation, error) {
-    var unannotatedValidations []UnannotatedValidation
+func getUnannotatedValidations(apiUser datastructures.APIUser, imageId string) ([]datastructures.UnannotatedValidation, error) {
+    var unannotatedValidations []datastructures.UnannotatedValidation
 
     includeOwnImageDonations := ""
     if apiUser.Name != "" {
@@ -2583,7 +2235,7 @@ func getUnannotatedValidations(apiUser APIUser, imageId string) ([]UnannotatedVa
     defer rows.Close()
 
     for rows.Next() {
-        var unannotatedValidation UnannotatedValidation
+        var unannotatedValidation datastructures.UnannotatedValidation
         err = rows.Scan(&unannotatedValidation.Validation.Id, &unannotatedValidation.Validation.Label, 
                             &unannotatedValidation.Validation.Sublabel)
         if err != nil {
@@ -2629,85 +2281,100 @@ func getMostPopularLabels(limit int32) ([]string, error) {
     return labels, nil
 }
 
-func getRandomAnnotationForRefinement() (AnnotationRefinement, error) {
+func getRandomAnnotationForQuizRefinement() (datastructures.AnnotationRefinement, error) {
     var bytes []byte
     var annotationBytes []byte
-    var refinement AnnotationRefinement
+    var refinement datastructures.AnnotationRefinement
     var annotations []json.RawMessage
-    err := db.QueryRow(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, s1.uuid, s.allow_unknown, 
-                        s.allow_other, s.browse_by_example, s.multiselect
-                        FROM ( 
-                                SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
-                                json_agg(json_build_object('id', l.id, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
-                                qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
-                                qq.browse_by_example as browse_by_example, qq.multiselect
-    
-                                FROM quiz_question qq 
-                                JOIN quiz_answer q ON q.quiz_question_id = qq.id 
-                                JOIN label l ON q.label_id = l.id
-                                LEFT JOIN (
-                                    SELECT e.label_id, json_agg(json_build_object('filename', e.filename, 'attribution', e.attribution))::jsonb as examples
-                                    FROM label_example e GROUP BY label_id
-                                ) s2 
-                                ON s2.label_id = l.id 
-                                GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
-                             ) as s
-                        JOIN (
-                                SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"id":'||d.id||'}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
-                                FROM image_annotation a
-                                JOIN image i ON i.id = a.image_id
-                                JOIN annotation_data d ON d.image_annotation_id = a.id
-                                JOIN annotation_type t ON d.annotation_type_id = t.id
-                                WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
-                                AND i.unlocked = true
-                                GROUP BY a.label_id, a.image_id, a.uuid
-                             ) as s1
-                        ON s1.label_id =  s.refines_label_id 
-                        JOIN image i ON i.id = s1.image_id
-                        OFFSET floor(random() * 
-                            ( SELECT count(*) FROM image_annotation a 
-                              JOIN quiz_question q ON q.refines_label_id = a.label_id
-                              WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
-                            )
-                        ) LIMIT 1`).Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
-                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, 
-                            &refinement.Metainfo.AllowOther, &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
+    rows, err := db.Query(`SELECT i.key, s.quiz_question_id, s.quiz_question, s.quiz_answers, s1.annotations, s.recommended_control::text, 
+                            s1.uuid, s.allow_unknown, s.allow_other, s.browse_by_example, s.multiselect
+                            FROM ( 
+                                    SELECT qq.question as quiz_question, qq.recommended_control as recommended_control,
+                                    json_agg(json_build_object('uuid', l.uuid, 'label', l.name, 'examples', COALESCE(s2.examples, '[]'))) as quiz_answers, 
+                                    qq.refines_label_id as refines_label_id, qq.id as quiz_question_id, qq.allow_unknown as allow_unknown, qq.allow_other as allow_other, 
+                                    qq.browse_by_example as browse_by_example, qq.multiselect
+        
+                                    FROM quiz_question qq 
+                                    JOIN quiz_answer q ON q.quiz_question_id = qq.id 
+                                    JOIN label l ON q.label_id = l.id
+                                    LEFT JOIN (
+                                        SELECT e.label_id, json_agg(json_build_object('filename', e.filename, 'attribution', e.attribution))::jsonb as examples
+                                        FROM label_example e GROUP BY label_id
+                                    ) s2 
+                                    ON s2.label_id = l.id 
+                                    GROUP BY qq.question, qq.refines_label_id, qq.id, qq.recommended_control
+                                 ) as s
+                            JOIN (
+                                    SELECT a.uuid, a.label_id, a.image_id, json_agg(d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"'||t.name||'"}')::jsonb)::jsonb as annotations 
+                                    FROM image_annotation a
+                                    JOIN image i ON i.id = a.image_id
+                                    JOIN annotation_data d ON d.image_annotation_id = a.id
+                                    JOIN annotation_type t ON d.annotation_type_id = t.id
+                                    WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
+                                    AND i.unlocked = true
+                                    GROUP BY a.label_id, a.image_id, a.uuid
+                                 ) as s1
+                            ON s1.label_id =  s.refines_label_id 
+                            JOIN image i ON i.id = s1.image_id
+                            OFFSET floor(random() * 
+                                ( SELECT count(*) FROM image_annotation a 
+                                  JOIN quiz_question q ON q.refines_label_id = a.label_id
+                                  WHERE CASE WHEN a.num_of_valid + a.num_of_invalid = 0 THEN 0 ELSE (CAST (a.num_of_valid AS float)/(a.num_of_valid + a.num_of_invalid)) END >= 0.8
+                                )
+                            ) LIMIT 1`)
+
     if err != nil {
-        log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
+        log.Debug("[Random Quiz question] Couldn't get random image quiz: ", err.Error())
         raven.CaptureError(err, nil)
         return refinement, err 
     }
 
-    err = json.Unmarshal(bytes, &refinement.Answers)
-    if err != nil {
-        log.Debug("[Random Quiz question] Couldn't unmarshal answers: ", err.Error())
-        raven.CaptureError(err, nil)
-        return refinement, err
-    }
+    defer rows.Close()
 
-    err = json.Unmarshal(annotationBytes, &annotations)
-    if err != nil {
-        log.Debug("[Random Quiz question] Couldn't unmarshal annotations: ", err.Error())
-        raven.CaptureError(err, nil)
-        return refinement, err
-    }
+    if rows.Next() {
+        err = rows.Scan(&refinement.Image.Uuid, &refinement.Question.Uuid, 
+                            &refinement.Question.Question, &bytes, &annotationBytes, &refinement.Question.RecommendedControl, 
+                            &refinement.Annotation.Uuid, &refinement.Metainfo.AllowUnknown, &refinement.Metainfo.AllowOther, 
+                            &refinement.Metainfo.BrowseByExample, &refinement.Metainfo.MultiSelect)
 
-    if len(annotations) == 1 {
-        refinement.Annotation.Annotation = annotations[0]
-    } else if len(annotations) > 1 {
-        randomVal := random(0, (len(annotations) - 1))
-        refinement.Annotation.Annotation = annotations[randomVal]
+        if err != nil {
+            log.Debug("[Random Quiz question] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return refinement, err
+        }
+
+        err = json.Unmarshal(bytes, &refinement.Answers)
+        if err != nil {
+            log.Debug("[Random Quiz question] Couldn't unmarshal answers: ", err.Error())
+            raven.CaptureError(err, nil)
+            return refinement, err
+        }
+
+        err = json.Unmarshal(annotationBytes, &annotations)
+        if err != nil {
+            log.Debug("[Random Quiz question] Couldn't unmarshal annotations: ", err.Error())
+            raven.CaptureError(err, nil)
+            return refinement, err
+        }
+
+        if len(annotations) == 1 {
+            refinement.Annotation.Annotation = annotations[0]
+        } else if len(annotations) > 1 {
+            randomVal := random(0, (len(annotations) - 1))
+            refinement.Annotation.Annotation = annotations[randomVal]
+        }
     }
 
     return refinement, nil
 }
 
-func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annotationRefinementEntries []AnnotationRefinementEntry, clientFingerprint string) error {
+func addOrUpdateRefinements(annotationUuid string, annotationDataId string, annotationRefinementEntries []datastructures.AnnotationRefinementEntry, 
+                                clientFingerprint string) error {
     var err error
 
     tx, err := db.Begin()
     if err != nil {
-        log.Debug("[Add or Update Random Quiz question] Couldn't begin transaction: ", err.Error())
+        log.Debug("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
@@ -2715,15 +2382,17 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annot
     for _, item := range annotationRefinementEntries {
 
         _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
-                            SELECT $1, $2, $3, $4 FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.id = $1
+                            SELECT d.id, (SELECT l.id FROM label l WHERE l.uuid = $2), $3, $4 
+                            FROM image_annotation a JOIN annotation_data d ON d.image_annotation_id = a.id WHERE a.uuid = $5 AND d.uuid = $1
                           ON CONFLICT (annotation_data_id, label_id)
                           DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
-                          WHERE image_annotation_refinement.annotation_data_id = $1 AND image_annotation_refinement.label_id = $2`, 
+                          WHERE image_annotation_refinement.annotation_data_id = (SELECT d.id FROM annotation_data d WHERE d.uuid = $1) 
+                          AND image_annotation_refinement.label_id = (SELECT l.id FROM label l WHERE l.uuid = $2)`, 
                                annotationDataId, item.LabelId, 1, clientFingerprint, annotationUuid)
         
         if err != nil {
             tx.Rollback()
-            log.Debug("[Add or Update Random Quiz question] Couldn't update: ", err.Error())
+            log.Debug("[Add or Update annotation refinement] Couldn't update: ", err.Error())
             raven.CaptureError(err, nil)
             return err
         }
@@ -2731,7 +2400,7 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId int64, annot
 
     err = tx.Commit()
     if err != nil {
-        log.Debug("[Add or Update Random Quiz question] Couldn't commit transaction: ", err.Error())
+        log.Debug("[Add or Update annotation refinement] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
@@ -2751,11 +2420,14 @@ func addLabelSuggestion(suggestedLabel string) error {
     return nil
 } 
 
-func getLabelAccessors() ([]string, error) {
+func getLabelCategories() ([]string, error) {
     var labels []string
-    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    rows, err := db.Query(`SELECT pl.name 
+                            FROM label l 
+                            JOIN label pl on pl.id = l.parent_id
+                            WHERE pl.label_type = 'refinement_category'`)
     if err != nil {
-        log.Debug("[Get label accessor] Couldn't insert: ", err.Error())
+        log.Debug("[Get label categories] Couldn't get category: ", err.Error())
         raven.CaptureError(err, nil)
         return labels, err
     }
@@ -2765,7 +2437,32 @@ func getLabelAccessors() ([]string, error) {
     for rows.Next() {
         err = rows.Scan(&label)
         if err != nil {
-           log.Debug("[Get label accessor] Couldn't scan row: ", err.Error())
+           log.Debug("[Get label categories] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labels, err 
+        }
+
+        labels = append(labels, label)
+    }
+
+    return labels, nil
+}
+
+func getLabelAccessors() ([]string, error) {
+    var labels []string
+    rows, err := db.Query(`SELECT accessor FROM label_accessor`)
+    if err != nil {
+        log.Debug("[Get label accessors] Couldn't get accessor: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labels, err
+    }
+    defer rows.Close()
+
+    var label string
+    for rows.Next() {
+        err = rows.Scan(&label)
+        if err != nil {
+           log.Debug("[Get label accessors] Couldn't scan row: ", err.Error())
            raven.CaptureError(err, nil)
            return labels, err 
         }
@@ -2850,8 +2547,8 @@ func deleteImage(uuid string) error {
     return nil
 }
 
-func getImagesForAutoAnnotation(labels []string) ([]AutoAnnotationImage, error) {
-    var autoAnnotationImages []AutoAnnotationImage
+func getImagesForAutoAnnotation(labels []string) ([]datastructures.AutoAnnotationImage, error) {
+    var autoAnnotationImages []datastructures.AutoAnnotationImage
     rows, err := db.Query(`SELECT i.key, i.width, i.height, json_agg(l.name)  FROM image i 
                            JOIN image_validation v ON v.image_id = i.id
                            JOIN label l on v.label_id = l.id
@@ -2869,7 +2566,7 @@ func getImagesForAutoAnnotation(labels []string) ([]AutoAnnotationImage, error) 
     defer rows.Close()
 
     for rows.Next() {
-        var autoAnnotationImage AutoAnnotationImage
+        var autoAnnotationImage datastructures.AutoAnnotationImage
         var data []byte
         err = rows.Scan(&autoAnnotationImage.Image.Id, &autoAnnotationImage.Image.Width, &autoAnnotationImage.Image.Height, &data)
         if err != nil {
@@ -2909,8 +2606,8 @@ func userExists(username string) (bool, error) {
     return false, nil
 }
 
-func getUserInfo(username string) (UserInfo, error) {
-    var userInfo UserInfo
+func getUserInfo(username string) (datastructures.UserInfo, error) {
+    var userInfo datastructures.UserInfo
     var removeLabelPermission bool
     removeLabelPermission = false
 
@@ -2932,7 +2629,7 @@ func getUserInfo(username string) (UserInfo, error) {
     }
 
     if userInfo.IsModerator {
-        permissions := &UserPermissions {CanRemoveLabel: removeLabelPermission}
+        permissions := &datastructures.UserPermissions {CanRemoveLabel: removeLabelPermission}
         userInfo.Permissions = permissions
     }
 
@@ -3038,8 +2735,8 @@ func createUser(username string, hashedPassword []byte, email string) error {
     return nil
 }
 
-func getUserStatistics(username string) (UserStatistics, error) {
-    var userStatistics UserStatistics
+func getUserStatistics(username string) (datastructures.UserStatistics, error) {
+    var userStatistics datastructures.UserStatistics
 
     tx, err := db.Begin()
     if err != nil {
@@ -3137,51 +2834,9 @@ func changeProfilePicture(username string, uuid string) (string, error) {
     return existingProfilePicture, nil
 }
 
-/*func getMonthlyStatistics() (MonthlyStatistics, error) {
-    var monthlyStatistics MonthlyStatistics
 
-    rows, err := db.Query(`WITH dates AS (
-                            SELECT *
-                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
-                           ),
-                           num_of_annotations AS (
-                            SELECT * FROM image_annotation_history h
-                           )
-                          SELECT date,
-                           ( SELECT count(*) FROM num_of_annotations s
-                             WHERE date(lower(s.sys_period)) = date(date) 
-                           ) as num
-                           FROM dates
-                           GROUP BY date
-                           ORDER BY date`)
-    if err != nil {
-        log.Debug("[Get Statistics] Couldn't get monthly statistics: ", err.Error())
-        raven.CaptureError(err, nil)
-        return monthlyStatistics, err
-    }
-
-    defer rows.Close()
-
-    for rows.Next() {
-        var numOfAnnotations int32
-        //var numOfValidations int32
-        var date string
-        err = rows.Scan(&date, &numOfAnnotations)
-        if err != nil {
-            log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
-            raven.CaptureError(err, nil)
-            return monthlyStatistics, err
-        }
-
-        monthlyStatistics.Dates = append(monthlyStatistics.Dates, date)
-        monthlyStatistics.Annotations = append(monthlyStatistics.Annotations, numOfAnnotations)
-    }
-
-    return monthlyStatistics, nil
-}*/
-
-func getAnnotationStatistics(period string) ([]DataPoint, error) {
-    var annotationStatistics []DataPoint
+func getAnnotationStatistics(period string) ([]datastructures.DataPoint, error) {
+    var annotationStatistics []datastructures.DataPoint
 
     if period != "last-month" {
         return annotationStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -3212,7 +2867,7 @@ func getAnnotationStatistics(period string) ([]DataPoint, error) {
     defer rows.Close()
 
     for rows.Next() {
-        var datapoint DataPoint
+        var datapoint datastructures.DataPoint
         err = rows.Scan(&datapoint.Date, &datapoint.Value)
         if err != nil {
             log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
@@ -3227,8 +2882,8 @@ func getAnnotationStatistics(period string) ([]DataPoint, error) {
 }
 
 
-func getValidationStatistics(period string) ([]DataPoint, error) {
-    var validationStatistics []DataPoint
+func getValidationStatistics(period string) ([]datastructures.DataPoint, error) {
+    var validationStatistics []datastructures.DataPoint
 
     if period != "last-month" {
         return validationStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -3259,7 +2914,7 @@ func getValidationStatistics(period string) ([]DataPoint, error) {
     defer rows.Close()
 
     for rows.Next() {
-        var datapoint DataPoint
+        var datapoint datastructures.DataPoint
         err = rows.Scan(&datapoint.Date, &datapoint.Value)
         if err != nil {
             log.Debug("[Get Statistics] Couldn't scan row: ", err.Error())
@@ -3273,8 +2928,8 @@ func getValidationStatistics(period string) ([]DataPoint, error) {
     return validationStatistics, nil
 }
 
-func getActivity(period string) ([]Activity, error) {
-    var activity []Activity
+func getActivity(period string) ([]datastructures.Activity, error) {
+    var activity []datastructures.Activity
 
     if period != "last-month" {
         return activity, errors.New("Only last-month statistics are supported at the moment")
@@ -3397,7 +3052,7 @@ func getActivity(period string) ([]Activity, error) {
     defer rows.Close()
 
     for rows.Next() {
-        var a Activity
+        var a datastructures.Activity
         var annotation []byte
         err = rows.Scan(&a.Image.Label, &a.Image.Id, &a.Type, &a.Date, &a.Image.Width, &a.Image.Height, &annotation, &a.Name)
         if err != nil {
@@ -3448,7 +3103,7 @@ func getLabelSuggestions() ([]string, error) {
     return labelSuggestions, nil
 }
 
-func blacklistForAnnotation(validationId string, apiUser APIUser) error {
+func blacklistForAnnotation(validationId string, apiUser datastructures.APIUser) error {
     _, err := db.Exec(`INSERT INTO user_annotation_blacklist(image_validation_id, account_id)
                         SELECT v.id, (SELECT a.id FROM account a WHERE a.name = $1) as account_id 
                                FROM image_validation v WHERE v.uuid = $2
@@ -3497,8 +3152,8 @@ func isImageUnlocked(uuid string) (bool, error) {
     return unlocked, nil
 }
 
-func getApiTokens(username string) ([]APIToken, error) {
-    var apiTokens []APIToken
+func getApiTokens(username string) ([]datastructures.APIToken, error) {
+    var apiTokens []datastructures.APIToken
     rows, err := db.Query(`SELECT token, issued_at, description, revoked 
                            FROM api_token a
                            JOIN account a1 ON a1.id = a.account_id
@@ -3512,7 +3167,7 @@ func getApiTokens(username string) ([]APIToken, error) {
     defer rows.Close() 
 
     for rows.Next() {
-        var apiToken APIToken
+        var apiToken datastructures.APIToken
         err = rows.Scan(&apiToken.Token, &apiToken.IssuedAtUnixTimestamp, &apiToken.Description, &apiToken.Revoked)
         if err != nil {
             log.Debug("[Get API Tokens] Couldn't scan row: ", err.Error())
@@ -3538,14 +3193,14 @@ func isApiTokenRevoked(token string) (bool, error) {
     return revoked, nil
 }
 
-func generateApiToken(username string, description string) (APIToken, error) {
+func generateApiToken(username string, description string) (datastructures.APIToken, error) {
     type MyCustomClaims struct {
         Username string `json:"username"`
         Created int64 `json:"created"`
         jwt.StandardClaims
     }
 
-    var apiToken APIToken
+    var apiToken datastructures.APIToken
 
     issuedAt := time.Now()
     expiresAt := issuedAt.Add(time.Hour * 24 * 365 * 10) //10 years
@@ -3599,8 +3254,8 @@ func revokeApiToken(username string, apiToken string) (bool, error) {
     return true, nil
 }
 
-func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, orderRandomly bool, apiBaseUrl string) ([]AnnotationTask, error) {
-    var annotationTasks []AnnotationTask
+func getAvailableAnnotationTasks(apiUser datastructures.APIUser, parseResult ParseResult, orderRandomly bool, apiBaseUrl string) ([]datastructures.AnnotationTask, error) {
+    var annotationTasks []datastructures.AnnotationTask
 
 
     includeOwnImageDonations := ""
@@ -3685,7 +3340,7 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
     defer rows.Close()
 
     for rows.Next() {
-        var annotationTask AnnotationTask
+        var annotationTask datastructures.AnnotationTask
         err = rows.Scan(&annotationTask.Image.Id, &annotationTask.Image.Width, &annotationTask.Image.Height, 
                             &annotationTask.Id, &annotationTask.Image.Unlocked)
         if err != nil {
@@ -3723,8 +3378,8 @@ func getAvailableAnnotationTasks(apiUser APIUser, parseResult ParseResult, order
 }*/
 
 
-func getAnnotations(apiUser APIUser, parseResult ParseResult, apiBaseUrl string) ([]AnnotatedImage, error) {
-    var annotatedImages []AnnotatedImage
+func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult, apiBaseUrl string) ([]datastructures.AnnotatedImage, error) {
+    var annotatedImages []datastructures.AnnotatedImage
 
     includeOwnImageDonations := ""
     if apiUser.Name != "" {
@@ -3793,7 +3448,7 @@ func getAnnotations(apiUser APIUser, parseResult ParseResult, apiBaseUrl string)
     var label2 string
     var annotations []byte
     for rows.Next() {
-        var annotatedImage AnnotatedImage
+        var annotatedImage datastructures.AnnotatedImage
         annotatedImage.Image.Provider = "donation"
 
         err = rows.Scan(&annotatedImage.Image.Id, &label1, &label2, &annotatedImage.Id, 
@@ -3870,8 +3525,8 @@ func isOwnDonation(imageId string, username string) (bool, error) {
     return isOwnDonation, nil
 }
 
-func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string, shuffle bool) ([]ImageLabel, error) {
-    var imageLabels []ImageLabel
+func getImagesLabels(apiUser datastructures.APIUser, parseResult ParseResult, apiBaseUrl string, shuffle bool) ([]datastructures.ImageLabel, error) {
+    var imageLabels []datastructures.ImageLabel
 
     shuffleStr := ""
     if shuffle {
@@ -3983,7 +3638,7 @@ func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string
 
 
     for rows.Next() {
-        var imageLabel ImageLabel
+        var imageLabel datastructures.ImageLabel
         var labels []byte
         err = rows.Scan(&imageLabel.Image.Id, &imageLabel.Image.Width, &imageLabel.Image.Height, &imageLabel.Image.Unlocked, &labels)
         if err != nil {
@@ -4005,4 +3660,115 @@ func getImagesLabels(apiUser APIUser, parseResult ParseResult, apiBaseUrl string
     }
 
     return imageLabels, nil
+}
+
+func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string, 
+        annotationDataId string) ([]datastructures.AnnotationRefinementTask, error) {
+    var annotationRefinementTasks []datastructures.AnnotationRefinementTask
+
+    q1 := ""
+    if annotationDataId != "" {
+        q1 = fmt.Sprintf("WHERE d.uuid::text = $%d", len(parseResult.queryValues) + 1)
+    }
+
+    q2 := ""
+    if len(parseResult.queryValues) > 0 {
+        q2 = fmt.Sprintf("WHERE %s", parseResult.query)
+    }
+
+    q := fmt.Sprintf(`WITH 
+                        productive_image_annotation_data_entries AS (
+                            SELECT q.annotation_data_id, array_agg(q.label)::text[] as accessors
+                            FROM (
+                                    SELECT d.id as annotation_data_id, an.image_id as image_id, a.accessor as label 
+                                    FROM image_annotation an
+                                    JOIN annotation_data d on d.image_annotation_id = an.id
+                                    JOIN label_accessor a on a.label_id = an.label_id
+
+                                    UNION ALL
+                                    
+                                    SELECT d.id as annotation_data_id, an.image_id as image_id, a.accessor as accessor
+                                    FROM image_annotation an
+                                    JOIN annotation_data d on d.image_annotation_id = an.id
+                                    JOIN image_annotation_refinement r on r.annotation_data_id = d.id
+                                    JOIN label_accessor a on a.label_id = r.label_id
+                                    JOIN label l on l.id = r.label_id
+                                    LEFT JOIN label pl ON l.parent_id = pl.id
+                                    WHERE pl.label_type = 'refinement_category'
+
+                                    UNION ALL
+
+                                    SELECT d.id as annotation_data_id, an.image_id as image_id, pl.name as accessor
+                                    FROM image_annotation an
+                                    JOIN annotation_data d on d.image_annotation_id = an.id
+                                    JOIN image_annotation_refinement r on r.annotation_data_id = d.id
+                                    JOIN label l on l.id = r.label_id
+                                    LEFT JOIN label pl ON l.parent_id = pl.id
+                                    WHERE pl.label_type = 'refinement_category'
+                                ) q
+                                JOIN image i ON q.image_id = i.id
+                                WHERE i.unlocked = true
+                                GROUP BY q.annotation_data_id
+                        ), 
+                        filtered_image_annotation_data_entries AS (
+                            SELECT annotation_data_id 
+                            FROM productive_image_annotation_data_entries q
+                            %s
+                        )
+                        SELECT i.key, i.unlocked, i.width, i.height, a.uuid,
+                        (d.annotation || ('{"uuid":"' || d.uuid || '"}')::jsonb || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation,
+                        COALESCE(json_agg(json_build_object('name', l.name, 'uuid', l.uuid)) FILTER (WHERE l.id is not null), '[]'::json) as labels
+                        FROM filtered_image_annotation_data_entries f
+                        JOIN annotation_data d ON d.id = f.annotation_data_id
+                        JOIN image_annotation a ON a.id = d.image_annotation_id
+                        JOIN image i ON i.id = a.image_id
+                        JOIN annotation_type t ON d.annotation_type_id = t.id
+                        LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                        LEFT JOIN label l ON l.id = r.label_id
+                        %s
+                        GROUP BY i.key, i.unlocked, i.width, i.height, a.uuid, d.annotation, d.uuid, t.name`, q2, q1)
+
+    if annotationDataId != "" {
+        parseResult.queryValues = append(parseResult.queryValues, annotationDataId)
+    }
+
+    rows, err := db.Query(q, parseResult.queryValues...)
+    if err != nil {
+        log.Debug("[Get Annotations For Refinement] Couldn't get annotations for refinement: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationRefinementTasks, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var annotationBytes []byte
+        var labelAccessorsBytes []byte
+        var annotationRefinementTask datastructures.AnnotationRefinementTask
+        rows.Scan(&annotationRefinementTask.Image.Id, &annotationRefinementTask.Image.Unlocked, 
+                    &annotationRefinementTask.Image.Width, &annotationRefinementTask.Image.Height, 
+                    &annotationRefinementTask.Annotation.Id, &annotationBytes, &labelAccessorsBytes)
+
+        err = json.Unmarshal(annotationBytes, &annotationRefinementTask.Annotation.Data)
+        if err != nil {
+            log.Debug("[Get Annotations For Refinement] Couldn't unmarshal annotation: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationRefinementTasks, err
+        }
+
+        err = json.Unmarshal(labelAccessorsBytes, &annotationRefinementTask.Refinements)
+        if err != nil {
+            log.Debug("[Get Annotations For Refinement] Couldn't unmarshal labels: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationRefinementTasks, err
+        }
+
+
+        annotationRefinementTask.Image.Url = getImageUrlFromImageId(apiBaseUrl, annotationRefinementTask.Image.Id, 
+                                                                        annotationRefinementTask.Image.Unlocked)
+
+        annotationRefinementTasks = append(annotationRefinementTasks, annotationRefinementTask)
+    }
+
+    return annotationRefinementTasks, nil
 }

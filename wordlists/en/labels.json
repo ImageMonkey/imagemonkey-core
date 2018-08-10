@@ -891,6 +891,31 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "1f887b33-d1ab-4559-ac30-f595831cd1d7"
+		},
+		"door": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0291fabe-39d8-4ec9-b539-76bd77fb5c96"
+		},
+		"traffic cone": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d753a069-2b21-490a-987b-ed6d055eea43"
+		},
+		"church": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ac3c81eb-7e0a-40e6-acc9-e1c58ec02c36"
+		},
+		"laptop": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f605385b-86e1-4074-a123-5c0057bf911b"
+		},
+		"tomato": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "5b8a204d-8dee-4422-9afe-fd7567a5b633"
 		}
 	}
 }

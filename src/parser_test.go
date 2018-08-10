@@ -56,6 +56,22 @@ func TestParserKeepWhitespacesInAssigment(t *testing.T) {
 	//t.Errorf("a = %s\n", parseResult.queryValues)
 }
 
+func TestParserAssignment(t *testing.T) {  
+	queryParser := NewQueryParser("hello='world'")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}
+
+func TestParserAssignment1(t *testing.T) {  
+	queryParser := NewQueryParser("a & hello='big world'")
+	_, err := queryParser.Parse(1)
+	if err != nil {
+		t.Errorf("Expected nil, but got not nil: %s", err.Error())
+	}
+}
+
 func TestComplexQuery(t *testing.T) {
 	queryParser := NewQueryParserV2("a & (b | c) | d")
 	_, err := queryParser.Parse(1)

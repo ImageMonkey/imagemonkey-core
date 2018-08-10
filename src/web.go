@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"errors"
+	"./datastructures"
 )
 
 var db *sql.DB
@@ -52,6 +53,7 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
+	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8082", "Playground Base URL")
@@ -130,10 +132,17 @@ func main() {
 		},*/
 	}
 
-	log.Debug("[Main] Reading Label Map")
+	log.Debug("[Main] Reading labels")
 	labelMap, words, err := getLabelMap(*wordlistPath)
 	if err != nil {
-		fmt.Printf("[Main] Couldn't read label map...terminating!")
+		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
+		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading label refinements")
+	labelRefinementsMap, err := getLabelRefinementsMap(*labelRefinementsPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
 		log.Fatal(err)
 	}
 
@@ -377,12 +386,26 @@ func main() {
 			c.HTML(http.StatusOK, "quiz.html", gin.H{
 				"title": "Quiz",
 				"randomQuiz": "",
-				"randomAnnotatedImage": pick(getRandomAnnotationForRefinement())[0],
+				"randomAnnotatedImage": pick(getRandomAnnotationForQuizRefinement())[0],
 				"activeMenuNr": 7,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})	
+		router.GET("/refine", func(c *gin.Context) {
+			mode := getParamFromUrlParams(c, "mode", "default")
+
+			c.HTML(http.StatusOK, "refinement.html", gin.H{
+				"title": "Refinement",
+				"activeMenuNr": 14,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"apiBaseUrl": apiBaseUrl,
+				"mode": mode,
+				"labels": labelRefinementsMap,
+				"labelAccessors": pick(getLabelAccessors())[0],
+				"labelCategories": pick(getLabelCategories())[0],
+			})
+		})
 		router.GET("/statistics", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "statistics.html", gin.H{
 				"title": "Statistics",
@@ -473,7 +496,7 @@ func main() {
 
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
-			var apiTokens []APIToken
+			var apiTokens []datastructures.APIToken
 			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
 				apiTokens, err = getApiTokens(username)
 				if err != nil {

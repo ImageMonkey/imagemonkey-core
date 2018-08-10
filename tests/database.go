@@ -386,19 +386,41 @@ func (p *ImageMonkeyDatabase) GetRandomAnnotationId() (string, error) {
 	return annotationId, err
 }
 
+func (p *ImageMonkeyDatabase) GetLastAddedAnnotationDataId() (string, error) {
+	var annotationDataId string
+	err := p.db.QueryRow(`SELECT d.uuid FROM annotation_data d ORDER BY d.id DESC LIMIT 1`).Scan(&annotationDataId)
+	return annotationDataId, err
+}
+
 func (p *ImageMonkeyDatabase) GetRandomLabelId() (int64, error) {
 	var labelId int64
 	err := p.db.QueryRow(`SELECT l.id FROM label l ORDER BY random() LIMIT 1`).Scan(&labelId)
 	return labelId, err
 }
 
-func (p *ImageMonkeyDatabase) GetRandomAnnotationData() (string, int64, error) {
+func (p *ImageMonkeyDatabase) GetRandomLabelUuid() (string, error) {
+	var labelUuid string
+	err := p.db.QueryRow(`SELECT l.uuid FROM label l ORDER BY random() LIMIT 1`).Scan(&labelUuid)
+	return labelUuid, err
+}
+
+func (p *ImageMonkeyDatabase) GetRandomAnnotationData() (string, string, error) {
 	var annotationId string
-	var annotationDataId int64
-	err := p.db.QueryRow(`SELECT a.uuid, d.id
+	var annotationDataId string
+	err := p.db.QueryRow(`SELECT a.uuid, d.uuid
 						  FROM image_annotation a 
 						  JOIN annotation_data d ON d.image_annotation_id = a.id
 						  ORDER BY random() LIMIT 1`).Scan(&annotationId, &annotationDataId)
+	return annotationId, annotationDataId, err
+}
+
+func (p *ImageMonkeyDatabase) GetLastAddedAnnotationData() (string, string, error) {
+	var annotationId string
+	var annotationDataId string
+	err := p.db.QueryRow(`SELECT a.uuid, d.uuid
+						  FROM image_annotation a 
+						  JOIN annotation_data d ON d.image_annotation_id = a.id
+						  ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId, &annotationDataId)
 	return annotationId, annotationDataId, err
 }
 
@@ -467,6 +489,36 @@ func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) e
 	_, err := p.db.Exec(`UPDATE image_validation 
 							SET num_of_valid = $2 
 							WHERE uuid = $1`, validationId, num)
+	return err
+}
+
+func (p *ImageMonkeyDatabase) GetAllAnnotationIds() ([]string, error) {
+	var annotationIds []string
+
+	rows, err := p.db.Query("SELECT uuid FROM image_annotation")
+	if err != nil {
+		return annotationIds, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var annotationId string
+		err = rows.Scan(&annotationId)
+		if err != nil {
+			return annotationIds, err
+		}
+
+		annotationIds = append(annotationIds, annotationId)
+	}
+
+	return annotationIds, nil
+}
+
+func (p *ImageMonkeyDatabase) SetAnnotationValid(annotationId string, num int) error {
+	_, err := p.db.Exec(`UPDATE image_annotation 
+							SET num_of_valid = $2 
+							WHERE uuid = $1`, annotationId, num)
 	return err
 }
 

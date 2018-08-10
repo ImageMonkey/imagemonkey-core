@@ -1,0 +1,364 @@
+<style>
+  .justified {
+    position: relative;
+    width: 100%;
+  }
+
+  .canvas-container{margin: 0 auto;}
+
+  .justified-layout-item {
+    position: absolute;
+  }
+
+  .grey-out {
+    opacity: 0.4;
+    filter: alpha(opacity=40);
+  }
+
+  .item-selected { border: 5px solid #0000ff; }
+
+  #smartRefinementDoneButton{
+    /*display: none;*/ /* Hidden by default */
+    position: fixed; /* Fixed/sticky position */
+    bottom: 20px; /* Place the button at the bottom of the page */
+    /*right: 30px;*/ /* Place the button 30px from the right */
+    z-index: 99; /* Make sure it does not overlap */
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+</style>
+
+<script>
+  //var imageGridItems = [];
+  var justifiedLayoutGeometry, imageGridData;
+  var numOfLastFetchedImg = 0;
+  var defaultBatchSize = 50;
+  var currentRefinedImageGridElement;
+  var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
+  var imageGridCanvases = {};
+  var selectedItems = {};
+
+  var clearImageGrid = function() {
+    imageGridCanvases = {};
+    justifiedLayoutGeometry = null;
+    imageGridData = null;
+    numOfLastFetchedImg = 0;
+    selectedItems = {};
+    infiniteScroll.deactivate();
+    $('#imageGrid').children().each(function () {
+      $(this).remove();
+    })
+  }
+  function updateLabelsInImageGrid(annotationDataId, labels) {
+    var id = "justified-item" + annotationDataId;
+    var tooltip = $("#"+id).attr("data-balloon");
+    for(var i = 0; i < labels.length; i++) {
+      if(tooltip.length !== 0)
+        tooltip += (", " + labels[i]);
+      else
+        tooltip += labels[i];
+    }
+    $("#"+id).attr("data-balloon", tooltip);
+  }
+
+  function showBrowseAnnotationRefineImageGrid() {
+    $("#"+currentRefinedImageGridElement).addClass("grey-out");
+    $("#"+currentRefinedImageGridElement).css('cursor', 'default');
+
+    //show image grid and jump to scroll position that we were before
+    $("#imageGrid").show();
+    $("#annotationRefinementQuerySearchContainer").show();
+    infiniteScroll.resume();
+    infiniteScroll.restoreScrollPosition();
+  }
+  function handleRes(d) {
+    $("#imageGrid").show();
+
+    if(d !== null) {
+      imageGridData = d;
+      sizes = [];
+
+      for(var i = 0; i < imageGridData.length; i++){
+        sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
+      }
+
+      var justifiedLayout = require('justified-layout');
+      justifiedLayoutGeometry = justifiedLayout(sizes, {
+        "fullWidthBreakoutRowCadence": false,
+        "containerWidth": document.getElementById("imageGrid").clientWidth
+      });
+
+      loadNextImagesInImageGrid();
+      infiniteScroll.activate();
+      $('#browseAnnotationRefinementErrorMessage').hide();
+    }
+    else{
+      $('#browseAnnotationRefinementErrorMessage').text("There are currently no annotations for that expression - please try another one!");
+      $('#browseAnnotationRefinementErrorMessage').show(200);
+    }
+
+    $('#browseAnnotationRefinementLoadingSpinner').hide();
+  }
+
+  function isSmartRefinementModeActivated() {
+    return $("#smartRefinementModeCheckbox").checkbox("is checked");
+  }
+
+  function onGoButtonClicked() {
+    if(isSmartRefinementModeActivated()) {
+      if($("#smartRefinementLabelDropdown").dropdown("get value") === "") {
+        $('#browseAnnotationRefinementErrorMessage').text("Please select a label for refinement first!");
+        $('#browseAnnotationRefinementErrorMessage').show(200);
+        return;
+      }
+    }
+
+    $('#browseAnnotationRefinementLoadingSpinner').show();
+
+    $("#imageGrid").hide();
+    clearImageGrid();
+
+    var url = '{{ .apiBaseUrl }}/v1/refine';
+
+    var query = $("#annotationRefinementQuery").val();
+    $.ajax({
+          url: url,
+          dataType: 'json',
+          data: {query: encodeURIComponent(query), shuffle: true},
+          beforeSend: function(xhr) {
+            xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+          },
+          success: function(d) {
+            handleRes(d);
+          }, 
+          error: function(xhr, status, error) {
+            var err = JSON.parse(xhr.responseText)["error"];
+            var obj = $('#browseAnnotationRefinementErrorMessage').text(err);
+            obj.html(obj.html().replace(/\n/g,'<br/>'));
+            $('#browseAnnotationRefinementErrorMessage').show(200);
+            $('#browseAnnotationRefinementSpinner').hide();
+            clearImageGrid();
+          }
+    });
+  }
+
+  function onImageGridCanvasClicked(data) {
+    var annotationDataId = data["annotationDataId"];
+    if(isSmartRefinementModeActivated()) {
+      if(!(annotationDataId in selectedItems)) {
+        $("#"+annotationDataId).addClass("item-selected");
+        selectedItems[annotationDataId] = true;
+      }
+      else {
+        delete selectedItems[annotationDataId];
+        $("#"+annotationDataId).removeClass("item-selected");
+      }
+
+      //enable disable button accordingly
+      if(Object.keys(selectedItems).length > 0)
+        $("#smartRefinementDoneButton").show();
+      else
+        $("#smartRefinementDoneButton").hide();
+
+    }
+    else {
+      currentRefinedImageGridElement = annotationDataId;
+      $("#annotationRefinementQuerySearchContainer").hide();
+      infiniteScroll.pause();
+      infiniteScroll.saveScrollPosition();
+      $("#imageGrid").hide();
+      getAnnotationRefinement(annotationDataId);
+    }
+  }
+
+  function newCanvasItem(id, top, left, width, height, tooltip){
+    var tooltipStr = '';
+    if(tooltip !== '')
+      tooltipStr = ' data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"'
+
+    var d = ('<div class="justified-layout-item"' 
+            + ' id="' + ('justified-item' + id) + '"' + tooltipStr 
+            + ' style="width: ' + width + 'px; height: ' + height + 'px; top: ' 
+            + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
+    return d;
+  }
+
+  function drawAnnotationsCallback(canvas, annotations, scaleFactor){
+    if(annotations !== undefined)
+      canvas.drawAnnotations([annotations], scaleFactor);
+  }
+
+  function loadNextImagesInImageGrid() {
+    var from = numOfLastFetchedImg;
+    var n = defaultBatchSize;
+    if((numOfLastFetchedImg + defaultBatchSize) > imageGridData.length){
+      n = imageGridData.length - numOfLastFetchedImg;
+    }
+
+    if(n === 0)
+      return;
+
+    var imageUrl;
+    var annotationsScaleFactor;
+    var item;
+    for(var i = from; i < (from + n); i++){
+      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
+                                  + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
+                                  Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
+                                  "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
+
+      var tooltipText = '';
+      var refinements = imageGridData[i]["refinements"];
+      //only show tooltip text if we are not in smart refinement mode
+      if(!isSmartRefinementModeActivated()) {
+        for(var j = 0; j < refinements.length; j++){
+          tooltipText += (refinements[j]["name"] + ', ');
+        }
+        if(tooltipText.length > 2)
+          tooltipText = tooltipText.substring(0, tooltipText.length - 2); //remove last comma + space
+      }
+      
+      var itemId = imageGridData[i]["annotation"]["data"]["uuid"];
+      annotationsScaleFactor = justifiedLayoutGeometry.boxes[i].width / imageGridData[i]["image"]["width"];
+
+      item = newCanvasItem(itemId, justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
+
+      $("#imageGrid").append(item); 
+
+      imageGridCanvases[itemId] = new CanvasDrawer(itemId, justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+      imageGridCanvases[itemId].setData({"annotationDataId" : imageGridData[i]["annotation"]["data"]["uuid"], "annotationsScaleFactor": annotationsScaleFactor});
+      imageGridCanvases[itemId].makeClickable(onImageGridCanvasClicked);
+      imageGridCanvases[itemId].setCanvasBackgroundImageUrl(url, drawAnnotationsCallback.bind(null, imageGridCanvases[itemId], imageGridData[i]["annotation"]["data"],   
+                                                                                                    annotationsScaleFactor));  
+
+      document.getElementById("imageGrid").style.height = (justifiedLayoutGeometry.boxes[(from + n - 1)].top 
+                                                            + justifiedLayoutGeometry.boxes[(from + n - 1)].height)  + "px";  
+    }
+
+    numOfLastFetchedImg += n;
+  }
+
+  function split(val) {
+    return val.split( / \s*/ );
+  }
+  function extractLast(term) {
+    return split(term).pop();
+  }
+
+  $(document).ready(function(){
+    var searchLabels = [];
+    var labelAccessors = {{ .labelAccessors }};
+    var labelCategories = {{ .labelCategories }};
+    for(var i = 0; i < labelAccessors.length; i++) {
+      searchLabels.push(labelAccessors[i]);
+    }
+    for(var i = 0; i < labelCategories.length; i++) {
+      searchLabels.push(labelCategories[i]);
+    }
+
+    populateLabelsDropdown("#smartRefinementLabelDropdownMenu");
+
+    $("#smartRefinementModeCheckbox").checkbox({
+      onChecked: function() {
+        $("#smartRefinementLabelDropdown").show();
+      },
+      onUnchecked: function() {
+        $("#smartRefinementLabelDropdown").hide();
+      }
+    });
+
+    $("#annotationRefinementQuery")
+      // don't navigate away from the field on tab when selecting an item
+      .on("keydown", function(event) {
+        if (event.keyCode === $.ui.keyCode.TAB &&
+          $(this).autocomplete("instance").menu.active) {
+          event.preventDefault();
+      }
+    })
+    .autocomplete({
+      minLength: 3,
+      delay: 700,
+      source: function(request, response) {
+        // delegate back to autocomplete, but extract the last term
+        response($.ui.autocomplete.filter(
+          searchLabels, extractLast(request.term)));
+      },
+      focus: function() {
+        // prevent value inserted on focus
+        return false;
+      },
+      select: function(event, ui) {
+        var terms = split(this.value);
+        // remove the current input
+        terms.pop();
+        // add the selected item
+        terms.push(ui.item.value);
+        // add placeholder to get the comma-and-space at the end
+        terms.push("");
+        this.value = terms.join(" ");
+        return false;
+      }
+    });
+  });
+</script>
+
+
+
+<div class="row"></div>
+<div class="row" id="annotationRefinementQuerySearchContainer">
+  <div class="four wide column"></div>
+  <div class="eight wide center aligned column">
+    <form class="ui form segment">
+      <div class="field">
+       <p>Search for annotations you want to refine</p>
+       <input placeholder="Query..." type="text" id="annotationRefinementQuery">
+      </div>
+      <div class="inline fields">
+        <div class="field">
+          <div class="ui checkbox" id="smartRefinementModeCheckbox">
+            <input type="checkbox">
+            <label>Smart Refinement</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui search selection dropdown" id="smartRefinementLabelDropdown" style="display: none;">
+              <div class="default text">Select Label</div>
+              <div class="menu" id="smartRefinementLabelDropdownMenu">
+              </div>
+          </div>
+        </div>
+      </div>
+
+    <div class="ui primary submit button" onclick="onGoButtonClicked();">Go</div>
+    </form>
+
+    <button class="ui huge positive button" id="smartRefinementDoneButton" style="display: none;">Done</button>
+
+    <div class="ui warning message" hidden id="browseAnnotationRefinementErrorMessage">
+      <i class="close icon"></i>
+      <div class="header"></div>
+    </div>
+  </div>
+  <div class="four wide column"></div>
+</div>
+
+<div class="row" id="browseAnnotationRefinementLoadingSpinner" style="display: none;">
+  <div class="sk-wave overlay">
+    <div class="sk-rect sk-rect1"></div>
+    <div class="sk-rect sk-rect2"></div>
+    <div class="sk-rect sk-rect3"></div>
+    <div class="sk-rect sk-rect4"></div>
+    <div class="sk-rect sk-rect5"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="one wide column"></div>
+  <div class="fourteen wide centered column">
+    <div hidden class="justified" id="imageGrid">
+    </div>
+  </div>
+  <div class="one wide column"></div>
+</div>
