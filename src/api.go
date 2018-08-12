@@ -1063,6 +1063,27 @@ func main(){
 			}
 		})
 
+		router.PATCH("/v1/refine", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			var annotationRefinements []datastructures.BatchAnnotationRefinementEntry
+			err := c.BindJSON(&annotationRefinements)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid request"})
+				return
+			}
+
+			err = batchAnnotationRefinement(annotationRefinements, apiUser)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			c.JSON(204, nil)
+		});
+
 		router.GET("/v1/donations/labels", func(c *gin.Context) {
 			query := getParamFromUrlParams(c, "query", "")
 

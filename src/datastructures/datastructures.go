@@ -268,6 +268,11 @@ type AnnotationRefinementEntry struct {
     LabelId string `json:"label_uuid"`
 }
 
+type BatchAnnotationRefinementEntry struct {
+    LabelId string `json:"label_uuid"`
+    AnnotationDataId string `json:"annotation_data_uuid"`
+}
+
 type ExportedImage struct {
     Id string `json:"uuid"`
     Provider string `json:"provider"`

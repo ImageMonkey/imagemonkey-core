@@ -38,6 +38,7 @@
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var imageGridCanvases = {};
   var selectedItems = {};
+  var selectedSmartRefinementLabelUuid = null;
   var numberOfQueryResults = 0;
   var numberOfCurrentlyShownResults = 0;
 
@@ -88,6 +89,9 @@
         sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
       }
 
+      if(isSmartRefinementModeActivated() && numberOfQueryResults > 0)
+        $("#smartRefinementDoneButton").show();
+
       var justifiedLayout = require('justified-layout');
       justifiedLayoutGeometry = justifiedLayout(sizes, {
         "fullWidthBreakoutRowCadence": false,
@@ -101,6 +105,7 @@
     else{
       $('#browseAnnotationRefinementErrorMessage').text("There are currently no annotations for that expression - please try another one!");
       $('#browseAnnotationRefinementErrorMessage').show(200);
+      $('#smartRefinementLabelDropdown').removeClass("disabled");
     }
 
     $('#browseAnnotationRefinementLoadingSpinner').hide();
@@ -115,18 +120,37 @@
     $("#imageGrid").hide();
     clearImageGrid();
     $("#numberOfQueryResults").text("");
+    selectedSmartRefinementLabelUuid = null;
+    
+    if(isSmartRefinementModeActivated())
+      $("#smartRefinementLabelDropdown").addClass("disabled");
+    else
+      $("#smartRefinementLabelDropdown").removeClass("disabled");
 
     if(isSmartRefinementModeActivated()) {
       if($("#smartRefinementLabelDropdown").dropdown("get value") === "") {
         $('#browseAnnotationRefinementErrorMessage').text("Please select a label for refinement first!");
         $('#browseAnnotationRefinementErrorMessage').show(200);
+        $("#smartRefinementLabelDropdown").removeClass("disabled");
         return;
+      }
+      else {
+        selectedSmartRefinementLabelUuid = $("#smartRefinementLabelDropdown").dropdown("get value");
       }
     }
 
     var url = '{{ .apiBaseUrl }}/v1/refine';
 
     var query = $("#annotationRefinementQuery").val();
+
+    if(query === "") { //no query specified
+      $('#browseAnnotationRefinementErrorMessage').text("There are currently no annotations for that expression - please try another one!");
+      $('#browseAnnotationRefinementErrorMessage').show(0).delay(1000).hide(0);
+      $("#smartRefinementLabelDropdown").removeClass("disabled");
+      return;
+    }
+
+
     $.ajax({
           url: url,
           dataType: 'json',
@@ -160,11 +184,11 @@
         $("#"+annotationDataId).removeClass("item-selected");
       }
 
-      //enable disable button accordingly
+      /*//enable disable button accordingly
       if(Object.keys(selectedItems).length > 0)
         $("#smartRefinementDoneButton").show();
       else
-        $("#smartRefinementDoneButton").hide();
+        $("#smartRefinementDoneButton").hide();*/
 
     }
     else {
@@ -255,7 +279,24 @@
     return split(term).pop();
   }
 
+  function onSmartRefinementDone() {
+    $("#imageGrid").hide();
+    clearImageGrid();
+    $("#smartRefinementDoneButton").hide();
+    $("#numberOfQueryResults").text("");
+    $("#browseAnnotationRefinementLoadingSpinner").hide();
+
+    $('#browseAnnotationRefinementSuccessMessage').text("Success!");
+    $('#browseAnnotationRefinementSuccessMessage').show(0).delay(1000).hide(0);
+    $("#smartRefinementLabelDropdown").removeClass("disabled");
+  }
+
   $(document).ready(function(){
+    $("#smartRefinementLabelDropdown").dropdown({
+      forceSelection: false,
+      selectOnKeydown: false
+    });
+
     var searchLabels = [];
     var labelAccessors = {{ .labelAccessors }};
     var labelCategories = {{ .labelCategories }};
@@ -275,6 +316,40 @@
       onUnchecked: function() {
         $("#smartRefinementLabelDropdown").hide();
       }
+    });
+
+    $('#smartRefinementDoneButton').click(function(e) {
+      e.preventDefault();
+
+      $("#browseAnnotationRefinementLoadingSpinner").show();
+
+      var data = [];
+      for(var key in selectedItems) {
+        if(selectedItems.hasOwnProperty(key)) {
+          data.push({"label_uuid": selectedSmartRefinementLabelUuid, "annotation_data_uuid": key});
+        }
+      }
+
+      if(data.length === 0) { //nothing to do here
+        onSmartRefinementDone();
+        return;
+      }
+
+      var headers = {}
+      if(browserFingerprint !== null)
+        headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/refine',
+        dataType: 'json',
+        type: 'PATCH',
+        headers: headers,
+        data: JSON.stringify(data),
+        success: function(data){
+          onSmartRefinementDone();
+        }
+      });
+
     });
 
     $("#annotationRefinementQuery")
@@ -349,6 +424,12 @@
       <i class="close icon"></i>
       <div class="header"></div>
     </div>
+
+    <div class="ui positive message" hidden id="browseAnnotationRefinementSuccessMessage">
+      <i class="close icon"></i>
+      <div class="header"></div>
+    </div>
+
   </div>
   <div class="four wide column"></div>
 </div>

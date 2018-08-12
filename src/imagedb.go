@@ -2411,6 +2411,44 @@ func addOrUpdateRefinements(annotationUuid string, annotationDataId string, anno
     return nil
 }
 
+
+func batchAnnotationRefinement(annotationRefinementEntries []datastructures.BatchAnnotationRefinementEntry, apiUser datastructures.APIUser) error {
+    var err error
+
+    tx, err := db.Begin()
+    if err != nil {
+        log.Debug("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    for _, item := range annotationRefinementEntries {
+        _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
+                            SELECT d.id, (SELECT l.id FROM label l WHERE l.uuid = $2), $3, $4 
+                            FROM annotation_data d WHERE d.uuid = $1
+                          ON CONFLICT (annotation_data_id, label_id)
+                          DO UPDATE SET fingerprint_of_last_modification = $4, num_of_valid = image_annotation_refinement.num_of_valid + 1
+                          WHERE image_annotation_refinement.annotation_data_id = (SELECT d.id FROM annotation_data d WHERE d.uuid = $1)`, 
+                               item.AnnotationDataId, item.LabelId, 1, apiUser.ClientFingerprint)
+        
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Batch annotation refinement] Couldn't update: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Batch annotation refinement] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    return nil
+}
+
 func addLabelSuggestion(suggestedLabel string) error {
      _, err := db.Exec(`INSERT INTO label_suggestion(name) VALUES($1)
                        ON CONFLICT (name) DO NOTHING`, suggestedLabel)
