@@ -169,7 +169,7 @@ func TestBrowseRefinementInvalidRequest(t *testing.T) {
 	testAnnotate(t, imageId, "dog", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
 
-	testBrowseRefinement(t, "", "", 200, 1)
+	testBrowseRefinement(t, "", "", 422, 0)
 }
 
 func TestBrowseRefinementByAnnotationDataId(t *testing.T) {

@@ -944,6 +944,21 @@ func main(){
 			c.JSON(http.StatusOK, img.AllLabels)
 		})
 
+		router.GET("/v1/donation/:imageid/validations/unannotated", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			ids, err := getUnannotatedValidations(apiUser, imageId)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, ids)
+		})
+
 		router.GET("/v1/donation/:imageid/annotations", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
@@ -951,21 +966,18 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			params := c.Request.URL.Query()
-
-			if temp, ok := params["only_missing"]; ok {
-				if temp[0] == "true" {
-					ids, err := getUnannotatedValidations(apiUser, imageId)
-					if err != nil {
-						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-						return
-					}
-					c.JSON(http.StatusOK, ids)
-					return
-				}
+			annotatedImages, err := getAnnotations(apiUser, ParseResult{}, imageId, *apiBaseUrl)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+				return
 			}
 
-			c.JSON(http.StatusOK, nil)
+			if len(annotatedImages) == 0 {
+				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
+				return
+			}
+
+			c.JSON(200, annotatedImages)
 		})
 
 		router.POST("/v1/validation/:validationid/validate/:param", func(c *gin.Context) {
@@ -1045,7 +1057,8 @@ func main(){
 				imageUrl := getImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked)
 
 				c.JSON(http.StatusOK, gin.H{"image": gin.H{"uuid": image.Id, "provider": image.Provider, 
-															"url": imageUrl, "unlocked": image.Unlocked}, 
+															"url": imageUrl, "unlocked": image.Unlocked,
+															"width": image.Width, "height": image.Height}, 
 											"all_labels": image.AllLabels})
 			}
 		})
@@ -1666,7 +1679,7 @@ func main(){
 	            return
 	        }
 
-			annotatedImages, err := getAnnotations(apiUser, parseResult, *apiBaseUrl)
+			annotatedImages, err := getAnnotations(apiUser, parseResult, "", *apiBaseUrl)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1674,30 +1687,6 @@ func main(){
 
 			c.JSON(200, annotatedImages)
 		})
-
-		/*router.GET("/v1/annotations/refine", func(c *gin.Context) {
-			query := getParamFromUrlParams(c, "query", "")
-			query, err = url.QueryUnescape(query)
-	        if err != nil {
-	            c.JSON(422, gin.H{"error": "invalid query"})
-	            return
-	        }
-
-			queryParser := NewQueryParserV2(query)
-	        parseResult, err := queryParser.Parse(1)
-	        if err != nil {
-	            c.JSON(422, gin.H{"error": err.Error()})
-	            return
-	        }
-
-	        annotationRefinementTaks, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl, "")
-	        if err != nil {
-	        	c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
-				return
-	        }
-
-	        c.JSON(200, annotationRefinementTaks)
-		})*/
 
 		router.GET("/v1/annotation", func(c *gin.Context) {
 			params := c.Request.URL.Query()

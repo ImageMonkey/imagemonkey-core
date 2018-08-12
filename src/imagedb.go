@@ -1790,7 +1790,7 @@ func getImageToLabel(imageId string, username string) (datastructures.Image, err
 
     var unlabeledRows *sql.Rows 
     if imageId == "" {
-        q := fmt.Sprintf(`SELECT i.key, i.unlocked 
+        q := fmt.Sprintf(`SELECT i.key, i.unlocked, i.width, i.height
                             FROM image i 
                             WHERE (i.unlocked = true %s)
 
@@ -1820,7 +1820,8 @@ func getImageToLabel(imageId string, username string) (datastructures.Image, err
         q1 := ""
         if imageId == "" {
             //either get a random image or image with specific id
-            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, i.unlocked as image_unlocked
+            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, 
+                              i.unlocked as image_unlocked, i.width as image_width, i.height as image_height
                                FROM image i WHERE (i.unlocked = true %s)
                                OFFSET floor(random() * (
                                                         SELECT count(*) FROM image i WHERE (unlocked = true %s)
@@ -1832,7 +1833,8 @@ func getImageToLabel(imageId string, username string) (datastructures.Image, err
                 paramPos = 2
             }
 
-            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, i.unlocked as image_unlocked
+            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, 
+                              i.unlocked as image_unlocked, i.width as image_width, i.height as image_height
                               FROM image i 
                               WHERE (i.unlocked = true %s) AND i.key = $%d`, includeOwnImageDonations, paramPos)
         } 
@@ -1840,7 +1842,8 @@ func getImageToLabel(imageId string, username string) (datastructures.Image, err
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
                           COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
-                          COALESCE(q1.num_of_valid, 0) as num_of_valid, COALESCE(q1.num_of_invalid, 0) as num_of_invalid, q.image_unlocked
+                          COALESCE(q1.num_of_valid, 0) as num_of_valid, COALESCE(q1.num_of_invalid, 0) as num_of_invalid, q.image_unlocked,
+                          q.image_width, q.image_height
                                FROM 
                                 (
                                     SELECT v.image_id as image_id, l.name as label, 
@@ -1901,7 +1904,7 @@ func getImageToLabel(imageId string, username string) (datastructures.Image, err
         temp := make(map[string]datastructures.LabelMeEntry) 
         for rows.Next() {
             err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
-                            &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked)
+                            &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked, &image.Width, &image.Height)
             if err != nil {
                 tx.Rollback()
                 raven.CaptureError(err, nil)
@@ -1963,7 +1966,7 @@ func getImageToLabel(imageId string, username string) (datastructures.Image, err
         }
 
     } else {
-        err = unlabeledRows.Scan(&image.Id, &image.Unlocked)
+        err = unlabeledRows.Scan(&image.Id, &image.Unlocked, &image.Width, &image.Height)
         if err != nil {
             tx.Rollback()
             raven.CaptureError(err, nil)
@@ -3378,8 +3381,20 @@ func getAvailableAnnotationTasks(apiUser datastructures.APIUser, parseResult Par
 }*/
 
 
-func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult, apiBaseUrl string) ([]datastructures.AnnotatedImage, error) {
+func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult, 
+                        imageId string, apiBaseUrl string) ([]datastructures.AnnotatedImage, error) {
     var annotatedImages []datastructures.AnnotatedImage
+    var queryValues []interface{}
+
+
+    q1 := ""
+    if imageId == "" {
+        q1 = parseResult.query
+        queryValues = parseResult.queryValues
+    } else {
+        q1 = "i.key = $1"
+        queryValues = append(queryValues, imageId)
+    }
 
     includeOwnImageDonations := ""
     if apiUser.Name != "" {
@@ -3397,7 +3412,8 @@ func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult, api
                                                         FROM image_quarantine q 
                                                         WHERE q.image_id = i.id 
                                                     )
-                                               )`, len(parseResult.queryValues) + 1)
+                                               )`, len(queryValues) + 1)
+        queryValues = append(queryValues, apiUser.Name)
     }
 
     q := fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
@@ -3429,13 +3445,9 @@ func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult, api
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                    GROUP BY q1.key, q.annotation_id, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations, parseResult.query)
+                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations, q1)
 
-    if apiUser.Name != "" {
-        parseResult.queryValues = append(parseResult.queryValues, apiUser.Name)
-    }
-
-    rows, err := db.Query(q, parseResult.queryValues...)
+    rows, err := db.Query(q, queryValues...)
     if err != nil {
         log.Debug("[Get Annotated Images] Couldn't get annotations: ", err.Error())
         raven.CaptureError(err, nil)

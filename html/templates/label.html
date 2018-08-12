@@ -30,6 +30,13 @@
   <script src="js/infinitescroll.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
   <link rel="stylesheet" href="css/balloon/balloon.min.css">
+  <script src="js/fabric.min.js"></script>
+  <script src="js/fabric_helper.js?v=12"></script>
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
+
+  <style type="text/css">
+    .canvas-container{margin: 0 auto;}
+  </style>
 
   <script type="text/javascript">
   var browserFingerprint = null;
@@ -37,8 +44,20 @@
   var oldLabelMap = {}
   var newlyAddedLabels = {}
   var labelMap = {{ .labels }};
+  var canvas = null;
+  var cachedAnnotations = null;
+  var annotationsShown = false;
+  var annotationFetchingInProgress = false;
 
   buildColorMap();
+
+  function getCanvasScaleFactor(origImageWidth) {
+    var maxWidth = document.getElementById("imageContainer").clientWidth - 100; //margin
+    var scaleFactor = maxWidth/origImageWidth;
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+    return scaleFactor;
+  }
 
   function labelExists(label){
     if(label in oldLabelMap)
@@ -80,12 +99,76 @@
     return false;
   }
 
+  //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
+  function getUrlFromImageUrl(imageUrl, imageUnlocked) {
+    var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
+
+    if(imageUrl !== "") {
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+    }
+
+    return url;
+  }
+
+  function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
+  function getAnnotations(imageId) {
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/annotations";
+    
+    annotationFetchingInProgress = true;
+    $("#annotationsLoadingIndicator").show();
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      error: function(jqXHR, textStatus, errorThrown){
+        if(jqXHR.status === 422) {
+          cachedAnnotations = [];
+          $('#warningMessageBoxContent').text("No annotations available for that image");
+          $('#warningMessageBox').show(200).delay(1500).hide(200);
+          $('#annotationsLoadingIndicator').hide();
+        }
+      },
+      success: function(data){
+        cachedAnnotations = [];
+
+        var entries;
+        var color;
+        for(var i = 0; i < data.length; i++) {
+          entries = data[i].annotations;
+          for(var j = 0; j < entries.length; j++) {
+            color = getRandomColor();
+            entries[j].stroke.color = color;
+
+            entries[j]["fill"] = {}
+            entries[j].fill.color = color;
+            entries[j].fill.opacity = 0.5;
+          }
+          cachedAnnotations = cachedAnnotations.concat(entries);
+        }
+        drawAnnotations(canvas.fabric(), cachedAnnotations, canvas.fabric().backgroundImage.scaleX);
+        $('#annotationsLoadingIndicator').hide();
+      }
+    });
+  }
+
   function getNextImage(imageId){
     showHideMainArea(true);
     clearSelectedLabel(); //clear current label
     removeAllLabels();
     $('#mostPopularLabelsContainer').hide();
-    //removeAllMostPopularLabels();
     oldLabelMap = {}
     newlyAddedLabels = {}
 
@@ -103,27 +186,20 @@
       beforeSend: function(xhr) {
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
-      complete: function(data){
-      },
       success: function(data){
         $("#image").attr("imageId", data.image.uuid);
 
-        var downloadingImage = new Image();
-        downloadingImage.onload = function(){
-          $("#image").attr("src", this.src);
-          showHideControls(true, data.image.unlocked);
-          showHideMainArea(true);
-        }
+        var scaleFactor = getCanvasScaleFactor(data.image.width);
+        canvas.clear();
+        canvas.setWidth(data.image.width*scaleFactor);
+        canvas.setHeight(data.image.height*scaleFactor);
 
-        var token = getCookie("imagemonkey");
-        if(token === "")
-          downloadingImage.src = data.image.url;
-        else{
-          if(data.image.unlocked)
-            downloadingImage.src = data.image.url;
-          else //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
-            downloadingImage.src = data.image.url + "?token=" + token;
-        }
+        canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
+          showHideMainArea(true);
+          showHideControls(true, data.image.unlocked);
+          //drawAnnotations(canvas.fabric(), [data.annotation.data], canvas.fabric().backgroundImage.scaleX);
+        });
+
 
         addOldLabels(data["all_labels"]);
 
@@ -200,7 +276,6 @@
       $('#image').show();
       $('#doneButton').show();
       $('#labels').show();
-      $('#loadingIndicator').addClass('active');
       $('#loadingIndicator').hide();
       $('#labelForm').show();
       $('#objectsWithoutLabelText').show();
@@ -214,7 +289,6 @@
       $('#image').hide();
       $('#doneButton').hide();
       $('#labels').hide();
-      $('#loadingIndicator').removeClass('active');
       $('#loadingIndicator').show();
       $('#labelForm').hide();
       $('#objectsWithoutLabelText').hide();
@@ -411,8 +485,10 @@
       $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
 
-    if(!added)
-      $('#labelAlreadyExistsMessage').show(200).delay(1500).hide(200);
+    if(!added) {
+      $('#warningMessageBoxContent').text("Label already exists");
+      $('#warningMessageBox').show(200).delay(1500).hide(200);
+    }
 
     showHideNoLabelsDefined();
   }
@@ -430,9 +506,11 @@
   }
 
   $(document).ready(function(){
-    $('#labelAlreadyExistsMessage').hide();
     $('#mostPopularLabelsContainer').hide();
     addOldLabels({{ .image.AllLabels }});
+
+    canvas = new CanvasDrawer("image");
+    canvas.fabric().selection = false;
 
     var availableLabels = [];
     var availableLabelsLookupTable = {} //use map for faster access
@@ -445,11 +523,13 @@
     } 
 
     var labelSuggestions = {{ .labelSuggestions }};
-    for (var i = 0; i < labelSuggestions.length; i++) { 
-      var escapedLabelSuggestion = escapeHtml(labelSuggestions[i]);
-      if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
-        availableLabelsLookupTable[escapedLabelSuggestion] = true;
-        availableLabels.push(escapedLabelSuggestion);
+    if(labelSuggestions !== null) {
+      for (var i = 0; i < labelSuggestions.length; i++) { 
+        var escapedLabelSuggestion = escapeHtml(labelSuggestions[i]);
+        if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
+          availableLabelsLookupTable[escapedLabelSuggestion] = true;
+          availableLabels.push(escapedLabelSuggestion);
+        }
       }
     }
 
@@ -601,6 +681,30 @@
     onAddLabelSuggestion();
   });
 
+  Mousetrap.bind("#", function(e, combo) { 
+    if(!annotationsShown) {
+      if(!cachedAnnotations && !annotationFetchingInProgress) {
+        getAnnotations($("#image").attr("imageId"));
+        annotationsShown = !annotationsShown;
+      }
+      else {
+        if(cachedAnnotations.length === 0) { //image has no annotations
+          $('#warningMessageBoxContent').text("No annotations available for that image");
+          $('#warningMessageBox').show(200).delay(1500).hide(200);
+        }
+        else {
+          canvas.clearObjects();
+          drawAnnotations(canvas.fabric(), cachedAnnotations, canvas.fabric().backgroundImage.scaleX);
+          annotationsShown = !annotationsShown;
+        }
+      }
+    } 
+    else {
+      canvas.clearObjects();
+      annotationsShown = !annotationsShown;
+    }
+  });
+
   {{ if eq .mode "default" }}
   getNextImage({{ .imageId }});
   {{ end }}
@@ -652,10 +756,10 @@
 
     </div>
     <div class="eight wide center aligned column" style="display: none;" id="mainContainer">
-      <img class="ui large image centered" src="" imageId="" id="image">
-      
+      <div id="imageContainer" style="margin-top:-4em;">
+        <canvas imageId="" id="image"></canvas>
+      </div>
 
-      <h2></h2>
       <p id="objectsWithoutLabelText">Do you see any objects without a label?</p>
       <div class="ui centered grid">
         <div class="row">
@@ -694,7 +798,25 @@
           </div>
 
 
-          <div class="ui large loader" id="loadingIndicator"></div>
+          <div class="row" id="loadingIndicator" style="display: none;">
+            <div class="sk-wave overlay">
+              <div class="sk-rect sk-rect1"></div>
+              <div class="sk-rect sk-rect2"></div>
+              <div class="sk-rect sk-rect3"></div>
+              <div class="sk-rect sk-rect4"></div>
+              <div class="sk-rect sk-rect5"></div>
+            </div>
+          </div>
+
+          <div class="row" id="annotationsLoadingIndicator" style="display: none;">
+            <div class="sk-wave overlay">
+              <div class="sk-rect sk-rect1"></div>
+              <div class="sk-rect sk-rect2"></div>
+              <div class="sk-rect sk-rect3"></div>
+              <div class="sk-rect sk-rect4"></div>
+              <div class="sk-rect sk-rect5"></div>
+            </div>
+          </div>
 
           <h1></h1>
         </div>
@@ -708,10 +830,9 @@
         </div>
       </div>
 
-      <div hidden class="ui warning message" hidden id="labelAlreadyExistsMessage">
+      <div hidden class="ui warning message" hidden id="warningMessageBox">
         <i class="close icon"></i>
-        <div class="header">
-          Label already exists
+        <div class="header" id="warningMessageBoxContent">
         </div>
       </div>
 

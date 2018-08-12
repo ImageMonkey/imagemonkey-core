@@ -73,6 +73,15 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         if("angle" in annotations[i]) 
             angle = annotations[i]["angle"];
 
+        var fillColor = "transparent";
+        var fillOpacity = 1.0;
+        var fillInfo = annotations[i]["fill"];
+        if(fillInfo && "color" in fillInfo)
+            fillColor = fillInfo["color"];
+        if(fillInfo && "opacity" in fillInfo)
+            fillOpacity = fillInfo["opacity"];
+
+
         var strokeWidth = 5;
         var strokeColor = "red";
         var strokeInfo = annotations[i]["stroke"];
@@ -91,7 +100,8 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             angle: angle,
             stroke: strokeColor,
             strokeWidth: strokeWidth,
-            fill: "transparent",
+            fill: fillColor,
+            opacity: fillOpacity,
             transparentCorners: false,
             hasBorders: false,
             hasControls: false,
@@ -109,6 +119,14 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var angle = 0;
         if("angle" in annotations[i]) 
             angle = annotations[i]["angle"];
+
+        var fillColor = "transparent";
+        var fillOpacity = 1.0;
+        var fillInfo = annotations[i]["fill"];
+        if(fillInfo && "color" in fillInfo)
+            fillColor = fillInfo["color"];
+        if(fillInfo && "opacity" in fillInfo)
+            fillOpacity = fillInfo["opacity"];
 
         var strokeWidth = 5;
         var strokeColor = "red";
@@ -128,7 +146,8 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             angle: angle,
             stroke: strokeColor,
             strokeWidth: strokeWidth,
-            fill: "transparent",
+            fill: fillColor,
+            opacity: fillOpacity,
             transparentCorners: false,
             hasBorders: false,
             hasControls: false,
@@ -153,6 +172,14 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         
         var points = annotations[i]["points"];
 
+        var fillColor = "transparent";
+        var fillOpacity = 1.0;
+        var fillInfo = annotations[i]["fill"];
+        if(fillInfo && "color" in fillInfo)
+            fillColor = fillInfo["color"];
+        if(fillInfo && "opacity" in fillInfo)
+            fillOpacity = fillInfo["opacity"];
+
         var strokeWidth = 5;
         var strokeColor = "red";
         var strokeInfo = annotations[i]["stroke"];
@@ -176,7 +203,8 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 angle: angle,
                 stroke: strokeColor,
                 strokeWidth: strokeWidth,
-                fill: "transparent",
+                fill: fillColor,
+                opacity: fillOpacity,
                 transparentCorners: false,
                 hasBorders: false,
                 hasControls: false,
@@ -192,7 +220,8 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 angle: angle,
                 stroke: strokeColor,
                 strokeWidth: strokeWidth,
-                fill: "transparent",
+                fill: fillColor,
+                opacity: fillOpacity,
                 transparentCorners: false,
                 hasBorders: false,
                 hasControls: false,

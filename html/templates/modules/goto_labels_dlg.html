@@ -149,7 +149,7 @@
   }
 
   function getUnannotatedLabelsForImage(imageId) {
-    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/annotations?only_missing=true";
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/validations/unannotated";
     $.ajax({
       url: url,
       dataType: 'json',

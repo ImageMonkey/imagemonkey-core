@@ -62,6 +62,8 @@ type Image struct {
     NumOfValid int32 `json:"num_yes"`
     NumOfInvalid int32 `json:"num_no"`
     Unlocked bool `json:"unlocked,omitempty"`
+    Width int32 `json:"width,omitempty"`
+    Height int32 `json:"height,omitempty"`
     Annotations []json.RawMessage `json:"annotations"`
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
