@@ -24,6 +24,8 @@
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var browseAnnotationsOnlyMode = false;
   var imageGridCanvases = {};
+  var numberOfQueryResults = 0;
+  var numberOfCurrentlyShownResults = 0;
 
   var clearImageGrid = function() {
     imageGridCanvases = {};
@@ -61,7 +63,10 @@
       imageGridData = d;
       sizes = [];
 
+      numberOfQueryResults = 0;
+
       for(var i = 0; i < imageGridData.length; i++){
+        numberOfQueryResults += 1;
         sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
       }
 
@@ -88,6 +93,7 @@
 
     $("#imageGrid").hide();
     clearImageGrid();
+    $("#numberOfQueryResults").text("");
 
     browseAnnotationsOnlyMode = $("#annotationsOnlyCheckbox").checkbox("is checked");
     var url = '{{ .apiBaseUrl }}/v1/validations/unannotated';
@@ -212,6 +218,9 @@
     }
 
     numOfLastFetchedImg += n;
+    numberOfCurrentlyShownResults = numOfLastFetchedImg;
+
+    $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
   }
 
   function split(val) {
@@ -275,9 +284,9 @@
       <div class="field">
        <p>Search for annotation tasks you are interested in</p>
        <input placeholder="Query..." type="text" id="annotationQuery">
-     </div>
+      </div>
 
-     <div class="inline fields">
+      <div class="inline fields">
         <div class="field">
           <div class="ui checkbox" id="annotationsOnlyCheckbox">
             <input type="checkbox">
@@ -286,8 +295,9 @@
         </div>
       </div>
 
-    <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
+      <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
     </form>
+    <p id="numberOfQueryResults"></p>
 
     <div class="ui warning message" hidden id="browseAnnotationsErrorMessage">
       <i class="close icon"></i>

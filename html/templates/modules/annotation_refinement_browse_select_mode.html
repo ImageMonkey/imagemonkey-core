@@ -38,6 +38,8 @@
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var imageGridCanvases = {};
   var selectedItems = {};
+  var numberOfQueryResults = 0;
+  var numberOfCurrentlyShownResults = 0;
 
   var clearImageGrid = function() {
     imageGridCanvases = {};
@@ -79,7 +81,10 @@
       imageGridData = d;
       sizes = [];
 
+      numberOfQueryResults = 0;
+
       for(var i = 0; i < imageGridData.length; i++){
+        numberOfQueryResults += 1;
         sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
       }
 
@@ -106,6 +111,11 @@
   }
 
   function onGoButtonClicked() {
+    $('#browseAnnotationRefinementLoadingSpinner').show();
+    $("#imageGrid").hide();
+    clearImageGrid();
+    $("#numberOfQueryResults").text("");
+
     if(isSmartRefinementModeActivated()) {
       if($("#smartRefinementLabelDropdown").dropdown("get value") === "") {
         $('#browseAnnotationRefinementErrorMessage').text("Please select a label for refinement first!");
@@ -113,11 +123,6 @@
         return;
       }
     }
-
-    $('#browseAnnotationRefinementLoadingSpinner').show();
-
-    $("#imageGrid").hide();
-    clearImageGrid();
 
     var url = '{{ .apiBaseUrl }}/v1/refine';
 
@@ -238,6 +243,9 @@
     }
 
     numOfLastFetchedImg += n;
+    numberOfCurrentlyShownResults = numOfLastFetchedImg;
+
+    $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
   }
 
   function split(val) {
@@ -324,15 +332,16 @@
         </div>
         <div class="field">
           <div class="ui search selection dropdown" id="smartRefinementLabelDropdown" style="display: none;">
-              <div class="default text">Select Label</div>
-              <div class="menu" id="smartRefinementLabelDropdownMenu">
-              </div>
+            <div class="default text">Select Label</div>
+            <div class="menu" id="smartRefinementLabelDropdownMenu">
+            </div>
           </div>
         </div>
       </div>
 
-    <div class="ui primary submit button" onclick="onGoButtonClicked();">Go</div>
+      <div class="ui primary submit button" onclick="onGoButtonClicked();">Go</div>
     </form>
+    <p id="numberOfQueryResults"></p>
 
     <button class="ui huge positive button" id="smartRefinementDoneButton" style="display: none;">Done</button>
 
