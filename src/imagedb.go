@@ -3734,6 +3734,7 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string,
                                     FROM image_annotation an
                                     JOIN annotation_data d on d.image_annotation_id = an.id
                                     JOIN label_accessor a on a.label_id = an.label_id
+                                    WHERE an.auto_generated = false
 
                                     UNION ALL
                                     
@@ -3744,7 +3745,7 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string,
                                     JOIN label_accessor a on a.label_id = r.label_id
                                     JOIN label l on l.id = r.label_id
                                     LEFT JOIN label pl ON l.parent_id = pl.id
-                                    WHERE pl.label_type = 'refinement_category'
+                                    WHERE pl.label_type = 'refinement_category' AND an.auto_generated = false
 
                                     UNION ALL
 
@@ -3754,7 +3755,7 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string,
                                     JOIN image_annotation_refinement r on r.annotation_data_id = d.id
                                     JOIN label l on l.id = r.label_id
                                     LEFT JOIN label pl ON l.parent_id = pl.id
-                                    WHERE pl.label_type = 'refinement_category'
+                                    WHERE pl.label_type = 'refinement_category' AND an.auto_generated = false
                                 ) q
                                 JOIN image i ON q.image_id = i.id
                                 WHERE i.unlocked = true

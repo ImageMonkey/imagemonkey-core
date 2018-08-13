@@ -150,9 +150,11 @@
           entries = data[i].annotations;
           for(var j = 0; j < entries.length; j++) {
             color = getRandomColor();
+            
+            entries[j]["stroke"] = {};
             entries[j].stroke.color = color;
 
-            entries[j]["fill"] = {}
+            entries[j]["fill"] = {};
             entries[j].fill.color = color;
             entries[j].fill.opacity = 0.5;
           }
@@ -681,7 +683,7 @@
     onAddLabelSuggestion();
   });
 
-  Mousetrap.bind("#", function(e, combo) { 
+  Mousetrap.bind("alt+a", function(e, combo) { 
     if(!annotationsShown) {
       if(!cachedAnnotations && !annotationFetchingInProgress) {
         getAnnotations($("#image").attr("imageId"));

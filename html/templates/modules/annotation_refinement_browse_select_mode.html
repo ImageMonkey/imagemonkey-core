@@ -55,7 +55,11 @@
   }
   function updateLabelsInImageGrid(annotationDataId, labels) {
     var id = "justified-item" + annotationDataId;
-    var tooltip = $("#"+id).attr("data-balloon");
+    var tooltip = '';
+    var item = $("#"+id);
+    if(item[0].hasAttribute("data-balloon"))
+      tooltip = item.attr("data-balloon");
+
     for(var i = 0; i < labels.length; i++) {
       if(tooltip.length !== 0)
         tooltip += (", " + labels[i]);
@@ -129,6 +133,7 @@
 
     if(isSmartRefinementModeActivated()) {
       if($("#smartRefinementLabelDropdown").dropdown("get value") === "") {
+        $('#browseAnnotationRefinementLoadingSpinner').hide();
         $('#browseAnnotationRefinementErrorMessage').text("Please select a label for refinement first!");
         $('#browseAnnotationRefinementErrorMessage').show(200);
         $("#smartRefinementLabelDropdown").removeClass("disabled");
@@ -144,6 +149,7 @@
     var query = $("#annotationRefinementQuery").val();
 
     if(query === "") { //no query specified
+      $('#browseAnnotationRefinementLoadingSpinner').hide();
       $('#browseAnnotationRefinementErrorMessage').text("There are currently no annotations for that expression - please try another one!");
       $('#browseAnnotationRefinementErrorMessage').show(0).delay(1000).hide(0);
       $("#smartRefinementLabelDropdown").removeClass("disabled");
@@ -166,7 +172,7 @@
             var obj = $('#browseAnnotationRefinementErrorMessage').text(err);
             obj.html(obj.html().replace(/\n/g,'<br/>'));
             $('#browseAnnotationRefinementErrorMessage').show(200);
-            $('#browseAnnotationRefinementSpinner').hide();
+            $('#browseAnnotationRefinementLoadingSpinner').hide();
             clearImageGrid();
           }
     });
@@ -429,7 +435,6 @@
       <i class="close icon"></i>
       <div class="header"></div>
     </div>
-
   </div>
   <div class="four wide column"></div>
 </div>

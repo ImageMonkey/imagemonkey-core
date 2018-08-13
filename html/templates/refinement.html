@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/balloon/balloon.min.css">
   <script src="js/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="css/jquery-ui.css">
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
 
   <style>
     .canvas-container{margin: 0 auto;}
@@ -64,6 +65,7 @@
         $("#mainContainer").show();
         $("#imgInfo").show();
         $("#labelsColumn").show();
+        $("#loadingSpinner").hide();
 
         showHideNoLabelsDefined();
       }
@@ -71,6 +73,7 @@
         $("#mainContainer").hide();
         $("#imgInfo").hide();
         $("#labelsColumn").hide();
+        $("#loadingSpinner").show();
       }
     }
 
@@ -203,6 +206,7 @@
       showHideMainControls(false);
 
       if(data.length === 0) { //nothing to do
+        $("#loadingSpinner").hide();
         newlyAddedLabels = {};
         oldLabels = {};
         $("#labels").empty();
@@ -220,6 +224,7 @@
         data: JSON.stringify(data),
         headers: headers,
         success: function(data){
+          $("#loadingSpinner").hide();
           updateLabelsInImageGrid($("#annotatedImage").attr("data-annotation-data-id"), labelNames); 
 
           $("#labels").empty();
