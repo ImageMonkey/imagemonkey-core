@@ -83,6 +83,10 @@
 
 		initializeGraph();
 
+		$('#graphInfoButton').click(function(e) {
+        	$('#labelGraphInfoDlg').modal('show');
+      	});
+
 		$('#refreshLabelGraphButton').click(function(e) {
         	evaluateGraph();
       	});
@@ -193,12 +197,36 @@
 	      url: url,
 	      dataType: 'json',
 	      success: function(data){
-	      	populateGraph(data);
+	      	populateGraph(data.graph);
+	      	populateInfoDlg(data.metadata);
 	      }
 	    });
 	    {{ else }}
 	    	evaluateGraph();
 	    {{ end }}
+	}
+
+	function populateInfoDlg(metadata) {
+		if(metadata.name !== "")
+			$("#labelGraphInfoDlgName").html("<b>Name:</b> " + metadata.name);
+		else
+			$("#labelGraphInfoDlgName").html("<b>Name:</b> -");
+
+		if(metadata.description !== "")
+			$("#labelGraphInfoDlgDescription").html("<b>Description:</b> " + metadata.description);
+		else
+			$("#labelGraphInfoDlgDescription").html("<b>Description:</b> -");
+
+		if(metadata.author !== "")
+			$("#labelGraphInfoDlgAuthor").html("<b>Author:</b> " + metadata.author);
+		else
+			$("#labelGraphInfoDlgAuthor").html("<b>Author:</b> -");
+
+		if(metadata.homepage !== "")
+			$("#labelGraphInfoDlgHomepage").html("<b>Homepage:</b> " + metadata.homepage);
+		else
+			$("#labelGraphInfoDlgHomepage").html("<b>Homepage:</b> -");
+
 	}
 
 	function populateGraph(graph) {
@@ -500,10 +528,29 @@
 
 			<div class="row" style="margin-top:1em; margin-right:1em;">
 				<div class="sixteen wide right aligned column">
-					<button class="ui button" button id="zoomInButton"><i class="search plus icon"></i> Zoom In</button>
+					<button class="ui button" button id="zoomInButton"><i class="search plus icon"></i>  Zoom In  </button>
   					<button class="ui button" id="zoomOutButton"><i class="search minus icon"></i> Zoom Out</button>
+  					<button class="ui button" id="graphInfoButton"><i class="info icon"></i> Info</button>
 				</div>
 				<div class="sixteen wide center aligned column" id="labelGraphContainer">
+					<div class="ui modal" id="labelGraphInfoDlg">
+					  <i class="close icon"></i>
+					  <div class="center aligned header">
+					    Label Graph Info
+					  </div>
+					  <div class="content">
+					  	<p id="labelGraphInfoDlgName"></p>
+					  	<p id="labelGraphInfoDlgDescription"></p>
+					     <p id="labelGraphInfoDlgAuthor"></p>
+					     <p id="labelGraphInfoDlgHomepage"></p>
+					  </div>
+					  <div class="actions">
+					    <div class="ui right labeled cancel icon button">
+					      Close
+					    </div>
+					  </div>
+					</div>
+
 					<svg id="labelGraph"></svg>
 				</div>
 			</div>
