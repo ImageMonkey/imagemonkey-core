@@ -1,6 +1,13 @@
 {
 	"graph.dot" : {
 		"name": "main"
+	},
+
+	"imagenet.dot": {
+		"name": "imagenet",
+		"description": "",
+		"author": "dobkeratops",
+		"homepage": "https://github.com/dobkeratops"
 	}
 
 }
