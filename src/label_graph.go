@@ -11,6 +11,13 @@ import (
 	"errors"
 )
 
+type LabelGraphMappingEntry struct {
+	Name string `json:"name"`
+	Description string `json:"description"`
+	Author string `json:"author"`
+	Homepage string `json:"homepage"`
+}
+
 type LabelGraphNode struct {
     Id int `json:"id"`
     Idenfifier string `json:"identifier"`
@@ -41,13 +48,19 @@ type LabelGraph struct {
     path string
     graphDefinition string
     graph *gographviz.Graph
+    labelGraphMetadata LabelGraphMappingEntry
 }
 
-func NewLabelGraph(path string) *LabelGraph {
+func NewLabelGraph(path string, labelGraphMetadata LabelGraphMappingEntry) *LabelGraph {
     return &LabelGraph{
         path: path,
         graphDefinition: "",
+        labelGraphMetadata: labelGraphMetadata,
     } 
+}
+
+func (p *LabelGraph) GetMetadata() LabelGraphMappingEntry {
+	return p.labelGraphMetadata
 }
 
 func (p *LabelGraph) Load() error {
@@ -229,10 +242,6 @@ func (p *LabelGraphRepository) Get(id string) (*LabelGraph, error) {
 }
 
 func (p *LabelGraphRepository) Load() error {
-	type LabelGraphMappingEntry struct {
-	    Name string `json:"name"`
-	}
-
 	type LabelGraphMapping map[string]LabelGraphMappingEntry
 	var labelGraphMapping LabelGraphMapping
 
@@ -269,7 +278,7 @@ func (p *LabelGraphRepository) Load() error {
 		}
 
 
-		labelGraph := NewLabelGraph(path)
+		labelGraph := NewLabelGraph(path, val)
 		err = labelGraph.Load()
 		if err != nil {
 			return err

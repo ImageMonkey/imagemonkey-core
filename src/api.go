@@ -1289,7 +1289,8 @@ func main(){
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 			}
-			c.JSON(http.StatusOK, labelGraphJson)
+
+			c.JSON(http.StatusOK, gin.H{"graph" : labelGraphJson, "metadata": labelGraph.GetMetadata()})
 		})
 
 		router.POST("/v1/label/graph-editor/evaluate", func(c *gin.Context) {
@@ -1310,7 +1311,7 @@ func main(){
 				return
 			}
 
-			labelGraph := NewLabelGraph("")
+			labelGraph := NewLabelGraph("", LabelGraphMappingEntry{})
 			err := labelGraph.LoadFromString(string(data)) 
 			if err != nil {
 				c.JSON(422, gin.H{"error": "Couldn't process request"})
