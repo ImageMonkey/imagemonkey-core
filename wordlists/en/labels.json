@@ -916,6 +916,51 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "5b8a204d-8dee-4422-9afe-fd7567a5b633"
+		},
+		"steps": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "269e038e-7395-4bf1-ab98-1eb57c90374c"
+		},
+		"path": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "689421e5-5779-4ba0-83c3-1ad145397d5d"
+		},
+		"gate": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "de63bd0c-bed2-4af2-9ae4-5bc24e035362"
+		},
+		"hat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "13127a19-78b7-4f36-b67a-cc4ffaf4ac13"
+		},
+		"litter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "95b3f6e8-d434-4dff-9b00-abe114a4b923"
+		},
+		"puddle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9599ced7-c4de-44db-a626-38c6dd43ef9d"
+		},
+		"mountain": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2c4306a7-242f-49d5-a817-774c43ff985e"
+		},
+		"rucksack": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f702402b-a6ea-4c57-bc1a-bb173e17715f"
+		},
+		"flag": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "651b2ef9-3c5c-4f73-900a-4f344de4b644"
 		}
 	}
 }
