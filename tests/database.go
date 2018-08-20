@@ -109,6 +109,24 @@ func installUuidExtension() error {
 	return nil
 } 
 
+func installPostgisExtension() error {
+	query := "CREATE EXTENSION IF NOT EXISTS \"postgis\""
+	var out, stderr bytes.Buffer
+
+	//load defaults
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+	    fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+	    return err
+	}
+
+	return nil
+} 
+
 func installTemporalTablesExtension() error {
 	query := "CREATE EXTENSION IF NOT EXISTS temporal_tables"
 	var out, stderr bytes.Buffer
@@ -185,6 +203,11 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 	}
 
 	err = installUuidExtension()
+	if err != nil {
+		return err
+	}
+
+	err = installPostgisExtension()
 	if err != nil {
 		return err
 	}
