@@ -7,6 +7,7 @@ import(
     "github.com/satori/go.uuid"
 	"regexp"
     "strings"
+    "./commons"
 )
 
 type Token int
@@ -19,7 +20,13 @@ const (
 	RPAR 
     NOT
 	UNKNOWN
+    ANNOTATION_COVERAGE
 )
+
+type AnnotationCoverage struct {
+    Operator string 
+    Value int
+}
 
 func IsLetter(s string) bool {
     for _, r := range s {
@@ -54,6 +61,29 @@ func IsAssignment(s string) bool {
 	return match
 }
 
+func IsAnnotationCoverage(s string) bool {
+    expr := commons.GetStaticQueryAttributes()["annotation-coverage"].RegExp
+    match, _ := regexp.MatchString(expr, s)
+    return match
+}
+
+func GetAnnotationCoverageFromToken(token string) (AnnotationCoverage, error) {
+    var err error 
+    annotationCoverage := AnnotationCoverage{Value: 0, Operator: ">="}
+    expr := commons.GetStaticQueryAttributes()["annotation-coverage"].RegExp
+    r := regexp.MustCompile(expr)
+    matches := r.FindStringSubmatch(token)
+    if len(matches) > 2 {
+        annotationCoverage.Operator = matches[1]
+        annotationCoverage.Value, err = strconv.Atoi(matches[2])
+        if err != nil {
+            return annotationCoverage, errors.New("Oops: " + matches[2])
+        }
+    }
+
+    return annotationCoverage, nil
+}
+
 func StrToToken(str string) Token {
 	switch str {
 		case "&":
@@ -67,6 +97,9 @@ func StrToToken(str string) Token {
         case "~":
             return NOT
 		default:
+            if IsAnnotationCoverage(str) {
+                return ANNOTATION_COVERAGE
+            }
 			if IsAssignment(str) || IsLetterOrSpace(str) || IsUuid(str) {
 				return LABEL
 			}
@@ -78,12 +111,12 @@ func StrToToken(str string) Token {
 func IsTokenValid(currentToken Token, lastToken Token) bool {
 	switch currentToken {
 		case AND:
-			if (lastToken == LABEL) || (lastToken == RPAR)  {
+			if (lastToken == LABEL) || (lastToken == ANNOTATION_COVERAGE) || (lastToken == RPAR)  {
 				return true
 			}
 			return false
 		case OR:
-			if (lastToken == LABEL) || (lastToken == RPAR) {
+			if (lastToken == LABEL) || (lastToken == ANNOTATION_COVERAGE) || (lastToken == RPAR) {
 				return true
 			}
 			return false
@@ -93,17 +126,22 @@ func IsTokenValid(currentToken Token, lastToken Token) bool {
 			}
 			return false
 		case RPAR:
-			if lastToken == LABEL {
+			if (lastToken == LABEL) || (lastToken == ANNOTATION_COVERAGE) {
 				return true
 			}
 			return false
 		case LPAR:
-			if (lastToken == LABEL) || (lastToken == AND) || (lastToken == OR) || (lastToken == NOT) {
+			if (lastToken == LABEL) || (lastToken == ANNOTATION_COVERAGE) || (lastToken == AND) || (lastToken == OR) || (lastToken == NOT) {
 				return true
 			}
 			return false
         case NOT:
-            if (lastToken == LABEL) || (lastToken == AND) || (lastToken == OR) || (lastToken == LPAR) {
+            if (lastToken == LABEL) || (lastToken == ANNOTATION_COVERAGE) || (lastToken == AND) || (lastToken == OR) || (lastToken == LPAR) {
+                return true
+            }
+            return false
+        case ANNOTATION_COVERAGE:
+            if (lastToken == OR) || (lastToken == AND) || (lastToken == LPAR) || (lastToken == NOT) {
                 return true
             }
             return false
@@ -225,6 +263,7 @@ type QueryParser struct {
 	brackets int32
     isUuidQuery bool
     version int32
+    allowAnnotationCoverage bool
 }
 
 type ParseResult struct {
@@ -241,6 +280,7 @@ func NewQueryParser(query string) *QueryParser {
         query: query,
         isFirst: true,
         version: 1,
+        allowAnnotationCoverage: false,
     } 
 }
 
@@ -252,11 +292,36 @@ func NewQueryParserV2(query string) *QueryParser {
     } 
 }
 
+func (p *QueryParser) _getErrorMessage(token string, isFirst bool) string {
+    e := ""
+    if p.allowAnnotationCoverage {
+        if isFirst {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ATTRIBUTE' (e.q " + 
+              commons.GetStaticQueryAttributes()["annotationCoverage"].Name + "= 10%), '~' or '('"
+        } else {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ATTRIBUTE' (e.q " +
+                 commons.GetStaticQueryAttributes()["annotationCoverage"].Name + "= 10%), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|', '&' or '~' "
+        }
+    } else {
+        if isFirst {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), '~' or '('"
+        } else {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|', '&' or '~' "
+        }
+    }
+
+    return e
+}
+
+func (p *QueryParser) AllowAnnotationCoverage(allow bool) {
+    p.allowAnnotationCoverage = allow
+}
+
 func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 	parseResult := ParseResult{}
 	parseResult.query = ""
-    parseResult.isUuidQuery = p.isUuidQuery
-
+    lastSubqueryOperator := ""
+    //parseResult.isUuidQuery = p.isUuidQuery
     parseResult.isUuidQuery = false
 
     tokens := Tokenize(p.query)
@@ -273,9 +338,8 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 
     	t := StrToToken(token)
     	if p.isFirst {
-    		if !((t == LABEL) || (t == LPAR) || (t == NOT)) {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog) or 'ASSIGNMENT' (e.q dog.breed='Labrador') "
-    			return parseResult, errors.New(e)
+    		if !((t == LABEL) || (t == LPAR) || (t == NOT) || (p.allowAnnotationCoverage && t == ANNOTATION_COVERAGE)) {
+    			return parseResult, errors.New(p._getErrorMessage(token, true))
     		}
 
             //use the first entry to determine whether its a UUID or not. We can't have both labels and UUIDs in the same query, so
@@ -286,8 +350,7 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
     		p.isFirst = false
     	} else {
     		if !IsTokenValid(t, p.lastToken) {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|', '&' or '~' "
-    			return parseResult, errors.New(e)
+    			return parseResult, errors.New(p._getErrorMessage(token, false))
     		}
     	}
 
@@ -301,27 +364,40 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
             } else {
                 if !parseResult.isUuidQuery {
                     parseResult.query += ("q.accessors @> ARRAY[$" + strconv.Itoa(i) + "]::text[]")
+                    
+                    if lastSubqueryOperator != "" {
+                        parseResult.subquery += lastSubqueryOperator + " "
+                        lastSubqueryOperator = ""
+                    }
                     parseResult.subquery += ("a.accessor = $" + strconv.Itoa(i))
                 }
             }
     		parseResult.queryValues = append(parseResult.queryValues, token)
     		i += 1
     		numOfLabels += 1
-    	} else if t == AND {
+    	} else if t == ANNOTATION_COVERAGE {
+            if p.allowAnnotationCoverage {
+                if !parseResult.isUuidQuery {
+                    annotationCoverage, err := GetAnnotationCoverageFromToken(token)
+                    if err != nil {
+                        return parseResult, err
+                    }
+                    parseResult.query += ("q.annotated_percentage" + annotationCoverage.Operator + strconv.Itoa(annotationCoverage.Value))
+                }
+            } else {
+                return parseResult, errors.New(p._getErrorMessage(token, false))
+            }
+        } else if t == AND {
     		parseResult.query += "AND"
-            parseResult.subquery += "OR"
+            lastSubqueryOperator = "AND"
     	} else if t == OR {
     		parseResult.query += "OR"
-            parseResult.subquery += "OR"
+            lastSubqueryOperator = "OR"
         } else if t == NOT {
             parseResult.query += "NOT"
-            parseResult.subquery += "NOT"
-    	} else {
-    		parseResult.query += token
-            parseResult.subquery += token
+            lastSubqueryOperator = "NOT"
     	}
     	parseResult.query += " "
-        parseResult.subquery += " "
 
 
     	if t == LPAR {

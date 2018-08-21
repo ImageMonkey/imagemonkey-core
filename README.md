@@ -83,7 +83,11 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * build `temporal_table` extension, as described here: https://github.com/arkhipov/temporal_tables
 * connect to imagemonkey database and execute `CREATE EXTENSION temporal_tables;`
 * connect to imagemonkey database and execute `CREATE EXTENSION uuid-ossp;`
+* connect to imagemonkey database and execute `CREATE EXTENSION postgis;`
 * apply `defaults.sql`
+* apply `indexesl.sql`
+* apply sql functions from `env/functions` directory
+* apply sql stored procedures from `env/stored_procs` directory
 
 ### Webserver & SSL ###
 

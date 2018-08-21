@@ -24,4 +24,7 @@ CREATE INDEX user_image_image_id_index ON user_image (image_id);
 CREATE INDEX user_image_account_id_index ON user_image(account_id);
 
 -- image_quarantine table
-CREATE INDEX image_quarantine_image_id_index ON image_quarantine (image_id);
+CREATE INDEX image_quarantine_image_id_index ON image_quarantine(image_id);
+
+-- image_annotation_coverage table
+CREATE INDEX image_annotation_coverage_image_id_index ON image_annotation_coverage(image_id);

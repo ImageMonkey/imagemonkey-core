@@ -1,0 +1,1 @@
+go build -o data_processor.exe data_processor.go api_secrets.go shared_secrets.go && data_processor.exe

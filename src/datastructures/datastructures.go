@@ -4,6 +4,15 @@ import (
     "encoding/json"
 )
 
+type ImageAnnotationCoverage struct {
+    Image struct {
+        Id string `json:"id"`
+        Width float32 `json:"width"`
+        Height float32 `json:"height"`
+    } `json:"image"`
+    Coverage float32 `json:"coverage"`
+}
+
 type AnnotationStroke struct {
     Width float32 `json:"width"`
     Color string `json:"color"`
@@ -503,4 +512,9 @@ type LabelMapRefinementEntry struct {
      Values map[string]LabelMapRefinementValue `json:"values"`
      Uuid string `json:"uuid"`
      Icon string `json:"icon"`
+}
+
+type UpdateAnnotationCoverageRequest struct {
+    Uuid string `json:"uuid"`
+    Type string `json:"type"`
 }

@@ -3,7 +3,38 @@ package main
 import (
 	"testing"
 	"reflect"
+	"runtime"
+	"fmt"
+	"path/filepath"
+	"strings"
 )
+
+// ok fails the test if an err is not nil.
+func ok(tb testing.TB, err error) {
+	if err != nil {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
+		tb.FailNow()
+	}
+}
+
+// notOk fails the test if an err is nil.
+func notOk(tb testing.TB, err error) {
+	if err == nil {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: unexpected error, expected not nil, but got nil: \033[39m\n\n", filepath.Base(file), line)
+		tb.FailNow()
+	}
+}
+
+// equals fails the test if exp is not equal to act.
+func equals(tb testing.TB, exp, act interface{}) {
+	if !reflect.DeepEqual(exp, act) {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d:\n\n\texp: %#v\n\n\tgot: %#v\033[39m\n\n", filepath.Base(file), line, exp, act)
+		tb.FailNow()
+	}
+}
 
 
 func TestParserCorrect(t *testing.T) {  
@@ -195,3 +226,67 @@ func TestNotOperator6(t *testing.T) {
 		t.Errorf("Expected nil, but got not nil: %s", err.Error())
 	}
 }
+
+func TestQueryAnnotationCoverage(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage=10%")
+	queryParser.AllowAnnotationCoverage(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "c.annotated_percentage=10"), true)
+}
+
+func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage = 10%")
+	queryParser.AllowAnnotationCoverage(true)
+	_, err := queryParser.Parse(1)
+	ok(t, err)
+}
+
+func TestQueryWrongAnnotationCoverage(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.cov=1")
+	queryParser.AllowAnnotationCoverage(true)
+	_, err := queryParser.Parse(1)
+	notOk(t, err)
+}
+
+func TestQueryAnnotationCoverageOperator(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage>=1%")
+	queryParser.AllowAnnotationCoverage(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>=1"), true)
+}
+
+func TestQueryAnnotationCoverageOperator1(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage<=50%")
+	queryParser.AllowAnnotationCoverage(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<=50"), true)
+}
+
+func TestQueryAnnotationCoverageOperator2(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage=70%")
+	queryParser.AllowAnnotationCoverage(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage=70"), true)
+}
+
+func TestQueryAnnotationCoverageOperator3(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage<50%")
+	queryParser.AllowAnnotationCoverage(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<50"), true)
+}
+
+func TestQueryAnnotationCoverageOperator4(t *testing.T) {
+	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage>50%")
+	queryParser.AllowAnnotationCoverage(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>50"), true)
+}
+
+

@@ -3344,14 +3344,16 @@ func getAvailableAnnotationTasks(apiUser datastructures.APIUser, parseResult Par
                               FROM
                               (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
                                   array_to_string(array_agg(CASE WHEN (%s) THEN v.uuid ELSE NULL END), ',') as validation_uuids, 
-                                  array_agg(a.accessor)::text[] as accessors, i.unlocked as image_unlocked
+                                  array_agg(a.accessor)::text[] as accessors, COALESCE(c.annotated_percentage, 0) as annotated_percentage, 
+                                  i.unlocked as image_unlocked
                                   FROM image i 
                                   JOIN image_validation v ON v.image_id = i.id 
                                   JOIN label l ON l.id = v.label_id
                                   JOIN label_accessor a ON l.id = a.label_id
+                                  LEFT JOIN image_annotation_coverage c ON c.image_id = i.id
                                   WHERE (i.unlocked = true %s)
 
-                                  GROUP BY i.key, i.width, i.height, i.unlocked
+                                  GROUP BY i.key, i.width, i.height, i.unlocked, c.annotated_percentage
                               ) q WHERE %s
                         )qq
                       ) qqq
@@ -3466,6 +3468,7 @@ func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult,
                                      JOIN image_annotation an ON i.id = an.image_id
                                      JOIN image_provider p ON i.image_provider_id = p.id
                                      JOIN label_accessor a ON a.label_id = an.label_id
+                                     LEFT JOIN image_annotation_coverage q ON q.image_id = i.id
                                      WHERE (i.unlocked = true %s) AND p.name = 'donation' AND %s
                                      AND an.auto_generated = false
                                      
@@ -3822,4 +3825,45 @@ func getAnnotationsForRefinement(parseResult ParseResult, apiBaseUrl string,
     }
 
     return annotationRefinementTasks, nil
+}
+
+func getAnnotationCoverage(imageId string) ([]datastructures.ImageAnnotationCoverage, error) {
+    var imageAnnotationCoverages []datastructures.ImageAnnotationCoverage
+
+    q1 := ""
+    var queryValues []interface{}
+    if imageId != "" {
+        q1 = "WHERE i.key = $1"
+        queryValues = append(queryValues, imageId)
+    }
+
+    q := fmt.Sprintf(`SELECT i.key, i.width, i.height, c.annotated_percentage
+                      FROM image_annotation_coverage c
+                      JOIN image i ON c.image_id = i.id
+                      %s`, q1)
+
+    rows, err := db.Query(q, queryValues...)
+    if err != nil {
+        log.Debug("[Get annotation coverage] Couldn't get annotation coverage: ", err.Error())
+        raven.CaptureError(err, nil)
+        return imageAnnotationCoverages, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var imageAnnotationCoverage datastructures.ImageAnnotationCoverage
+
+        err = rows.Scan(&imageAnnotationCoverage.Image.Id, &imageAnnotationCoverage.Image.Width, 
+                            &imageAnnotationCoverage.Image.Height, &imageAnnotationCoverage.Coverage)
+        if err != nil {
+            log.Debug("[Get annotation coverage] Couldn't scan rows: ", err.Error())
+            raven.CaptureError(err, nil)
+            return imageAnnotationCoverages, err
+        }
+
+        imageAnnotationCoverages = append(imageAnnotationCoverages, imageAnnotationCoverage)
+    }
+
+    return imageAnnotationCoverages, nil
 }

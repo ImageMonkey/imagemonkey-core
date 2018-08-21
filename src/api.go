@@ -31,6 +31,7 @@ import (
     "time"
     "github.com/getsentry/raven-go"
     "./datastructures"
+    "./commons"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -159,6 +160,26 @@ func pushCountryContributionToRedis(redisPool *redis.Pool, contributionsPerCount
 	_, err = redisConn.Do("RPUSH", "contributions-per-country", serialized)
 	if err != nil { //just log error, but not abort (it's just some statistical information)
 		log.Debug("[Push Contributions per Country to Redis] Couldn't update contributions-per-country: ", err.Error())
+		return
+	}
+}
+
+func pushAnnotationCoverageUpdateRequestToRedis(redisPool *redis.Pool, uuid string, t string) {
+	updateAnnotationCoverageRequest := datastructures.UpdateAnnotationCoverageRequest{Uuid : uuid, Type: t}
+	serialized, err := json.Marshal(updateAnnotationCoverageRequest)
+	if err != nil { 
+		log.Debug("[Notify data processor] Couldn't create update annotation coverage request: ", err.Error())
+		raven.CaptureError(err, nil)
+		return
+	}
+
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+
+	_, err = redisConn.Do("RPUSH", commons.UPDATE_IMAGE_ANNOTATION_COVERAGE_TOPIC, serialized)
+	if err != nil { 
+		log.Debug("[Notify data processor] Couldn't update annotation coverage: ", err.Error())
+		raven.CaptureError(err, nil)
 		return
 	}
 }
@@ -980,6 +1001,23 @@ func main(){
 			c.JSON(200, annotatedImages)
 		})
 
+		router.GET("/v1/donation/:imageid/annotations/coverage", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			imageCoverages, err := getAnnotationCoverage(imageId)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			if len(imageCoverages) == 0 {
+				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
+				return
+			}
+
+			c.JSON(200, imageCoverages[0])
+		})
+
 		router.POST("/v1/validation/:validationid/validate/:param", func(c *gin.Context) {
 			validationId := c.Param("validationid")
 			param := c.Param("param")
@@ -1423,6 +1461,7 @@ func main(){
 		        }
 
 		        queryParser := NewQueryParserV2(query)
+		        queryParser.AllowAnnotationCoverage(true)
 		        parseResult, err := queryParser.Parse(1)
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
@@ -1534,6 +1573,8 @@ func main(){
 			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 			statisticsPusher.PushAppAction(getAppIdentifier(c), "annotation")
 
+			pushAnnotationCoverageUpdateRequestToRedis(redisPool, annotationId, "annotation")
+
 			c.JSON(201, nil)
 		})
 
@@ -1639,6 +1680,8 @@ func main(){
 			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 			statisticsPusher.PushAppAction(getAppIdentifier(c), "annotation")
 
+			pushAnnotationCoverageUpdateRequestToRedis(redisPool, imageId, "image")
+
 			c.Writer.Header().Set("Location", (*apiBaseUrl + "/v1/annotation?annotation_id=" + annotationId))
 			c.JSON(201, nil)
 		})
@@ -1695,6 +1738,7 @@ func main(){
 	        }
 
 			queryParser := NewQueryParser(query)
+			queryParser.AllowAnnotationCoverage(true)
 	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
