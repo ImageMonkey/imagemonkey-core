@@ -1,5 +1,14 @@
 package commons
 
+var attributes = make(map[string](QueryAttribute))
+
+func init() {
+	//attributes := make(map[string](QueryAttribute))
+	attributes["annotation-coverage"] = QueryAttribute{InternalIdentifier: "annotation-coverage", 
+																Name: "annotation.coverage",
+																RegExp: "annotation\\.coverage[ ]*(>|<|>=|=|<=){1}[ ]*([0-9]*)%"}
+}
+
 type QueryAttribute struct {
 	InternalIdentifier string
 	Name string
@@ -7,10 +16,5 @@ type QueryAttribute struct {
 }
 
 func GetStaticQueryAttributes() map[string]QueryAttribute {
-	attributes := make(map[string](QueryAttribute))
-	attributes["annotation-coverage"] = QueryAttribute{InternalIdentifier: "annotation-coverage", 
-																Name: "annotation.coverage",
-																RegExp: "annotation\\.coverage[ ]*(>|<|>=|=|<=){1}[ ]*([0-9]*)%"}
-
 	return attributes
 }
