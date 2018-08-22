@@ -3621,10 +3621,10 @@ func getImagesLabels(apiUser datastructures.APIUser, parseResult ParseResult, ap
                                                                 WHERE (i.unlocked = true %s)
                         ),
                         image_ids AS (
-                            SELECT image_id
+                            SELECT image_id, annotated_percentage
                             FROM
                             (
-                                SELECT image_id, array_agg(label)::text[] as accessors
+                                SELECT q1.image_id, array_agg(label)::text[] as accessors, c.annotated_percentage
                                 FROM 
                                 (
                                     SELECT image_id, accessor as label
@@ -3635,7 +3635,8 @@ func getImagesLabels(apiUser datastructures.APIUser, parseResult ParseResult, ap
                                     SELECT image_id, label as label
                                     FROM image_trending_labels t
                                 ) q1
-                                GROUP BY image_id
+                                JOIN image_annotation_coverage c ON c.image_id = q1.image_id
+                                GROUP BY q1.image_id, c.annotated_percentage
                             ) q
                             WHERE %s
                         )

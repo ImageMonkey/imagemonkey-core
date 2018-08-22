@@ -545,6 +545,29 @@ func (p *ImageMonkeyDatabase) SetAnnotationValid(annotationId string, num int) e
 	return err
 }
 
+func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId string) (int, error) {
+	rows, err := p.db.Query(`SELECT annotated_percentage 
+							  FROM image_annotation_coverage c
+							  JOIN image i ON i.id = c.image_id
+							  WHERE i.key = $1`, imageId)
+	if err != nil {
+		return 0, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var coverage int
+		err = rows.Scan(&coverage)
+		if err != nil {
+			return 0, err
+		}
+
+		return coverage, nil
+	}
+	return 0, errors.New("missing result set")
+}
+
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
 }

@@ -101,10 +101,10 @@
           }, 
           error: function(xhr, status, error) {
             var err = JSON.parse(xhr.responseText)["error"];
-            var obj = $('#browseAnnotationsErrorMessage').text(err);
+            var obj = $('#browseLabelsErrorMessage').text(err);
             obj.html(obj.html().replace(/\n/g,'<br/>'));
-            $('#browseAnnotationsErrorMessage').show(200);
-            $('#browseAnnotationsLoadingSpinner').hide();
+            $('#browseLabelsErrorMessage').show(200);
+            $('#browseLabelsLoadingSpinner').hide();
             clearImageGrid();
           }
     });

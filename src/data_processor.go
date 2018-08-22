@@ -93,6 +93,7 @@ func calculateImageAnnotationCoverage(updateAnnotationCoverageRequest datastruct
 
 func main() {
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
+	singleshot := flag.Bool("singleshot", false, "Terminate after work is done")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
@@ -148,6 +149,11 @@ func main() {
 				break
 			}
 		}
+
+		if *singleshot {
+			return
+		}
+
 		//then do only a incremental re-calculate
 		for {
 			retryImmediately := false

@@ -4,7 +4,32 @@ import (
 	"testing"
 	"gopkg.in/resty.v1"
 	"../src/datastructures"
+	"time"
+	"os/exec"
 )
+
+
+func runDataProcessor(t *testing.T) {
+	// Start a process:
+	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "shared_secrets.go", "-singleshot", "true")
+	cmd.Dir = "../src"
+	err := cmd.Start()
+	ok(t, err)
+
+	// Wait for the process to finish or kill it after a timeout:
+	done := make(chan error, 1)
+	go func() {
+	    done <- cmd.Wait()
+	}()
+	select {
+	case <-time.After(5 * time.Second):
+	    err := cmd.Process.Kill()
+	    ok(t, err) //failed to kill process
+	    t.Errorf("process killed as timeout reached")
+	case err := <-done:
+	    ok(t, err)
+	}
+}
 
 
 func testGetExistingAnnotations(t *testing.T, query string, token string, requiredStatusCode int, requiredNumOfResults int) {
@@ -201,5 +226,50 @@ func TestGetImageAnnotationsImageLockedOwnDonationButQuarantine(t *testing.T) {
 	ok(t, err)
 
 	testGetAnnotatedImage(t, imageId, token,  422)
+}
+
+func TestBrowseByCoverage(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "apple", "", 
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+
+
+	runDataProcessor(t)
+
+	//expected coverage = annotation area / image area (i.e: (836*660)/(1132*750) = ~65%)
+	coverage, err := db.GetImageAnnotationCoverageForImageId(imageId)
+	ok(t, err)
+	equals(t, coverage, 65)
+}
+
+
+func TestBrowseByCoverageFullyContained(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	//in case there is another rect that is fully contained within the bigger rect, the coverage should still be the same
+	testAnnotate(t, imageId, "apple", "", 
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}},
+					  {"top":67,"left":150,"type":"rect","angle":0,"width":500,"height":500,"stroke":{"color":"red","width":5}}]`, "")
+
+
+	runDataProcessor(t)
+
+	//expected coverage = annotation area / image area (i.e: (836*660)/(1132*750) = ~65%)
+	coverage, err := db.GetImageAnnotationCoverageForImageId(imageId)
+	ok(t, err)
+	equals(t, coverage, 65)
 }
 
