@@ -237,9 +237,17 @@
     $("#sublabel").attr("sublabel", "");
 
     var availableLabels = [];
-    {{ range $val := .labelAccessors }}
-    availableLabels.push({{ $val }});
-    {{ end }}
+    var labelAccessors = {{ .labelAccessors }};
+    for(var i = 0; i < labelAccessors.length; i++) {
+      availableLabels.push(labelAccessors[i]);
+    }
+
+    var staticQueryAttributes = {{ .queryAttributes }};
+    for(var key in staticQueryAttributes) {
+      if(staticQueryAttributes.hasOwnProperty(key)) {
+        availableLabels.push(staticQueryAttributes[key].name);
+      }
+    }
 
 
     $("#annotationQuery")

@@ -235,6 +235,15 @@
       }
     }
 
+
+    var staticQueryAttributes = {{ .queryAttributes }};
+    for(var key in staticQueryAttributes) {
+      if(staticQueryAttributes.hasOwnProperty(key)) {
+        availableLabels.push(staticQueryAttributes[key].name);
+      }
+    }
+
+
     $("#labelQuery")
       // don't navigate away from the field on tab when selecting an item
       .on("keydown", function(event) {

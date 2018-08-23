@@ -10,9 +10,9 @@ func init() {
 }
 
 type QueryAttribute struct {
-	InternalIdentifier string
-	Name string
-	RegExp string
+	InternalIdentifier string `json:"internal_identifier"`
+	Name string `json:"name"`
+	RegExp string `json:"regexp"`
 }
 
 func GetStaticQueryAttributes() map[string]QueryAttribute {

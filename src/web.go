@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"errors"
 	"./datastructures"
+	"./commons"
 )
 
 var db *sql.DB
@@ -239,6 +240,7 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
 				"labelAccessors": pick(getLabelAccessors())[0],
+				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
 
@@ -306,6 +308,7 @@ func main() {
 				"onlyOnce": onlyOnce,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"labelAccessors": pick(getLabelAccessors())[0],
+				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
 
