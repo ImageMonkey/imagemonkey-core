@@ -59,10 +59,6 @@ func IsStaticQueryAttribute(s string) (bool, commons.Token) {
     }
 
     return false, commons.UNKNOWN
-
-    //expr := commons.GetStaticQueryAttributes()["annotation-coverage"].RegExp
-    //match, _ := regexp.MatchString(expr, s)
-    //return match
 }
 
 func GetStaticQueryAttributeFromToken(s string, token commons.Token) (StaticQueryAttribute, error) {
@@ -82,23 +78,6 @@ func GetStaticQueryAttributeFromToken(s string, token commons.Token) (StaticQuer
 
     return staticQueryAttribute, nil
 }
-
-/*func GetAnnotationCoverageFromToken(token string) (AnnotationCoverage, error) {
-    var err error 
-    annotationCoverage := AnnotationCoverage{Value: 0, Operator: ">="}
-    expr := commons.GetStaticQueryAttributes()["annotation-coverage"].RegExp
-    r := regexp.MustCompile(expr)
-    matches := r.FindStringSubmatch(token)
-    if len(matches) > 2 {
-        annotationCoverage.Operator = matches[1]
-        annotationCoverage.Value, err = strconv.Atoi(matches[2])
-        if err != nil {
-            return annotationCoverage, errors.New("Oops: " + matches[2])
-        }
-    }
-
-    return annotationCoverage, nil
-}*/
 
 func StrToToken(str string) commons.Token {
 	switch str {
@@ -138,11 +117,6 @@ func IsTokenValid(currentToken commons.Token, lastToken commons.Token) bool {
 				return true
 			}
 			return false
-		/*case commons.LABEL:
-			if (lastToken == commons.OR) || (lastToken == commons.AND) || (lastToken == commons.LPAR) || (lastToken == commons.NOT) {
-				return true
-			}
-			return false*/
 		case commons.RPAR:
 			if commons.IsGeneralLabelToken(lastToken) {
 				return true
@@ -166,11 +140,6 @@ func IsTokenValid(currentToken commons.Token, lastToken commons.Token) bool {
             }
 
             return false
-        /*case commons.ANNOTATION_COVERAGE:
-            if (lastToken == commons.OR) || (lastToken == commons.AND) || (lastToken == commons.LPAR) || (lastToken == commons.NOT) {
-                return true
-            }
-            return false*/
 	}
 
 	return false
@@ -422,11 +391,6 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
                         return parseResult, err
                     }
                     parseResult.query += (staticQueryAttribute.QueryName + staticQueryAttribute.Operator + strconv.Itoa(staticQueryAttribute.Value))
-                    /*annotationCoverage, err := GetAnnotationCoverageFromToken(token)
-                    if err != nil {
-                        return parseResult, err
-                    }
-                    parseResult.query += ("q.annotated_percentage" + annotationCoverage.Operator + strconv.Itoa(annotationCoverage.Value))*/
                 }
             } else {
                 return parseResult, errors.New(p._getErrorMessage(token, false))
