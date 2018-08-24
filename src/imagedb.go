@@ -3432,7 +3432,7 @@ func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult,
         q1 = parseResult.query
         queryValues = parseResult.queryValues
     } else {
-        q1 = "i.key = $1"
+        q1 = "q.key = $1"
         queryValues = append(queryValues, imageId)
     }
 
@@ -3458,21 +3458,25 @@ func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult,
 
     q := fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
                              json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                             q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
+                             q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked
                                    FROM (
-                                     SELECT i.key as key, i.id as image_id, an.label_id as label_id, 
-                                     an.id as entry_id, an.uuid as annotation_uuid, an.num_of_valid as num_of_valid, 
-                                     an.num_of_invalid as num_of_invalid, i.width as width, i.height as height,
-                                     i.unlocked as image_unlocked
-                                     FROM image i
-                                     JOIN image_annotation an ON i.id = an.image_id
-                                     JOIN image_provider p ON i.image_provider_id = p.id
-                                     JOIN label_accessor a ON a.label_id = an.label_id
-                                     LEFT JOIN image_annotation_coverage q ON q.image_id = i.id
-                                     WHERE (i.unlocked = true %s) AND p.name = 'donation' AND %s
-                                     AND an.auto_generated = false
-                                     
-                                     
+                                     SELECT key, image_id, q.label_id, entry_id, annotation_uuid, num_of_valid,
+                                     num_of_invalid, image_width, image_height, image_unlocked, annotated_percentage
+                                     FROM
+                                     (
+                                         SELECT i.key as key, i.id as image_id, an.label_id as label_id, 
+                                         an.id as entry_id, an.uuid as annotation_uuid, an.num_of_valid as num_of_valid, 
+                                         an.num_of_invalid as num_of_invalid, i.width as image_width, i.height as image_height,
+                                         i.unlocked as image_unlocked, qq.annotated_percentage
+                                         FROM image i
+                                         JOIN image_annotation an ON i.id = an.image_id
+                                         JOIN image_provider p ON i.image_provider_id = p.id
+                                         LEFT JOIN image_annotation_coverage qq ON qq.image_id = i.id
+                                         WHERE (i.unlocked = true %s) AND p.name = 'donation'
+                                         AND an.auto_generated = false
+                                     ) q
+                                     JOIN label_accessor a ON a.label_id = q.label_id
+                                     WHERE %s
                                    ) q1
 
                                    JOIN
@@ -3486,7 +3490,8 @@ func getAnnotations(apiUser datastructures.APIUser, parseResult ParseResult,
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
                                    GROUP BY q1.key, q.annotation_id, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations, q1)
+                                   q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked`, 
+                                   includeOwnImageDonations, q1)
 
     rows, err := db.Query(q, queryValues...)
     if err != nil {
@@ -3621,39 +3626,49 @@ func getImagesLabels(apiUser datastructures.APIUser, parseResult ParseResult, ap
                                                                 WHERE (i.unlocked = true %s)
                         ),
                         image_ids AS (
-                            SELECT image_id, annotated_percentage
+                            SELECT image_id, annotated_percentage, image_width, image_height, image_key, image_unlocked
                             FROM
                             (
-                                SELECT q1.image_id, array_agg(label)::text[] as accessors, c.annotated_percentage
-                                FROM 
+                                SELECT image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
+                                i.unlocked as image_unlocked, i.key as image_key
+                                FROM
                                 (
-                                    SELECT image_id, accessor as label
-                                    FROM image_productive_labels p 
+                                    SELECT q1.image_id, array_agg(label)::text[] as accessors, 
+                                    COALESCE(c.annotated_percentage, 0) as annotated_percentage
+                                    FROM 
+                                    (
+                                        SELECT image_id, accessor as label
+                                        FROM image_productive_labels p 
 
-                                    UNION ALL
+                                        UNION ALL
 
-                                    SELECT image_id, label as label
-                                    FROM image_trending_labels t
-                                ) q1
-                                JOIN image_annotation_coverage c ON c.image_id = q1.image_id
-                                GROUP BY q1.image_id, c.annotated_percentage
+                                        SELECT image_id, label as label
+                                        FROM image_trending_labels t
+                                    ) q1
+                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id
+                                    GROUP BY q1.image_id, c.annotated_percentage
+                                ) q2
+                                JOIN image i ON i.id = q2.image_id
                             ) q
                             WHERE %s
                         )
 
 
-                        SELECT i.key, i.width, i.height, i.unlocked,
+                        SELECT image_key, image_width, image_height, image_unlocked,
                         json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels))
                         FROM
                         (
                             SELECT q3.image_id, q3.label, q3.num_of_valid, q3.num_of_invalid,
                             coalesce(json_agg(json_build_object('name', q3.sublabel, 'num_yes', q3.num_of_valid, 'num_no', q3.num_of_invalid)) 
-                                                FILTER (WHERE q3.sublabel is not null), '[]'::json) as sublabels
+                                                FILTER (WHERE q3.sublabel is not null), '[]'::json) as sublabels,
+                            image_key, image_width, image_height, image_unlocked
                             FROM
                             (
                                 SELECT ii.image_id, CASE WHEN pl.name is not null then pl.name else l.name end as label, 
                                        COALESCE(CASE WHEN l.parent_id is not null then l.name else null end, null) as sublabel,
-                                       v.num_of_valid as num_of_valid, v.num_of_invalid as num_of_invalid
+                                       v.num_of_valid as num_of_valid, v.num_of_invalid as num_of_invalid, 
+                                       ii.image_key as image_key, ii.image_width as image_width, ii.image_height as image_height,
+                                       ii.image_unlocked as image_unlocked
                                 FROM
                                 image_ids ii
                                 JOIN image_productive_labels p on p.image_id = ii.image_id
@@ -3664,15 +3679,16 @@ func getImagesLabels(apiUser datastructures.APIUser, parseResult ParseResult, ap
                                 UNION ALL
 
                                 SELECT ii.image_id, s.name as label, null as sublabel, 
-                                0 as num_of_valid, 0 as num_of_invalid
+                                0 as num_of_valid, 0 as num_of_invalid,
+                                ii.image_key as image_key, ii.image_width as image_width, ii.image_height as image_height,
+                                ii.image_unlocked as image_unlocked
                                 FROM image_ids ii
                                 JOIN image_label_suggestion ils on ii.image_id = ils.image_id
                                 JOIN label_suggestion s on ils.label_suggestion_id = s.id
                             ) q3
-                            GROUP BY image_id, label, num_of_valid, num_of_invalid
+                            GROUP BY image_id, image_key, image_width, image_height, image_unlocked, label, num_of_valid, num_of_invalid
                         ) q4
-                        JOIN image i on q4.image_id = i.id
-                        GROUP BY i.key, i.width, i.height, i.unlocked
+                        GROUP BY image_key, image_width, image_height, image_unlocked
                         %s`, 
                       includeOwnImageDonations, includeOwnImageDonations, parseResult.query, shuffleStr)
 

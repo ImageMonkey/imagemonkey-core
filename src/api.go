@@ -1147,7 +1147,7 @@ func main(){
 		    }
 
 			queryParser := NewQueryParserV2(query)
-			queryParser.AllowAnnotationCoverage(true)
+			queryParser.AllowStaticQueryAttributes(true)
 	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
@@ -1462,7 +1462,7 @@ func main(){
 		        }
 
 		        queryParser := NewQueryParserV2(query)
-		        queryParser.AllowAnnotationCoverage(true)
+		        queryParser.AllowStaticQueryAttributes(true)
 		        parseResult, err := queryParser.Parse(1)
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
@@ -1739,7 +1739,7 @@ func main(){
 	        }
 
 			queryParser := NewQueryParser(query)
-			queryParser.AllowAnnotationCoverage(true)
+			queryParser.AllowStaticQueryAttributes(true)
 	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})

@@ -229,7 +229,7 @@ func TestNotOperator6(t *testing.T) {
 
 func TestQueryAnnotationCoverage(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage=10%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage=10"), true)
@@ -237,21 +237,21 @@ func TestQueryAnnotationCoverage(t *testing.T) {
 
 func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage = 10%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	_, err := queryParser.Parse(1)
 	ok(t, err)
 }
 
 func TestQueryWrongAnnotationCoverage(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.cov=1")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	_, err := queryParser.Parse(1)
 	notOk(t, err)
 }
 
 func TestQueryAnnotationCoverageOperator(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage>=1%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>=1"), true)
@@ -259,7 +259,7 @@ func TestQueryAnnotationCoverageOperator(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator1(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage<=50%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<=50"), true)
@@ -267,7 +267,7 @@ func TestQueryAnnotationCoverageOperator1(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator2(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage=70%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage=70"), true)
@@ -275,7 +275,7 @@ func TestQueryAnnotationCoverageOperator2(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator3(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage<50%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<50"), true)
@@ -283,7 +283,7 @@ func TestQueryAnnotationCoverageOperator3(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator4(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage>50%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>50"), true)
@@ -291,10 +291,18 @@ func TestQueryAnnotationCoverageOperator4(t *testing.T) {
 
 func TestQueryMultipleAnnotationCoverage(t *testing.T) {
 	queryParser := NewQueryParserV2("annotation.coverage > 10% & annotation.coverage < 10%")
-	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>10 AND q.annotated_percentage<10"), true)
+}
+
+func TestQueryImageWidth(t *testing.T) {
+	queryParser := NewQueryParserV2("image.width > 50px")
+	queryParser.AllowStaticQueryAttributes(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, strings.Contains(parseResult.query, "q.image_width>50"), true)
 }
 
 
