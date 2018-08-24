@@ -6,6 +6,7 @@ import (
 	"../src/datastructures"
 	"time"
 	"os/exec"
+	"net/url"
 )
 
 
@@ -29,6 +30,38 @@ func runDataProcessor(t *testing.T) {
 	case err := <-done:
 	    ok(t, err)
 	}
+}
+
+func testBrowseAnnotation(t *testing.T, query string, requiredNumOfResults int, token string) {
+	type AnnotationTask struct {
+	    Image struct {
+	        Id string `json:"uuid"`
+	        Width int32 `json:"width"`
+	        Height int32 `json:"height"`
+	    } `json:"image"`
+
+	    Id string `json:"uuid"`
+	}
+
+	var annotationTasks []AnnotationTask
+
+	u := BASE_URL + API_VERSION + "/validations/unannotated"
+	req := resty.R().
+			    SetQueryParams(map[string]string{
+		          "query": url.QueryEscape(query),
+		        }).
+				SetResult(&annotationTasks)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Get(u)
+
+	ok(t, err)
+    equals(t, resp.StatusCode(), 200)
+
+    equals(t, len(annotationTasks), requiredNumOfResults)
 }
 
 
@@ -271,5 +304,162 @@ func TestBrowseByCoverageFullyContained(t *testing.T) {
 	coverage, err := db.GetImageAnnotationCoverageForImageId(imageId)
 	ok(t, err)
 	equals(t, coverage, 65)
+}
+
+func TestBrowseAnnotationQuery(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	//give first image the labels cat and dog
+	testLabelImage(t, imageIds[0], "dog")
+	testLabelImage(t, imageIds[0], "cat")
+
+	//add label 'cat' to second image
+	testLabelImage(t, imageIds[1], "cat")
+
+	testBrowseAnnotation(t, "cat&dog", 2, "")
+	testBrowseAnnotation(t, "cat|dog", 3, "")
+	testBrowseAnnotation(t, "cat|cat", 2, "")
+
+	//annotate image with label dog
+	testAnnotate(t, imageIds[0], "dog", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+
+	//now we expect just one result 
+	testBrowseAnnotation(t, "cat&dog", 1, "")
+	testBrowseAnnotation(t, "cat", 2, "")
+
+	//annotate image with label cat
+	testAnnotate(t, imageIds[0], "cat", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+
+	//now we should get no result
+	testBrowseAnnotation(t, "cat&dog", 0, "")
+	testBrowseAnnotation(t, "dog", 0, "")
+
+	//there is still one cat left
+	testBrowseAnnotation(t, "cat", 1, "")
+
+}
+
+func TestBrowseAnnotationQueryLockedButOwnDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token)
+
+	testBrowseAnnotation(t, "apple", 2, token)
+}
+
+func TestBrowseAnnotationQueryLockedButForeignDonation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
+	token1 := testLogin(t, "user1", "pwd1", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token1)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token)
+
+	testBrowseAnnotation(t, "apple", 1, token)
+}
+
+func TestBrowseAnnotationQueryLockedOwnDonationButQuarantine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageIds[0])
+	ok(t, err)
+
+	err = db.PutImageInQuarantine(imageIds[1])
+	ok(t, err)
+
+	testBrowseAnnotation(t, "apple", 0, token)
+}
+
+
+func TestBrowseAnnotationQuery1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	num := testMultipleDonate(t)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testBrowseAnnotation(t, "~tree", num, "")
+	testBrowseAnnotation(t, "apple", num, "")
+
+	testBrowseAnnotation(t, "~tree | apple", num, "")
+	testBrowseAnnotation(t, "~tree & apple", num, "")
+	testBrowseAnnotation(t, "~tree & car", 0, "")
+
+	
+	testAnnotate(t, imageIds[0], "apple", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+
+	testBrowseAnnotation(t, "~tree", num-1, "")
+	testBrowseAnnotation(t, "apple", num-1, "")	
+
+}
+
+
+func TestBrowseAnnotationQueryAnnotationCoverage(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "orange")
+
+	testAnnotate(t, imageId, "apple", "", 
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+
+	runDataProcessor(t)
+
+	testBrowseAnnotation(t, "orange & annotation.coverage > 0%", 1, "")
+}
+
+func TestBrowseAnnotationQueryImageDimensions(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "orange")
+
+	testAnnotate(t, imageId, "apple", "", 
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+
+	runDataProcessor(t)
+
+	testBrowseAnnotation(t, "orange & annotation.coverage > 0% & image.width > 100px & image.height > 100px", 1, "")
 }
 
