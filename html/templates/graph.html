@@ -13,8 +13,7 @@
   
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
-  <script src="js/semantic.min.js"></script> 
-  <script src="js/semantic.min.js"></script> 
+  <script src="js/semantic.min.js"></script>  
 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
@@ -22,14 +21,10 @@
   <script src="js/ace/ext-language_tools.js"></script>
   <script src="js/d3.v4.min.js"></script>
   <script src="js/d3-selection-multi.v1.js"></script>
+  <script src="js/mousetrap.min.js"></script>
+  <script src="js/force-graph/force-graph.min.js"></script>
 
   <style>
-
-	.nodes circle {
-	  	stroke: #fff;
-	  	stroke-width: 1.5px;
-	}
-
 	.tooltip {
 	  	position:absolute;
 	  	text-align: center;
@@ -68,13 +63,12 @@
 	    text-align: center;
   	}
 
-  	.link { stroke: #999; stroke-opacity: .6; stroke-width: 5px; }
-
   </style>
 
   <script type="text/javascript">
-  	var link, simulation, svg, node, radius, color, tooltip, zoom, main, link, edgepaths, edgelabels;
   	var editor;
+  	var Graph;
+  	var clickCtr = 0;
 
 	$(document).ready(function(){
 		{{ if eq .editorMode true }}
@@ -82,6 +76,14 @@
 		{{ end }}
 
 		initializeGraph();
+
+		Mousetrap.bind("+", function(e, combo) { 
+			zoomIn();
+		});
+
+		Mousetrap.bind("-", function(e, combo) { 
+			zoomOut();
+		});
 
 		$('#graphInfoButton').click(function(e) {
         	$('#labelGraphInfoDlg').modal('show');
@@ -92,13 +94,26 @@
       	});
 
       	$('#zoomInButton').click(function(e) {
-        	zoomMe(1.2); // increase on 0.2 each time
+        	zoomIn();
       	});
 
       	$('#zoomOutButton').click(function(e) {
-        	zoomMe(1/1.2); // decrease on 0.2 each time
+        	zoomOut();
       	});
 	});
+
+	function zoomOut() {
+		var currentZoom = Graph.zoom();
+		var boost = 1;
+		if(currentZoom > 5.5) //if we are zoomed in very far, make it possible to zoom out faster
+			boost = 5;
+        Graph.zoom((currentZoom - (0.3 * boost)), 500); //decrease 0.3 each time
+	}
+
+	function zoomIn() {
+		var currentZoom = Graph.zoom();
+        Graph.zoom((currentZoom + 0.3), 500); //increase 0.3 each time
+	}
 
 	function initializeEditor() {
 		ace.config.set('themePath', 'js/ace/themes/');
@@ -229,156 +244,51 @@
 
 	}
 
+	function handlePotentialNodeDoubleClick(node) {
+		clickCtr += 1
+		if(clickCtr === 1) {
+			setTimeout(function(){  
+				if(clickCtr === 2) {
+					buildQuery(node.identifier);
+				} 
+				clickCtr = 0;
+			}, 500);
+		}
+		else if(clickCtr === 2) {
+			buildQuery(node.identifier);
+			clickCtr = 0;
+		}
+	}
+
 	function populateGraph(graph) {
 		d3.select("#labelGraph").html(null); //clear all
 
-		var maxWidth = document.getElementById("labelGraphContainer").clientWidth - 50;
-		var maxHeight = 1500;
-		$("#labelGraph").attr("width", maxWidth);
-		$("#labelGraph").attr("height", maxHeight);
+		const elem = document.getElementById('labelGraph');
 
-		svg = d3.select("#labelGraph"),
-	    	width = +svg.attr("width"),
-	    	height = +svg.attr("height")
-
-	    main = svg.append("g");
-
-
-	    zoom = d3.zoom()
-            .scaleExtent([1, 10])
-            .on("zoom", zoomed);
-
-		color = d3.scaleOrdinal(d3.schemeCategory20);
-	  
-		radius = d3.scaleSqrt()
-	    	.range([0, 6]);
-
-		simulation = d3.forceSimulation(graph.links)
-		.force("link", d3.forceLink()
-			.id(function(d) { return d.id; }))
-		.force("charge", d3.forceManyBody()
-			.strength(function(d) { return -600;}))
-		.force("center", d3.forceCenter(width / 2, height / 2))
-		.force("link", d3.forceLink()
-			.distance(function(d) { return d.distance; }).strength(1));
-		//.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) { return d.size; }).strength(1));
-		//.force("linkForce", function(d) { return 100; });
-
-		svg.append("svg:defs").append("svg:marker")
-            .attr("id", "arrowhead")
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 45) // This sets how far back it sits, kinda
-            .attr("refY", 0)
-            .attr("markerWidth", 12)
-            .attr("markerHeight", 12)
-            .attr("orient", "auto")
-            .attr("markerUnits", "userSpaceOnUse") //do not make arrowhead dependent on line width
-            .append("svg:path")
-            .attr("d", "M0,-5L10,0L0,5")
-            .style("fill", "#aaa"); //arrowhead color
-
-
-		link = main.selectAll(".link")
-            .data(((graph.links === null) ? [] : graph.links))
-            .enter()
-            .append("line")
-            .attr("class", "link")
-            .attr('marker-end', function(d) { return d.directed ? 'url(#arrowhead)' : '' }); //show arrowhead only if directed graph
-
-        link.append("title")
-            .text(function (d) {return d.type;});
-
-        edgepaths = main.selectAll(".edgepath")
-            .data(((graph.links === null) ? [] : graph.links))
-            .enter()
-            .append('path')
-            .attrs({
-                'class': 'edgepath',
-                'fill-opacity': 0,
-                'stroke-opacity': 0,
-                'id': function (d, i) {return 'edgepath' + i}
-            })
-            .style("pointer-events", "none");
-
-        edgelabels = main.selectAll(".edgelabel")
-            .data(((graph.links === null) ? [] : graph.links))
-            .enter()
-            .append('text')
-            .style("pointer-events", "none")
-            .attrs({
-                'class': 'edgelabel',
-                'id': function (d, i) {return 'edgelabel' + i},
-                'font-size': function (d) {return d.fontsize; },
-                'fill': '#aaa'
-            });
-
-        edgelabels.append('textPath')
-            .attr('xlink:href', function (d, i) {return '#edgepath' + i})
-            .style("text-anchor", "middle")
-            .style("pointer-events", "none")
-            .attr("startOffset", "50%")
-            .text(function (d) {return d.label});
-
-
-	  	node = main.append("g")
-	      .attr("class", "nodes")
-	    .selectAll("g")
-	    .data(graph.nodes)
-	    .enter().append("g")
-	  		.style('transform-origin', '50% 50%')
-	   	.call(d3.drag()
-	          .on("start", dragstarted)
-	          .on("drag", dragged)
-	          .on("end", dragended));
-	  
-	  	node.append('circle')
-	      .attr("r", function(d) { return radius(d.size / 2); })
-	      .attr("fill", function(d) { 
-	      					if(d.color === "") //in case no color is provided, default to grey
-	      						return d3.color("grey");
-	      					return d3.color(d.color); 
-	      				})
-	      .attr("label-identifier", function(d) { return d.identifier; })
-	      .attr("label-uuid", function(d) { return d.uuid; })
-	      .on("click", onNodeClicked)
-	      .on("mouseenter", function(d) {
-	      		if(d.onhover !== "") { //in case the node contains a 'onhover' property
-	      			showWikipediaPagePreview(d.onhover, 100, d3.event.clientY - 200);
-	            }
-            })
-
-            .on("mouseout", function(d) {
-            	hideTooltip();
-	        });
-
-	    
-	  
-	  	node.append("text")
-	  	  .text(function(d) { return d.name; })
-	      .attr("dy", ".35em")
-	      .attr("text-anchor", "middle")
-	      .style("font-size", function(d) { return d.fontsize.toString() + "px"; })
-	      .attr("pointer-events", "none"); //ignore pointer events for text
-
-	  	simulation
-	      .nodes(graph.nodes)
-	      .on("tick", ticked);
-
-
-	  	simulation.force("link")
-	      .links(((graph.links === null) ? [] : graph.links));
-
-	    tooltip = d3.select("body")
-                  .append("div")
-                        .attr("class", "tooltip")
-                        .style("opacity", 0)
-                        .style("position","fixed")
-                        .style("display", "block")
-                        .style("top", 100)
-                        .style("left", 100)
-                        .style("pointer-events","none");
-
-    	svg.call(zoom).append("g");
+	    Graph = ForceGraph()(elem)
+	      .backgroundColor('#101020')
+	      .nodeRelSize(6)
+	      .nodeColor(function(node) 
+	      			 { 
+	      				if(node.color === "") {
+	      					return 'rgba(166,206,227,0.8)';
+	      				}
+	      				return node.color;
+	      			 }
+	  	  )
+	      .nodeLabel(node => `${node.name}`)
+	      .linkColor(() => 'rgba(255,255,255,0.2)')
+	      .linkDirectionalParticles(1)
+	      .enableZoomPanInteraction(true)
+	      .enableNodeDrag(true)
+	      .onNodeHover(node => elem.style.cursor = node ? 'pointer' : null)
+	      .onNodeClick(node => {
+	        // Center/zoom on node
+	        Graph.centerAt(node.x, node.y, 1000);
+	        Graph.zoom(8, 2000);
+	        handlePotentialNodeDoubleClick(node);
+	      })
+	      .graphData(graph);
 	    
 	}
 
@@ -406,76 +316,6 @@
         //.style("top", (yPos - 190) + "px");
         .style("left", xPos + "px")   
         .style("top", yPos + "px");
-	}
-
-
-	function ticked() {
-		link
-            .attr("x1", function (d) {return d.source.x;})
-            .attr("y1", function (d) {return d.source.y;})
-            .attr("x2", function (d) {return d.target.x;})
-            .attr("y2", function (d) {return d.target.y;});
-
-        node
-            .attr("transform", function (d) {return "translate(" + d.x + ", " + d.y + ")";});
-
-        edgepaths.attr('d', function (d) {
-            return 'M ' + d.source.x + ' ' + d.source.y + ' L ' + d.target.x + ' ' + d.target.y;
-        });
-
-        edgelabels.attr('transform', function (d) {
-            if (d.target.x < d.source.x) {
-                var bbox = this.getBBox();
-
-                rx = bbox.x + bbox.width / 2;
-                ry = bbox.y + bbox.height / 2;
-                return 'rotate(180 ' + rx + ' ' + ry + ')';
-            }
-            else {
-                return 'rotate(0)';
-            }
-        });
-
-        //push link label a bit away from link to avoid overlapping
-        edgelabels.attr('dy', '-3');
-	}
-
-	function onNodeClicked(d, i) {
-		d3.select(this).transition()
-	      .style("fill", "black")
-	      .attr("r", 64)
-	    .transition()
-	      .attr("r", 32)
-	      .style("fill", color(i));
-
-	    buildQuery(d3.select(this).attr("label-identifier"));
-	}
-
-	function dragstarted(d) {
-	  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-	  d.fx = d.x;
-	  d.fy = d.y;
-	}
-
-	function dragged(d) {
-	  d.fx = d3.event.x;
-	  d.fy = d3.event.y;
-	}
-
-	function dragended(d) {
-	  if (!d3.event.active) simulation.alphaTarget(0);
-	  d.fx = null;
-	  d.fy = null;
-	}
-
-	function zoomed() {
-		main.attr("transform", d3.event.transform);
-    }
-    function zoomMe(zoomLevel) {
-  		svg.transition()
-	      .delay(100)
-	      .duration(700)
-	      .call(zoom.scaleBy, zoomLevel);
 	}
 
    </script>
@@ -529,7 +369,7 @@
 			<div class="row" style="margin-top:1em; margin-right:1em;">
 				<div class="sixteen wide right aligned column">
 					<button class="ui button" button id="zoomInButton"><i class="search plus icon"></i>  Zoom In  </button>
-  					<button class="ui button" id="zoomOutButton"><i class="search minus icon"></i> Zoom Out</button>
+  					<button class="ui button" id="zoomOutButton"><i class="search minus icon"></i> Zoom Out </button>
   					<button class="ui button" id="graphInfoButton"><i class="info icon"></i> Info</button>
 				</div>
 				<div class="sixteen wide center aligned column" id="labelGraphContainer">
@@ -551,7 +391,7 @@
 					  </div>
 					</div>
 
-					<svg id="labelGraph"></svg>
+					<div id="labelGraph"></div>
 				</div>
 			</div>
 		</div>
