@@ -27,6 +27,7 @@ type LabelGraphNode struct {
     Color string `json:"color"`
     Uuid string `json:"uuid"`
     OnHover string `json:"onhover"`
+    Image string `json:"image"`
 }
 
 type LabelGraphEdge struct {
@@ -163,6 +164,11 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 			}
 		}
 
+
+		labelGraphNode.Image, err = strconv.Unquote(node.Attrs["image"])
+		if err != nil { //doesn't contain quotes
+			labelGraphNode.Image = node.Attrs["image"]
+		}
 
 
 		labelGraphNode.Color = node.Attrs["color"]
