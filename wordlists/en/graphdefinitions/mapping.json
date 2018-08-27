@@ -1,10 +1,10 @@
 {
-	"graph.dot" : {
-		"name": "main"
+	"test.dot" : {
+		"name": "test"
 	},
 
-	"imagenet.dot": {
-		"name": "imagenet",
+	"main.dot": {
+		"name": "main",
 		"description": "",
 		"author": "dobkeratops",
 		"homepage": "https://github.com/dobkeratops"
