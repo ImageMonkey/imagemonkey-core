@@ -69,6 +69,10 @@
   	var editor;
   	var Graph;
   	var clickCtr = 0;
+  	var images = {};
+  	var searchLabels = [];
+  	var highlightedLinks = new Set();
+  	var existingNodes = new Set();
 
 	$(document).ready(function(){
 		{{ if eq .editorMode true }}
@@ -99,6 +103,15 @@
 
       	$('#zoomOutButton').click(function(e) {
         	zoomOut();
+      	});
+
+      	$('#highlightExistingNodesCheckbox').checkbox({
+      		onChecked: function() {
+      			colorExistingNodes();
+      		},
+      		onUnchecked: function() {
+      			clearExistingNodes();
+    		}
       	});
 	});
 
@@ -204,6 +217,29 @@
 	    });
 	}
 
+	function populateSearch(nodes) {
+		for(var i = 0; i < nodes.length; i++) {
+			searchLabels.push({title: nodes[i].name, nodeId: nodes[i].id});
+		}
+
+		//connect after searchLabels is connected
+		$('#searchLabel').search({source: searchLabels,
+									   onSelect: function(result, response) {
+									   	colorNodes(result.nodeId);
+									   	_existingNodes = new Set();
+									   },
+									   onResultsClose: function() {
+									   	if($('#searchLabel').search('get value') === "") {
+									   		if(isHighlightExistingNodesChecked())
+									   			colorExistingNodes();
+									   		else
+									   			clearExistingNodes();
+									   		clearColoredNodes();
+									   	}
+									   }
+								});
+	}
+
 
 	function initializeGraph() {
 		{{ if eq .editorMode false }}
@@ -212,6 +248,7 @@
 	      url: url,
 	      dataType: 'json',
 	      success: function(data){
+	      	populateSearch(data.graph.nodes);
 	      	populateGraph(data.graph);
 	      	populateInfoDlg(data.metadata);
 	      }
@@ -260,8 +297,76 @@
 		}
 	}
 
+	function centerGraphAtCoordinates(x, y) {
+		// Center/zoom on node
+	    Graph.centerAt(x, y, 1000);
+	    Graph.zoom(8, 2000);
+	}
+
+	function isHighlightExistingNodesChecked() {
+		return $("#highlightExistingNodesCheckbox").checkbox("is checked");
+	}
+
+	function colorExistingNodes() {
+		_existingNodes = existingNodes;
+	}
+
+	function clearExistingNodes() {
+		_existingNodes = new Set();
+	}
+
+	function clearColoredNodes() {
+		highlightedLinks = new Set();
+		highlightedNodes = new Set();
+	}
+
+	function colorNodes(nodeId) {
+		highlightedLinks = new Set();
+		highlightedNodes = new Set();
+
+		var nodes = Graph.graphData().nodes;
+		for(var i = 0; i < nodes.length; i++) {
+			if(nodes[i].id === nodeId) {
+				//centerGraphAtCoordinates(nodes[i].x, nodes[i].y);
+				highlightedLinks.add(nodeId);
+				break;
+			}
+		}
+
+		var links = Graph.graphData().links;
+		for(var i = 0; i < links.length; i++) {
+			if(highlightedLinks.has(links[i].target.id))
+				highlightedNodes.add(links[i].source.id);
+			
+			if(highlightedLinks.has(links[i].source.id))
+				highlightedNodes.add(links[i].target.id);
+		}
+	}
+
 	function populateGraph(graph) {
 		d3.select("#labelGraph").html(null); //clear all
+		var redHighlightingColor = 'rgba(255,0,0,0.3)';
+		var greenHighlightingColor = 'rgba(255,20,147,0.9)';
+		images = {};
+		highlightedNodes = new Set();
+		highlightedLinks = new Set();
+		existingNodes = new Set();
+
+		var filteredNodes = new Set();
+		var nodes = graph.nodes;
+		for(var i = 0; i < nodes.length; i++) {
+			if("image" in nodes[i]) {
+				if(nodes[i].image !== "")
+					filteredNodes.add(nodes[i].id);
+			}
+
+			if("uuid" in nodes[i]) {
+				if(nodes[i].uuid !== "")
+					existingNodes.add(nodes[i].id);
+			}
+		}
+
+		_existingNodes = new Set(); //per default we do not color existing nodes
 
 		const elem = document.getElementById('labelGraph');
 
@@ -270,25 +375,55 @@
 	      .nodeRelSize(6)
 	      .nodeColor(function(node) 
 	      			 { 
-	      				if(node.color === "") {
+	      				if(highlightedNodes.has(node.id))
+	      					return redHighlightingColor;
+
+	      				if(_existingNodes.has(node.id))
+	      					return greenHighlightingColor;
+
+	      				if(node.color === "")
 	      					return 'rgba(166,206,227,0.8)';
-	      				}
+
 	      				return node.color;
 	      			 }
 	  	  )
+	  	  .linkWidth(link => (highlightedLinks.has(link.target.id) || highlightedLinks.has(link.source.id)) ? 5 : 1)
 	      .nodeLabel(node => `${node.name}`)
-	      .linkColor(() => 'rgba(255,255,255,0.2)')
+	      .linkColor(link => (highlightedLinks.has(link.target.id) || highlightedLinks.has(link.source.id)) ? redHighlightingColor : 'rgba(255,255,255,0.2)')
 	      .linkDirectionalParticles(1)
 	      .enableZoomPanInteraction(true)
 	      .enableNodeDrag(true)
 	      .onNodeHover(node => elem.style.cursor = node ? 'pointer' : null)
 	      .onNodeClick(node => {
-	        // Center/zoom on node
-	        Graph.centerAt(node.x, node.y, 1000);
-	        Graph.zoom(8, 2000);
+	      	colorNodes(node.id);
+	        centerGraphAtCoordinates(node.x, node.y);
 	        handlePotentialNodeDoubleClick(node);
 	      })
+	      .filterCanvasObject({"property": "id", "values": filteredNodes})
+	      .nodeCanvasObject((node, ctx, globalScale) => {
+	      		if(!(node.id in images)) {
+	      			images[node.id] = {"image": new Image(), "loaded": false};
+	      			images[node.id].image.onload = (function(id) {
+	      				return function() {
+	      					var item = images[node.id];
+	      					item.loaded = true;
+	      					images[node.id] = item;
+			            }
+	      			}(node.id));
+	      			images[node.id].image.src = node.image;
+	      		}
+	      		else {
+	      			var item = images[node.id];
+	      			if(item.loaded) {
+	      				var imgWidth = 50;
+	      				var imgHeight = 50;
+	      				ctx.drawImage(item.image, node.x - (imgWidth/2), node.y - (imgHeight/2), imgWidth, imgHeight);
+	      			}
+	      		}
+	      })
 	      .graphData(graph);
+
+	      //setTimeout(function() {console.log(Graph.graphData().nodes)}, 2000)
 	    
 	}
 
@@ -367,6 +502,23 @@
 			{{ end }}
 
 			<div class="row" style="margin-top:1em; margin-right:1em;">
+				<div class="seven wide column">
+				</div>
+				<div class="five wide column">
+					<div class="ui search" id="searchLabel">
+					  <div class="ui icon input">
+					    <input class="prompt" placeholder="Search Labels..." type="text" id="searchLabelInput">
+					    <i class="search icon"></i>
+					  </div>
+					  <div class="results"></div>
+					</div>
+					<div class="ui toggle checkbox" style="margin-top:1em;" id="highlightExistingNodesCheckbox">
+					  <input name="public" type="checkbox">
+					  <label>Highlight existing nodes</label>
+					</div>
+				</div>
+				<div class="four wide right aligned column">
+				</div>
 				<div class="sixteen wide right aligned column">
 					<button class="ui button" button id="zoomInButton"><i class="search plus icon"></i>  Zoom In  </button>
   					<button class="ui button" id="zoomOutButton"><i class="search minus icon"></i> Zoom Out </button>
