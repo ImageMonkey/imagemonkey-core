@@ -1746,9 +1746,14 @@ func main(){
 			query := getParamFromUrlParams(c, "query", "")
 			query, err = url.QueryUnescape(query)
 	        if err != nil {
-	            c.JSON(422, gin.H{"error": "invalid query"})
+	            c.JSON(422, gin.H{"error": "Please provide a valid query"})
 	            return
 	        }
+
+	        if query == "" {
+		    	c.JSON(422, gin.H{"error": "Please provide a valid query"})
+		    	return
+		    }
 
 			queryParser := NewQueryParser(query)
 			queryParser.AllowStaticQueryAttributes(true)
