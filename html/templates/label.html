@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  {{ template "favicon.html" .}}
+  
   <!-- Standard Meta -->
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
@@ -12,7 +14,6 @@
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
@@ -20,16 +21,43 @@
   <script src="js/label.js"></script>
   <script src="js/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="css/jquery-ui.css">
-
+  <script src="js/justified-layout.min.js"></script>
+  <script src="js/mousetrap.min.js"></script>
+  <script src="js/mousetrap-record.min.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/contextjs/context.js"></script>
+  <link rel="stylesheet" href="css/contextjs/context.standalone.css">
+  <script src="js/infinitescroll.js?v=2"></script>
   <script src="js/fingerprint2.min.js"></script>
+  <link rel="stylesheet" href="css/balloon/balloon.min.css">
+  <script src="js/fabric.min.js"></script>
+  <script src="js/fabric_helper.js?v=12"></script>
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
+
+  <style type="text/css">
+    .canvas-container{margin: 0 auto;}
+  </style>
 
   <script type="text/javascript">
+  var browserFingerprint = null;
   var colorMap = {}
   var oldLabelMap = {}
   var newlyAddedLabels = {}
   var labelMap = {{ .labels }};
+  var canvas = null;
+  var cachedAnnotations = null;
+  var annotationsShown = false;
+  var annotationFetchingInProgress = false;
 
   buildColorMap();
+
+  function getCanvasScaleFactor(origImageWidth) {
+    var maxWidth = document.getElementById("imageContainer").clientWidth - 100; //margin
+    var scaleFactor = maxWidth/origImageWidth;
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+    return scaleFactor;
+  }
 
   function labelExists(label){
     if(label in oldLabelMap)
@@ -54,7 +82,7 @@
       var sublabels = oldLabelMap[label];
       if(sublabels !== null){
         for(var i = 0; i < sublabels.length; i++){
-          if(sublabels[i] === sublabel)
+          if(sublabels[i]["name"] === sublabel)
             return true;
         }
       }
@@ -71,35 +99,139 @@
     return false;
   }
 
-  function getNextImage(){
-    clearSelectedLabel(); //clear current label
-    removeAllLabels();
-    $('#mostPopularLabelsContainer').hide();
-    removeAllMostPopularLabels();
-    oldLabelMap = {}
-    newlyAddedLabels = {}
+  //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
+  function getUrlFromImageUrl(imageUrl, imageUnlocked) {
+    var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
 
+    if(imageUrl !== "") {
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+    }
 
-    var url = '{{ .apiBaseUrl }}/v1/labelme';
+    return url;
+  }
+
+  function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
+  function getAnnotations(imageId) {
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/annotations";
+    
+    annotationFetchingInProgress = true;
+    $("#annotationsLoadingIndicator").show();
+
     $.ajax({
       url: url,
       dataType: 'json',
-      complete: function(data){
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      error: function(jqXHR, textStatus, errorThrown){
+        if(jqXHR.status === 422) {
+          cachedAnnotations = [];
+          $('#warningMessageBoxContent').text("No annotations available for that image");
+          $('#warningMessageBox').show(200).delay(1500).hide(200);
+          $('#annotationsLoadingIndicator').hide();
+        }
       },
       success: function(data){
-        $("#image").attr("imageId", data.uuid);
+        cachedAnnotations = [];
 
-        var downloadingImage = new Image();
-        downloadingImage.onload = function(){
-          $("#image").attr("src", this.src);
-          showHideControls(true);
+        var entries;
+        var color;
+        for(var i = 0; i < data.length; i++) {
+          entries = data[i].annotations;
+          for(var j = 0; j < entries.length; j++) {
+            color = getRandomColor();
+            
+            entries[j]["stroke"] = {};
+            entries[j].stroke.color = color;
+
+            entries[j]["fill"] = {};
+            entries[j].fill.color = color;
+            entries[j].fill.opacity = 0.5;
+          }
+          cachedAnnotations = cachedAnnotations.concat(entries);
         }
-        downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/"+data.uuid;
+        drawAnnotations(canvas.fabric(), cachedAnnotations, canvas.fabric().backgroundImage.scaleX);
+        $('#annotationsLoadingIndicator').hide();
+      }
+    });
+  }
+
+  function getNextImage(imageId){
+    showHideMainArea(true);
+    clearSelectedLabel(); //clear current label
+    removeAllLabels();
+    $('#mostPopularLabelsContainer').hide();
+    oldLabelMap = {}
+    newlyAddedLabels = {}
+
+    showHideControls(false, false);
+
+
+    var url = '{{ .apiBaseUrl }}/v1/labelme';
+    if(imageId !== "") {
+      url += '?image_id=' + imageId;
+    }
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        $("#image").attr("imageId", data.image.uuid);
+
+        var scaleFactor = getCanvasScaleFactor(data.image.width);
+        canvas.clear();
+        canvas.setWidth(data.image.width*scaleFactor);
+        canvas.setHeight(data.image.height*scaleFactor);
+
+        canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
+          showHideMainArea(true);
+          showHideControls(true, data.image.unlocked);
+          //drawAnnotations(canvas.fabric(), [data.annotation.data], canvas.fabric().backgroundImage.scaleX);
+        });
+
 
         addOldLabels(data["all_labels"]);
 
-        //get suggested labels
-        getMostPopularLabels();
+
+        {{ if eq .isModerator true }}
+        context.init({preventDoubleContext: false});
+        context.attach('.existing-label', [
+
+          {header: 'Moderator'},
+          {text: 'Remove', action: function(e, selector) {
+                              e.preventDefault();
+                              
+                              if(selector.css("text-decoration").startsWith("line-through")) {
+                                $("#moderatorLabelAlreadyRemovedInfoDlg").modal("show");
+                              } else {
+                                var validationUuid = selector.attr("data-validation-uuid");
+
+                                if(validationUuid !== "") {
+                                  $("#moderatorRemoveLabelDlg").attr("data-remove-label-id", selector.attr("id"));
+                                  $("#moderatorRemoveLabelDlg").attr("data-validation-uuid", validationUuid);
+                                  $("#moderatorRemoveLabelDlg").modal("show");
+                                } else {
+                                  $("#moderatorOnlyRemoveProductiveLabelsInfoDlg").modal("show");
+                                }
+                              }
+                           }
+          }
+        ]);
+        {{ end }}
+
       }
     });
   }
@@ -113,34 +245,77 @@
     }
   }
 
-  function showHideControls(show){
+  function isLabelValid(numOfValid, numOfInvalid) {
+    if((numOfValid + numOfInvalid) > 0) {
+      var probabilityOfBeginValid = numOfValid / (numOfValid + numOfInvalid);
+      if(probabilityOfBeginValid >= 0.75)
+        return true;
+      return false;
+    }
+
+    //images with no validations are always seen as valid
+    return true;
+  }
+  function showHideMainArea(show) {
+    if(show) {
+      $("#mainContainer").show();
+      $("#imgInfo").show();
+      $("#labelInfo").show();
+      $("#mostPopularLabelsContainer").fadeIn("slow");
+      $("#gotoModeContainer").show();
+    } 
+    else {
+      $("#mainContainer").hide();
+      $("#imgInfo").hide();
+      $("#mostPopularLabelsContainer").hide();
+      $("#labelInfo").hide();
+      $("#gotoModeContainer").hide();
+    }
+  }
+
+  function showHideControls(show, imageUnlocked){
     if(show){
       $('#image').show();
       $('#doneButton').show();
       $('#labels').show();
-      $('#loadingIndicator').addClass('active');
       $('#loadingIndicator').hide();
       $('#labelForm').show();
       $('#objectsWithoutLabelText').show();
+
+      if(imageUnlocked)
+        $("#imageLockedLabel").hide();
+      else
+        $("#imageLockedLabel").show();
     }
     else{
       $('#image').hide();
       $('#doneButton').hide();
       $('#labels').hide();
-      $('#loadingIndicator').removeClass('active');
       $('#loadingIndicator').show();
       $('#labelForm').hide();
       $('#objectsWithoutLabelText').hide();
+      $("#imageLockedLabel").hide();
     }
   }
 
   function addOldLabels(input) {
     oldLabelMap = {};
-    if(input !== null){
-      for(var i = 0; i < input.length; i++){
+    if(input !== null) {
+      for(var i = 0; i < input.length; i++) {
         var escapedLabel = escapeHtml(input[i]["label"]);
-        oldLabelMap[escapedLabel] = input[i]["sublabels"];
-        addOldLabel(escapedLabel);
+
+        var sublabels = input[i]["sublabels"];
+        var s = [];
+        if(sublabels !== undefined && sublabels !== null) {
+          for(var j = 0; j < sublabels.length; j++) {
+            s.push(sublabels[j]);
+          }
+          oldLabelMap[escapedLabel] = s;
+        } 
+        else
+          oldLabelMap[escapedLabel] = []; //sublabels;
+        
+        addOldLabel(input[i]);
       }
     }
 
@@ -207,23 +382,64 @@
     })
   }
 
-  var removeAllMostPopularLabels = function(){
+  /*var removeAllMostPopularLabels = function(){
     $('#mostPopularLabels').children().each(function (){
       $(this).remove();
     })
-  }
+  }*/
 
 
-  function addOldLabel(label){
+  function addOldLabel(data){
+    var label = escapeHtml(data["label"]);
+    var displayedLabel = '';
     var color = colorMap[label];
     var subLabels = oldLabelMap[label];
+    var id = '';
+    var elem = null;
+    var strikethrough = false;
     if((subLabels !== null) && (subLabels.length > 0)){
       for(var i = 0; i < subLabels.length; i++){
-        $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[i] +'" label="' + label + '"' + '>' + subLabels[i] + '/' + label + '</div>')));
+        //if the label isn't valid, strike through label and make it grey
+        displayedLabel = subLabels[i]["name"] + '/' + label;
+        id = 'old' + subLabels[i]["validation"]["uuid"];
+        strikethrough = false;
+        if(!isLabelValid(subLabels[i]["validation"]["num_yes"], subLabels[i]["validation"]["num_no"])){
+          displayedLabel = subLabels[i]["name"] + '/' + label;
+          color = '';
+          strikethrough = true;
+        }
+
+
+        elem = $(('<div class="ui huge ' + color + ' label existing-label" sublabel="' + subLabels[i]["name"] 
+                    +'" label="' + label + '"' + ' data-validation-uuid="' 
+                    + data["validation"]["uuid"] + '"' + ' id="' + id + '"' + ' >' + displayedLabel + '</div>'));
+
+        if(strikethrough)
+          elem.css("text-decoration", "line-through");
+
+        $('#labels').prepend(elem);
       }
 
     }
-    $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + label +  '" >' + label + '</div>')));
+
+    //if the label isn't valid, strike through label and make it grey
+    strikethrough = false;
+    displayedLabel = label;
+    if(!isLabelValid(data["validation"]["num_yes"], data["validation"]["num_no"])){
+      displayedLabel = label;
+      color = '';
+      strikethrough = true;
+    }
+
+    id = 'old' + data["validation"]["uuid"];
+    elem = $(('<div class="ui huge ' + color + ' label existing-label" label="' + label +  '"' 
+               + ' data-validation-uuid="' + data["validation"]["uuid"] + '"' + ' id="' + id + '"'
+               + ' >' + displayedLabel + '</div>'));
+
+    if(strikethrough)
+      elem.css("text-decoration", "line-through");
+
+    $('#labels').prepend(elem);
   }
 
   function addLabel(label){
@@ -232,8 +448,9 @@
     var baseLabelExists = labelExists(escapedLabel);
     var subLabels = []; 
     var subLabelsDict = {};
-    if(escapedLabel in labelMap)
-      sublabelsDict = labelMap[escapedLabel]["has"];
+    if(escapedLabel in labelMap){
+      subLabelsDict = labelMap[escapedLabel]["has"];
+    }
 
     for (key in subLabelsDict) {
       if (subLabelsDict.hasOwnProperty(key))
@@ -270,8 +487,10 @@
       $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
 
-    if(!added)
-      $('#labelAlreadyExistsMessage').show(200).delay(1500).hide(200);
+    if(!added) {
+      $('#warningMessageBoxContent').text("Label already exists");
+      $('#warningMessageBox').show(200).delay(1500).hide(200);
+    }
 
     showHideNoLabelsDefined();
   }
@@ -289,25 +508,32 @@
   }
 
   $(document).ready(function(){
-    $('#labelAlreadyExistsMessage').hide();
     $('#mostPopularLabelsContainer').hide();
-    var browserFingerprint = null;
     addOldLabels({{ .image.AllLabels }});
+
+    canvas = new CanvasDrawer("image");
+    canvas.fabric().selection = false;
 
     var availableLabels = [];
     var availableLabelsLookupTable = {} //use map for faster access
-    {{ range $key, $value := .labels }}
-      availableLabelsLookupTable[{{ $key }}] = true;
-      availableLabels.push(escapeHtml({{ $key }}));
-    {{ end }}
-
-    {{ range $value := .labelSuggestions }}
-      var escapedLabelSuggestion = escapeHtml({{ $value }});
-      if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
-        availableLabelsLookupTable[escapedLabelSuggestion] = true;
-        availableLabels.push(escapedLabelSuggestion);
+    var productiveLabels = {{ .labels }};
+    for (var key in productiveLabels) {
+      if (productiveLabels.hasOwnProperty(key)) { 
+        availableLabelsLookupTable[key] = true;
+        availableLabels.push(escapeHtml(key));
       }
-    {{ end }}
+    } 
+
+    var labelSuggestions = {{ .labelSuggestions }};
+    if(labelSuggestions !== null) {
+      for (var i = 0; i < labelSuggestions.length; i++) { 
+        var escapedLabelSuggestion = escapeHtml(labelSuggestions[i]);
+        if(!(escapedLabelSuggestion in availableLabelsLookupTable)){
+          availableLabelsLookupTable[escapedLabelSuggestion] = true;
+          availableLabels.push(escapedLabelSuggestion);
+        }
+      }
+    }
 
     getMostPopularLabels();
 
@@ -320,27 +546,29 @@
     });
 
     $('#addLabelSuggestionButton').click(function(e){
-      var label = $("#labelSuggestion").val();
-      if(label !== ""){
-        if(!(label in availableLabelsLookupTable)){
-          availableLabelsLookupTable[label] = true;
-          availableLabels.push(label);
-        }
-
-        addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
-        $("#labelSuggestion").val(''); //clear input after add
-      }
+      onAddLabelSuggestion();
     });
 
   $('#doneButton').click(function(e) {
     var labelsLst = [];
+    var strLabelsLst = "";
 
         //dict to list
         for (var key in newlyAddedLabels){
-          if (newlyAddedLabels.hasOwnProperty(key)){
-            labelsLst.push({label: key, annotatable: true, sublabels: newlyAddedLabels[key]});
+          if (newlyAddedLabels.hasOwnProperty(key)) {
+            var sublabels = newlyAddedLabels[key];
+            var s = [];
+            strLabelsLst += (escapeHtml(key) + ", ");
+            for(var i = 0; i < sublabels.length; i++) {
+              s.push({"name": sublabels[i]});
+              strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
+            }
+            labelsLst.push({label: key, annotatable: true, sublabels: s});
           }
         }
+
+        if(strLabelsLst.length > 2)
+          strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
 
         var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/labelme";
         var headers = {}
@@ -348,11 +576,9 @@
           headers['X-Browser-Fingerprint'] = browserFingerprint;
 
         if(newlyAddedLabels.length === 0){ //if no label was added, just load next image
-          showHideControls(false);
-          getNextImage();
+          getNextImage("");
         }
         else {
-          showHideControls(false);
           e.preventDefault();
           $.ajax({
             url: url,
@@ -366,7 +592,14 @@
             complete: function(data){
             },
             success: function(data){
-              getNextImage();
+              {{ if eq .mode "default" }}
+              getNextImage("");
+              {{ else }}
+              showHideMainArea(false);
+              updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
+              showBrowseLabelImageGrid();
+              {{ end }}
+              
             }
           });
         }
@@ -386,6 +619,28 @@
     return split(term).pop();
   }
 
+  function onAddLabelSuggestion() {
+    var labels = $("#labelSuggestion").val();
+    if(labels !== ""){
+      var splittedLabels = labels.split(new Settings().getLabelSeparator()).map(item => item.trim()); //split by delimiter and 
+                                                                                                      //remove surrouding spaces around each label
+      var label = "";
+      for(var i = 0; i < splittedLabels.length; i++) { 
+        label = splittedLabels[i];
+        if(label === "")
+          continue;
+
+        if(!(label in availableLabelsLookupTable)) {
+          availableLabelsLookupTable[label] = true;
+          availableLabels.push(label);
+        }
+
+        addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
+        $("#labelSuggestion").val(''); //clear input after add
+      }
+    }
+  }
+
   $("#labelSuggestion")
     // don't navigate away from the field on tab when selecting an item
     .on("keydown", function(event) {
@@ -395,7 +650,7 @@
     }
   })
   .autocomplete({
-    minLength: 0,
+    minLength: 2,
     source: function(request, response) {
       // delegate back to autocomplete, but extract the last term
       response($.ui.autocomplete.filter(
@@ -422,6 +677,41 @@
     browserFingerprint = result;
   });
 
+  var settings = new Settings();
+  Mousetrap.bind(settings.getAddLabelHotkey(), function(e, combo) { 
+    $('#labelSuggestion').autocomplete('close'); //close autocomplete dropdown
+    onAddLabelSuggestion();
+  });
+
+  Mousetrap.bind("alt+a", function(e, combo) { 
+    if(!annotationsShown) {
+      if(!cachedAnnotations && !annotationFetchingInProgress) {
+        getAnnotations($("#image").attr("imageId"));
+        annotationsShown = !annotationsShown;
+      }
+      else {
+        if(cachedAnnotations.length === 0) { //image has no annotations
+          $('#warningMessageBoxContent').text("No annotations available for that image");
+          $('#warningMessageBox').show(200).delay(1500).hide(200);
+        }
+        else {
+          canvas.clearObjects();
+          drawAnnotations(canvas.fabric(), cachedAnnotations, canvas.fabric().backgroundImage.scaleX);
+          annotationsShown = !annotationsShown;
+        }
+      }
+    } 
+    else {
+      canvas.clearObjects();
+      annotationsShown = !annotationsShown;
+    }
+  });
+
+  {{ if eq .mode "default" }}
+  getNextImage({{ .imageId }});
+  {{ end }}
+  
+
 });
 </script>
 </head>
@@ -435,18 +725,22 @@
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
        <h2 class="ui inverted header">Label all objects</h2>
+       <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
 
-   <div class="ui stackable grid vertical stripe mobile reversed">
+   <div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-8em;">
+    {{ if eq .mode "browse" }}
+    {{ template "label_browse_select_mode.html" .}}
+    {{ end }}
+
+
+    {{ template "goto_mode.html" dict "validation" 1 "annotation" 1 "labeling" 0 "currentScreen" "labeling" "visible" false}}
+
     <div class="one wide column">
     </div>
 
-    <!--<div class="four wide center aligned mobile only column">
-      {{ template "img_info.html" .}}
-    </div>-->
-
-    <div class="three wide center aligned column">
+    <div class="three wide center aligned column" style="display: none;" id="labelInfo">
       <p><h2 id="labelsHeader">Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
@@ -463,11 +757,11 @@
       </div>
 
     </div>
-    <div class="eight wide center aligned column">
-      <img class="ui large image centered" src="{{ .apiBaseUrl}}/v1/donation/{{ .image.Id }}" imageId="{{ .image.Id }}" id="image">
-      
+    <div class="eight wide center aligned column" style="display: none;" id="mainContainer">
+      <div id="imageContainer" style="margin-top:-4em;">
+        <canvas imageId="" id="image"></canvas>
+      </div>
 
-      <h2></h2>
       <p id="objectsWithoutLabelText">Do you see any objects without a label?</p>
       <div class="ui centered grid">
         <div class="row">
@@ -496,7 +790,7 @@
             <div class="field">
               <div class="ui center aligned action input" id="labelForm">
                 <div class="ui input">
-                  <input placeholder="Enter label..." type="text" id="labelSuggestion">
+                  <input placeholder="Enter label..." type="text" id="labelSuggestion" class="mousetrap">
                 </div>
                 <button class="ui button" id="addLabelSuggestionButton">Add</button>
               </div>
@@ -506,7 +800,25 @@
           </div>
 
 
-          <div class="ui large loader" id="loadingIndicator"></div>
+          <div class="row" id="loadingIndicator" style="display: none;">
+            <div class="sk-wave overlay">
+              <div class="sk-rect sk-rect1"></div>
+              <div class="sk-rect sk-rect2"></div>
+              <div class="sk-rect sk-rect3"></div>
+              <div class="sk-rect sk-rect4"></div>
+              <div class="sk-rect sk-rect5"></div>
+            </div>
+          </div>
+
+          <div class="row" id="annotationsLoadingIndicator" style="display: none;">
+            <div class="sk-wave overlay">
+              <div class="sk-rect sk-rect1"></div>
+              <div class="sk-rect sk-rect2"></div>
+              <div class="sk-rect sk-rect3"></div>
+              <div class="sk-rect sk-rect4"></div>
+              <div class="sk-rect sk-rect5"></div>
+            </div>
+          </div>
 
           <h1></h1>
         </div>
@@ -520,19 +832,23 @@
         </div>
       </div>
 
-      <div class="ui warning message" hidden id="labelAlreadyExistsMessage">
+      <div hidden class="ui warning message" hidden id="warningMessageBox">
         <i class="close icon"></i>
-        <div class="header">
-          Label already exists
+        <div class="header" id="warningMessageBoxContent">
         </div>
       </div>
 
       {{ template "label_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
+      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" }}
+
+      {{ if eq .isModerator true }}
+      {{ template "moderator_label_remove_dlg.html" dict "apiBaseUrl" .apiBaseUrl}}
+      {{ end }}
     </div>
 
 
-    <div class="four wide center aligned computer only column">
+    <div class="four wide center aligned computer only column" style="display: none;" id="imgInfo">
       {{ template "img_info.html" .}}
     </div>
   </div>

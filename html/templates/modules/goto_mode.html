@@ -1,0 +1,30 @@
+<div class="fifteen wide right aligned column" id="gotoModeContainer" {{if eq .visible false}}style="display: none;"{{end}}>
+  <div class="ui white buttons">
+    <div class="ui icon button">
+      <i class="external alternate icon"></i>
+      Goto
+    </div>
+    <div class="ui simple dropdown icon button">
+      <i class="dropdown icon"></i>
+      <div class="menu">
+        {{ if eq .labeling 1 }}
+        <div class="item" onclick="window.open('label?image_id=' + $('#image').attr('imageId'), '_blank');"><i class="edit icon"></i> Labeling Mode</div>
+        {{ end }}
+        {{ if eq .validation 1 }}
+        <div class="item" onclick="$('#gotoValidationModeLabelsDlg').modal('show');"><i class="check circle icon"></i> Validation Mode</div>
+        {{ end }}
+        {{ if eq .annotation 1 }}
+        <div class="item" onclick="$('#gotoAnnotationModeLabelsDlg').modal('show');"><i class="square outline icon"></i> Annotation Mode</div>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+
+  {{ if eq .currentScreen "labeling" }}
+  <div class="ui icon button" style="margin-left:0.5em;" id="generalSettingsButton" onclick="openGeneralLabelingSettingsDlg();">
+    <i class="cogs icon"></i>
+    Settings
+  </div>
+  {{ end }}
+</div>
+<div class="one wide column"></div>

@@ -1,0 +1,288 @@
+<script>
+
+  {{ if eq .currentScreen "labeling" }}
+  function persistGeneralLabelingSettings() {
+    var settings = new Settings();
+    settings.setAddLabelHotkey($("#recordAddLabelKeyInput").val());
+    settings.setLabelSeparator($('#labelSeparatorDropdown').dropdown('get value'));
+
+    $("#generalSettingsRefreshBrowserPopup").modal("show");
+  }
+
+  function loadGeneralLabelingSettings() {
+    var settings = new Settings();
+    $("#recordAddLabelKeyInput").val(settings.getAddLabelHotkey());
+    $('#labelSeparatorDropdown').dropdown('set selected', settings.getLabelSeparator());
+
+  }
+
+  function openGeneralLabelingSettingsDlg() {
+    loadGeneralLabelingSettings();
+    $('#generalLabelingSettingsDlg').modal('show');
+  }
+
+  function recordAddLabelKeySequence() {
+    $("#recordAddLabelKeyButton").addClass("disabled");
+    $("#recordAddLabelKeyInput").val("Press your key combination");
+    Mousetrap.record(function(sequence) {
+      //sequence is an array like ['ctrl+k', 'c']
+      var completeSequence = sequence.join(" ");
+      //there seems to be a bug with mousetrap.js - when recording the shift+enter 
+      //combo, mousetrap.js ALWAYS detects the combo enter+shift. so in case we detect
+      //enter+shift we rewrite it to shift+enter
+      
+      if(completeSequence === "enter+shift")
+        completeSequence = "shift+enter";
+
+      $("#recordAddLabelKeyInput").val(completeSequence);
+      $("#recordAddLabelKeyButton").removeClass("disabled");
+    });
+  }
+
+  {{ end }}
+
+  function goToValidationLabelEntryClicked(elem) {
+    if($(elem).attr("data-unlocked") === "true") {
+      $('#gotoValidationModeLabelsDlg').modal({
+        duration:0
+      }).modal('hide');
+
+      var url = $(elem).attr("data-url");
+      window.open(url, '_blank');
+    }
+  }
+
+  function goToAnnotationLabelEntryClicked(elem) {
+    if($(elem).attr("data-unlocked") === "true") {
+      $('#gotoAnnotationModeLabelsDlg').modal({
+        duration:0
+      }).modal('hide');
+
+      var url = $(elem).attr("data-url");
+      window.open(url, '_blank');
+    }
+  }
+
+  function clearAnnotationLabelEntries() {
+    $("#gotoAnnotationModeLabelsDlgContentList").empty();
+  }
+
+  function clearValidationLabelEntries() {
+    $("#gotoValidationModeLabelsDlgContentList").empty();
+  }
+
+  function addAnnotationEntriesToGotoLabelsDlg(imageId, data) {
+    var url = '';
+    var div = '';
+    var label = '';
+    var sublabel = '';
+    var unlocked = '';
+    for(var i = 0; i < data.length; i++) {
+      url = '/annotate?validation_id=' + data[i]["validation"]["uuid"];
+      unlocked = 'true';
+      label = escapeHtml(data[i]["validation"]["label"]);
+      sublabel = escapeHtml(data[i]["validation"]["sublabel"])
+
+      div = '<div class="item">' +
+              '<img class="ui avatar image" src="img/logo.png">' +
+              '<div class="content">' +
+                '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + 
+                  '" onclick="goToAnnotationLabelEntryClicked(this);">' +
+                  label + ((sublabel === '') ? '' : ('/' + sublabel)) +'</a>'
+              '</div>'
+            '</div>';
+      $("#gotoAnnotationModeLabelsDlgContentList").append(div);
+    }
+  }
+
+  function addValidationEntriesToGotoLabelsDlg(imageId, data) {
+    var url = '';
+    var div = '';
+    var tooltip = '';
+    var unlocked = '';
+    for(var i = 0; i < data.length; i++) {
+      url = '/verify?label_id=' + data[i]["uuid"] + '&image_id=' + imageId;
+      unlocked = (data[i]["unlocked"]) ? 'true' : 'false';
+      tooltip = (data[i]["unlocked"]) ? '' : ' data-tooltip="Label not yet unlocked"'; 
+      
+      div = '<div class="item">' +
+              '<img class="ui avatar image" src="img/logo.png">' +
+              '<div class="content">' +
+                '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + tooltip +
+                  ' onclick="goToValidationLabelEntryClicked(this);">' + escapeHtml(data[i]["label"]) +'</a>'
+              '</div>'
+            '</div>';
+      $("#gotoValidationModeLabelsDlgContentList").append(div);
+
+
+      //$("#gotoModeLabelsDlgContentList").append('<a class="item" data-url="' + url + '" onclick="goToLabelEntryClicked(this);">' + data[i]["label"] + '</a>');
+      var sublabels = data[i]["sublabels"];
+      if(sublabels !== undefined && sublabels !== null) {
+        for(var j = 0; j < sublabels.length; j++) {
+          url = '/verify?label_id=' + sublabels[j]["uuid"] + '&image_id=' + imageId;
+          unlocked = (data[i]["unlocked"]) ? 'true' : 'false';
+          tooltip = (data[i]["unlocked"]) ? '' : ' data-tooltip="Label not yet unlocked"'; 
+
+          div = '<div class="item">' +
+              '<img class="ui avatar image" src="img/logo.png">' +
+              '<div class="content">' +
+                '<a class="header" data-unlocked="' + unlocked + '" data-url="' + url + '"' + tooltip + 
+                  '" onclick="goToValidationLabelEntryClicked(this);">' + escapeHtml(sublabels[j]["name"]) + '/' + escapeHtml(data[i]["label"]) +'</a>'
+              '</div>'
+            '</div>';
+          $("#gotoValidationModeLabelsDlgContentList").append(div);
+        }
+      }
+    }
+  }
+
+  function getLabelsForImage(imageId) {
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/labels";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      success: function(data){
+        if(data)
+          addValidationEntriesToGotoLabelsDlg(imageId, data)
+      }
+    });
+  }
+
+  function getUnannotatedLabelsForImage(imageId) {
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + imageId + "/validations/unannotated";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      success: function(data){
+        if(data)
+          addAnnotationEntriesToGotoLabelsDlg(imageId, data)
+      }
+    });
+  }
+
+  $(document).ready(function(){
+    $({{ .imageIdentifier }}).on('load', function () {
+      {{ if eq .validation 1 }}
+      clearValidationLabelEntries();
+      getLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+      {{ end }}
+      
+      {{ if eq .annotation 1 }}
+      clearAnnotationLabelEntries();
+      getUnannotatedLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+      {{ end }}
+    });
+
+    {{ if eq .validation 1 }}
+    getLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+    {{ end }}
+    
+    {{ if eq .annotation 1 }}
+    getUnannotatedLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+    {{ end }}
+
+  });
+</script>
+
+<div class="ui modal" id="gotoValidationModeLabelsDlg">
+  <div class="ui header">
+    <h2 class="ui header">Select a label</h2>
+  </div>
+  <div class="scrolling content" id="gotoValidationModeLabelsDlgContent">
+    <div class="ui huge middle aligned divided list" id="gotoValidationModeLabelsDlgContentList">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red cancel inverted button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+  </div>
+</div>
+
+
+<div class="ui modal" id="gotoAnnotationModeLabelsDlg">
+  <div class="ui header">
+    <h2 class="ui header">Select a label</h2>
+  </div>
+  <div class="scrolling content" id="gotoAnnotationModeLabelsDlgContent">
+    <div class="ui huge middle aligned divided list" id="gotoAnnotationModeLabelsDlgContentList">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red cancel inverted button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+  </div>
+</div>
+
+{{ if eq .currentScreen "labeling" }}
+<div class="ui modal" id="generalLabelingSettingsDlg">
+  <div class="ui header">
+    <h2 class="ui header">Settings</h2>
+  </div>
+  <div class="scrolling content" id="generalLabelingSettingsDlgContent">
+    
+    <div class="ui raised segment">
+      <div class="ui grid">
+        <div class="eight wide column">
+          <b>Add Label Hotkey</b>
+          <p>Use this key combination to add a new label</p>
+          <div class="ui fluid action input">
+            <input value="shift+enter" type="text" readonly="" id="recordAddLabelKeyInput">
+
+            <div class="ui icon button" onclick="recordAddLabelKeySequence();" id="recordAddLabelKeyButton">
+              Change
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ui raised segment">
+      <div class="ui grid">
+        <div class="eight wide column">
+          <b>Label separator</b>
+          <p>Specify the label separator</p>
+          <select class="ui dropdown" id="labelSeparatorDropdown">
+            <option value=""> (none)</option>
+            <option value=",">, (comma)</option>
+            <option value="|">| (pipe)</option>
+            <option value=";">; (semicolon)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="actions">
+    <div class="ui red cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui green ok button" id="generalLabelingSettingsSaveButton" onclick="persistGeneralLabelingSettings();">
+      <i class="checkmark icon"></i>
+      Save
+    </div>
+  </div>
+</div>
+{{ end }}
+
+
+<div class="ui modal" id="generalSettingsRefreshBrowserPopup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Info
+  </div>
+  <div class="content">
+    Please refresh your browser window to apply the changes.  
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel icon button">
+      Got it
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+

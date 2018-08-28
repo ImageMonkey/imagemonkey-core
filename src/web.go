@@ -17,9 +17,18 @@ import (
 	"strings"
 	"path/filepath"
 	"strconv"
+	"errors"
+	"./datastructures"
+	"./commons"
 )
 
 var db *sql.DB
+
+func ShowErrorPage(c *gin.Context) {
+	c.HTML(404, "404.html", gin.H{
+		"title": "Page not found",
+	})
+}
 
 
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
@@ -45,6 +54,7 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
+	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
 	playgroundBaseUrl := flag.String("playground_base_url", "http://127.0.0.1:8082", "Playground Base URL")
@@ -95,6 +105,27 @@ func main() {
 			d := time.Unix(t, 0)
 			return fmt.Sprintf("%d-%02d-%02d", d.Year(), d.Month(), d.Day())
 		},
+		"dict": func(values ...interface{}) (map[string]interface{}, error) {
+	        if len(values)%2 != 0 {
+	            return nil, errors.New("invalid dict call")
+	        }
+	        dict := make(map[string]interface{}, len(values)/2)
+	        for i := 0; i < len(values); i+=2 {
+	            key, ok := values[i].(string)
+	            if !ok {
+	                return nil, errors.New("dict keys must be strings")
+	            }
+	            dict[key] = values[i+1]
+	        }
+	        return dict, nil
+	    },
+	    "loop": func(min int32, n int32) []int32 {
+            arr := make([]int32, n-min+1)
+		    for i := range arr {
+		        arr[i] = int32(min) + int32(i)
+		    }
+		    return arr
+        },
 		/*"executeTemplate": func(name string) string {
     		buf := &bytes.Buffer{}
     		_ = tmpl.ExecuteTemplate(buf, name, nil)
@@ -102,10 +133,17 @@ func main() {
 		},*/
 	}
 
-	log.Debug("[Main] Reading Label Map")
+	log.Debug("[Main] Reading labels")
 	labelMap, words, err := getLabelMap(*wordlistPath)
 	if err != nil {
-		fmt.Printf("[Main] Couldn't read label map...terminating!")
+		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
+		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading label refinements")
+	labelRefinementsMap, err := getLabelRefinementsMap(*labelRefinementsPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
 		log.Fatal(err)
 	}
 
@@ -173,14 +211,36 @@ func main() {
 		})
 
 		router.GET("/label", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			mode := getParamFromUrlParams(c, "mode", "default")
+
+			imageId := ""
+			if mode == "default" {
+				imageId = getParamFromUrlParams(c, "image_id", "")
+			}
+
+			isModerator := false
+			if sessionInformation.LoggedIn {
+				userInfo, _ := getUserInfo(sessionInformation.Username)
+				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanRemoveLabel {
+					isModerator = true
+				}
+			}
+
+
 			c.HTML(http.StatusOK, "label.html", gin.H{
 				"title": "Add Labels",
-				"image": pick(getImageToLabel())[0],
+				"imageId": imageId,
+				"mode": mode,
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
 				"labelSuggestions": pick(getLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"isModerator" : isModerator,
+				"labelAccessors": pick(getLabelAccessors())[0],
+				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
 
@@ -188,7 +248,7 @@ func main() {
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+			//sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			
 
 			labelId, err := getLabelIdFromUrlParams(params)
@@ -197,16 +257,58 @@ func main() {
 				return
 			}
 
+			mode := getParamFromUrlParams(c, "mode", "default")
+			onlyOnce := false
+			var revision int64
+			revision = -1
+			showSkipAnnotationButtons := true
+			validationId := ""
+			annotationId := ""
 
+			if mode == "default" {
+
+				annotationId = getParamFromUrlParams(c, "annotation_id", "")
+				if annotationId != "" {
+					mode = "refine"
+					onlyOnce = true
+					showSkipAnnotationButtons = false //if there are already annotations, 
+													 //then we do not need to show the blacklist annotation and unannotatable buttons
+
+					revisionStr := getParamFromUrlParams(c, "rev", "-1")
+					revision, err = strconv.ParseInt(revisionStr, 10, 32)
+					if err != nil {
+						ShowErrorPage(c)
+						return
+					}
+
+				} else {
+					validationId = getValidationIdFromUrlParams(params)
+					if validationId != "" {
+						//it doesn't make sene to use the validation id and the label id for querying - so we
+						//give the validation id preference.
+						labelId = ""
+						onlyOnce = true
+					}
+				}
+			}
+
+			
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
-				"randomImage": pick(getRandomUnannotatedImage(sessionInformation.Username, true, labelId))[0],
 				"activeMenuNr": 4,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
 				"playgroundBaseUrl": playgroundBaseUrl,
 				"labelId": labelId,
+				"annotationRevision": revision,
+				"validationId": validationId,
+				"annotationId": annotationId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"annotationMode": mode,
+				"onlyOnce": onlyOnce,
+				"showSkipAnnotationButtons": showSkipAnnotationButtons,
+				"labelAccessors": pick(getLabelAccessors())[0],
+				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
 
@@ -249,16 +351,20 @@ func main() {
 				}
 			}
 
+			imageId := ""
+			if temp, ok := params["image_id"]; ok {
+				imageId = temp[0]
+			}
+
 			labelId, err := getLabelIdFromUrlParams(params)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
 				return
 			}
 
-
 			c.HTML(http.StatusOK, "validate.html", gin.H{
 				"title": "Validate Label",
-				"randomImage": getRandomImage(labelId),
+				"imageId": imageId,
 				"activeMenuNr": 5,
 				"showHeader": showHeader,
 				"showFooter": showFooter,
@@ -273,7 +379,6 @@ func main() {
 		router.GET("/verify_annotation", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "validate_annotations.html", gin.H{
 				"title": "Validate Annotations",
-				"randomImage": pick(getRandomAnnotatedImage(false))[0],
 				"activeMenuNr": 6,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
@@ -284,12 +389,26 @@ func main() {
 			c.HTML(http.StatusOK, "quiz.html", gin.H{
 				"title": "Quiz",
 				"randomQuiz": "",
-				"randomAnnotatedImage": pick(getRandomAnnotationForRefinement())[0],
+				"randomAnnotatedImage": pick(getRandomAnnotationForQuizRefinement())[0],
 				"activeMenuNr": 7,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})	
+		router.GET("/refine", func(c *gin.Context) {
+			mode := getParamFromUrlParams(c, "mode", "default")
+
+			c.HTML(http.StatusOK, "refinement.html", gin.H{
+				"title": "Refinement",
+				"activeMenuNr": 14,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"apiBaseUrl": apiBaseUrl,
+				"mode": mode,
+				"labels": labelRefinementsMap,
+				"labelAccessors": pick(getLabelAccessors())[0],
+				"labelCategories": pick(getLabelCategories())[0],
+			})
+		})
 		router.GET("/statistics", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "statistics.html", gin.H{
 				"title": "Statistics",
@@ -380,7 +499,7 @@ func main() {
 
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
-			var apiTokens []APIToken
+			var apiTokens []datastructures.APIToken
 			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
 				apiTokens, err = getApiTokens(username)
 				if err != nil {
@@ -434,6 +553,7 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"defaultLabelGraphName": labelGraphName,
 				"editorMode" : editorMode,
+				"repository": "https://github.com/bbernhard/imagemonkey-core",
 			})
 		})
 
@@ -445,6 +565,12 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})*/
+
+		router.NoRoute(func(c *gin.Context) {
+			c.HTML(404, "404.html", gin.H{
+				"title": "Page not found",
+			})
+		})
 	}
 
 	router.Run(":" + strconv.FormatInt(int64(*listenPort), 10))

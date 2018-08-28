@@ -1,13 +1,18 @@
 <div hidden class="ui compact icon menu" id="annotatorMenu">
-  <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle">
+  <a class="square outline popup icon active item" id="rectMenuItem" data-content="Rectangle (r)">
     <i class="square outline icon"></i>
   </a>
-  <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle">
+  <a class="circle thin popup icon item" id="circleMenuItem" data-content="Circle (c)">
     <i class="circle thin icon"></i>
   </a>
-  <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon">
+  <a class="cellipsis horizontal popup icon item" id="polygonMenuItem" data-content="Polygon (p)">
     <i class="ellipsis horizontal icon"></i>
   </a>
+
+  <a class="mouse pointer horizontal popup icon item" id="selectMoveMenutItem" data-content="Select + Move">
+    <i class="mouse pointer icon"></i>
+  </a>
+
   <a hidden class="pencil popup icon item" id="smartAnnotationFgMenuItem" data-content="Foreground Selection">
     <i class="pencil icon"></i>
   </a>
@@ -15,13 +20,13 @@
     <i class="pencil icon"></i>
   </a>
 
-  <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In">
+  <a class="zoom popup icon item" id="zoomInMenuItem" data-content="Zoom In (+)">
     <i class="zoom icon"></i>
   </a>
-  <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out">
+  <a class="zoom out popup icon item" id="zoomOutMenuItem" data-content="Zoom Out (-)">
     <i class="zoom out icon"></i>
   </a>
-  <a class="maximize popup icon item" id="panMenuItem" data-content="Pan">
+  <a class="maximize popup icon item" id="panMenuItem" data-content="Pan (shift + click)">
     <i class="maximize icon"></i>
   </a>
   <a class="trash disabled popup icon item" id="trashMenuItem" data-content="Delete">
@@ -30,6 +35,21 @@
   <a hidden class="active download popup orange icon item" id="loadAutoAnnotationsMenuItem" data-content="Load Auto Annotations">
     <i class="download icon"></i>
   </a>
+  
+  <div class="ui simple dropdown item" id="propertiesMenuItem" data-content="Properties">
+    <i class="edit outline icon"></i>
+    <div class="menu">
+        <div class="item">
+          <label for="strokeWidthSlider">Stroke Width</label>
+          <input type="range" min="1" max="10" value="3" step=".2" id="strokeWidthSlider">
+        </div>
+        <div class="item">
+          <label for="colorPicker">Stroke color</label>
+          <input class="color-input" data-huebee data-color="#F00" value="#F00" id="colorPicker" />
+        </div>
+      </div>
+  </div>
+
   <a class="settings popup icon item mobile hidden" id="settingsMenuItem" data-content="Settings">
     <i class="settings icon"></i>
   </a>

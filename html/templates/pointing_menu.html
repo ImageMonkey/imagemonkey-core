@@ -1,5 +1,3 @@
-<script src="/js/cookies.min.js"></script>
-
 <div class="ui container">
   <div class="ui large secondary inverted pointing menu">
     <a class="toc item">
@@ -8,10 +6,17 @@
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
   <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Add Labels</a>
-  <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" href="/annotate">Annotate</a>
+  <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationPointingMenuItem" href="/annotate">Annotate</a>
   <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
   <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
-  <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
+  
+  <div class="ui dropdown item" id="refinementPointingMenuDropdown">
+      Refinement<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/refine?mode=browse';">Refinement</div>
+        <div class="center aligned item" onclick="window.location='/quiz';">Quiz</div>
+      </div>
+    </div>
 
   <div class="ui dropdown item" id="datasetPointingMenuDropdown">
     Dataset<i class="dropdown icon"></i>
@@ -55,6 +60,7 @@
     $('#mainMenuDropdown').dropdown();
     $('#developersPointingMenuDropdown').dropdown();
     $('#datasetPointingMenuDropdown').dropdown();
+    $('#refinementPointingMenuDropdown').dropdown();
 
     function parseJwt(token){
       var base64Url = token.split('.')[1];
@@ -85,8 +91,10 @@
       window.location.href = "/profile/" + username; //redirect to profile page
     });
 
-
-
+    //switch to browse mode when annotation mode is set to browse
+    var settings = new Settings();
+    if(settings.getAnnotationMode() === "browse")
+      $("#annotationPointingMenuItem").attr("href", "/annotate?mode=browse");
   });
 
 </script>

@@ -28,7 +28,7 @@
       </div>
     </div>
     <br><br>
-    <div class="ui form">
+    <div class="ui form" id="annotationWorkspaceSizeForm">
       <div class="grouped fields" id="annotationWorkspaceSizeCheckboxes">
         <label>Workspace Size</label>
         <div class="field">
@@ -51,6 +51,24 @@
         </div>
       </div>
     </div>
+    <br><br>
+    <div class="ui form" id="annotationModeForm">
+      <div class="grouped fields" id="annotationModeCheckboxes">
+        <label>Annotation Mode</label>
+        <div class="field">
+          <div class="ui radio checkbox" id="annotationDefaultModeCheckbox">
+            <input name="annotationMode" id="annotationDefaultModeCheckboxInput" checked="checked" type="radio">
+            <label>default</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui radio checkbox" id="annotationBrowseModeCheckbox">
+            <input name="annotationMode" id="annotationBrowseModeCheckboxInput" type="radio">
+            <label>browse</label>
+          </div>
+        </div>
+      </div>
+    </div>
 
 
   </div>
@@ -62,3 +80,21 @@
       </div>
     </div>
   </div>
+
+<div class="ui modal" id="annotationSettingsRefreshBrowserPopup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Info
+  </div>
+  <div class="content">
+    Please refresh your browser window to apply the changes.  
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel icon button">
+      Got it
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+
+

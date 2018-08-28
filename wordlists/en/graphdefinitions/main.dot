@@ -1,0 +1,3156 @@
+digraph ImagenetLabels
+{
+unicycle [label="unicycle"]
+onscreen_object [label="onscreen object"]
+condiment_shaker [label="condiment shaker"]
+net [label="net"]
+gravel [label="gravel"]
+kit_fox [label="kit fox"]
+sloth_bear [label="sloth bear"]
+aircraft_part [label="aircraft part"]
+bow [label="bow"]
+weight_plate [label="weight plate"]
+dam [label="dam"]
+board [label="board"]
+cleaning_tool [label="cleaning tool"]
+train [label="train"]
+tank_vehicle [label="tank (vehicle)"]
+diapsid [label="diapsid"]
+vine_snake [label="vine snake"]
+measuring_device [label="measuring device"]
+tile_roof [label="tile roof"]
+dishrag [label="dishrag"]
+prairie_chicken [label="prairie chicken"]
+green_lizard [label="green lizard"]
+mask [label="mask"]
+wire_haired_fox_terrier [label="wire-haired fox terrier"]
+tabby [label="tabby"]
+cradle [label="cradle"]
+plant_part [label="plant part"]
+letter_opener [label="letter opener"]
+bonnet [label="bonnet"]
+woman [label="woman"]
+spoon [label="spoon" id="fa12ab77-acef-40ba-90e1-aba5a8e2c245"]
+cellular_telephone [label="cellular_telephone"]
+thistle [label="thistle"]
+crossword_puzzle [label="crossword puzzle"]
+cylindrical_object [label="cylindrical object"]
+marine_mammal [label="marine mammal"]
+plane_tool [label="plane (tool)"]
+black_and_gold_garden_spider [label="black and gold garden spider"]
+confectionery [label="confectionery"]
+beacon [label="beacon"]
+burial_vault [label="burial vault"]
+indian_elephant [label="indian elephant"]
+tiger_shark [label="tiger shark"]
+assault_rifle [label="assault rifle"]
+bookshop [label="bookshop"]
+breakwater [label="breakwater"]
+tiger_cat [label="tiger cat"]
+mortar_weaponry [label="mortar (weaponry)"]
+vegetable [label="vegetable"]
+box [label="box"]
+killer_whale [label="killer whale"]
+bighorn [label="bighorn"]
+flat_coated_retriever [label="flat coated retriever"]
+carriage [label="carriage"]
+damselfly [label="damselfly"]
+holster [label="holster"]
+drilling_platform [label="drilling platform"]
+french_loaf [label="french loaf"]
+bernese_mountain_dog [label="bernese mountain dog"]
+mobile_home [label="mobile_home"]
+eft [label="eft"]
+insect_part [label="insect part"]
+walking_stick_insect [label="walking stick (insect)"]
+electric_locomotive [label="electric locomotive"]
+jinrikisha [label="jinrikisha"]
+file [label="file"]
+organ [label="organ"]
+headwear [label="headwear"]
+bluetick [label="bluetick"]
+pembroke [label="pembroke"]
+swing [label="swing"]
+lycaenid [label="lycaenid"]
+lamp_post [label="lamp post"]
+shoe [label="shoe"]
+scotch_terrier [label="scotch terrier"]
+curly_coated_retriever [label="curly coated retriever"]
+chow_chow [label="chow chow"]
+garter_snake [label="garter snake"]
+mitten [label="mitten"]
+binder [label="binder"]
+animal_enclosure [label="animal enclosure"]
+coffee_mug [label="coffee mug"]
+pembroke_welsh_corgi [label="pembroke welsh corgi"]
+steel_drum [label="steel drum"]
+tree_part [label="tree part"]
+buckle [label="buckle"]
+scorpion [label="scorpion"]
+bathroom_object [label="bathroom object"]
+goggles [label="goggles"]
+water [label="water"]
+bowl [label="bowl"]
+eggnog [label="eggnog"]
+hair_spray [label="hair spray"]
+clog [label="clog"]
+british_angora [label="british angora"]
+maraca [label="maraca"]
+potters_wheel [label="potter's wheel"]
+plate_rack [label="plate rack"]
+coat [label="coat"]
+aquatic_vehicle [label="aquatic vehicle"]
+cinema [label="cinema"]
+teddy [label="teddy"]
+open_container [label="open container"]
+pencil [label="pencil"]
+boston_bull [label="boston bull"]
+spoonbill [label="spoonbill"]
+carousel [label="carousel"]
+candle [label="candle"]
+chest [label="chest"]
+foliage [label="foliage"]
+sea_urchin [label="sea urchin"]
+paddlewheel [label="paddlewheel"]
+altar [label="altar"]
+compost [label="compost"]
+sloth [label="sloth"]
+plow [label="plow"]
+tower_crane [label="tower crane"]
+microphone [label="microphone"]
+joystick [label="joystick"]
+apron [label="apron"]
+balloon [label="balloon"]
+vulture [label="vulture"]
+turkish_angora [label="turkish angora"]
+pitcher_container [label="pitcher (container)"]
+ox [label="ox"]
+bobsled [label="bobsled"]
+common_newt [label="common newt"]
+printer [label="printer"]
+paving_stones [label="paving stones"]
+staffordshire_bullterrier [label="staffordshire bullterrier"]
+police_van [label="police van"]
+ruddy_turnstone [label="ruddy turnstone"]
+bell_pepper [label="bell pepper"]
+nipple_plumbing [label="nipple (plumbing)"]
+man [label="man"]
+brassiere [label="brassiere"]
+burrito [label="burrito"]
+guenon [label="guenon"]
+collie [label="collie"]
+beetle [label="beetle"]
+cauliflower [label="cauliflower"]
+thorax [label="thorax"]
+metal_barrel [label="metal barrel"]
+spherical_object [label="spherical object"]
+wolf_spider [label="wolf spider"]
+wall [label="wall"]
+siamang [label="siamang"]
+hamster [label="hamster"]
+cabinet [label="cabinet"]
+pomegranate [label="pomegranate"]
+renewable_energy_device [label="renewable energy device"]
+bannister [label="bannister"]
+shield [label="shield"]
+ice_lolly [label="ice lolly"]
+antelope [label="antelope"]
+appenzeller_chicken [label="appenzeller chicken"]
+container [label="container"]
+trailer_truck [label="trailer truck"]
+streetcar [label="streetcar"]
+titi [label="titi"]
+chimpanzee [label="chimpanzee"]
+eel [label="eel"]
+chien_leonberg [label="chien leonberg"]
+trilobite [label="trilobite"]
+fox [label="fox"]
+oboe [label="oboe"]
+amusement_ride [label="amusement ride"]
+component [label="component"]
+fairground_ride [label="fairground ride"]
+tray [label="tray"]
+beverage [label="beverage"]
+pomeranian_dog [label="pomeranian dog"]
+saint_bernard [label="saint bernard"]
+racing_car [label="racing car"]
+pelican [label="pelican"]
+carniverous_animal [label="carniverous animal"]
+fire_screen [label="fire_screen"]
+hound [label="hound"]
+fence [label="fence"]
+wool [label="wool"]
+maze [label="maze"]
+water_tank [label="water tank"]
+pig [label="pig"]
+powered_wheeled_vehicle [label="powered wheeled vehicle"]
+shopping_cart [label="shopping cart"]
+leatherback_turtle [label="leatherback turtle"]
+computer_keyboard [label="computer keyboard"]
+siamese_cat [label="siamese cat"]
+warplane [label="warplane"]
+wardrobe [label="wardrobe"]
+religious_building [label="religious building"]
+sunscreen_container [label="sunscreen container"]
+drake [label="drake"]
+dutch_oven [label="dutch oven"]
+cliff_dwelling [label="cliff dwelling"]
+walker_hound [label="walker_hound"]
+armoured_animal [label="armoured animal"]
+umbrella [label="umbrella"]
+bus [label="bus"]
+lemon [label="lemon"]
+picket_fence [label="picket fence"]
+admiral_butterfly [label="admiral butterfly"]
+agaric [label="agaric"]
+tape_player [label="tape player"]
+wolf [label="wolf"]
+llama [label="llama"]
+soccer_ball [label="soccer ball"]
+yellow_ladys_slipper [label="yellow lady's slipper"]
+rule [label="rule"]
+utility_vault [label="utility vault"]
+jewellery [label="jewellery"]
+envelope [label="envelope"]
+soap_dispenser [label="soap dispenser"]
+koala [label="koala"]
+daisy [label="daisy"]
+peacock [label="peacock"]
+liquid_container [label="liquid container"]
+mashed_potato [label="mashed potato"]
+balance_beam [label="balance beam"]
+macaque [label="macaque"]
+arctic_fox [label="arctic fox"]
+organ_musical_instrument [label="organ (musical instrument)"]
+gar [label="gar"]
+shell [label="shell"]
+military_vehicle [label="military vehicle"]
+bed [label="bed"]
+power_tool [label="power tool"]
+chickadee [label="chickadee"]
+sport [label="sport"]
+lampshade [label="lampshade"]
+soup_bowl [label="soup bowl"]
+tank_liquid_container [label="tank (liquid container)"]
+basset [label="basset"]
+furniture_electronics [label="furniture/electronics"]
+grass [label="grass"]
+pot [label="pot"]
+lumbermill [label="lumbermill"]
+stole_vestment [label="stole (vestment)"]
+bird [label="bird"]
+land_mammal [label="land mammal"]
+spade [label="spade"]
+safety_pin [label="safety pin"]
+lotion [label="lotion"]
+irish_terrier [label="irish terrier"]
+helicopter [label="helicopter"]
+petri_dish [label="petri dish"]
+miniskirt [label="miniskirt"]
+brick [label="brick"]
+marine_mollusc [label="marine mollusc"]
+furniture [label="furniture"]
+park_bench [label="park bench"]
+belt [label="belt"]
+fluid [label="fluid"]
+kelpie [label="kelpie"]
+combination_lock [label="combination lock"]
+paper_card_object [label="paper/card object"]
+dome [label="dome"]
+limpkin [label="limpkin"]
+seat_belt [label="seat belt"]
+footwear [label="footwear"]
+wooden_container [label="wooden container"]
+lens_cap [label="lens cap"]
+hard_disc [label="hard disc"]
+paper_object [label="paper object"]
+leonberg [label="leonberg"]
+ocarina [label="ocarina"]
+hen [label="hen"]
+banded_gecko [label="banded gecko"]
+device [label="device"]
+torch [label="torch"]
+jetty [label="jetty"]
+waste_container [label="waste container"]
+knee_pad [label="knee pad"]
+bin [label="bin"]
+ski_mask [label="ski mask"]
+binder_clip [label="binder clip"]
+arabian_camel [label="arabian camel"]
+howler_monkey [label="howler_monkey"]
+granny_smith [label="granny smith"]
+leaf [label="leaf"]
+cabbage_butterfly [label="cabbage butterfly"]
+coral [label="coral"]
+small_bag [label="small bag"]
+expresso [label="expresso"]
+seal [label="seal"]
+airedale_terrier [label="airedale terrier"]
+bicycle [label="bicycle"]
+motor_scooter [label="motor scooter"]
+hand_cart [label="hand cart"]
+rottweiler [label="rottweiler"]
+object [label="object"]
+Model_T [label="Model_T"]
+notebook_book [label="notebook (book)"]
+bride [label="bride"]
+muzzle [label="muzzle"]
+strawberry [label="strawberry"]
+file_folder [label="file (folder)"]
+fish [label="fish"]
+king_snake [label="king snake"]
+slide_rule [label="slide rule"]
+venus_fly_trap [label="venus fly trap"]
+sports_aparatus [label="sports aparatus"]
+milk_can [label="milk can"]
+african_elephant [label="african elephant"]
+shih_tzu [label="shih tzu"]
+entertainment_center [label="entertainment center"]
+flute [label="flute"]
+American_coot [label="American coot"]
+strainer [label="strainer"]
+brain_coral [label="brain_coral"]
+toaster [label="toaster"]
+english_springer [label="english springer"]
+wombat [label="wombat"]
+fig [label="fig"]
+lionfish [label="lionfish"]
+whiptail [label="whiptail"]
+gyromitra [label="gyromitra"]
+christmas_stocking [label="christmas stocking"]
+stage_platform [label="stage (platform)"]
+pizza [label="pizza" id="be8270fd-2c5c-47ff-b938-0555e5201a18"]
+english_setter [label="english setter"]
+indri [label="indri"]
+rhodesian_ridgeback [label="rhodesian ridgeback"]
+aircraft [label="aircraft"]
+airship [label="airship"]
+old_english_sheepdog [label="old english sheepdog"]
+jacamar [label="jacamar"]
+harness [label="harness"]
+worm_fence [label="worm fence"]
+book_part [label="book part"]
+flagpole [label="flagpole"]
+hare [label="hare"]
+sled [label="sled"]
+perfume_dispenser [label="perfume dispenser"]
+small_case [label="small case"]
+bubble [label="bubble"]
+bolete [label="bolete"]
+baboon [label="baboon"]
+ibizan_hound [label="ibizan hound"]
+green_snake [label="green snake"]
+head_cabbage [label="head cabbage"]
+metal_cover [label="metal cover"]
+spindle [label="spindle"]
+chain_mail [label="chain_mail"]
+ice_cream [label="ice cream"]
+chow [label="chow"]
+wheelbarrow [label="wheelbarrow"]
+railed_transport_vehicle [label="railed transport vehicle"]
+frilled_lizard [label="frilled lizard"]
+oven [label="oven"]
+dragonfly [label="dragonfly"]
+monitor [label="monitor"]
+loafer [label="loafer"]
+boxer_snipe_eel [label="boxer snipe eel"]
+airliner [label="airliner"]
+brush [label="brush"]
+rock_crab [label="rock crab"]
+bee [label="bee"]
+wooden_barrel [label="wooden barrel"]
+airborne_object [label="airborne object"]
+rapeseed [label="rapeseed"]
+flatworm [label="flatworm"]
+modem [label="modem"]
+uniform [label="uniform"]
+crash_helmet [label="crash helmet"]
+urban_object [label="urban object"]
+aquatic_mammal [label="aquatic mammal"]
+space_shuttle [label="space shuttle"]
+cultivated_plant [label="cultivated plant"]
+robin [label="robin"]
+mouse_animal [label="mouse (animal)"]
+colobus [label="colobus"]
+chain [label="chain"]
+baseball [label="baseball"]
+reflex_camera [label="reflex camera"]
+siberian_husky [label="siberian husky"]
+maltese_dog [label="maltese dog"]
+leonberg_town [label="leonberg town"]
+alp [label="alp"]
+king_crab [label="king crab"]
+American_egret [label="American_egret"]
+mud_turtle [label="mud turtle"]
+conch [label="conch"]
+gazelle [label="gazelle"]
+newfoundland [label="newfoundland"]
+french_bulldog [label="french bulldog"]
+bull_mastiff [label="bull mastiff"]
+snowmobile [label="snowmobile"]
+squash [label="squash"]
+powder [label="powder"]
+shopping_basket [label="shopping basket"]
+sportsperson [label="sportsperson"]
+aquatic_object [label="aquatic object"]
+paintbrush [label="paintbrush"]
+monument [label="monument"]
+stole [label="stole"]
+passenger_motor_vehicle [label="passenger motor vehicle"]
+lemur [label="lemur"]
+marmoset [label="marmoset"]
+ptarmigan [label="ptarmigan"]
+wall_clock [label="wall clock"]
+water_tower [label="water tower"]
+maypole [label="maypole"]
+cricket_sport [label="cricket (sport)"]
+invertebrate_with_exosksleton [label="invertebrate with exosksleton"]
+bison [label="bison"]
+labrador_retriever [label="labrador retriever"]
+lakeside [label="lakeside"]
+toad [label="toad"]
+hanging_object [label="hanging object"]
+spider [label="spider"]
+architectural_element [label="architectural element"]
+invertebrate [label="invertebrate"]
+marine_animal [label="marine animal"]
+sea_lion [label="sea lion"]
+irish_wolfhound [label="irish wolfhound"]
+gorilla [label="gorilla"]
+utility_pole [label="utility pole"]
+cassette_bicycle [label="cassette (bicycle)"]
+barrel [label="barrel"]
+ballpoint [label="ballpoint"]
+fabric [label="fabric"]
+accordion [label="accordion"]
+little_blue_heron [label="little_blue_heron"]
+sidewinder [label="sidewinder"]
+mosque [label="mosque"]
+barrier [label="barrier"]
+shower_curtain [label="shower curtain"]
+earthstar [label="earthstar"]
+ferret [label="ferret"]
+american_staffordshire_terrier [label="american staffordshire terrier"]
+bodypart [label="bodypart"]
+cliff [label="cliff"]
+fly [label="fly"]
+backpack [label="backpack"]
+vault_architecture [label="vault (architecture)"]
+parallel_bars [label="parallel bars"]
+water_buffalo [label="water_buffalo"]
+horse_cart [label="horse cart"]
+cricket_insect [label="cricket (insect)"]
+mantis [label="mantis"]
+prayer_rug [label="prayer rug"]
+hat [label="hat"]
+shoji [label="shoji"]
+toy_poodle [label="toy poodle"]
+object_with_wheels [label="object with wheels"]
+spectacles [label="spectacles"]
+wind_turbine [label="wind turbine"]
+belt_harness [label="belt/harness"]
+brabancon_griffon [label="brabancon griffon"]
+carnivore [label="carnivore"]
+household_applicance [label="household applicance"]
+bathing_cap [label="bathing cap"]
+crate [label="crate"]
+toucan [label="toucan"]
+axolotl [label="axolotl"]
+digital_clock [label="digital clock"]
+dog [label="dog" id="bac46d8e-0655-46d5-a393-36c69a18ee2c"]
+great_Dane [label="great Dane"]
+equidae [label="equidae"]
+pomeranian [label="pomeranian"]
+tricycle [label="tricycle"]
+espresso_maker [label="espresso maker"]
+nipple_anatomy [label="nipple (anatomy)"]
+crane_bird [label="crane (bird)"]
+giant_schnauzer [label="giant schnauzer"]
+bovinae [label="bovinae"]
+tibetan_mastiff [label="tibetan mastiff"]
+platypus [label="platypus"]
+bee_eater [label="bee eater"]
+mongoose [label="mongoose"]
+leporidae [label="leporidae"]
+cutting_tool [label="cutting tool"]
+handrail [label="handrail"]
+cosmetics [label="cosmetics"]
+appenzeller_cheese [label="appenzeller cheese"]
+american_alligator [label="american alligator"]
+vestment [label="vestment"]
+cloak [label="cloak"]
+meat_loaf [label="meat loaf"]
+helmet [label="helmet"]
+lizard [label="lizard"]
+can_opener [label="can opener"]
+pole_post [label="pole/post"]
+mousetrap [label="mousetrap"]
+barn [label="barn"]
+impala [label="impala"]
+tailed_frog [label="tailed frog"]
+hook [label="hook"]
+eyewear [label="eyewear"]
+bonnet_headgear [label="bonnet (headgear)"]
+rug [label="rug"]
+maillot [label="maillot"]
+junco [label="junco"]
+green_mamba [label="green_mamba"]
+disk_brake [label="disk brake"]
+tick [label="tick"]
+fungus [label="fungus"]
+laptop [label="laptop"]
+spacecraft [label="spacecraft"]
+agricultural_machinery [label="agricultural machinery"]
+valley [label="valley"]
+marine_invertebrate [label="marine invertebrate"]
+racer [label="racer"]
+road_bike [label="road bike"]
+wok [label="wok"]
+printing_plate [label="printing plate"]
+bikini [label="bikini"]
+animal_with_shell [label="animal with shell"]
+electrical_appliance [label="electrical appliance"]
+viaduct [label="viaduct"]
+hotdog [label="hotdog"]
+window_shade [label="window shade"]
+fruit [label="fruit"]
+violin [label="violin"]
+echinoderms [label="echinoderms"]
+plate_metal [label="plate (metal)"]
+cuirass [label="cuirass"]
+building_structure [label="building/structure"]
+building_room [label="building/room"]
+boathouse [label="boathouse"]
+lesser_panda [label="lesser panda"]
+japanese_spaniel [label="japanese spaniel"]
+passenger_car [label="passenger car"]
+european_gallinule [label="european gallinule"]
+spotlight [label="spotlight"]
+litter_bin [label="litter bin"]
+book_jacket [label="book jacket"]
+roof [label="roof"]
+water_jug [label="water jug"]
+boot [label="boot"]
+punching_bag [label="punching bag"]
+nipple_flexible_nozzle [label="nipple (flexible nozzle)"]
+wallet [label="wallet"]
+ram [label="ram"]
+grand_piano [label="grand piano"]
+black_stork [label="black stork"]
+american_lobster [label="american lobster"]
+marine_structure [label="marine structure"]
+langur [label="langur"]
+shop [label="shop"]
+spaghetti_squash [label="spaghetti squash"]
+ground_beetle [label="ground_beetle"]
+shoe_shop [label="shoe shop"]
+butternut_squash [label="butternut squash"]
+chest_furniture [label="chest (furniture)"]
+horizontal_bar [label="horizontal bar"]
+rubber_eraser [label="rubber eraser"]
+keyboard [label="keyboard"]
+refrigerator [label="refrigerator"]
+bread [label="bread"]
+groom [label="groom"]
+passenger_vehicle [label="passenger vehicle"]
+flexible_material [label="flexible material"]
+quilt [label="quilt"]
+van [label="van"]
+redshank [label="redshank"]
+hermit_crab [label="hermit_crab"]
+structure_water [label="structure/water"]
+shelter [label="shelter"]
+harmonica [label="harmonica"]
+bird_wing [label="bird wing"]
+tent [label="tent"]
+wooden_door [label="wooden door"]
+pill_bottle [label="pill bottle"]
+cylindrical_container [label="cylindrical container"]
+coin_container [label="coin container"]
+flower [label="flower"]
+chain_saw [label="chain saw"]
+partridge [label="partridge"]
+screw [label="screw"]
+glass [label="glass" id="f08885f5-e0fa-467f-addf-459013170516"]
+kite_bird [label="kite (bird)"]
+crayfish [label="crayfish"]
+mushroom [label="mushroom"]
+dish [label="dish"]
+spoke_nipple [label="spoke nipple"]
+hammerhead [label="hammerhead"]
+odometer [label="odometer"]
+cannon [label="cannon"]
+kerry_blue_terrier [label="kerry blue terrier"]
+dingo [label="dingo"]
+electronic_device [label="electronic device"]
+upright_piano [label="upright piano"]
+tree_root [label="tree root"]
+wasp [label="wasp"]
+paper_towel [label="paper towel"]
+volleyball [label="volleyball"]
+diaper [label="diaper"]
+mountain_bike [label="mountain bike"]
+rail_transport_vehicle [label="rail transport vehicle"]
+hand_tool [label="hand tool"]
+padlock [label="padlock"]
+cricket [label="cricket"]
+car_bonnet [label="car bonnet"]
+coral_fungus [label="coral fungus"]
+amphibian [label="amphibian"]
+aeroplane [label="aeroplane"]
+go_kart [label="go-kart"]
+toilet_seat [label="toilet seat"]
+radio_telescope [label="radio telescope"]
+academic_gown [label="academic gown"]
+comic_book [label="comic_book"]
+cheeseburger [label="cheeseburger"]
+structure [label="structure"]
+centipede [label="centipede"]
+butterfly [label="butterfly"]
+sulphur_butterfly [label="sulphur butterfly"]
+honeycomb [label="honeycomb"]
+aquatic_animal [label="aquatic animal"]
+wind_instrument [label="wind instrument"]
+triceratops [label="triceratops"]
+box_turtle [label="box turtle"]
+fiddler_crab [label="fiddler crab"]
+lacewing [label="lacewing"]
+pomeranian_goose [label="pomeranian goose"]
+old_dutch_capuchin [label="old dutch capuchin"]
+firearm [label="firearm"]
+volcano [label="volcano"]
+red_backed_sandpiper [label="red backed sandpiper"]
+mud [label="mud"]
+Egyptian_cat [label="Egyptian cat"]
+house_finch [label="house finch"]
+glass_door [label="glass door"]
+petri_plate [label="petri plate"]
+dishware [label="dishware"]
+badger [label="badger"]
+limousine [label="limousine"]
+electric_guitar [label="electric guitar"]
+stem_plant [label="stem (plant)"]
+american_chameleon [label="american chameleon"]
+sheep [label="sheep"]
+proboscis_monkey [label="proboscis monkey"]
+protective_clothing [label="protective clothing"]
+soup [label="soup"]
+sauce [label="sauce"]
+obelisk [label="obelisk"]
+jug [label="jug"]
+dipping_sauce [label="dipping sauce"]
+rugby_ball [label="rugby ball"]
+sign [label="sign"]
+writing_implement [label="writing implement"]
+schipperke [label="schipperke"]
+cello [label="cello"]
+komodo_dragon [label="komodo dragon"]
+flexible_object [label="flexible object"]
+square_academic_cap [label="square academic cap"]
+red_wine [label="red wine"]
+writing_tool [label="writing tool"]
+lab_coat [label="lab coat"]
+nut [label="nut"]
+buckeye_tree [label="buckeye (tree)"]
+grasshopper [label="grasshopper"]
+suspension_bridge [label="suspension bridge"]
+monastery [label="monastery"]
+coffee [label="coffee"]
+room [label="room"]
+beaker [label="beaker"]
+sandbar [label="sandbar"]
+stingray [label="stingray"]
+harvester [label="harvester"]
+sunglass [label="sunglass"]
+steel_arch_bridge [label="steel arch bridge"]
+pomeranian_sheep [label="pomeranian sheep"]
+snake [label="snake"]
+quill [label="quill"]
+lotion_container [label="lotion container"]
+bouvier_des_flandres [label="bouvier des flandres"]
+seashore [label="seashore"]
+land_animal [label="land animal"]
+display_board [label="display board"]
+subscreen [label="subscreen"]
+malinois [label="malinois"]
+rotating_object [label="rotating object"]
+dinosaur [label="dinosaur"]
+sliding_door [label="sliding door"]
+face_powder [label="face powder"]
+sweatshirt [label="sweatshirt"]
+dumbbell [label="dumbbell"]
+afghan_hound [label="afghan hound"]
+spatula [label="spatula"]
+whiskey_jug [label="whiskey jug"]
+photocopier [label="photocopier"]
+liquid [label="liquid"]
+yorkshire_terrier [label="yorkshire terrier"]
+chow_food [label="chow (food)"]
+jackfruit [label="jackfruit"]
+acoustic_guitar [label="acoustic guitar"]
+fur_coat [label="fur coat"]
+shower_cap [label="shower cap"]
+protective_cover [label="protective cover"]
+white_wolf [label="white wolf"]
+boxer_crab [label="boxer crab"]
+marmot [label="marmot"]
+web_site [label="web site"]
+tiger_beetle [label="tiger beetle"]
+stretcher [label="stretcher"]
+hammer [label="hammer"]
+great_grey_owl [label="great grey owl"]
+space_heater [label="space heater"]
+coil_tube [label="coil/tube"]
+nozzle [label="nozzle"]
+golf_ball [label="golf ball"]
+plumbing_fixture [label="plumbing fixture"]
+electronics [label="electronics"]
+red_fox [label="red fox"]
+vizsla [label="vizsla"]
+root_plant [label="root (plant)"]
+brambling [label="brambling"]
+boa_constrictor [label="boa constrictor"]
+jack_o_lantern [label="jack-o'-lantern"]
+musical_instrument [label="musical instrument"]
+banjo [label="banjo"]
+hummingbird [label="hummingbird"]
+barometer [label="barometer"]
+digital_watch [label="digital watch"]
+affenpinscher [label="affenpinscher"]
+sussex_spaniel [label="sussex spaniel"]
+folding_chair [label="folding chair"]
+bolo_tie [label="bolo tie"]
+fabric_object [label="fabric object"]
+hoopskirt [label="hoopskirt"]
+cushion [label="cushion"]
+appenzeller_sennenhund [label="appenzeller sennenhund"]
+keeshond [label="keeshond"]
+steam_locomotive [label="steam locomotive"]
+sunglasses [label="sunglasses"]
+sewing_machine [label="sewing_machine"]
+soil [label="soil"]
+jigsaw_puzzle [label="jigsaw puzzle"]
+consomme [label="consomme"]
+bloodhound [label="bloodhound"]
+pekinese [label="pekinese"]
+bicycle_built_for_two [label="bicycle-built-for-two"]
+pickup_truck [label="pickup truck"]
+chiffonier [label="chiffonier"]
+megalith [label="megalith"]
+door [label="door"]
+toy [label="toy"]
+insect [label="insect"]
+mink [label="mink"]
+papillon_horse [label="papillon (horse)"]
+notebook_computer [label="notebook (computer)"]
+spider_web [label="spider web"]
+scabbard [label="scabbard"]
+typewriter_keyboard [label="typewriter keyboard"]
+restaurant [label="restaurant"]
+coil [label="coil"]
+patas [label="patas"]
+dugong [label="dugong"]
+ant [label="ant"]
+passenger_car_rail [label="passenger car (rail)"]
+scale [label="scale"]
+hay_bale [label="hay bale"]
+concrete [label="concrete"]
+roof_tiles [label="roof tiles"]
+irish_setter [label="irish setter"]
+cab [label="cab"]
+black_grouse [label="black grouse"]
+cash_machine [label="cash machine"]
+artichoke [label="artichoke"]
+bush [label="bush"]
+solar_dish [label="solar dish"]
+vehicle_part [label="vehicle part"]
+butcher_shop [label="butcher_shop"]
+swimming_trunks [label="swimming trunks"]
+plunger [label="plunger"]
+coucal [label="coucal"]
+barracouta [label="barracouta"]
+unknown [label="unknown"]
+spider_monkey [label="spider monkey"]
+tusker [label="tusker"]
+bassinet [label="bassinet"]
+drill [label="drill"]
+optical_device [label="optical device"]
+waffle_iron [label="waffle iron"]
+rock_python [label="rock_python"]
+amiguous_term [label="amiguous term"]
+tie [label="tie"]
+oriental_longhair [label="oriental longhair"]
+seat [label="seat"]
+pineapple [label="pineapple"]
+power_drill [label="power drill"]
+albatross [label="albatross"]
+screen [label="screen"]
+cleaning_device [label="cleaning device"]
+human_activity [label="human activity"]
+invertebrate_without_exoskeleton [label="invertebrate without exoskeleton"]
+bookcase [label="bookcase"]
+buckeye_chicken [label="buckeye chicken"]
+shovel [label="shovel"]
+worm [label="worm"]
+binoculars [label="binoculars"]
+poncho [label="poncho"]
+pug [label="pug"]
+border_terrier [label="border terrier"]
+custard_apple [label="custard apple"]
+hatchet [label="hatchet"]
+african_chameleon [label="african chameleon"]
+primate [label="primate"]
+fox_squirrel [label="fox squirrel"]
+border_collie [label="border collie"]
+berry [label="berry"]
+mosquito_net [label="mosquito_net"]
+wooden_object [label="wooden object"]
+potato_chips [label="potato chips"]
+chihuahua_dog [label="chihuahua (dog)"]
+airplane [label="airplane"]
+screwdriver [label="screwdriver"]
+goldfish [label="goldfish"]
+leafhopper [label="leafhopper"]
+file_tool [label="file (tool)"]
+nail [label="nail"]
+light_source [label="light source"]
+tub [label="tub"]
+academic_stole [label="academic stole"]
+scuba_diver [label="scuba diver"]
+saluki [label="saluki"]
+polecat [label="polecat"]
+insect_wing [label="insect wing"]
+french_fries [label="french fries"]
+theater_curtain [label="theater curtain"]
+percussion_instrument [label="percussion instrument"]
+car_part [label="car part"]
+totem_pole [label="totem pole"]
+paper [label="paper"]
+mat [label="mat"]
+doormat [label="doormat"]
+turtle [label="turtle"]
+social_insect [label="social insect"]
+apiary [label="apiary"]
+metal [label="metal"]
+pen [label="pen"]
+thatch [label="thatch"]
+sorrel [label="sorrel"]
+standard_poodle [label="standard poodle"]
+paddle [label="paddle"]
+polaroid_camera [label="polaroid camera"]
+display_device [label="display device"]
+swab [label="swab"]
+broom [label="broom"]
+medicine_chest [label="medicine chest"]
+bird_part [label="bird part"]
+lighter [label="lighter"]
+platform [label="platform"]
+stupa [label="stupa"]
+boxer_shrimp [label="boxer shrimp"]
+kuvasz [label="kuvasz"]
+crane_machine [label="crane (machine)"]
+dry_leaves [label="dry leaves"]
+plymouth_expresso [label="plymouth expresso"]
+rodent [label="rodent"]
+angora [label="angora"]
+chest_of_drawers [label="chest of drawers"]
+pop_bottle [label="pop bottle"]
+wine_bottle [label="wine bottle"]
+agricultural_area [label="agricultural area"]
+revolving_door [label="revolving door"]
+necklace [label="necklace"]
+wild_boar [label="wild boar"]
+chicken [label="chicken"]
+coho [label="coho"]
+horned_viper [label="horned viper"]
+sea_anemone [label="sea_anemone"]
+space_bar [label="space bar"]
+communication_device [label="communication device"]
+electrical_device [label="electrical device"]
+nematode [label="nematode"]
+caldron [label="caldron"]
+menu [label="menu"]
+CD_player [label="CD player"]
+water_bottle [label="water bottle"]
+cheetah [label="cheetah"]
+sax [label="sax"]
+thunder_snake [label="thunder snake"]
+switch [label="switch"]
+ping_pong_ball [label="ping pong ball"]
+feral_dog [label="feral dog"]
+truck [label="truck"]
+hip [label="hip"]
+thimble [label="thimble"]
+toilet_tissue [label="toilet tissue"]
+cart [label="cart"]
+water_ouzel [label="water ouzel"]
+potpie [label="potpie"]
+bell_cote [label="bell cote"]
+bag [label="bag"]
+electrical_enclosure [label="electrical enclosure"]
+guinea_pig [label="guinea pig"]
+boat [label="boat"]
+gong [label="gong"]
+household_object [label="household object"]
+wine [label="wine"]
+cairn [label="cairn"]
+stone_pile [label="stone pile"]
+marimba [label="marimba"]
+notebook [label="notebook"]
+arachnid [label="arachnid"]
+marsupial [label="marsupial"]
+zucchini [label="zucchini"]
+vertebrate [label="vertebrate"]
+jaguar [label="jaguar"]
+black_footed_ferret [label="black footed ferret"]
+eskimo_dog [label="eskimo dog"]
+cocker_spaniel [label="cocker_spaniel"]
+hamper [label="hamper"]
+crab [label="crab"]
+ostrich [label="ostrich"]
+cicada [label="cicada"]
+wall_plate [label="wall plate"]
+plate_armour [label="plate (armour)"]
+macaw [label="macaw"]
+puffer [label="puffer"]
+opening [label="opening"]
+sea_slug [label="sea_slug"]
+birdhouse [label="birdhouse"]
+paste [label="paste"]
+greater_swiss_mountain_dog [label="greater swiss mountain dog"]
+ambiguous_word [label="ambiguous word"]
+personal_item [label="personal item"]
+monarch [label="monarch"]
+architecture [label="architecture"]
+moving_van [label="moving van"]
+slug [label="slug"]
+wheelie_bin [label="wheelie bin"]
+mexican_hairless [label="mexican hairless"]
+german_short_haired_pointer [label="german short haired pointer"]
+spotted_salamander [label="spotted salamander"]
+control_device [label="control device"]
+ladybug [label="ladybug"]
+mortarboard_tool [label="mortarboard (tool)"]
+spaniel [label="spaniel"]
+norwich_terrier [label="norwich terrier"]
+dogsled [label="dogsled"]
+indigo_bunting [label="indigo bunting"]
+tripod [label="tripod"]
+australian_terrier [label="australian terrier"]
+great_pyrenees [label="great pyrenees"]
+promontory [label="promontory"]
+hair_slide [label="hair slide"]
+instrument [label="instrument"]
+minibus [label="minibus"]
+clothing [label="clothing"]
+lhasa [label="lhasa"]
+sheepdog [label="sheepdog"]
+ship [label="ship"]
+fire_engine [label="fire engine"]
+sea_cucumber [label="sea cucumber"]
+washer [label="washer"]
+glass_drinkware [label="glass (drinkware)"]
+komondor [label="komondor"]
+miniature_schnauzer [label="miniature schnauzer"]
+corkscrew [label="corkscrew"]
+neck_brace [label="neck brace"]
+woodlouse [label="woodlouse"]
+goose [label="goose"]
+alligator_lizard [label="alligator lizard"]
+ambigous_word [label="ambigous word"]
+animal [label="animal"]
+chesapeake_bay_retriever [label="chesapeake bay retriever"]
+panpipe [label="panpipe"]
+long_horned_beetle [label="long-horned beetle"]
+shrimp [label="shrimp"]
+standard_schnauzer [label="standard schnauzer"]
+parking_meter [label="parking meter"]
+cabbage [label="cabbage"]
+dessert [label="dessert"]
+person [label="person"]
+dry_plant_matter [label="dry plant matter"]
+gasmask [label="gasmask"]
+asphalt [label="asphalt"]
+cheese [label="cheese"]
+stationery [label="stationery"]
+trombone [label="trombone"]
+washbasin [label="washbasin"]
+parachute [label="parachute"]
+stove [label="stove"]
+abacus [label="abacus"]
+lock [label="lock"]
+grey_whale [label="grey whale"]
+snow_leopard [label="snow leopard"]
+pickup [label="pickup"]
+chair [label="chair"]
+cleaver [label="cleaver"]
+pretzel [label="pretzel"]
+food [label="food"]
+dock_water [label="dock (water)"]
+trifle [label="trifle"]
+bearskin_hat [label="bearskin hat"]
+big_spoon [label="big spoon"]
+excercise_equipment [label="excercise equipment"]
+appenzeller [label="appenzeller"]
+organ_anatomy [label="organ (anatomy)"]
+piano [label="piano"]
+night_snake [label="night snake"]
+stone_wall [label="stone wall"]
+capuchin [label="capuchin"]
+monarch_butterfly [label="monarch butterfly"]
+tiles [label="tiles"]
+carnivora [label="carnivora"]
+landmark_monument [label="landmark/monument"]
+red_breasted_merganser [label="red breasted merganser"]
+glass_object [label="glass object"]
+cardoon [label="cardoon"]
+sand [label="sand"]
+vehicle [label="vehicle"]
+car [label="car"]
+toyshop [label="toyshop"]
+running_shoe [label="running shoe"]
+pencil_box [label="pencil box"]
+dung_beetle [label="dung beetle"]
+vacuum_cleaner [label="vacuum cleaner"]
+fountain [label="fountain"]
+otterhound [label="otterhound"]
+boxer_dog [label="boxer dog"]
+starfish [label="starfish"]
+flying_animal [label="flying animal"]
+white_stork [label="white stork"]
+mortar [label="mortar"]
+trench_coat [label="trench coat"]
+telephone [label="telephone"]
+four_poster [label="four-poster"]
+whistle [label="whistle"]
+cassette_tape [label="cassette tape"]
+ladle [label="ladle"]
+sausage [label="sausage"]
+stick [label="stick"]
+wooden_gate [label="wooden gate"]
+mountain_tent [label="mountain tent"]
+broccoli [label="broccoli"]
+plate_dishware [label="plate (dishware)"]
+bucket [label="bucket"]
+thresher [label="thresher"]
+bridge [label="bridge"]
+basketball [label="basketball"]
+samoyed [label="samoyed"]
+italian_greyhound [label="italian greyhound"]
+fork_lift [label="fork lift"]
+tench [label="tench"]
+anemone_fish [label="anemone_fish"]
+knot [label="knot"]
+cookware [label="cookware"]
+brass [label="brass"]
+warthog [label="warthog"]
+jeep [label="jeep"]
+ringneck_snake [label="ringneck snake"]
+guillotine [label="guillotine"]
+pinwheel [label="pinwheel"]
+crutch [label="crutch"]
+cassette_player [label="cassette player"]
+cocktail_shaker [label="cocktail shaker"]
+medical_aparatus [label="medical aparatus"]
+domestic_cat [label="domestic cat"]
+snowplow [label="snowplow"]
+ruffed_grouse [label="ruffed grouse"]
+teapot [label="teapot"]
+gate [label="gate"]
+cassette [label="cassette"]
+Burial_vault_enclosure [label="Burial vault (enclosure)"]
+mollusc [label="mollusc"]
+barber_chair [label="barber_chair"]
+chime [label="chime"]
+sundial [label="sundial"]
+stopwatch [label="stopwatch"]
+boxer [label="boxer"]
+echidna [label="echidna"]
+orange [label="orange" id="5ca7ccad-3b8c-4c9a-ac27-44cddc96d4fa"]
+bulbul [label="bulbul"]
+croquet_ball [label="croquet ball"]
+swimwear [label="swimwear"]
+water_kelpie [label="water kelpie"]
+beaver [label="beaver"]
+european_fire_salamander [label="european fire salamander"]
+clock [label="clock"]
+rotisserie [label="rotisserie"]
+plastic_bag [label="plastic_bag"]
+vault [label="vault"]
+bagel [label="bagel"]
+hay [label="hay"]
+wig [label="wig"]
+pole [label="pole"]
+street_sign [label="street sign"]
+trolleybus [label="trolleybus"]
+bald_eagle [label="bald eagle"]
+object_part [label="object part"]
+nut_food [label="nut (food)"]
+potato [label="potato"]
+textile [label="textile"]
+trashcan [label="trashcan"]
+handkerchief [label="handkerchief"]
+manhole_cover [label="manhole cover"]
+mammal [label="mammal"]
+grey_fox [label="grey fox"]
+computer_mouse [label="computer mouse"]
+syringe [label="syringe"]
+cockroach [label="cockroach"]
+overskirt [label="overskirt"]
+stone [label="stone"]
+windsor_tie [label="windsor tie"]
+persian_cat [label="persian cat"]
+throne [label="throne"]
+coral_reef [label="coral reef"]
+african_grey [label="african grey"]
+sports_equipment [label="sports equipment"]
+garden_spider [label="garden spider"]
+yurt [label="yurt"]
+bank_vault [label="bank vault"]
+shetland_sheepdog [label="shetland sheepdog"]
+elephant [label="elephant"]
+oxygen_mask [label="oxygen mask"]
+isopod [label="isopod"]
+goblet [label="goblet"]
+microscope [label="microscope"]
+coil_spring [label="coil/spring"]
+abaya [label="abaya"]
+sheep_dog [label="sheep dog"]
+english_foxhound [label="english foxhound"]
+clothes_iron [label="clothes iron"]
+golden_retriever [label="golden retriever"]
+otter [label="otter"]
+barbershop [label="barbershop"]
+bottle [label="bottle"]
+piggy_bank [label="piggy bank"]
+fountain_pen [label="fountain pen"]
+squirrel_monkey [label="squirrel monkey"]
+miniature_pinscher [label="miniature pinscher"]
+recreational_vehicle [label="recreational vehicle"]
+tool [label="tool"]
+carton [label="carton"]
+tomb [label="tomb"]
+appenzeller_goat [label="appenzeller goat"]
+slot [label="slot"]
+bakery [label="bakery"]
+pajama [label="pajama"]
+mailbag [label="mailbag"]
+hippopotamus [label="hippopotamus"]
+basket_bed [label="basket/bed"]
+geyser [label="geyser"]
+black_widow [label="black widow"]
+arch [label="arch"]
+gila_monster [label="gila monster"]
+carpenters_kit [label="carpenter's kit"]
+dial_telephone [label="dial telephone"]
+norfolk_terrier [label="norfolk_terrier"]
+lion [label="lion"]
+drum [label="drum"]
+cornet [label="cornet"]
+kite [label="kite"]
+pickelhaube [label="pickelhaube"]
+australian_kelpie [label="australian kelpie"]
+crane [label="crane"]
+carniverous_fish [label="carniverous fish"]
+equipment [label="equipment"]
+stinkhorn [label="stinkhorn"]
+carbonara [label="carbonara"]
+loggerhead [label="loggerhead"]
+planetarium [label="planetarium"]
+marine_object [label="marine object"]
+bale [label="bale"]
+television [label="television"]
+sports_car [label="sports car"]
+water_snake [label="water snake"]
+hand_held_computer [label="hand held computer"]
+hen_of_the_woods [label="hen-of-the-woods"]
+tibetan_terrier [label="tibetan terrier"]
+german_shepherd [label="german shepherd"]
+king_penguin [label="king penguin"]
+rock_beauty [label="rock_beauty"]
+tower [label="tower"]
+bovine [label="bovine"]
+hartebeest [label="hartebeest"]
+giant_panda [label="giant panda"]
+briard [label="briard"]
+beer_bottle [label="beer bottle"]
+tractor [label="tractor"]
+chiton [label="chiton"]
+headgear [label="headgear"]
+thin_vertical_object [label="thin vertical object"]
+cup [label="cup" id="654c2298-aa63-4d7d-b154-c8b521c26532"]
+purse [label="purse"]
+norwegian_elkhound [label="norwegian elkhound"]
+boxer_sportsperson [label="boxer (sportsperson)"]
+town [label="town"]
+terrapin [label="terrapin"]
+electric_fan [label="electric fan"]
+breastplate [label="breastplate"]
+metal_container [label="metal container"]
+great_white_shark [label="great white shark"]
+sturgeon [label="sturgeon"]
+crock_pot [label="crock pot"]
+library [label="library"]
+mortar_masonry [label="mortar (masonry)"]
+crustacean [label="crustacean"]
+lynx [label="lynx"]
+lamp [label="lamp"]
+traffic_light [label="traffic light"]
+velvet [label="velvet"]
+borzoi [label="borzoi"]
+rocking_chair [label="rocking chair"]
+flying_insect [label="flying insect"]
+stand [label="stand"]
+stage [label="stage"]
+whale [label="whale"]
+cock [label="cock"]
+quail [label="quail"]
+puzzle [label="puzzle"]
+ballplayer [label="ballplayer"]
+metal_door [label="metal door"]
+pay_phone [label="pay phone"]
+dough [label="dough"]
+brittany_spaniel [label="brittany spaniel"]
+tow_truck [label="tow truck"]
+lawn_mower [label="lawn mower"]
+oystercatcher [label="oystercatcher"]
+spiny_lobster [label="spiny lobster"]
+rucksack [label="rucksack"]
+bathtub [label="bathtub"]
+reptile [label="reptile"]
+chihuahua [label="chihuahua"]
+wallaby [label="wallaby"]
+agama [label="agama"]
+grocery_store [label="grocery_store"]
+dandie_dinmont [label="dandie dinmont"]
+table_lamp [label="table lamp"]
+custard_apple_tree [label="custard apple (tree)"]
+snail [label="snail"]
+vase [label="vase"]
+post [label="post"]
+rain_barrel [label="rain barrel"]
+book [label="book"]
+west_highland_white_terrier [label="west highland white terrier"]
+remote_control [label="remote control"]
+pier [label="pier"]
+kimono [label="kimono"]
+window_screen [label="window screen"]
+curtain [label="curtain"]
+wooden_spoon [label="wooden spoon"]
+scottish_deerhound [label="scottish deerhound"]
+weimaraner [label="weimaraner"]
+beagle [label="beagle"]
+hornbill [label="hornbill"]
+aircraft_wing [label="aircraft wing"]
+tree_stump [label="tree stump"]
+indian_cobra [label="indian cobra"]
+projector [label="projector"]
+jean [label="jean"]
+oscilloscope [label="oscilloscope"]
+pigeon [label="pigeon"]
+aquatic_equipment [label="aquatic equipment"]
+onscreen [label="onscreen"]
+crustaceans [label="crustaceans"]
+ladybird [label="ladybird"]
+camera [label="camera"]
+porcupine [label="porcupine"]
+cardigan [label="cardigan"]
+madagascar_cat [label="madagascar cat"]
+wheeled_vehicle [label="wheeled vehicle"]
+barn_spider [label="barn spider"]
+dishwasher [label="dishwasher"]
+radio [label="radio"]
+bath_towel [label="bath towel"]
+big_cat [label="big cat"]
+poodle [label="poodle"]
+passenger_carrier [label="passenger carrier"]
+tree_trunk [label="tree trunk"]
+common_iguana [label="common iguana"]
+bib [label="bib"]
+wood_rabbit [label="wood rabbit"]
+stethoscope [label="stethoscope"]
+microwave_oven [label="microwave oven"]
+plastic_object [label="plastic object"]
+whippet [label="whippet"]
+ice_bear [label="ice bear"]
+tank [label="tank"]
+scale_animal_skin [label="scale (animal skin)"]
+lakeland_terrier [label="lakeland terrier"]
+half_track [label="half track"]
+meat [label="meat"]
+monkey [label="monkey"]
+pomeranian_duck [label="pomeranian duck"]
+carniverous_plant [label="carniverous plant"]
+snorkel [label="snorkel"]
+iPod [label="iPod"]
+soft_coated_wheaten_terrier [label="soft coated wheaten terrier"]
+rabbit [label="rabbit"]
+electric_bus [label="electric bus"]
+utensil [label="utensil"]
+angora_ferret [label="angora ferret"]
+cephalopod [label="cephalopod"]
+geographical_feature [label="geographical feature"]
+fixture [label="fixture"]
+freight_car [label="freight car"]
+bench [label="bench"]
+buckeye [label="buckeye"]
+object_with_wings [label="object with wings"]
+bustard [label="bustard"]
+lipstick [label="lipstick"]
+weighing_scale [label="weighing scale"]
+leaf_beetle [label="leaf beetle"]
+coffeepot [label="coffeepot"]
+prison [label="prison"]
+dock [label="dock"]
+adhesive_bandage [label="adhesive bandage"]
+squirrel [label="squirrel"]
+lorikeet [label="lorikeet"]
+frog [label="frog"]
+jellyfish [label="jellyfish"]
+trap_door [label="trap door"]
+miniature_poodle [label="miniature poodle"]
+cucumber [label="cucumber"]
+papillon_dog [label="papillon (dog)"]
+oxcart [label="oxcart"]
+rattle [label="rattle"]
+gantry_crane [label="gantry crane"]
+magnetic_compass [label="magnetic compass"]
+zebra [label="zebra"]
+weapon [label="weapon"]
+bottlecap [label="bottlecap"]
+drumstick [label="drumstick"]
+furniture_electronic_device [label="furniture/electronic device"]
+ear [label="ear"]
+diamondback [label="diamondback"]
+football_helmet [label="football helmet"]
+bulletproof_vest [label="bulletproof vest"]
+military_uniform [label="military uniform"]
+pillow [label="pillow"]
+matchstick [label="matchstick"]
+revolver [label="revolver"]
+pick [label="pick"]
+monarch_person [label="monarch (person)"]
+palace [label="palace"]
+bow_tie [label="bow tie"]
+plastic [label="plastic"]
+dalmatian [label="dalmatian"]
+bittern [label="bittern"]
+african_crocodile [label="african crocodile"]
+ski [label="ski"]
+pedestal [label="pedestal"]
+jersey [label="jersey"]
+band_aid [label="band aid"]
+dolphin [label="dolphin"]
+organism [label="organism"]
+hourglass [label="hourglass"]
+feather_boa [label="feather_boa"]
+armour [label="armour"]
+loudspeaker [label="loudspeaker"]
+hot_pot [label="hot pot"]
+floor_tiles [label="floor tiles"]
+camel [label="camel"]
+angora_goat [label="angora goat"]
+dining_table [label="dining table"]
+corn [label="corn"]
+hognose_snake [label="hognose snake"]
+garbage_truck [label="garbage truck"]
+plane [label="plane"]
+metal_gate [label="metal gate"]
+brown_bear [label="brown bear"]
+suidae [label="suidae"]
+leopard [label="leopard"]
+dhole [label="dhole"]
+buffalo [label="buffalo"]
+ring_binder [label="ring binder"]
+projectile [label="projectile"]
+french_horn [label="french horn"]
+chainlink_fence [label="chainlink fence"]
+wing [label="wing"]
+stick_insect [label="stick insect"]
+patio [label="patio"]
+silky_terrier [label="silky terrier"]
+chihuahua_cheese [label="chihuahua cheese"]
+container_with_wheels [label="container with wheels"]
+desk [label="desk"]
+electric_ray [label="electric ray"]
+acorn_squash [label="acorn squash"]
+guacamole [label="guacamole"]
+gown [label="gown"]
+packet [label="packet"]
+cover [label="cover"]
+racket [label="racket"]
+meerkat [label="meerkat"]
+groenendael [label="groenendael"]
+apple [label="apple" id="f81cf567-4798-4e4d-95f9-b430cf04ee55"]
+hanging_basket [label="hanging basket"]
+safe [label="safe"]
+home_theater [label="home theater"]
+dock_structure [label="dock (structure)"]
+plate [label="plate"]
+plant [label="plant"]
+goat [label="goat"]
+wheel [label="wheel"]
+table [label="table"]
+pitcher_plant [label="pitcher plant"]
+mixing_bowl [label="mixing bowl"]
+cowboy_hat [label="cowboy hat"]
+surface_material [label="surface material"]
+angora_rabbit [label="angora rabbit"]
+ball [label="ball"]
+structural_element [label="structural element"]
+puck [label="puck"]
+material [label="material"]
+crib [label="crib"]
+grille [label="grille"]
+sombrero [label="sombrero"]
+red_wolf [label="red_wolf"]
+american_black_bear [label="american black bear"]
+oil_filter [label="oil filter"]
+plastic_container [label="plastic container"]
+rifle [label="rifle"]
+desktop_computer [label="desktop_computer"]
+rhinoceros_beetle [label="rhinoceros beetle"]
+toy_terrier [label="toy terrier"]
+chambered_nautilus [label="chambered_nautilus"]
+minivan [label="minivan"]
+golfcart [label="golfcart"]
+hand_blower [label="hand blower"]
+chocolate_sauce [label="chocolate sauce"]
+paved_area [label="paved area"]
+plant_matter [label="plant matter"]
+mobility_aid [label="mobility aid"]
+ibex [label="ibex"]
+entlebucher [label="entlebucher"]
+pool_table [label="pool table"]
+magpie [label="magpie"]
+radiator [label="radiator"]
+tree [label="tree"]
+bear [label="bear"]
+armadillo [label="armadillo"]
+flying_object [label="flying object"]
+convertible [label="convertible"]
+container_with_handle [label="container with handle"]
+black_and_tan_coonhound [label="black and tan coonhound"]
+doberman [label="doberman"]
+agricultural_tool [label="agricultural tool"]
+soduku_puzzle [label="soduku puzzle"]
+volleyball_sport [label="volleyball (sport)"]
+skunk [label="skunk"]
+gordon_setter [label="gordon setter"]
+ambiguous_term [label="ambiguous term"]
+bullfrog [label="bullfrog"]
+vending_machine [label="vending machine"]
+sealyham_terrier [label="sealyham terrier"]
+schooner [label="schooner"]
+tree_frog [label="tree frog"]
+metal_pot [label="metal pot"]
+sailing_ship [label="sailing ship"]
+basket [label="basket"]
+harp [label="harp"]
+car_mirror [label="car mirror"]
+metal_object [label="metal object"]
+motor_vehicle [label="motor vehicle"]
+three_toed_sloth [label="three toed sloth"]
+clumber [label="clumber"]
+bedlington_terrier [label="bedlington terrier"]
+electric_device [label="electric device"]
+walking_stick_mobility_aid [label="walking stick (mobility aid)"]
+church [label="church"]
+turnstile [label="turnstile"]
+ringlet_butterfly [label="ringlet butterfly"]
+aerosol_spray_can [label="aerosol spray can"]
+cougar [label="cougar"]
+tree_squirrel [label="tree squirrel"]
+african_hunting_dog [label="african hunting dog"]
+automobile [label="automobile"]
+dowitcher [label="dowitcher"]
+barrow [label="barrow"]
+agricultural_machine [label="agricultural machine"]
+harvestman [label="harvestman"]
+consumer_electronics [label="consumer electronics"]
+building [label="building"]
+cloth [label="cloth"]
+tennis_ball [label="tennis ball"]
+arthropod [label="arthropod"]
+weasel [label="weasel"]
+orangutan [label="orangutan"]
+irish_water_spaniel [label="irish water spaniel"]
+car_wheel [label="car wheel"]
+wellington_boot [label="wellington boot"]
+tiger [label="tiger"]
+flamingo [label="flamingo"]
+shark [label="shark"]
+sea_snake [label="sea snake"]
+analog_clock [label="analog clock"]
+hyena [label="hyena"]
+machine [label="machine"]
+banana [label="banana" id="1c1dfe7c-0978-4c59-8728-7857a3867296"]
+acorn [label="acorn"]
+sulphur_crested_cockatoo [label="sulphur crested cockatoo"]
+sarong [label="sarong"]
+tobacco_shop [label="tobacco shop"]
+pie [label="pie"]
+nipple [label="nipple"]
+mailbox [label="mailbox"]
+volleyball_ball [label="volleyball (ball)"]
+mirror [label="mirror"]
+household_appliance [label="household appliance"]
+expresso_coffee [label="expresso (coffee)"]
+terrier [label="terrier"]
+capuchin_monkey [label="capuchin monkey"]
+hog [label="hog"]
+timber_wolf [label="timber wolf"]
+black_swan [label="black swan"]
+school_bus [label="school bus"]
+dry_twigs [label="dry twigs"]
+basenji [label="basenji"]
+mouse [label="mouse"]
+scientific_instrument [label="scientific instrument"]
+platform_table [label="platform/table"]
+beer_glass [label="beer glass"]
+suit [label="suit"]
+cowboy_boot [label="cowboy_boot"]
+invertebrate_without_exosksleton [label="invertebrate without exosksleton"]
+tarantula [label="tarantula"]
+dungeness_crab [label="dungeness crab"]
+weevil [label="weevil"]
+car_door [label="car door"]
+bollard [label="bollard"]
+barbell [label="barbell"]
+measuring_cup [label="measuring cup"]
+malamute [label="malamute"]
+duck [label="duck"]
+gibbon [label="gibbon"]
+custard_apple_fruit [label="custard apple (fruit)"]
+gas_pump [label="gas pump"]
+cooking_appliance [label="cooking appliance"]
+scoreboard [label="scoreboard"]
+bullet_train [label="bullet train"]
+retriever_dog [label="retriever (dog)"]
+ambulance [label="ambulance"]
+moped [label="moped"]
+china_cabinet [label="china cabinet"]
+studio_couch [label="studio couch"]
+information_storage_device [label="information storage device"]
+castle [label="castle"]
+ashcan [label="ashcan"]
+pencil_sharpener [label="pencil sharpener"]
+blenheim_spaniel [label="blenheim spaniel"]
+guitar [label="guitar"]
+bassoon [label="bassoon"]
+frying_pan [label="frying pan"]
+pillar [label="pillar"]
+greenhouse [label="greenhouse"]
+sandal [label="sandal"]
+computer_keyboard_key [label="computer keyboard key"]
+reel [label="reel"]
+enclosure [label="enclosure"]
+mortarboard [label="mortarboard"]
+cat [label="cat" id="05c02fc5-9095-41e4-acb1-68303654ebb1"]
+welsh_springer_spaniel [label="welsh springer spaniel"]
+upright [label="upright"]
+goldfinch [label="goldfinch"]
+jay [label="jay"]
+saltshaker [label="saltshaker"]
+sock [label="sock"]
+slipper [label="slipper"]
+coyote [label="coyote"]
+missile [label="missile"]
+string_instrument [label="string instrument"]
+walking_stick [label="walking stick"]
+triumphal_arch [label="triumphal arch"]
+
+
+animal->vertebrate
+vertebrate->reptile
+vertebrate->lizard
+vertebrate->amphibian
+vertebrate->mammal
+vertebrate->bird
+animal->invertebrate
+invertebrate->invertebrate_with_exosksleton
+invertebrate->invertebrate_without_exosksleton
+invertebrate_with_exosksleton->arthropod
+invertebrate_with_exosksleton->insect
+invertebrate_without_exoskeleton->mollusc
+mammal->land_mammal
+land_mammal->fox
+land_mammal->dog
+land_mammal->cat
+land_mammal->bear
+land_mammal->pig
+land_mammal->bovine
+cat->domestic_cat
+cat->big_cat
+fox->kit_fox
+dog->english_setter
+dog->siberian_husky
+dog->australian_terrier
+dog->english_springer
+animal->aquatic_animal
+aquatic_animal->marine_animal
+marine_animal->marine_mammal
+marine_mammal->whale
+marine_mammal->dolphin
+marine_mammal->seal
+whale->grey_whale
+bear->lesser_panda
+cat->Egyptian_cat
+land_mammal->ibex
+cat->persian_cat
+big_cat->cougar
+land_mammal->gazelle
+land_mammal->porcupine
+aquatic_mammal->sea_lion
+dog->malamute
+land_mammal->badger
+dog->great_Dane
+dog->hound
+hound->walker_hound
+dog->spaniel
+spaniel->welsh_springer_spaniel
+dog->whippet
+hound->scottish_deerhound
+aquatic_mammal->killer_whale
+land_mammal->mink
+land_mammal->african_elephant
+dog->weimaraner
+dog->soft_coated_wheaten_terrier
+dog->dandie_dinmont
+land_mammal->red_wolf
+dog->old_english_sheepdog
+big_cat->jaguar
+dog->otterhound
+dog->bloodhound
+dog->airedale_terrier
+land_mammal->hyena
+land_mammal->meerkat
+dog->giant_schnauzer
+primate->monkey
+monkey->titi
+sloth->three_toed_sloth
+plant->sorrel
+ferret->black_footed_ferret
+dog->dalmatian
+dog->black_and_tan_coonhound
+dog->papillon_dog
+dog->papillon_horse
+land_mammal->skunk
+dog->staffordshire_bullterrier
+dog->mexican_hairless
+dog->bouvier_des_flandres
+land_mammal->weasel
+dog->miniature_poodle
+clothing->cardigan
+dog->malinois
+sheep->bighorn
+tree_squirrel->fox_squirrel
+monkey->colobus
+cat->tiger_cat
+unknown->lhasa
+antelope->impala
+land_mammal->coyote
+dog->yorkshire_terrier
+dog->newfoundland
+bear->brown_bear
+fox->red_fox
+dog->norwegian_elkhound
+dog->rottweiler
+antelope->hartebeest
+dog->saluki
+fox->grey_fox
+dog->schipperke
+dog->pekinese
+dog->brabancon_griffon
+dog->west_highland_white_terrier
+dog->sealyham_terrier
+monkey->guenon
+land_mammal->carnivora
+carnivora->mongoose
+mammal->land_mammal
+mammal->aquatic_mammal
+land_mammal->primate
+land_mammal->cat
+land_mammal->dog
+land_mammal->big_cat
+land_mammal->primate
+primate->lemur
+lemur->indri
+land_mammal->big_cat
+big_cat->tiger
+dog->irish_wolfhound
+land_mammal->suidae
+land_mammal->equidae
+suidae->wild_boar
+dog->entlebucher
+equidae->zebra
+land_mammal->sheep
+sheep->ram
+dog->french_bulldog
+primate->orangutan
+dog->basenji
+big_cat->leopard
+dog->bernese_mountain_dog
+dog->maltese_dog
+dog->norfolk_terrier
+dog->toy_terrier
+dog->vizsla
+landmark_monument->cairn
+stone_pile->cairn
+monkey->squirrel_monkey
+dog->groenendael
+dog->clumber
+cat->siamese_cat
+primate->chimpanzee
+dog->komondor
+dog->afghan_hound
+dog->japanese_spaniel
+monkey->proboscis_monkey
+land_mammal->rodent
+rodent->guinea_pig
+wolf->white_wolf
+bear->ice_bear
+primate->gorilla
+dog->borzoi
+dog->toy_poodle
+dog->kerry_blue_terrier
+land_mammal->bovinae
+bovinae->ox
+dog->scotch_terrier
+dog->tibetan_mastiff
+monkey->spider_monkey
+dog->doberman
+dog->boston_bull
+dog->greater_swiss_mountain_dog
+appenzeller->appenzeller_cheese
+appenzeller->appenzeller_sennenhund
+appenzeller->appenzeller_chicken
+appenzeller->appenzeller_goat
+dog->appenzeller_sennenhund
+land_mammal->goat
+bird->chicken
+chicken->appenzeller_chicken
+goat->appenzeller_goat
+dog->shih_tzu
+spaniel->irish_water_spaniel
+pomeranian->pomeranian_dog
+dog->pomeranian_dog
+pomeranian->pomeranian_dog
+pomeranian->pomeranian_sheep
+sheep->pomeranian_sheep
+animal->bird
+bird->duck
+bird->goose
+pomeranian->pomeranian_duck
+duck->pomeranian_duck
+pomeranian->pomeranian_goose
+goose->pomeranian_goose
+dog->bedlington_terrier
+suidae->warthog
+land_mammal->camel
+camel->arabian_camel
+primate->gibbon
+gibbon->siamang
+dog->miniature_schnauzer
+dog->collie
+dog->golden_retriever
+dog->terrier
+terrier->irish_terrier
+dog->affenpinscher
+dog->border_collie
+land_mammal->leporidae
+leporidae->hare
+boxer->boxer_crab
+crab->boxer_crab
+arthropod->crustacean
+crustacean->crab
+boxer->boxer_shrimp
+crustacean->shrimp
+shrimp->boxer_shrimp
+boxer->boxer_dog
+dog->boxer_dog
+boxer->boxer_snipe_eel
+eel->boxer_snipe_eel
+boxer->boxer_sportsperson
+person->sportsperson
+sportsperson->boxer_sportsperson
+terrier->silky_terrier
+dog->hound
+hound->beagle
+leonberg->leonberg_town
+town->leonberg_town
+leonberg->chien_leonberg
+dog->chien_leonberg
+dog->german_short_haired_pointer
+monkey->patas
+dog->dhole
+primate->baboon
+monkey->macaque
+dog->chesapeake_bay_retriever
+dog->bull_mastiff
+dog->kuvasz
+capuchin->capuchin_monkey
+capuchin->old_dutch_capuchin
+bird->pigeon
+pigeon->old_dutch_capuchin
+monkey->capuchin_monkey
+dog->pug
+dog->curly_coated_retriever
+terrier->norwich_terrier
+dog->retriever_dog
+retriever_dog->flat_coated_retriever
+suidae->hog
+dog->keeshond
+dog->eskimo_dog
+spaniel->brittany_spaniel
+dog->poodle
+dog->terrier
+poodle->standard_poodle
+terrier->lakeland_terrier
+leopard->snow_leopard
+dog->gordon_setter
+dog->feral_dog
+feral_dog->dingo
+dog->standard_schnauzer
+mammal->rodent
+rodent->hamster
+terrier->tibetan_terrier
+mammal->fox
+fox->arctic_fox
+terrier->wire_haired_fox_terrier
+dog->basset
+mammal->bovinae
+bovinae->buffalo
+buffalo->water_buffalo
+bear->american_black_bear
+rabbit->angora_rabbit
+angora->angora_rabbit
+angora->angora_goat
+goat->angora_goat
+angora->angora_ferret
+ferret->angora_ferret
+angora->turkish_angora
+cat->turkish_angora
+angora->british_angora
+british_angora->oriental_longhair
+bovinae->bison
+primate->howler_monkey
+mammal->hippopotamus
+ambiguous_word->chow
+chow->chow_food
+chow->chow_chow
+dog->chow_chow
+bear->giant_panda
+terrier->american_staffordshire_terrier
+dog->sheepdog
+sheepdog->shetland_sheepdog
+dog->great_pyrenees
+ambiguous_word->chihuahua
+chihuahua->chihuahua_cheese
+cheese->chihuahua_cheese
+dog->chihuahua_dog
+cat->tabby
+monkey->marmoset
+dog->labrador_retriever
+dog->saint_bernard
+mammal->armadillo
+animal->armoured_animal
+armoured_animal->armadillo
+dog->samoyed
+dog->bluetick
+mammal->polecat
+squirrel->marmot
+ambiguous_word->kelpie
+kelpie->australian_kelpie
+kelpie->water_kelpie
+sheep_dog->australian_kelpie
+primate->gibbon
+mammal->llama
+dog->miniature_pinscher
+rabbit->wood_rabbit
+dog->italian_greyhound
+big_cat->lion
+spaniel->cocker_spaniel
+spaniel->sussex_spaniel
+spaniel->blenheim_spaniel
+dog->irish_setter
+marine_mammal->dugong
+elephant->indian_elephant
+mammal->beaver
+ambiguous_word->pembroke
+pembroke->pembroke_welsh_corgi
+dog->pembroke_welsh_corgi
+cat->madagascar_cat
+dog->rhodesian_ridgeback
+big_cat->lynx
+dog->african_hunting_dog
+monkey->langur
+hound->ibizan_hound
+wolf->timber_wolf
+big_cat->cheetah
+hound->english_foxhound
+dog->briard
+bear->sloth_bear
+terrier->border_terrier
+dog->german_shepherd
+mammal->otter
+bear->koala
+mammal->wild_boar
+wild_boar->tusker
+mammal->echidna
+mammal->marsupial
+marsupial->wallaby
+mammal->platypus
+mammal->wombat
+firearm->revolver
+personal_item->umbrella
+aquatic_vehicle->boat
+boat->ship
+ship->sailing_ship
+sailing_ship->schooner
+ball->soccer_ball
+musical_instrument->accordion
+insect->ant
+marine_animal->starfish
+marine_animal->marine_mollusc
+mollusc->marine_mollusc
+marine_mollusc->cephalopod
+cephalopod->chambered_nautilus
+musical_instrument->grand_piano
+electronic_device->laptop
+fruit->berry
+berry->strawberry
+aeroplane->airliner
+aeroplane->warplane
+aircraft->airship
+object->airborne_object
+airborne_object->balloon
+machine->vehicle
+vehicle->aircraft
+vehicle->spacecraft
+vehicle->wheeled_vehicle
+wheeled_vehicle->powered_wheeled_vehicle
+spacecraft->space_shuttle
+powered_wheeled_vehicle->minivan
+powered_wheeled_vehicle->truck
+powered_wheeled_vehicle->bus
+powered_wheeled_vehicle->van
+powered_wheeled_vehicle->car
+vehicle->half_track
+vehicle->military_vehicle
+military_vehicle->tank
+flying_object->projectile
+projectile->missile
+sled->bobsled
+sled->dogsled
+bicycle->bicycle_built_for_two
+bicycle->mountain_bike
+rail_transport_vehicle->freight_car
+vehicle->passenger_carrier
+passenger_carrier->passenger_car
+ambiguous_word->passenger_car
+passenger_car->passenger_car_rail
+passenger_car->automobile
+car->automobile
+ambiguous_word->barrow
+barrow->wheelbarrow
+container_with_wheels->wheelbarrow
+container->container_with_wheels
+object_with_wheels->container_with_wheels
+object_with_wheels->wheeled_vehicle
+container_with_wheels->shopping_cart
+powered_wheeled_vehicle->motor_scooter
+powered_wheeled_vehicle->fork_lift
+railed_transport_vehicle->electric_locomotive
+wheeled_vehicle->railed_transport_vehicle
+railed_transport_vehicle->steam_locomotive
+powered_wheeled_vehicle->ambulance
+car->cab
+car->convertible
+powered_wheeled_vehicle->jeep
+car->limousine
+car->Model_T
+ambiguous_word->racer
+racer->racing_car
+racer->road_bike
+wheeled_vehicle->road_bike
+powered_wheeled_vehicle->sports_car
+powered_wheeled_vehicle->go_kart
+powered_wheeled_vehicle->golfcart
+powered_wheeled_vehicle->moped
+vehicle->snowplow
+truck->fire_engine
+truck->garbage_truck
+ambiguous_word->pickup
+pickup->pickup_truck
+truck->pickup_truck
+truck->tow_truck
+truck->trailer_truck
+van->moving_van
+van->police_van
+vehicle->recreational_vehicle
+vehicle->streetcar
+vehicle->snowmobile
+wheeled_vehicle->tractor
+agricultural_machinery->tractor
+wheeled_vehicle->mobile_home
+wheeled_vehicle->tricycle
+wheeled_vehicle->unicycle
+wheeled_vehicle->cart
+cart->horse_cart
+wheeled_vehicle->carriage
+cart->hand_cart
+cart->jinrikisha
+cart->oxcart
+container->container_with_handle
+rotating_object->wheel
+furniture->bed
+basket->basket_bed
+bed->basket_bed
+basket_bed->bassinet
+bed->cradle
+bed->crib
+bed->four_poster
+furniture->bookcase
+furniture->cabinet
+cabinet->china_cabinet
+furniture->medicine_chest
+furniture->chest_of_drawers
+chest_of_drawers->chiffonier
+lamp->table_lamp
+electrical_device->table_lamp
+ambiguous_word->file
+stationery->file_folder
+file->file_folder
+tool->file_tool
+file->file_tool
+stationery->file
+bench->park_bench
+furniture->seat
+seat->park_bench
+seat->chair
+chair->barber_chair
+chair->throne
+chair->folding_chair
+chair->rocking_chair
+chair->studio_couch
+seat->toilet_seat
+bathroom_object->toilet_seat
+furniture->table
+table->desk
+table->pool_table
+table->dining_table
+furniture->furniture_electronic_device
+electronic_device->furniture_electronic_device
+furniture_electronics->entertainment_center
+furniture->wardrobe
+fruit->apple
+apple->granny_smith
+fruit->orange
+fruit->lemon
+fruit->fig
+fruit->pineapple
+fruit->banana
+fruit->jackfruit
+ambiguous_word->custard_apple
+custard_apple->custard_apple_fruit
+fruit->custard_apple_fruit
+custard_apple->custard_apple_tree
+tree->pomegranate
+object->nut
+nut->acorn
+bodypart->hip
+bodypart->ear
+plant->cultivated_plant
+cultivated_plant->rapeseed
+cultivated_plant->corn
+ambiguous_word->buckeye
+buckeye->buckeye_tree
+buckeye->buckeye_chicken
+tree->buckeye_tree
+chicken->buckeye_chicken
+object->musical_instrument
+ambiguous_term->organ
+organ->organ_anatomy
+organ->organ_musical_instrument
+ambiguous_word->upright
+upright->upright_piano
+piano->grand_piano
+musical_instrument->piano
+piano->upright_piano
+musical_instrument->percussion_instrument
+percussion_instrument->chime
+percussion_instrument->drum
+percussion_instrument->gong
+percussion_instrument->rattle
+rattle->maraca
+percussion_instrument->marimba
+drum->steel_drum
+musical_instrument->banjo
+musical_instrument->string_instrument
+string_instrument->cello
+string_instrument->violin
+string_instrument->harp
+string_instrument->guitar
+guitar->acoustic_guitar
+guitar->electric_guitar
+musical_instrument->wind_instrument
+wind_instrument->cornet
+wind_instrument->french_horn
+wind_instrument->trombone
+wind_instrument->harmonica
+wind_instrument->ocarina
+wind_instrument->panpipe
+wind_instrument->bassoon
+wind_instrument->oboe
+wind_instrument->sax
+wind_instrument->flute
+plant_part->flower
+plant_part->stem_plant
+plant_part->root_plant
+plant_part->leaf
+plant_part->foliage
+plant_part->tree_part
+tree_part->tree_trunk
+tree_part->tree_stump
+tree_part->tree_root
+plant->tree
+plant->bush
+plant->grass
+flower->daisy
+flower->yellow_ladys_slipper
+geographical_feature->cliff
+geographical_feature->valley
+geographical_feature->alp
+geographical_feature->volcano
+geographical_feature->promontory
+geographical_feature->sandbar
+geographical_feature->coral_reef
+geographical_feature->lakeside
+geographical_feature->seashore
+geographical_feature->geyser
+tool->cutting_tool
+cutting_tool->hatchet
+cutting_tool->cleaver
+cutting_tool->letter_opener
+ambiguous_term->plane
+plane->plane_tool
+plane->airplane
+cutting_tool->plane_tool
+cutting_tool->drill
+power_tool->power_drill
+drill->power_drill
+cutting_tool->lawn_mower
+tool->hand_tool
+hand_tool->hammer
+tool->corkscrew
+tool->can_opener
+tool->plunger
+tool->screwdriver
+tool->shovel
+tool->spade
+tool->agricultural_tool
+agricultural_tool->plow
+cutting_tool->chain_saw
+power_tool->chain_saw
+bird->cock
+bird->hen
+bird->ostrich
+bird->brambling
+bird->goldfinch
+bird->house_finch
+bird->junco
+bird->indigo_bunting
+bird->robin
+bird->bulbul
+bird->jay
+bird->magpie
+bird->chickadee
+bird->water_ouzel
+ambiguous_term->kite
+bird->kite_bird
+kite->kite_bird
+object->object_with_wings
+airborne_object->aircraft
+aircraft->aeroplane
+aircraft->helicopter
+object_with_wings->aeroplane
+vehicle->aeroplane
+flying_object->aeroplane
+object->flying_object
+flying_object->flying_animal
+animal->flying_animal
+flying_animal->bird
+flying_animal->flying_insect
+object_with_wings->kite
+bird->bald_eagle
+bird->vulture
+bird->great_grey_owl
+bird->black_grouse
+bird->ptarmigan
+bird->ruffed_grouse
+bird->prairie_chicken
+bird->peacock
+bird->quail
+bird->partridge
+bird->african_grey
+bird->macaw
+bird->sulphur_crested_cockatoo
+bird->lorikeet
+bird->coucal
+bird->bee_eater
+bird->hornbill
+bird->hummingbird
+bird->jacamar
+bird->toucan
+bird->drake
+bird->red_breasted_merganser
+bird->goose
+bird->black_swan
+bird->white_stork
+bird->black_stork
+bird->spoonbill
+bird->flamingo
+bird->American_egret
+bird->little_blue_heron
+bird->bittern
+ambiguous_term->crane
+crane->crane_bird
+crane->crane_machine
+crane_machine->tower_crane
+crane_machine->gantry_crane
+bird->crane_bird
+bird->limpkin
+bird->American_coot
+bird->bustard
+bird->ruddy_turnstone
+bird->red_backed_sandpiper
+bird->redshank
+bird->dowitcher
+bird->oystercatcher
+bird->european_gallinule
+bird->pelican
+bird->king_penguin
+bird->albatross
+object->aquatic_object
+aquatic_object->aquatic_animal
+aquatic_animal->fish
+organism->carnivore
+animal->carniverous_animal
+carnivore->carniverous_animal
+plant->carniverous_plant
+carnivore->carniverous_plant
+carniverous_plant->venus_fly_trap
+carniverous_plant->pitcher_plant
+carniverous_animal->carniverous_fish
+carniverous_fish->shark
+shark->great_white_shark
+shark->tiger_shark
+shark->hammerhead
+fish->electric_ray
+fish->stingray
+fish->barracouta
+fish->coho
+fish->tench
+fish->goldfish
+fish->eel
+fish->rock_beauty
+fish->anemone_fish
+fish->lionfish
+fish->puffer
+fish->sturgeon
+fish->gar
+aquatic_animal->amphibian
+land_animal->amphibian
+animal->diapsid
+diapsid->turtle
+turtle->loggerhead
+turtle->leatherback_turtle
+turtle->mud_turtle
+diapsid->terrapin
+turtle->box_turtle
+animal->reptile
+reptile->lizard
+lizard->banded_gecko
+lizard->common_iguana
+lizard->american_chameleon
+lizard->whiptail
+lizard->agama
+lizard->frilled_lizard
+lizard->alligator_lizard
+lizard->gila_monster
+lizard->green_lizard
+lizard->african_chameleon
+lizard->komodo_dragon
+lizard->dinosaur
+dinosaur->triceratops
+lizard->african_crocodile
+lizard->american_alligator
+reptile->snake
+snake->thunder_snake
+snake->ringneck_snake
+snake->hognose_snake
+snake->green_snake
+snake->king_snake
+snake->garter_snake
+snake->water_snake
+snake->vine_snake
+snake->night_snake
+snake->boa_constrictor
+snake->rock_python
+snake->indian_cobra
+snake->green_mamba
+snake->sea_snake
+aquatic_animal->sea_snake
+snake->horned_viper
+snake->diamondback
+snake->sidewinder
+amphibian->european_fire_salamander
+amphibian->common_newt
+amphibian->eft
+amphibian->spotted_salamander
+amphibian->axolotl
+amphibian->frog
+amphibian->toad
+frog->bullfrog
+frog->tree_frog
+frog->tailed_frog
+musical_instrument->whistle
+object_part->wing
+wing->aircraft_wing
+wing->bird_wing
+wing->insect_wing
+bird_part->bird_wing
+aircraft_part->aircraft_wing
+insect_part->insect_wing
+tool->brush
+brush->paintbrush
+tool->hand_blower
+mask->oxygen_mask
+object->equipment
+equipment->aquatic_equipment
+aquatic_equipment->snorkel
+electronic_device->loudspeaker
+electronic_device->microphone
+ambiguous_term->mouse
+mouse->computer_mouse
+mouse->mouse_animal
+object->device
+device->electric_device
+electric_device->electric_fan
+device->oil_filter
+device->strainer
+device->space_heater
+device->stove
+device->guillotine
+device->measuring_device
+measuring_device->barometer
+measuring_device->rule
+measuring_device->odometer
+ambiguous_term->scale
+scale->scale_animal_skin
+scale->weighing_scale
+measuring_device->weighing_scale
+measuring_device->clock
+clock->analog_clock
+clock->digital_clock
+clock->wall_clock
+measuring_device->hourglass
+measuring_device->sundial
+measuring_device->parking_meter
+measuring_device->stopwatch
+measuring_device->digital_watch
+personal_item->digital_watch
+measuring_device->stethoscope
+tool->syringe
+measuring_device->magnetic_compass
+device->optical_device
+optical_device->binoculars
+optical_device->projector
+personal_item->sunglasses
+object->instrument
+instrument->scientific_instrument
+scientific_instrument->radio_telescope
+scientific_instrument->microscope
+tool->weapon
+weapon->bow
+weapon->cannon
+weapon->assault_rifle
+weapon->rifle
+object->projectile
+object->control_device
+control_device->keyboard
+keyboard->computer_keyboard
+keyboard->typewriter_keyboard
+device->lighter
+device->abacus
+machine->cash_machine
+device->slide_rule
+electronic_device->desktop_computer
+electronic_device->hand_held_computer
+ambiguous_term->notebook
+notebook->notebook_book
+notebook->notebook_computer
+electronic_device->laptop
+object->onscreen_object
+onscreen->web_site
+machine->agricultural_machine
+agricultural_machine->harvester
+agricultural_machine->thresher
+electronic_device->printer
+structural_element->opening
+opening->slot
+machine->vending_machine
+machine->sewing_machine
+control_device->joystick
+control_device->switch
+object_part->wheel
+object_part->hook
+wheel->car_wheel
+wheel->paddlewheel
+wheel->pinwheel
+wheel->potters_wheel
+device->gas_pump
+amusement_ride->fairground_ride
+amusement_ride->carousel
+seat->swing
+hanging_object->swing
+hanging_object->hanging_basket
+basket->hanging_basket
+rotating_object->reel
+object->radiator
+sports_equipment->puck
+electronic_device->hard_disc
+sunglasses->sunglass
+eyewear->sunglasses
+eyewear->goggles
+eyewear->spectacles
+tool->pick
+mirror->car_mirror
+car_part->car_mirror
+renewable_energy_device->solar_dish
+renewable_energy_device->wind_turbine
+electronic_device->remote_control
+vehicle_part->disk_brake
+component->buckle
+personal_item->hair_slide
+object->knot
+lock->combination_lock
+lock->padlock
+component->nail
+object->safety_pin
+component->screw
+component->muzzle
+belt->belt_harness
+harness->belt_harness
+belt_harness->seat_belt
+sports_equipment->ski
+object->candle
+object->jack_o_lantern
+object->light_source
+light_source->spotlight
+light_source->torch
+object->neck_brace
+structure->pier
+stand->tripod
+pole_post->maypole
+device->mousetrap
+object->spider_web
+arthropod->trilobite
+arthropod->arachnid
+arachnid->spider
+spider->harvestman
+arthropod->scorpion
+spider->black_and_gold_garden_spider
+spider->barn_spider
+spider->garden_spider
+spider->black_widow
+spider->tarantula
+spider->wolf_spider
+arachnid->tick
+arthropod->centipede
+crustacean->isopod
+isopod->woodlouse
+crab->dungeness_crab
+crab->rock_crab
+crab->fiddler_crab
+crustaceans->king_crab
+crustacean->american_lobster
+crustacean->spiny_lobster
+crustacean->crayfish
+crustacean->crab
+crab->hermit_crab
+insect->beetle
+beetle->tiger_beetle
+beetle->ladybug
+beetle->ladybird
+beetle->ground_beetle
+beetle->long_horned_beetle
+beetle->leaf_beetle
+beetle->dung_beetle
+beetle->rhinoceros_beetle
+beetle->weevil
+insect->fly
+insect->social_insect
+social_insect->bee
+social_insect->ant
+flying_insect->bee
+flying_insect->wasp
+insect->grasshopper
+ambigous_word->cricket
+cricket->cricket_insect
+insect->cricket
+cricket->cricket_sport
+ambiguous_word->walking_stick
+walking_stick->walking_stick_insect
+walking_stick->walking_stick_mobility_aid
+insect->stick_insect
+insect->cockroach
+insect->mantis
+insect->cicada
+insect->leafhopper
+flying_insect->lacewing
+flying_insect->dragonfly
+flying_insect->damselfly
+butterfly->admiral_butterfly
+butterfly->ringlet_butterfly
+ambiguous_word->monarch
+flying_insect->butterfly
+monarch->monarch_butterfly
+monarch->monarch_person
+butterfly->monarch_butterfly
+butterfly->cabbage_butterfly
+butterfly->sulphur_butterfly
+butterfly->lycaenid
+marine_animal->marine_invertebrate
+animal->invertebrate
+invertebrate->marine_invertebrate
+marine_invertebrate->jellyfish
+marine_invertebrate->sea_anemone
+coral->brain_coral
+worm->flatworm
+worm->nematode
+object->shell
+shell->conch
+animal_with_shell->snail
+mollusc->snail
+mollusc->slug
+marine_mollusc->sea_slug
+marine_mollusc->chiton
+echinoderms->sea_urchin
+echinoderms->sea_cucumber
+marine_animal->echinoderms
+household_object->household_appliance
+household_applicance->clothes_iron
+household_applicance->espresso_maker
+cooking_appliance->microwave_oven
+oven->dutch_oven
+rotating_object->rotisserie
+cooking_appliance->rotisserie
+household_appliance->toaster
+electrical_appliance->toaster
+cooking_appliance->waffle_iron
+cleaning_device->vacuum_cleaner
+household_appliance->vacuum_cleaner
+household_appliance->dishwasher
+household_appliance->refrigerator
+component->washer
+cookware->crock_pot
+cookware->frying_pan
+cookware->wok
+liquid_container->pot
+pot->metal_pot
+metal_pot->caldron
+liquid_container->coffeepot
+liquid_container->teapot
+tool->spatula
+platform->platform_table
+table->platform_table
+platform_table->altar
+architectural_element->arch
+arch->triumphal_arch
+structure->monument
+monument->triumphal_arch
+paved_area->patio
+bridge->steel_arch_bridge
+bridge->suspension_bridge
+bridge->viaduct
+building->barn
+building_structure->building
+structure->building
+structure->machine
+building_structure->greenhouse
+building->palace
+religious_building->monastery
+building_room->library
+building_room->building
+building_room->room
+agricultural_area->apiary
+building->boathouse
+building->religious_building
+religious_building->church
+religious_building->mosque
+structure->stupa
+building->planetarium
+building->restaurant
+building->cinema
+electronic_device->home_theater
+building->lumbermill
+coil->coil_tube
+coil->coil_spring
+thin_vertical_object->obelisk
+thin_vertical_object->pillar
+thin_vertical_object->post
+thin_vertical_object->bollard
+thin_vertical_object->pole_post
+pole_post->utility_pole
+pole_post->lamp_post
+pole_post->totem_pole
+building->castle
+building->prison
+shop->grocery_store
+shop->bakery
+shop->barbershop
+shop->bookshop
+shop->butcher_shop
+food->confectionery
+shop->shoe_shop
+shop->tobacco_shop
+shop->toyshop
+architecture->fountain
+building->cliff_dwelling
+tent->yurt
+structure_water->dock
+dock->dock_water
+dock->dock_structure
+metal->brass
+material->stone
+object->stone
+stone->megalith
+object->megalith
+handrail->bannister
+marine_structure->breakwater
+marine_structure->jetty
+object->marine_object
+marine_object->marine_structure
+marine_object->marine_animal
+structure->barrier
+barrier->dam
+structure->fence
+structure->monument
+structure->wall
+structure->building
+fence->chainlink_fence
+fence->picket_fence
+fence->worm_fence
+wall->stone_wall
+structural_element->grille
+structural_element->door
+structural_element->gate
+structural_element->barrier
+gate->metal_gate
+metal_object->metal_gate
+wooden_object->wooden_gate
+metal_object->metal_door
+wooden_object->wooden_door
+door->sliding_door
+door->wooden_door
+door->metal_door
+door->car_door
+door->glass_door
+glass_object->glass_door
+door->revolving_door
+door->trap_door
+barrier->turnstile
+gate->turnstile
+structure->shelter
+shelter->tent
+tent->mountain_tent
+board->scoreboard
+board->display_board
+object->honeycomb
+household_object->plate_rack
+material->honeycomb
+structure->pedestal
+object->beacon
+food->vegetable
+food->meat
+food->fruit
+food->nut_food
+food->mashed_potato
+vegetable->potato
+potato->mashed_potato
+potato->potato_chips
+potato->french_fries
+vegetable->bell_pepper
+vegetable->cabbage
+cabbage->head_cabbage
+vegetable->broccoli
+vegetable->cauliflower
+squash->zucchini
+squash->spaghetti_squash
+squash->acorn_squash
+squash->butternut_squash
+vegetable->cucumber
+vegetable->artichoke
+plant->thistle
+thistle->cardoon
+fungus->mushroom
+curtain->shower_curtain
+clothing->jean
+container->carton
+container->box
+container->waste_container
+waste_container->bin
+bin->litter_bin
+bin->wheelie_bin
+bin->trashcan
+object->fabric_object
+object->wooden_object
+object->metal_object
+object->plastic_object
+object->glass_object
+fabric_object->handkerchief
+footwear->sandal
+waste_container->ashcan
+container->safe
+ambiguous_term->plate
+plate->plate_dishware
+plate->petri_plate
+plate->wall_plate
+plate->printing_plate
+plate->plate_metal
+plate->plate_armour
+plate->weight_plate
+personal_item->jewellery
+jewellery->necklace
+ball->croquet_ball
+clothing->coat
+coat->fur_coat
+protective_clothing->thimble
+clothing->pajama
+footwear->running_shoe
+container->cocktail_shaker
+ambiguous_term->chest
+chest->chest_furniture
+container->chest_furniture
+furniture->chest_furniture
+chest->thorax
+metal_cover->manhole_cover
+electronic_device->modem
+container->tub
+object->tray
+sports_aparatus->balance_beam
+food->bread
+bread->bagel
+rug->prayer_rug
+clothing->kimono
+pot->hot_pot
+container->jug
+jug->whiskey_jug
+protective_clothing->knee_pad
+cover->book_jacket
+book_part->book_jacket
+ambiguous_term->spindle
+clothing->headwear
+headwear->hat
+headwear->ski_mask
+container->bottle
+bottle->beer_bottle
+protective_clothing->helmet
+headgear->helmet
+headgear->hat
+helmet->crash_helmet
+object->bottlecap
+roof->tile_roof
+personal_item->mask
+clothing->maillot
+dish->petri_dish
+helmet->football_helmet
+headgear->bathing_cap
+toy->teddy
+personal_item->holster
+bottle->pop_bottle
+electronic_device->photocopier
+clothing->vestment
+puzzle->crossword_puzzle
+puzzle->jigsaw_puzzle
+puzzle->soduku_puzzle
+ball->golf_ball
+food->dessert
+dessert->trifle
+clothing->suit
+tower->water_tower
+container->water_tower
+clothing->feather_boa
+clothing->cloak
+liquid->beverage
+liquid->water
+beverage->wine
+wine->red_wine
+percussion_instrument->drumstick
+personal_item->shield
+container->christmas_stocking
+clothing->hoopskirt
+paper_card_object->menu
+ambiguous_term->stage
+stage->stage_platform
+structural_element->platform
+platform->stage_platform
+amiguous_term->bonnet
+bonnet->car_bonnet
+bonnet->bonnet_headgear
+headgear->bonnet_headgear
+car_part->car_bonnet
+car_part->car_wheel
+car_part->car_door
+food->meat_loaf
+ball->baseball
+powder->face_powder
+container->scabbard
+personal_item->scabbard
+container->sunscreen_container
+lotion->subscreen
+ambiguous_term->glass
+glass->glass_drinkware
+glass_drinkware->beer_glass
+mushroom->hen_of_the_woods
+food->dipping_sauce
+dipping_sauce->guacamole
+object->fixture
+fixture->lampshade
+material->flexible_material
+flexible_material->textile
+textile->wool
+plant_matter->dry_plant_matter
+plant_matter->dry_leaves
+plant_matter->dry_twigs
+plant_matter->compost
+dry_plant_matter->hay
+hay->hay_bale
+bale->hay_bale
+tie->bow_tie
+bag->mailbag
+jug->water_jug
+container->open_container
+open_container->bucket
+fabric_object->cloth
+cloth->dishrag
+dishware->bowl
+bowl->soup_bowl
+beverage->eggnog
+ambiguous_term->mortar
+mortar->mortar_weaponry
+mortar->mortar_masonry
+coat->trench_coat
+object->tool
+object->flexible_object
+tool->cleaning_tool
+tool->paddle
+flexible_object->chain
+object->swab
+bowl->mixing_bowl
+food->pie
+pie->potpie
+bottle->wine_bottle
+structural_element->shoji
+protective_clothing->bulletproof_vest
+protective_clothing->armour
+platform->drilling_platform
+ambiguous_term->binder
+binder->binder_clip
+binder->ring_binder
+clothing->cardigan
+clothing->sweatshirt
+container->cookware
+cookware->pot
+structural_element->enclosure
+enclosure->animal_enclosure
+enclosure->electrical_enclosure
+animal_enclosure->birdhouse
+open_container->basket
+basket->hamper
+ball->ping_pong_ball
+box->pencil_box
+telephone->pay_phone
+food->soup
+liquid->soup
+soup->consomme
+clothing->apron
+object->sports_equipment
+sports_equipment->punching_bag
+bag->backpack
+bag->rucksack
+man->groom
+woman->bride
+hat->bearskin_hat
+stationery->pencil_sharpener
+stationery->pen
+stationery->pencil
+stationery->envelope
+stationery->paper
+cleaning_tool->broom
+net->mosquito_net
+cloak->abaya
+ambiguous_word->mortarboard
+tool->mortarboard_tool
+mortarboard->mortarboard_tool
+mortarboard->square_academic_cap
+clothing->poncho
+tool->mobility_aid
+mobility_aid->crutch
+mobility_aid->walking_stick_mobility_aid
+camera->polaroid_camera
+computer_keyboard_key->space_bar
+open_container->cup
+sports_equipment->racket
+object->urban_object
+urban_object->traffic_light
+tool->writing_implement
+writing_implement->quill
+writing_implement->pen
+electronic_device->radio
+food->dough
+paste->dough
+fluid->paste
+fluid->liquid
+armour->cuirass
+clothing->uniform
+uniform->military_uniform
+cosmetics->lipstick
+hat->shower_cap
+electronic_device->monitor
+electronic_device->oscilloscope
+clothing->mitten
+clothing->brassiere
+bread->french_loaf
+open_container->vase
+liquid_container->milk_can
+ball->rugby_ball
+paper_object->paper_towel
+mushroom->earthstar
+paper_object->envelope
+clothing->miniskirt
+hat->cowboy_hat
+passenger_vehicle->trolleybus
+electric_bus->trolleybus
+bottle->perfume_dispenser
+cosmetics->perfume_dispenser
+container->liquid_container
+liquid_container->bathtub
+food->sausage
+sausage->hotdog
+fungus->coral_fungus
+train->bullet_train
+fabric_object->pillow
+fabric_object->cushion
+paper_object->toilet_tissue
+information_storage_device->cassette_tape
+ambiguous_word->cassette
+cassette->cassette_tape
+cassette->cassette_bicycle
+tool->carpenters_kit
+utensil->ladle
+spoon->big_spoon
+big_spoon->ladle
+fungus->stinkhorn
+container->lotion_container
+container->aerosol_spray_can
+aerosol_spray_can->hair_spray
+clothing->gown
+gown->academic_gown
+structural_element->dome
+container->crate
+personal_item->wig
+food->burrito
+bottle->pill_bottle
+protective_clothing->armour
+armour->chain_mail
+curtain->theater_curtain
+object->cover
+cover->window_shade
+container->cylindrical_container
+container->wooden_container
+container->plastic_container
+container->metal_container
+wooden_container->wooden_barrel
+cylindrical_container->barrel
+barrel->wooden_barrel
+barrel->metal_barrel
+metal_container->metal_barrel
+liquid_container->washbasin
+device->plumbing_fixture
+plumbing_fixture->washbasin
+tool->writing_tool
+writing_tool->pen
+pen->ballpoint
+ball->basketball
+fabric_object->bath_towel
+footwear->cowboy_boot
+clothing->gown
+ambiguous_word->screen
+screen->window_screen
+screen->fire_screen
+mushroom->agaric
+communication_device->telephone
+electronic_device->telephone
+telephone->cellular_telephone
+ambiguous_word->nipple
+nipple->nipple_anatomy
+nipple->nipple_plumbing
+nipple->nipple_flexible_nozzle
+nozzle->nipple_flexible_nozzle
+device->nozzle
+device->communication_device
+device->electronic_device
+nipple->spoke_nipple
+excercise_equipment->barbell
+container->mailbox
+coat->lab_coat
+motor_vehicle->passenger_motor_vehicle
+passenger_motor_vehicle->minibus
+container->packet
+architectural_element->maze
+cylindrical_object->pole
+cylindrical_object->horizontal_bar
+hat->sombrero
+helmet->pickelhaube
+container->liquid_container
+liquid_container->water_tank
+tank->tank_liquid_container
+tank->tank_vehicle
+tank_liquid_container->water_tank
+water_tank->rain_barrel
+container->small_case
+small_case->wallet
+personal_item->wallet
+consumer_electronics->cassette_player
+book->comic_book
+container->coin_container
+coin_container->piggy_bank
+sign->street_sign
+architectural_element->bell_cote
+pen->fountain_pen
+clothing->tie
+tie->windsor_tie
+human_activity->sport
+volleyball->volleyball_ball
+volleyball->volleyball_sport
+sport->volleyball_sport
+clothing->overskirt
+clothing->sarong
+bag->small_bag
+small_bag->purse
+clothing->bolo_tie
+clothing->bib
+device->parachute
+fabric_object->parachute
+display_device->television
+consumer_electronics->television
+swimwear->swimming_trunks
+cup->measuring_cup
+expresso->expresso_coffee
+coffee->expresso_coffee
+expresso->plymouth_expresso
+car->plymouth_expresso
+food->pizza
+protective_clothing->breastplate
+basket->shopping_basket
+utensil->wooden_spoon
+condiment_shaker->saltshaker
+sauce->chocolate_sauce
+sportsperson->ballplayer
+cup->goblet
+organism->fungus
+organism->animal
+organism->plant
+fungus->mushroom
+mushroom->gyromitra
+medical_aparatus->stretcher
+bottle->water_bottle
+telephone->dial_telephone
+container->soap_dispenser
+clothing->jersey
+bus->school_bus
+puzzle->jigsaw_puzzle
+object->puzzle
+puzzle->maze
+wooden_object->jigsaw_puzzle
+bag->plastic_bag
+camera->reflex_camera
+clothing->diaper
+adhesive_bandage->band_aid
+food->ice_lolly
+fabric->velvet
+ball->tennis_ball
+personal_item->mask
+mask->gasmask
+clothing->protective_clothing
+protective_clothing->gasmask
+fabric_object->mat
+mat->doormat
+footwear->loafer
+food->ice_cream
+food->pretzel
+fabric_object->quilt
+clothing->maillot
+electronics->tape_player
+clothing->footwear
+footwear->clog
+footwear->shoe
+footwear->slipper
+footwear->sandal
+footwear->boot
+footwear->wellington_boot
+consumer_electronics->iPod
+fungus->bolete
+person->scuba_diver
+open_container->pitcher_container
+liquid_container->pitcher_container
+tool->matchstick
+stick->matchstick
+object->stick
+swimwear->bikini
+footwear->sock
+consumer_electronics->CD_player
+protective_cover->lens_cap
+dry_plant_matter->thatch
+material->thatch
+material->metal
+material->fabric
+material->plastic
+material->stone
+material->brick
+material->concrete
+material->surface_material
+surface_material->gravel
+surface_material->sand
+surface_material->soil
+surface_material->mud
+surface_material->asphalt
+surface_material->paving_stones
+surface_material->roof_tiles
+surface_material->floor_tiles
+tiles->roof_tiles
+tiles->floor_tiles
+vault->vault_architecture
+vault->bank_vault
+vault->utility_vault
+vault->burial_vault
+tomb->burial_vault
+vault->Burial_vault_enclosure
+cup->beaker
+spherical_object->bubble
+food->cheeseburger
+excercise_equipment->parallel_bars
+pole->flagpole
+cup->coffee_mug
+stationery->rubber_eraser
+ambiguous_term->stole
+stole->stole_vestment
+clothing->stole_vestment
+stole->academic_stole
+clothing->academic_stole
+food->carbonara
+excercise_equipment->dumbbell
+}

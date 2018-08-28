@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  {{ template "favicon.html" .}}
+
   <!-- Standard Meta -->
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
@@ -11,24 +13,18 @@
   
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
-  <script src="js/semantic.min.js"></script> 
-  <script src="js/semantic.min.js"></script> 
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  <script src="js/semantic.min.js"></script>  
 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/ace/ace.js"></script> 
   <script src="js/ace/ext-language_tools.js"></script>
   <script src="js/d3.v4.min.js"></script>
-  <script src="http://d3js.org/d3-selection-multi.v1.js"></script>
+  <script src="js/d3-selection-multi.v1.js"></script>
+  <script src="js/mousetrap.min.js"></script>
+  <script src="js/force-graph/force-graph.min.js"></script>
 
   <style>
-
-	.nodes circle {
-	  	stroke: #fff;
-	  	stroke-width: 1.5px;
-	}
-
 	.tooltip {
 	  	position:absolute;
 	  	text-align: center;
@@ -67,45 +63,23 @@
 	    text-align: center;
   	}
 
-  	.link { stroke: #999; stroke-opacity: .6; stroke-width: 5px; }
-
   </style>
 
   <script type="text/javascript">
-  	var link, simulation, svg, node, radius, color, tooltip, zoom, main, link, edgepaths, edgelabels;
   	var editor;
+  	var Graph;
+  	var clickCtr = 0;
+  	var images = {};
+  	var searchLabels = [];
+  	var highlightedLinks = new Set();
+  	var existingNodes = new Set();
 
 	$(document).ready(function(){
-		{{ if eq .editorMode true }}
 		initializeEditor();
-		{{ end }}
-
-		initializeGraph();
-
-		$('#refreshLabelGraphButton').click(function(e) {
-        	evaluateGraph();
-      	});
-
-      	$('#zoomInButton').click(function(e) {
-        	zoomMe(1.2); // increase on 0.2 each time
-      	});
-
-      	$('#zoomOutButton').click(function(e) {
-        	zoomMe(1/1.2); // decrease on 0.2 each time
-      	});
-	});
-
-	function initializeEditor() {
-		ace.config.set('themePath', 'js/ace/themes/');
-		ace.config.set('modePath', 'js/ace/');
-
-		$("#editorContainer").css("height", "500px");
-		$("#editorContainer").css("width", "500px");
-		editor = window.ace.edit("editor");
-		editor.resize();
-
-		editor.setValue(`digraph G { 
-    { rootnode [label="root" size=250 fontsize=25 color=red] } 
+		{{ if eq .editorMode true }}
+		$('#labelGraphEditorArea').show();
+		setEditorContent(`digraph G { 
+    { rootnode [label="root" color=red] } 
     { r1 [label="r1" color=green URL="Orange_(fruit)"] } 
     { r2 [label="r2" color=green] } 
     { r3 [label="r3" color=green] } 
@@ -121,9 +95,77 @@
     rootnode -- r5
     
     r5 -- r6
-    r6 -> r7 [label="link" len=150 fontsize=20]
+    r6 -> r7 [label="link"]
     
 }`);
+		{{ end }}
+
+		initializeGraph({{ .defaultLabelGraphName }});
+
+		Mousetrap.bind("+", function(e, combo) { 
+			zoomIn();
+		});
+
+		Mousetrap.bind("-", function(e, combo) { 
+			zoomOut();
+		});
+
+		$('#graphInfoButton').click(function(e) {
+        	$('#labelGraphInfoDlg').modal('show');
+      	});
+
+		$('#refreshLabelGraphButton').click(function(e) {
+        	evaluateGraph(true);
+      	});
+
+      	$('#zoomInButton').click(function(e) {
+        	zoomIn();
+      	});
+
+      	$('#zoomOutButton').click(function(e) {
+        	zoomOut();
+      	});
+
+      	$('#editLabelGraphButton').click(function(e) { 
+      		$('#labelGraphEditorArea').transition('fly down');
+      		$('#labelGraphArea').hide();
+      	});
+
+      	$('#saveLabelGraphButton').click(function(e) {
+      		$('#saveLabelGraphDlg').modal('show');
+      	});
+
+      	$('#highlightExistingNodesCheckbox').checkbox({
+      		onChecked: function() {
+      			colorExistingNodes();
+      		},
+      		onUnchecked: function() {
+      			clearExistingNodes();
+    		}
+      	});
+	});
+
+	function zoomOut() {
+		var currentZoom = Graph.zoom();
+		var boost = 1;
+		if(currentZoom > 5.5) //if we are zoomed in very far, make it possible to zoom out faster
+			boost = 5;
+        Graph.zoom((currentZoom - (0.3 * boost)), 500); //decrease 0.3 each time
+	}
+
+	function zoomIn() {
+		var currentZoom = Graph.zoom();
+        Graph.zoom((currentZoom + 0.3), 500); //increase 0.3 each time
+	}
+
+	function initializeEditor() {
+		ace.config.set('themePath', 'js/ace/themes/');
+		ace.config.set('modePath', 'js/ace/');
+
+		$("#editorContainer").css("height", "500px");
+		$("#editorContainer").css("width", "500px");
+		editor = window.ace.edit("editor");
+		editor.resize();
 
 		editor.setOptions({
 		   enableBasicAutocompletion: true, // the editor completes the statement when you hit Ctrl + Space
@@ -143,6 +185,10 @@
 
 		// ensures proper autocomplete, validation and highlighting of dot code
 		editor.getSession().setMode("ace/mode/dot");
+	}
+
+	function setEditorContent(content) {
+		editor.setValue(content);
 	}
 
 	function buildQuery(identifier) {
@@ -168,7 +214,7 @@
 	    });
 	}
 
-	function evaluateGraph() {
+	function evaluateGraph(transition) {
 		var url = '{{ .apiBaseUrl }}/v1/label/graph-editor/evaluate';
 	    $.ajax({
 	      url: url,
@@ -176,6 +222,14 @@
 	      type: 'POST',
 	      success: function(data){
 	      	populateGraph(data);
+
+	      	if(transition) {
+		      	$('#labelGraphEditorArea').transition({animation: 'fly down', 
+		      										   onComplete : function() {
+		      										   	$('#labelGraphEditorArea').hide();
+		      										   }});
+		    }
+	      	$('#labelGraphArea').show();
 	      }, 
 	      error: function(jqXHR,error, errorThrown) {
 	      	$('#labelGraphEditorWarningMsgText').text("Can't parse file - please check for syntax errors!");
@@ -184,172 +238,230 @@
 	    });
 	}
 
+	function populateSearch(nodes) {
+		searchLabels = [];
+		for(var i = 0; i < nodes.length; i++) {
+			searchLabels.push({title: nodes[i].name, nodeId: nodes[i].id});
+		}
 
-	function initializeGraph() {
+		//connect after searchLabels is connected
+		$('#searchLabel').search({source: searchLabels,
+									   onSelect: function(result, response) {
+									   	colorNodes(result.nodeId);
+									   	_existingNodes = new Set();
+									   },
+									   onResultsClose: function() {
+									   	if($('#searchLabel').search('get value') === "") {
+									   		if(isHighlightExistingNodesChecked())
+									   			colorExistingNodes();
+									   		else
+									   			clearExistingNodes();
+									   		clearColoredNodes();
+									   	}
+									   }
+								});
+	}
+
+	function getLabelGraphDefinition(labelGraphName) {
+		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + labelGraphName + '/definition';
+		$.ajax({
+	      url: url,
+	      dataType: 'json',
+	      success: function(data) {
+	      	setEditorContent(data.definition);
+	      	$('#editLabelGraphButton').removeClass('disabled');
+	      }
+	  	});
+	}
+
+
+	function initializeGraph(labelGraphName) {
+		$('#labelGraphArea').show();
+
 		{{ if eq .editorMode false }}
-		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + {{ .defaultLabelGraphName }};
+		getLabelGraphDefinition(labelGraphName);
+
+		var url = '{{ .apiBaseUrl }}/v1/label/graph/' + labelGraphName;
 		$.ajax({
 	      url: url,
 	      dataType: 'json',
 	      success: function(data){
-	      	populateGraph(data);
+	      	populateGraph(data.graph);
+	      	populateInfoDlg(data.metadata);
 	      }
 	    });
 	    {{ else }}
-	    	evaluateGraph();
+	    evaluateGraph(false);
 	    {{ end }}
+	}
+
+	function populateInfoDlg(metadata) {
+		if(metadata.name !== "")
+			$("#labelGraphInfoDlgName").html("<b>Name:</b> " + metadata.name);
+		else
+			$("#labelGraphInfoDlgName").html("<b>Name:</b> -");
+
+		if(metadata.description !== "")
+			$("#labelGraphInfoDlgDescription").html("<b>Description:</b> " + metadata.description);
+		else
+			$("#labelGraphInfoDlgDescription").html("<b>Description:</b> -");
+
+		if(metadata.author !== "")
+			$("#labelGraphInfoDlgAuthor").html("<b>Author:</b> " + metadata.author);
+		else
+			$("#labelGraphInfoDlgAuthor").html("<b>Author:</b> -");
+
+		if(metadata.homepage !== "")
+			$("#labelGraphInfoDlgHomepage").html("<b>Homepage:</b> " + metadata.homepage);
+		else
+			$("#labelGraphInfoDlgHomepage").html("<b>Homepage:</b> -");
+
+	}
+
+	function handlePotentialNodeDoubleClick(node) {
+		clickCtr += 1
+		if(clickCtr === 1) {
+			setTimeout(function(){  
+				if(clickCtr === 2) {
+					buildQuery(node.identifier);
+				} 
+				clickCtr = 0;
+			}, 500);
+		}
+		else if(clickCtr === 2) {
+			buildQuery(node.identifier);
+			clickCtr = 0;
+		}
+	}
+
+	function centerGraphAtCoordinates(x, y) {
+		// Center/zoom on node
+	    Graph.centerAt(x, y, 1000);
+	    Graph.zoom(8, 2000);
+	}
+
+	function isHighlightExistingNodesChecked() {
+		return $("#highlightExistingNodesCheckbox").checkbox("is checked");
+	}
+
+	function colorExistingNodes() {
+		_existingNodes = existingNodes;
+	}
+
+	function clearExistingNodes() {
+		_existingNodes = new Set();
+	}
+
+	function clearColoredNodes() {
+		highlightedLinks = new Set();
+		highlightedNodes = new Set();
+	}
+
+	function colorNodes(nodeId) {
+		highlightedLinks = new Set();
+		highlightedNodes = new Set();
+
+		var nodes = Graph.graphData().nodes;
+		for(var i = 0; i < nodes.length; i++) {
+			if(nodes[i].id === nodeId) {
+				//centerGraphAtCoordinates(nodes[i].x, nodes[i].y);
+				highlightedLinks.add(nodeId);
+				break;
+			}
+		}
+
+		var links = Graph.graphData().links;
+		for(var i = 0; i < links.length; i++) {
+			if(highlightedLinks.has(links[i].target.id))
+				highlightedNodes.add(links[i].source.id);
+			
+			if(highlightedLinks.has(links[i].source.id))
+				highlightedNodes.add(links[i].target.id);
+		}
 	}
 
 	function populateGraph(graph) {
 		d3.select("#labelGraph").html(null); //clear all
+		var redHighlightingColor = 'rgba(255,0,0,0.3)';
+		var pinkHighlightingColor = 'rgba(255,20,147,0.9)';
+		images = {};
 
-		var maxWidth = document.getElementById("labelGraphContainer").clientWidth - 50;
-		var maxHeight = 1500;
-		$("#labelGraph").attr("width", maxWidth);
-		$("#labelGraph").attr("height", maxHeight);
+		populateSearch(graph.nodes);
 
-		svg = d3.select("#labelGraph"),
-	    	width = +svg.attr("width"),
-	    	height = +svg.attr("height")
+		highlightedNodes = new Set();
+		highlightedLinks = new Set();
+		existingNodes = new Set();
 
-	    main = svg.append("g");
+		var filteredNodes = new Set();
+		var nodes = graph.nodes;
+		for(var i = 0; i < nodes.length; i++) {
+			if("image" in nodes[i]) {
+				if(nodes[i].image !== "")
+					filteredNodes.add(nodes[i].id);
+			}
 
+			if("uuid" in nodes[i]) {
+				if(nodes[i].uuid !== "")
+					existingNodes.add(nodes[i].id);
+			}
+		}
 
-	    zoom = d3.zoom()
-            .scaleExtent([1, 10])
-            .on("zoom", zoomed);
+		_existingNodes = new Set(); //per default we do not color existing nodes
 
-		color = d3.scaleOrdinal(d3.schemeCategory20);
-	  
-		radius = d3.scaleSqrt()
-	    	.range([0, 6]);
+		const elem = document.getElementById('labelGraph');
 
-		simulation = d3.forceSimulation(graph.links)
-		.force("link", d3.forceLink()
-			.id(function(d) { return d.id; }))
-		.force("charge", d3.forceManyBody()
-			.strength(function(d) { return -600;}))
-		.force("center", d3.forceCenter(width / 2, height / 2))
-		.force("link", d3.forceLink()
-			.distance(function(d) { return d.distance; }).strength(1));
-		//.force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) { return d.size; }).strength(1));
-		//.force("linkForce", function(d) { return 100; });
+	    Graph = ForceGraph()(elem)
+	      .backgroundColor('#101020')
+	      .nodeRelSize(6)
+	      .nodeColor(function(node) 
+	      			 { 
+	      				if(highlightedNodes.has(node.id))
+	      					return redHighlightingColor;
 
-		svg.append("svg:defs").append("svg:marker")
-            .attr("id", "arrowhead")
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 45) // This sets how far back it sits, kinda
-            .attr("refY", 0)
-            .attr("markerWidth", 12)
-            .attr("markerHeight", 12)
-            .attr("orient", "auto")
-            .attr("markerUnits", "userSpaceOnUse") //do not make arrowhead dependent on line width
-            .append("svg:path")
-            .attr("d", "M0,-5L10,0L0,5")
-            .style("fill", "#aaa"); //arrowhead color
+	      				if(_existingNodes.has(node.id))
+	      					return pinkHighlightingColor;
 
+	      				if(node.color === "")
+	      					return 'rgba(166,206,227,0.8)';
 
-		link = main.selectAll(".link")
-            .data(((graph.links === null) ? [] : graph.links))
-            .enter()
-            .append("line")
-            .attr("class", "link")
-            .attr('marker-end', function(d) { return d.directed ? 'url(#arrowhead)' : '' }); //show arrowhead only if directed graph
-
-        link.append("title")
-            .text(function (d) {return d.type;});
-
-        edgepaths = main.selectAll(".edgepath")
-            .data(((graph.links === null) ? [] : graph.links))
-            .enter()
-            .append('path')
-            .attrs({
-                'class': 'edgepath',
-                'fill-opacity': 0,
-                'stroke-opacity': 0,
-                'id': function (d, i) {return 'edgepath' + i}
-            })
-            .style("pointer-events", "none");
-
-        edgelabels = main.selectAll(".edgelabel")
-            .data(((graph.links === null) ? [] : graph.links))
-            .enter()
-            .append('text')
-            .style("pointer-events", "none")
-            .attrs({
-                'class': 'edgelabel',
-                'id': function (d, i) {return 'edgelabel' + i},
-                'font-size': function (d) {return d.fontsize; },
-                'fill': '#aaa'
-            });
-
-        edgelabels.append('textPath')
-            .attr('xlink:href', function (d, i) {return '#edgepath' + i})
-            .style("text-anchor", "middle")
-            .style("pointer-events", "none")
-            .attr("startOffset", "50%")
-            .text(function (d) {return d.label});
-
-
-	  	node = main.append("g")
-	      .attr("class", "nodes")
-	    .selectAll("g")
-	    .data(graph.nodes)
-	    .enter().append("g")
-	  		.style('transform-origin', '50% 50%')
-	   	.call(d3.drag()
-	          .on("start", dragstarted)
-	          .on("drag", dragged)
-	          .on("end", dragended));
-	  
-	  	node.append('circle')
-	      .attr("r", function(d) { return radius(d.size / 2); })
-	      .attr("fill", function(d) { 
-	      					if(d.color === "") //in case no color is provided, default to grey
-	      						return d3.color("grey");
-	      					return d3.color(d.color); 
-	      				})
-	      .attr("label-identifier", function(d) { return d.identifier; })
-	      .attr("label-uuid", function(d) { return d.uuid; })
-	      .on("click", onNodeClicked)
-	      .on("mouseenter", function(d) {
-	      		if(d.onhover !== "") { //in case the node contains a 'onhover' property
-	      			showWikipediaPagePreview(d.onhover, 100, d3.event.clientY - 200);
-	            }
-            })
-
-            .on("mouseout", function(d) {
-            	hideTooltip();
-	        });
-
-	    
-	  
-	  	node.append("text")
-	  	  .text(function(d) { return d.name; })
-	      .attr("dy", ".35em")
-	      .attr("text-anchor", "middle")
-	      .style("font-size", function(d) { return d.fontsize.toString() + "px"; })
-	      .attr("pointer-events", "none"); //ignore pointer events for text
-
-	  	simulation
-	      .nodes(graph.nodes)
-	      .on("tick", ticked);
-
-
-	  	simulation.force("link")
-	      .links(((graph.links === null) ? [] : graph.links));
-
-	    tooltip = d3.select("body")
-                  .append("div")
-                        .attr("class", "tooltip")
-                        .style("opacity", 0)
-                        .style("position","fixed")
-                        .style("display", "block")
-                        .style("top", 100)
-                        .style("left", 100)
-                        .style("pointer-events","none");
-
-    	svg.call(zoom).append("g");
+	      				return node.color;
+	      			 }
+	  	  )
+	  	  .linkWidth(link => (highlightedLinks.has(link.target.id) || highlightedLinks.has(link.source.id)) ? 5 : 1)
+	      .nodeLabel(node => `${node.name}`)
+	      .linkColor(link => (highlightedLinks.has(link.target.id) || highlightedLinks.has(link.source.id)) ? redHighlightingColor : 'rgba(255,255,255,0.2)')
+	      .linkDirectionalParticles(1)
+	      .enableZoomPanInteraction(true)
+	      .enableNodeDrag(true)
+	      .onNodeHover(node => elem.style.cursor = node ? 'pointer' : null)
+	      .onNodeClick(node => {
+	      	colorNodes(node.id);
+	        centerGraphAtCoordinates(node.x, node.y);
+	        handlePotentialNodeDoubleClick(node);
+	      })
+	      .filterCanvasObject({"property": "id", "values": filteredNodes})
+	      .nodeCanvasObject((node, ctx, globalScale) => {
+	      		if(!(node.id in images)) {
+	      			images[node.id] = {"image": new Image(), "loaded": false};
+	      			images[node.id].image.onload = (function(id) {
+	      				return function() {
+	      					var item = images[node.id];
+	      					item.loaded = true;
+	      					images[node.id] = item;
+			            }
+	      			}(node.id));
+	      			images[node.id].image.src = node.image;
+	      		}
+	      		else {
+	      			var item = images[node.id];
+	      			if(item.loaded) {
+	      				var imgWidth = 50;
+	      				var imgHeight = 50;
+	      				ctx.drawImage(item.image, node.x - (imgWidth/2), node.y - (imgHeight/2), imgWidth, imgHeight);
+	      			}
+	      		}
+	      })
+	      .graphData(graph);
 	    
 	}
 
@@ -379,76 +491,6 @@
         .style("top", yPos + "px");
 	}
 
-
-	function ticked() {
-		link
-            .attr("x1", function (d) {return d.source.x;})
-            .attr("y1", function (d) {return d.source.y;})
-            .attr("x2", function (d) {return d.target.x;})
-            .attr("y2", function (d) {return d.target.y;});
-
-        node
-            .attr("transform", function (d) {return "translate(" + d.x + ", " + d.y + ")";});
-
-        edgepaths.attr('d', function (d) {
-            return 'M ' + d.source.x + ' ' + d.source.y + ' L ' + d.target.x + ' ' + d.target.y;
-        });
-
-        edgelabels.attr('transform', function (d) {
-            if (d.target.x < d.source.x) {
-                var bbox = this.getBBox();
-
-                rx = bbox.x + bbox.width / 2;
-                ry = bbox.y + bbox.height / 2;
-                return 'rotate(180 ' + rx + ' ' + ry + ')';
-            }
-            else {
-                return 'rotate(0)';
-            }
-        });
-
-        //push link label a bit away from link to avoid overlapping
-        edgelabels.attr('dy', '-3');
-	}
-
-	function onNodeClicked(d, i) {
-		d3.select(this).transition()
-	      .style("fill", "black")
-	      .attr("r", 64)
-	    .transition()
-	      .attr("r", 32)
-	      .style("fill", color(i));
-
-	    buildQuery(d3.select(this).attr("label-identifier"));
-	}
-
-	function dragstarted(d) {
-	  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-	  d.fx = d.x;
-	  d.fy = d.y;
-	}
-
-	function dragged(d) {
-	  d.fx = d3.event.x;
-	  d.fy = d3.event.y;
-	}
-
-	function dragended(d) {
-	  if (!d3.event.active) simulation.alphaTarget(0);
-	  d.fx = null;
-	  d.fy = null;
-	}
-
-	function zoomed() {
-		main.attr("transform", d3.event.transform);
-    }
-    function zoomMe(zoomLevel) {
-  		svg.transition()
-	      .delay(100)
-	      .duration(700)
-	      .call(zoom.scaleBy, zoomLevel);
-	}
-
    </script>
 </head>
 <body>
@@ -463,47 +505,99 @@
 			</div>
 		</div>
 
-		{{ if eq .editorMode false }}
 		<div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-9em;">
-		{{ else }}
-		<div class="ui stackable grid vertical stripe mobile reversed">
-		{{ end }}
 			
-			{{ if eq .editorMode true }}
-			<div class="row">
-				<div class="two wide column"></div>
-				<div class="twelve wide column" id="editor"></div>
-				<div class="two wide column"></div>
-			</div>
-			<div class="row">
-				<div class="two wide column"></div>
-				<div class="twelve wide center aligned column">
-					<div hidden class="ui warning message" id="labelGraphEditorWarningMsg">
-			            <i class="close icon"></i>
-			            <div class="header" id="labelGraphEditorWarningMsgText">
-			            </div>
-		          	</div>
-		        </div>
-		        <div class="two wide column"></div>
-		    </div>
-
-			<div class="row">
-				<div class="sixteen wide center aligned column">
-					<button class="ui blue button" id="refreshLabelGraphButton">
-					  <i class="icon refresh"></i>
-					  Update
-					</button>
+			<div class="twelve wide centered center aligned column" id="labelGraphEditorArea" style="display: none;">
+				<br>
+				<div class="row">
+					<div class="two wide column"></div>
+					<div class="twelve wide column" id="editor"></div>
+					<div class="two wide column"></div>
 				</div>
-			</div>
-			{{ end }}
+				<div class="row">
+					<div class="two wide column"></div>
+					<div class="twelve wide center aligned column">
+						<div hidden class="ui warning message" id="labelGraphEditorWarningMsg">
+				            <i class="close icon"></i>
+				            <div class="header" id="labelGraphEditorWarningMsgText">
+				            </div>
+			          	</div>
+			        </div>
+			        <div class="two wide column"></div>
+			    </div>
+			    <br>
+				<div class="row">
+					<div class="sixteen wide center aligned column">
+						<button class="ui blue button" id="refreshLabelGraphButton">
+						  <i class="icon refresh"></i>
+						  Update
+						</button>
+						<button class="ui blue button" id="saveLabelGraphButton">
+						  <i class="icon save"></i>
+						  Save
+						</button>
+					</div>
+				</div>
 
-			<div class="row" style="margin-top:1em; margin-right:1em;">
+
+
+				<div class="ui modal" id="saveLabelGraphDlg">
+				  <div class="header">Info</div>
+				  <div class="content">
+				    <p>Do you want to contribute? Please create <a href={{ .repository }}>a pull request</a>.</p>
+				  </div>
+				  <div class="actions">
+				    <div class="ui positive button">Got it</div>
+				  </div>
+				</div>
+
+			</div>
+			
+
+			<div class="row" style="margin-top:1em; margin-right:1em; display: none;" id="labelGraphArea">
+				<div class="seven wide column">
+				</div>
+				<div class="five wide column">
+					<div class="ui search" id="searchLabel">
+					  <div class="ui icon input">
+					    <input class="prompt" placeholder="Search Labels..." type="text" id="searchLabelInput">
+					    <i class="search icon"></i>
+					  </div>
+					  <div class="results"></div>
+					</div>
+					<div class="ui toggle checkbox" style="margin-top:1em;" id="highlightExistingNodesCheckbox">
+					  <input name="public" type="checkbox">
+					  <label>Highlight existing nodes</label>
+					</div>
+				</div>
+				<div class="four wide right aligned column">
+				</div>
 				<div class="sixteen wide right aligned column">
-					<button class="ui button" button id="zoomInButton"><i class="search plus icon"></i> Zoom In</button>
-  					<button class="ui button" id="zoomOutButton"><i class="search minus icon"></i> Zoom Out</button>
+					<button class="ui disabled button" button id="editLabelGraphButton"><i class="pencil alternate icon"></i> Edit </button>
+					<button class="ui button" button id="zoomInButton"><i class="search plus icon"></i>  Zoom In  </button>
+  					<button class="ui button" id="zoomOutButton"><i class="search minus icon"></i> Zoom Out </button>
+  					<button class="ui button" id="graphInfoButton"><i class="info icon"></i> Info</button>
 				</div>
 				<div class="sixteen wide center aligned column" id="labelGraphContainer">
-					<svg id="labelGraph"></svg>
+					<div class="ui modal" id="labelGraphInfoDlg">
+					  <i class="close icon"></i>
+					  <div class="center aligned header">
+					    Label Graph Info
+					  </div>
+					  <div class="content">
+					  	<p id="labelGraphInfoDlgName"></p>
+					  	<p id="labelGraphInfoDlgDescription"></p>
+					     <p id="labelGraphInfoDlgAuthor"></p>
+					     <p id="labelGraphInfoDlgHomepage"></p>
+					  </div>
+					  <div class="actions">
+					    <div class="ui right labeled cancel icon button">
+					      Close
+					    </div>
+					  </div>
+					</div>
+
+					<div id="labelGraph"></div>
 				</div>
 			</div>
 		</div>

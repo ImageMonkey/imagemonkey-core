@@ -48,6 +48,7 @@
 			"quiz": [
 				{
 					"question": "What's the size of the dog",
+					"uuid": "1e52541f-9a47-463d-b0cb-e32e1d3441f3",
 					"accessors": [".size"],
 					"answers": [
 						{
@@ -71,6 +72,7 @@
 				},
 				{
 					"question": "It's a...",
+					"uuid": "66cf612f-dd80-4732-b7de-3f3d2055588d",
 					"accessors": [".type"],
 					"answers": [
 						{
@@ -90,6 +92,7 @@
 				},
 				{
 					"question": "What am I?",
+					"uuid": "ceb2275b-4948-4d20-8cad-b0677259193e",
 					"accessors": [".breed"],
 					"answers": [
 						{
@@ -293,6 +296,7 @@
 			"quiz": [
 				{
 					"question": "The apple's color is...",
+					"uuid": "a4bcc81f-bebb-4c03-9950-eb92decccfba",
 					"accessors": [".color"],
 					"answers": [
 						{
@@ -330,6 +334,7 @@
 			"quiz": [
 				{
 					"question": "It's a...",
+					"uuid": "e6d01e97-d53b-4da5-9c71-5f3fe36a10b9",
 					"accessors": [".brand"],
 					"answers": [
 						{
@@ -477,6 +482,7 @@
 				},
 				{
 					"question": "The color of the car is...",
+					"uuid": "f39743c8-f1ce-4750-b7ab-f57d15ac7270",
 					"accessors": [".color"],
 					"answers": [
 						{
@@ -630,6 +636,331 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "ace0d018-f335-4947-8604-69323f375b1b"
+		},
+		"plate": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ba766c25-a0db-4458-b792-a9ec4f1777ac"
+		},
+		"wall": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9f6048e9-f867-4003-bb09-4087f087bea3"
+		},
+		"bird": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7"
+		},
+		"street light": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "430b0e22-bd5f-40a3-be13-15fbaf7eff99"
+		},
+		"sea": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "157b4dc1-59de-4c49-830c-2c9ddb66dfee"
+		},
+		"river": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d25e8353-2b45-434c-b8e7-8fe98ab2925b"
+		},
+		"kitchen": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6ea6beb7-b1ce-4ee1-bc94-bd35e118ddda"
+		},
+		"lake": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ddf7feaa-8c5f-4cab-84f2-6f1804998650"
+		},
+		"mushroom": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f7781c7d-b963-45ad-b09e-677a2c626827"
+		},
+		"book": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "735c2bda-dd22-4240-a373-135cbc53a05b"
+		},
+		"bag": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "3bb8f4ee-7eb5-4a61-b1cc-0c50aac8df72"
+		},
+		"bridge": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "50416c82-401a-469a-b2c4-85c64e4eee3a"
+		},
+		"onion": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "caeabb57-4f03-4ff2-bcfb-fba30bf70de6"
+		},
+		"sun": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c6818c11-6c0a-4f51-904b-4c3e07bbbc2d"
+		},
+		"window": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ff212ebc-c56c-47d3-843e-3e4d8693c3e2"
+		},
+		"sunglasses": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e15d84c5-1afa-439e-b089-ba1ce8b32d0f"
+		},
+		"house": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "22bbce9a-9f50-4f38-ba11-6f2963d19809"
+		},
+		"van": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1849f4b6-f6a9-4ee1-8422-9662d4daccf9"
+		},
+		"sky": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "459c447b-2919-475b-b6db-b5dfc3d3d676"
+		},
+		"truck": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "60c08783-9869-4d56-804f-14e14152b02f"
+		},
+		"motorbike": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "3ec690a8-0f00-4bb1-851b-51739bffc95d"
+		},
+		"sofa": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "3d186e64-38e5-404c-9452-30ba5173db45"
+		},
+		"traffic light": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1cf4fbe3-f381-4d10-af4d-5ac5199c94b8"
+		},
+		"cabbage": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ae65d146-6428-453b-9f80-ddfadcd49e5e"
+		},
+		"bus": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8d1c1663-1569-4c8f-a72b-5def6695a942"
+		},
+		"excavator": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e2a19fe2-9b15-49cd-83d2-3110d2b9d1ea"
+		},
+		"backhoe loader": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8cc8ae96-6a8e-4221-aa10-9ef2059ac678"
+		},
+		"bulldozer": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "39a47c82-a0f2-4b9c-8f22-00028b88004f"
+		},
+		"tractor": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4ecf2dcf-cf95-46f5-b2fa-5f7ccdb3a4cd"
+		},
+		"horse": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6cdadd8b-6dd1-4ebb-bf7e-ae388ec9cdf2"
+		},
+		"sheep": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "297932ac-5f16-4164-8997-a9d3343b2648"
+		},
+		"cow": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "04f9c653-b660-4471-8541-aaf0f33958a0"
+		},
+		"fork lift": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4d0d2782-ce7d-489c-8038-60dcace23ce7"
+		},
+		"crane": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e9a3970e-6627-47e0-84f3-29a9c5e9161a"
+		},
+		"helicopter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e37f1c27-f188-4423-9ffc-f975b9890932"
+		},
+		"boat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "86bf68c3-31af-41fa-8e35-29fbe6ecda27"
+		},
+		"ship": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "574aeaa2-7136-4e9c-a748-9b35446779de"
+		},
+		"table": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "61db30b9-9903-4255-b878-f23679401c90"
+		},
+		"desk": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "bba7aae9-3892-4367-9859-dbfdd05b9ab5"
+		},
+		"jet airliner": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e6870b75-9413-4e9f-8059-1e746732007e"
+		},
+		"tree trunk": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2af2b428-f5dc-4998-af0f-6a4ed5ade8cc"
+		},
+		"pillar": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a90f30ae-50bc-478d-9fec-c8f8f62f16b9"
+		},
+		"vegetation": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6d321ba0-a0ab-48de-ae42-feaf75035708"
+		},
+		"woman": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "eecd25ba-8ae1-43e5-b3a5-e43f3e7cdd67"
+		},
+		"man": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "57d71782-fcb6-49bc-aac4-3122de81b89b"
+		},
+		"shelf": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2722232d-2e5a-408b-bff7-f4c5e1b280b5"
+		},
+		"bench": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "773fcfc8-5a91-4a3e-900d-ba7f03828b93"
+		},
+		"park bench": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "70a063a4-fed4-49fb-988f-cd40276cfb76"
+		},
+		"stool": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6e720002-2a85-42b9-ac91-a4792000c2da"
+		},
+		"cupboard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9ee04fe2-4012-4a37-a97b-235af0519099"
+		},
+		"shop front": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1f887b33-d1ab-4559-ac30-f595831cd1d7"
+		},
+		"door": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0291fabe-39d8-4ec9-b539-76bd77fb5c96"
+		},
+		"traffic cone": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d753a069-2b21-490a-987b-ed6d055eea43"
+		},
+		"church": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ac3c81eb-7e0a-40e6-acc9-e1c58ec02c36"
+		},
+		"laptop": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f605385b-86e1-4074-a123-5c0057bf911b"
+		},
+		"tomato": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "5b8a204d-8dee-4422-9afe-fd7567a5b633"
+		},
+		"steps": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "269e038e-7395-4bf1-ab98-1eb57c90374c"
+		},
+		"path": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "689421e5-5779-4ba0-83c3-1ad145397d5d"
+		},
+		"gate": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "de63bd0c-bed2-4af2-9ae4-5bc24e035362"
+		},
+		"hat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "13127a19-78b7-4f36-b67a-cc4ffaf4ac13"
+		},
+		"litter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "95b3f6e8-d434-4dff-9b00-abe114a4b923"
+		},
+		"puddle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9599ced7-c4de-44db-a626-38c6dd43ef9d"
+		},
+		"mountain": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2c4306a7-242f-49d5-a817-774c43ff985e"
+		},
+		"rucksack": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f702402b-a6ea-4c57-bc1a-bb173e17715f"
+		},
+		"flag": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "651b2ef9-3c5c-4f73-900a-4f344de4b644"
 		}
 	}
 }

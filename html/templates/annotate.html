@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  {{ template "favicon.html" .}}
+  
   <!-- Standard Meta -->
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
@@ -12,17 +14,30 @@
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=7"></script>
+  <script src="js/fabric_helper.js?v=12"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=11"></script>
+  <script src="js/annotate.js?v=17"></script>
   <script src="js/simplify.js"></script>
+  <script src="js/justified-layout.min.js"></script>
+  <script src="js/infinitescroll.js?v=2"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
+  <script src="js/mousetrap.min.js"></script>
+  <script src="js/huebee.min.js"></script>
+  <link rel="stylesheet" href="css/huebee.min.css"/>
+  <script src="js/lodash.core.min.js"></script>
 
   <style>
+  /*.justified {
+    position: relative;
+    width: 1060px;
+  }*/
+
   .canvas-container{margin: 0 auto;}
 
 
@@ -51,40 +66,178 @@
   var labelId = null;
   var annotationInfo = new AnnotationInfo();
   var annotationSettings = new AnnotationSettings();
+  var colorPicker = null;
+  var existingAnnotations = null;
+  var browserFingerprint = null;
+
+  function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
+    var ret = "";
+    $("#annotatorMenu").children().each(function (){
+      if($(this).hasClass("active")){
+        if(ignoreAutoLoadButton) {
+          if($(this).attr("id") !== "loadAutoAnnotationsMenuItem") {
+            ret = $(this).attr("id");
+            return;
+          }
+        } else {
+          ret = $(this).attr("id");
+          return;
+        }
+      }
+    });
+
+    return ret;
+  }
+
+  function zoomIn() {
+    canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+  }
+
+  function zoomOut() {
+    canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+  }
 
   function AnnotationInfo () {
     this.imageId = "";
     this.validationId = "";
     this.origImageWidth = 0;
     this.origImageHeight = 0;
+    this.annotationId = "";
+    this.imageUrl = "";
+    this.imageUnlocked = false;
   }
 
-  function getRandomUnannotatedImage() {
+  function handleUnannotatedImageResponse(data) {
+    existingAnnotations = null;
+    autoAnnotations = null;
+
+    if(data !== null) {
+      annotationInfo.imageId = data.uuid;
+      annotationInfo.origImageWidth = data.width;
+      annotationInfo.origImageHeight = data.height;
+      annotationInfo.validationId = data.validation.uuid;
+      annotationInfo.imageUrl = data.url;
+      annotationInfo.imageUnlocked = data.unlocked;
+
+      if("auto_annotations" in data) {
+        if(data["auto_annotations"].length !== 0)
+          autoAnnotations = data["auto_annotations"];
+      }
+
+      setLabel(data.label, data.sublabel);
+    }
+    else {
+      annotationInfo.imageId = "";
+      annotationInfo.origImageWidth = 720; //width of the oops-no-annotation-left image
+      annotationInfo.origImageHeight = 720; //height of the oops-no-annotation-left image
+      annotationInfo.validationId = "";
+      annotationInfo.imageUrl = "";
+      annotationInfo.imageUnlocked = false;
+    }
+
+    showHideAutoAnnotationsLoadButton();
+
+    if(canvas !== undefined && canvas !== null) {
+      canvas.fabric().clear();
+      canvas.fabric().setZoom(1.0);
+      canvas.fabric().absolutePan(new fabric.Point(0,0));
+    }
+    addMainCanvas();
+    populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
+    changeControl(annotator);
+    numOfPendingRequests = 0;
+    showHideControls(true);
+
+    {{ if eq .annotationMode "browse" }}
+    annotationSettings.loadPreferedAnnotationTool(annotator);
+    {{ end }}
+
+    populateRevisionsDropdown(0, 0);
+    showHideRevisionsDropdown();
+  }
+
+  function handleAnnotatedImageResponse(data) {
+    annotationInfo.imageId = data.image.uuid;
+    annotationInfo.origImageWidth = data.image.width;
+    annotationInfo.origImageHeight = data.image.height;
+    annotationInfo.annotationId = data.uuid;
+    annotationInfo.imageUrl = data.image.url;
+    annotationInfo.imageUnlocked = data.image.unlocked;
+
+    autoAnnotations = null;
+    existingAnnotations = data["annotations"];
+    showHideAutoAnnotationsLoadButton();
+
+    setLabel(data.validation.label, data.validation.sublabel);
+
+    if(canvas !== undefined && canvas !== null) {
+      canvas.fabric().clear();
+      canvas.fabric().setZoom(1.0);
+      canvas.fabric().absolutePan(new fabric.Point(0,0));
+    }
+    addMainCanvas();
+    populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked), false);
+    changeControl(annotator);
+    numOfPendingRequests = 0;
+    showHideControls(true);
+
+    {{ if eq .annotationMode "browse" }}
+    annotationSettings.loadPreferedAnnotationTool(annotator);
+    {{ end }}
+
+    populateRevisionsDropdown(data["num_revisions"], data["revision"]);
+    showHideRevisionsDropdown();
+  }
+
+
+
+  function getUnannotatedImage(validationId) {
+    var url = '';
+
+    if(validationId === undefined)
+      url = '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId));
+    else
+      url = '{{ .apiBaseUrl }}/v1/annotate?validation_id=' + validationId;
+
+    showHideControls(false);
+
     $.ajax({
-      url: '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId)),
+      url: url,
       dataType: 'json',
       type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
       success: function(data){
-        annotationInfo.imageId = data.uuid;
-        annotationInfo.origImageWidth = data.width;
-        annotationInfo.origImageHeight = data.height;
-        annotationInfo.validationId = data.validation.uuid;
+        handleUnannotatedImageResponse(data);
+      },
+      error: function (xhr, options, err) {
+        handleUnannotatedImageResponse(null);
+      }
+    });
+  }
 
-        if("auto_annotations" in data)
-          autoAnnotations = data["auto_annotations"];
-        else
-          autoAnnotations = null;
-        showHideAutoAnnotationsLoadButton();
+  function getAnnotatedImage(annotationId, annotationRevision) {
+    var url = '{{ .apiBaseUrl }}/v1/annotation?annotation_id=' + annotationId;
 
-        setLabel(data.label, data.sublabel);
-        canvas.fabric().clear();
-        canvas.fabric().setZoom(1.0);
-        canvas.fabric().absolutePan(new fabric.Point(0,0));
-        addMainCanvas();
-        populateCanvas(getUrlFromImageId(data.uuid), false);
-        changeControl(annotator);
-        numOfPendingRequests = 0;
-        showHideControls(true);
+    if(annotationRevision !== -1)
+      url += '&rev=' + annotationRevision;
+
+    showHideControls(false);
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        handleAnnotatedImageResponse(data);
+
+        //if there are already annotations, do not show blacklist or unannotatable button
+        $("#blacklistButton").hide();
+        $("#notAnnotableButton").hide();
       }
     });
   }
@@ -96,10 +249,17 @@
       url: url,
       type: 'POST',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data, status, xhr){
-        getRandomUnannotatedImage();
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        clearDetailedCanvas();
+        canvas.clear();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
       }
     });
   }
@@ -111,16 +271,31 @@
       url: url,
       type: 'POST',
       beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data, status, xhr){
-        getRandomUnannotatedImage();
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        clearDetailedCanvas();
+        canvas.clear();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
       }
     });
   }
 
-  function getUrlFromImageId(imageId){
-    return (imageId === "" ? "img/oops-no-annotation-left.png" : ("{{ .apiBaseUrl }}/v1/donation/" + imageId))
+  function getUrlFromImageUrl(imageUrl, imageUnlocked){
+    var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
+
+    if(imageUrl !== ""){
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+    }
+
+    return url;
   }
 
   function isTrashMenuButtonEnabled(){
@@ -132,87 +307,35 @@
   }
 
   function changeMenuItem(type){
-    if(type === 'Rectangle'){
-      $("#rectMenuItem").addClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "Circle"){
-      $("#circleMenuItem").addClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "Polygon"){
-      $("#polygonMenuItem").addClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "PanMode"){
-      $("#panMenuItem").addClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "BlockSelection"){
-      $("#blockSelectMenuItem").addClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "FreeDrawing"){
-      $("#freeDrawingMenuItem").addClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "ForegroundSelection"){
-      $("#smartAnnotationFgMenuItem").addClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#smartAnnotationBgMenuItem").removeClass("active");
-    }
-    else if(type === "BackgroundSelection"){
-      $("#smartAnnotationBgMenuItem").addClass("active");
-      $("#freeDrawingMenuItem").removeClass("active");
-      $("#blockSelectMenuItem").removeClass("active");
-      $("#rectMenuItem").removeClass("active");
-      $("#circleMenuItem").removeClass("active");
-      $("#polygonMenuItem").removeClass("active");
-      $("#panMenuItem").removeClass("active");
-      $("#smartAnnotationFgMenuItem").removeClass("active");
-    }
+    var id = "";
+    if(type === 'Rectangle')
+      id = "rectMenuItem";
+    else if(type === "Circle")
+      id = "circleMenuItem";
+    else if(type === "Polygon")
+      id = "polygonMenuItem";
+    else if(type === "PanMode")
+      id = "panMenuItem";
+    else if(type === "BlockSelection")
+      id = "blockSelectMenuItem";
+    else if(type === "FreeDrawing")
+      id = "freeDrawingMenuItem";
+    else if(type === "ForegroundSelection")
+      id = "smartAnnotationFgMenuItem";
+    else if(type === "BackgroundSelection")
+      id = "smartAnnotationBgMenuItem";
+    else if(type === "SelectMove")
+      id = "selectMoveMenutItem";
+
+    $("#annotatorMenu").children().each(function (){
+      if($(this).attr("id") === id)
+        $(this).addClass("active");
+      else
+        $(this).removeClass("active");
+    });
+
   }
+
 
   function showHideSmartAnnotationControls(show){
     if(show){
@@ -242,6 +365,14 @@
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
       $("#showSmartAnnotationHelpDlg").show();
+      $("#annotationControls").show();
+      $("#annotationButtons").show();
+      $("#loadingSpinner").hide();
+
+      if(annotationInfo.imageUnlocked)
+        $("#imageLockedLabel").hide();
+      else
+        $("#imageLockedLabel").show();
     }
     else{
       $("#doneButton").hide();
@@ -250,6 +381,10 @@
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
       $("#showSmartAnnotationHelpDlg").hide();
+      $("#annotationControls").hide();
+      $("#annotationButtons").hide();
+      $("#loadingSpinner").show();
+      $("#imageLockedLabel").hide();
     }
   }
 
@@ -337,8 +472,8 @@
     if(initAnnotator){
       canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
         annotator.initHistory();
-        if(isSmartAnnotationEnabled())
-          populateDetailedCanvas();
+        onCanvasBackgroundImageSet();
+
       });
     } 
     else{
@@ -400,7 +535,17 @@
   }
 
   function onAnnotatorObjectSelected(){
-    $("#trashMenuItem").removeClass("disabled");
+    if(annotator.objectsSelected() && annotator.isSelectMoveModeEnabled()) {
+        $("#trashMenuItem").removeClass("disabled");
+        $("#propertiesMenuItem").removeClass("disabled");
+
+        var strokeColor = annotator.getStrokeColorOfSelected();
+        if(strokeColor !== null)
+          colorPicker.setColor(strokeColor);
+    } else {
+      $("#trashMenuItem").addClass("disabled");
+      $("#propertiesMenuItem").addClass("disabled");
+    }
   }
 
   function onAnnotatorMouseUp(){
@@ -417,6 +562,15 @@
   function onCanvasBackgroundImageSet(){
     if(isSmartAnnotationEnabled())
       populateDetailedCanvas();
+
+    if(existingAnnotations !== null) {
+      annotator.loadAnnotations(existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      //drawAnnotations(canvas.fabric(), existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      existingAnnotations = annotator.toJSON(); //export JSON after loading annotations 
+                                                //due to rounding we might end up with slightly different values, so we
+                                                //export them in order to make sure that we don't accidentially detect 
+                                                //a rounding errors as changes.
+    }
   }
 
   function isLoadingIndicatorVisible(){
@@ -462,7 +616,7 @@
                     '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
                 '</div>';
-
+    $("#annotationColumn").show();
     $("#annotationColumn").append(data);
 
     $("#annotationArea").attr("imageId", annotationInfo.imageId);
@@ -470,9 +624,106 @@
     $("#annotationArea").attr("origImageHeight", annotationInfo.origImageHeight);
     $("#annotationArea").attr("validationId", annotationInfo.validationId);
   }
+
+  function handleUpdateAnnotationsRes(res) {
+    {{ if eq .annotationMode "browse" }}
+    $("#loadingSpinner").hide();
+    updateAnnotationsForImage(annotationInfo.annotationId, res);
+    showBrowseAnnotationImageGrid();
+    {{ end }}
+
+    {{ if eq .onlyOnce true }}
+    showHideControls(false);
+    $("#onlyOnceDoneMessageContainer").show();
+    $("#onlyOnceDoneMessage").fadeIn("slow");
+    $("#loadingSpinner").hide();
+    {{ end }}
+  }
+
+  function updateAnnotations(res) {
+    
+    if(_.isEqual(res, existingAnnotations)) {
+      showHideControls(false);
+      clearDetailedCanvas();
+      canvas.clear();
+      handleUpdateAnnotationsRes(existingAnnotations);
+      return;
+    }
+
+    var postData = {}
+    postData["annotations"] = res;
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers["X-Browser-Fingerprint"] = browserFingerprint;
+
+    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
+    showHideControls(false);
+    clearDetailedCanvas();
+    canvas.clear();
+
+    var url = "{{ .apiBaseUrl }}/v1/annotation/" + annotationInfo.annotationId;
+    $.ajax({
+      url: url,
+      type: 'PUT',
+      data: JSON.stringify(postData),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        handleUpdateAnnotationsRes(res);
+      }
+    });
+  }
+
+  function addAnnotations(res) {
+    var postData = {}
+
+    postData["annotations"] = res;
+    postData["label"] = $('#label').attr('label');
+    postData["sublabel"] = $('#label').attr('sublabel');
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers["X-Browser-Fingerprint"] = browserFingerprint;
+
+    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
+    showHideControls(false);
+    clearDetailedCanvas();
+    canvas.clear();
+
+    var url = "{{ .apiBaseUrl }}/v1/annotate/" + annotationInfo.imageId;
+    $.ajax({
+      url: url,
+      type: 'POST',
+      data: JSON.stringify(postData),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
+
+        {{ if eq .onlyOnce true }}
+        $("#onlyOnceDoneMessage").fadeIn("slow");
+        showHideControls(false);
+        $("#loadingSpinner").hide();
+        {{ end }}
+      }
+    });
+  }
   
 
   $(document).ready(function(){
+      var lastActiveMenuItem = "";
       $('#warningMsg').hide();
       
       $('#smartAnnotation').checkbox({
@@ -482,6 +733,7 @@
             annotator.enableSmartAnnotation();
 
             $("#spacer").remove();
+            $("#annotationColumn").show();
             $("#annotationColumn").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
                                       '<div class="" id="smartAnnotationCanvasWrapper">' +
                                         '<div class="ui dimmer" id="smartAnnotationDimmer">' +
@@ -502,7 +754,7 @@
           }
 
           addMainCanvas();
-          populateCanvas(getUrlFromImageId(annotationInfo.imageId), false);
+          populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
 
           showHideSmartAnnotationControls(enabled);
           showHideAutoAnnotationsLoadButton();
@@ -521,61 +773,68 @@
         }
       });
 
-      annotationInfo.imageId = {{ .randomImage.Id }};
-      annotationInfo.origImageWidth = {{ .randomImage.Width }};
-      annotationInfo.origImageHeight = {{ .randomImage.Height }};
-      annotationInfo.validationId = {{ .randomImage.Validation.Id }};
-
-      addMainCanvas();
-
+      {{ if eq .annotationMode "browse" }}
       showHideSmartAnnotationControls(false);
+      {{ end }}
 
-      autoAnnotations = {{.randomImage.AutoAnnotations}};
-      showHideAutoAnnotationsLoadButton();
+      colorPicker = new Huebee($('#colorPicker')[0], {});
+      colorPicker.on('change', function(color, hue, sat, lum) {
+        annotator.setStrokeColorOfSelected(color);
+      });
 
-      setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
-
-      labelId = {{ .labelId }};
-      if(labelId === -1)
-        labelId = null;
-
-      canvas = new CanvasDrawer("annotationArea");
-      canvas.fabric().selection = false;
-      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
-
-      populateCanvas(getUrlFromImageId({{ .randomImage.Id }}), true, false);
-      changeControl(annotator);
-      showHideControls(true);
-
-      annotationSettings.loadPreferedAnnotationTool(annotator);
-
-
-      var browserFingerprint = null;
+      Mousetrap.bind("r", function() { 
+        $("#rectMenuItem").trigger("click");
+      });
 
       $("#rectMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Rectangle");
         changeMenuItem("Rectangle");
       });
 
+      Mousetrap.bind("c", function() { 
+        $("#circleMenuItem").trigger("click");
+      });
+
       $("#circleMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Circle");
         changeMenuItem("Circle");
 
       });
 
+      Mousetrap.bind("p", function() { 
+        $("#polygonMenuItem").trigger("click");
+      });
+
       $("#polygonMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Polygon");
         changeMenuItem("Polygon");
       });
 
+      $("#selectMoveMenutItem").click(function(e) {
+        annotator.disablePanMode();
+        annotator.setShape("");
+        annotator.enableSelectMoveMode();
+        changeMenuItem("SelectMove");
+      });
+
+      
+
        $("#freeDrawingMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("FreeDrawing");
         annotator.setBrushColor("red");
         changeMenuItem("FreeDrawing");
+      });
+
+      Mousetrap.bind("del", function() { 
+        $("#trashMenuItem").trigger("click");
       });
 
       $("#trashMenuItem").click(function(e) {
@@ -591,22 +850,48 @@
         annotator.undo();
       });
 
+      Mousetrap.bind('+', function() { 
+        zoomIn(); 
+      });
+
       $("#zoomInMenuItem").click(function(e) {
-        canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+        zoomIn();
+      });
+
+      Mousetrap.bind('-', function() { 
+        zoomOut(); 
       });
 
       $("#zoomOutMenuItem").click(function(e) {
-        canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+        zoomOut();
       });
+
+      $('#strokeWidthSlider').on('input', function(e) {
+        var val = parseInt($(this).val());
+        annotator.setStrokeWidthOfSelected(val);
+      });
+
+      Mousetrap.bind("ctrl", function(e) {
+        if(!e.repeat) { //if the ctrl key is held down, the event constantly fires. we are only interested in the first event 
+          lastActiveMenuItem = getActiveAnnotationMenuItem(true); //remember active menu item
+          $("#panMenuItem").trigger("click");
+        }
+      }, "keydown");
+
+      Mousetrap.bind("ctrl", function(e) { //ctrl key released
+        $("#"+lastActiveMenuItem).trigger("click");
+      }, "keyup");
 
       $("#panMenuItem").click(function(e) {
         annotator.enablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("");
         changeMenuItem("PanMode");
       });
 
       $("#blockSelectMenuItem").click(function(e) {
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setShape("Blocks");
         changeMenuItem("BlockSelection");
         annotator.toggleGrid();
@@ -621,6 +906,7 @@
       $("#smartAnnotationFgMenuItem").click(function(e) {
         changeMenuItem("ForegroundSelection");
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
         annotator.setBrushWidth(10);
         annotator.setShape("FreeDrawing");
@@ -629,6 +915,7 @@
       $("#smartAnnotationBgMenuItem").click(function(e) {
         changeMenuItem("BackgroundSelection");
         annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
         annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
         annotator.setBrushWidth(10);
         annotator.setShape("FreeDrawing");
@@ -658,10 +945,10 @@
       });
 
       $("#saveAnnotationSettingsButton").click(function(e) {
-        annotationSettings.persistAll();
-
-         
+        annotationSettings.persistAll(); 
         $('#annotationSettingsPopup').modal('hide');
+        $('#annotationSettingsRefreshBrowserPopup').modal('show');
+
       });
 
       $('#blacklistButton').click(function(e) {
@@ -714,37 +1001,29 @@
           return;
         }
 
-        var postData = {}
-
-        postData["annotations"] = res;
-        postData["label"] = $('#label').attr('label');
-        postData["sublabel"] = $('#label').attr('sublabel');
-
-        var headers = {}
-        if(browserFingerprint !== null)
-          headers["X-Browser-Fingerprint"] = browserFingerprint;
-
-        headers['X-App-Identifier'] = '{{ .appIdentifier }}';
-
-        showHideControls(false);
-        clearDetailedCanvas();
-        canvas.clear();
-
         e.preventDefault();
-        var url = "{{ .apiBaseUrl }}/v1/annotate/" + annotationInfo.imageId;
-        $.ajax({
-          url: url,
-          type: 'POST',
-          data: JSON.stringify(postData),
-          headers: headers,
-          beforeSend: function(xhr) {
-            xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
-          },
-          success: function(data){
-            getRandomUnannotatedImage();
-          }
-        });
+
+        
+        if(existingAnnotations !== null)
+          updateAnnotations(res);
+        else
+          addAnnotations(res);
       });
+
+
+      {{ if eq .annotationMode "default" }}
+        {{ if eq .validationId "" }}
+        getUnannotatedImage();
+        {{ else }}
+        getUnannotatedImage({{ .validationId }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "refine" }}
+        {{ if ne .annotationId "" }}
+        getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
+        {{ end }}
+      {{ end }}
 
       new Fingerprint2().get(function(result, components){
         browserFingerprint = result;
@@ -763,15 +1042,41 @@
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer">
       <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
-      <!--<h2>Annotate all occurences of the above.</h2>-->
+      <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
     </div>
   </div>
 
 
   <div class="ui stackable grid" id="mainGrid">
+      {{ if eq .annotationMode "browse" }}
+      {{ template "annotation_browse_select_mode.html" .}}
+      {{ end }}
+
+
       <div class="row"></div>
-      <div class="row">
+      <div class="row" id="loadingSpinner" style="display: none;">
+        <div class="sk-wave overlay">
+          <div class="sk-rect sk-rect1"></div>
+          <div class="sk-rect sk-rect2"></div>
+          <div class="sk-rect sk-rect3"></div>
+          <div class="sk-rect sk-rect4"></div>
+          <div class="sk-rect sk-rect5"></div>
+        </div>
+      </div>
+
+      <div class="row" style="display: none;" id="onlyOnceDoneMessageContainer">
         <div class="sixteen wide center aligned column">
+          <div hidden id="onlyOnceDoneMessage">
+            <i class="massive check circle outline icon"></i>
+            <h1 class="ui header">Done</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="display: none;" id="annotationControls">
+        <div class="sixteen wide center aligned column">
+          {{ template "annotation_revisions.html" .}}
+          <br>
           <div class="row">
             <div hidden class="ui toggle checkbox" id="smartAnnotation">
               <input type="checkbox">
@@ -794,21 +1099,28 @@
           {{ template "delete_annotation_objects_popup.html" .}}
 
           {{ template "annotation_discard_dlg.html" .}}
+
         </div>
       </div>
 
-      <div class="row" id="annotationColumn">
+      <div class="row" id="annotationColumn" style="display: none;">
       </div>
 
-      <div class="row">
+      <div class="row" style="display: none;" id="annotationButtons">
         <div class="sixteen wide center aligned column">
+
+          {{ if eq .showSkipAnnotationButtons true }}
           <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
+          {{ end }}
+
           <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
 
+          {{ if eq .showSkipAnnotationButtons true }}
           {{ if (eq .sessionInformation.LoggedIn true) }}
           <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
           {{ else }}
           <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
+          {{ end }}
           {{ end }}
 
           <div hidden class="ui warning message" id="warningMsg">
@@ -819,7 +1131,9 @@
         </div>
       </div>
       <div class="row"></div>
+
   </div>
+</div>
   {{ template "footer.html" .}}
 
 </body>

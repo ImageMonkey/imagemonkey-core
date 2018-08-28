@@ -8,7 +8,23 @@ CREATE INDEX image_unlocked_index ON image (unlocked);
 --Image Validation table
 CREATE INDEX image_validation_image_id_index ON image_validation (image_id);
 CREATE INDEX image_validation_label_id_index ON image_validation (label_id);
-
+CREATE INDEX image_validation_uuid_index ON image_validation (uuid);
 
 -- Label table
 CREATE INDEX label_name_index ON label (name);
+CREATE INDEX label_parent_id_index ON label(parent_id);
+CREATE INDEX label_label_type_index ON label(label_type);
+
+-- annotation_data table
+CREATE INDEX annotation_data_image_annotation_id_idx ON annotation_data(image_annotation_id);
+
+
+-- user_image table
+CREATE INDEX user_image_image_id_index ON user_image (image_id);
+CREATE INDEX user_image_account_id_index ON user_image(account_id);
+
+-- image_quarantine table
+CREATE INDEX image_quarantine_image_id_index ON image_quarantine(image_id);
+
+-- image_annotation_coverage table
+CREATE INDEX image_annotation_coverage_image_id_index ON image_annotation_coverage(image_id);

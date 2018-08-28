@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  {{ template "favicon.html" .}}
+  
   <!-- Standard Meta -->
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
@@ -12,7 +14,6 @@
   <link rel="stylesheet" href="/css/semantic.min.css"/>
   <script src="/js/jquery.min.js"></script>
   <script src="/js/semantic.min.js"></script> 
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
   <link rel="stylesheet" href="/css/common.css"/>
   <link rel="stylesheet" href="/css/common_sub.css"/>
   <script src="/js/common.js"></script> 
@@ -153,7 +154,7 @@
         data: JSON.stringify({"description" : description}),
         type: 'POST', 
         beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
           addApiTokenToTable(data.description, data.token, data.issued_at);
@@ -167,7 +168,7 @@
         url: '{{ .apiBaseUrl }}/v1/user/' + {{ .sessionInformation.Username }} + '/api-token/' + apiToken + '/revoke',
         type: 'POST', 
         beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
           $(('#revokedColumn' + id)).html('<i class="red close icon"></i>');
@@ -210,7 +211,7 @@
         contentType: false,
         processData: false, 
         beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
         }

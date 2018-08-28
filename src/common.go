@@ -18,112 +18,10 @@ import (
     "github.com/garyburd/redigo/redis"
     log "github.com/Sirupsen/logrus"
     "net/url"
-    "strconv"
     "errors"
     "github.com/gin-gonic/gin"
+    "./datastructures"
 )
-
-type Report struct {
-    Reason string `json:"reason"`
-}
-
-type Label struct {
-    Name string `json:"name"`
-}
-
-type LabelMeEntry struct {
-    Label string `json:"label"` 
-    Annotatable bool `json:"annotatable"` 
-    Sublabels []string `json:"sublabels"`
-}
-
-
-type ContributionsPerCountryRequest struct {
-    CountryCode string `json:"country_code"`
-    Type string `json:"type"`
-}
-
-type ContributionsPerAppRequest struct {
-    AppIdentifier string `json:"app_identifier"`
-    Type string `json:"type"`
-}
-
-
-type MetaLabelMapEntry struct {
-    Description string  `json:"description"`
-    Name string `json:"name"`
-}
-
-type LabelMapQuizExampleEntry struct {
-    Filename string `json:"filename"`
-    Attribution string `json:"attribution"`
-}
-
-type LabelMapQuizAnswerEntry struct {
-    Name string `json:"name"`
-    Examples []LabelMapQuizExampleEntry `json:"examples"`
-    Uuid string `json:"uuid"`
-}
-
-
-type LabelMapQuizEntry struct {
-    Question string `json:"question"`
-    Accessors []string `json:accessors"`
-    Answers []LabelMapQuizAnswerEntry `json:answers"`
-    AllowUnknown bool `json:allow_unknown"`
-    AllowOther bool `json:allow_other"`
-    BrowseByExample bool `json:browse_by_example"`
-    Multiselect bool `json:multiselect"`
-    ControlType string `json:control_type"`
-}
-
-type LabelMapEntry struct {
-    Description string  `json:"description"`
-    LabelMapEntries map[string]LabelMapEntry  `json:"has"`
-    Accessors []string `json:accessors"`
-    Quiz []LabelMapQuizEntry `json:quiz"`
-    Uuid string `json:"uuid"`
-}
-
-type LabelMap struct {
-    LabelMapEntries map[string]LabelMapEntry `json:"labels"`
-    MetaLabelMapEntries map[string]MetaLabelMapEntry  `json:"metalabels"`
-}
-
-type LabelValidationEntry struct {
-    Label string  `json:"label"`
-    Sublabel string `json:"sublabel"`
-}
-
-type BlogSubscribeRequest struct {
-    Email string `json:"email"`
-}
-
-type ImageSource struct {
-    Provider string
-    Url string
-    Trusted bool
-}
-
-type ImageInfo struct {
-    Hash uint64
-    Width int32
-    Height int32
-    Name string
-    Source ImageSource
-
-}
-
-type UserSignupRequest struct {
-    Username string `json:"username"`
-    Email string `json:"email"`
-    Password string `json:"password"`
-}
-
-type APIUser struct {
-    Name string `json:"name"`
-    ClientFingerprint string `json:"client_fingerprint"`
-}
 
 
 func use(vals ...interface{}) {
@@ -156,8 +54,8 @@ func hashImage(file io.Reader) (uint64, error){
     return imghash.Average(img), nil
 }
 
-func getImageInfo(file io.Reader) (ImageInfo, error){
-    var imageInfo ImageInfo
+func getImageInfo(file io.Reader) (datastructures.ImageInfo, error){
+    var imageInfo datastructures.ImageInfo
     imageInfo.Hash = 0
     imageInfo.Width = 0
     imageInfo.Height = 0
@@ -259,9 +157,9 @@ func getIPAddress(r *http.Request) string {
     return ""
 }
 
-func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
+func getLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
     var words []string
-    var labelMap LabelMap
+    var labelMap datastructures.LabelMap
 
     data, err := ioutil.ReadFile(path)
     if err != nil {
@@ -281,6 +179,22 @@ func getLabelMap(path string) (map[string]LabelMapEntry, []string, error) {
     }
 
     return labelMap.LabelMapEntries, words, nil
+}
+
+func getLabelRefinementsMap(path string) (map[string]datastructures.LabelMapRefinementEntry, error) {
+    var labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return labelMapRefinementEntries, err
+    }
+
+    err = json.Unmarshal(data, &labelMapRefinementEntries)
+    if err != nil {
+        return labelMapRefinementEntries, err
+    }
+
+    return labelMapRefinementEntries, nil
 }
 
 func GetSampleExportQueries() []string {
@@ -346,7 +260,7 @@ func (p *StatisticsPusher) Load() error {
 }
 
 func (p *StatisticsPusher) PushAppAction(appIdentifier string, actionType string) {
-    var contributionsPerAppRequest ContributionsPerAppRequest
+    var contributionsPerAppRequest datastructures.ContributionsPerAppRequest
     contributionsPerAppRequest.Type = actionType
     val, ok := p.registeredAppIdentifiers.Get(appIdentifier)
     if ok {
@@ -380,13 +294,13 @@ func isAlphaNumeric(s string) bool {
     return true
 }
 
-func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []string) bool {
+func isLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label string, sublabels []datastructures.Sublabel) bool {
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
 
             for _, value := range sublabels {
-                _, ok := availableSublabels[value]
+                _, ok := availableSublabels[value.Name]
                 if !ok {
                     return false
                 }
@@ -399,18 +313,24 @@ func isLabelValid(labelsMap map[string]LabelMapEntry, label string, sublabels []
     return false
 }
 
-func getLabelIdFromUrlParams(params url.Values) (int64, error) {
-    var labelId int64
-    var err error
-    labelId = -1
+func getLabelIdFromUrlParams(params url.Values) (string, error) {
+    var labelId string
+    labelId = ""
     if temp, ok := params["label_id"]; ok {
-        labelId, err = strconv.ParseInt(temp[0], 10, 64)
-        if err != nil {
-            return labelId, err
-        }
+        labelId = temp[0]
     }
 
     return labelId, nil
+}
+
+func getValidationIdFromUrlParams(params url.Values) string {
+    var validationId string
+    validationId = ""
+    if temp, ok := params["validation_id"]; ok {
+        validationId = temp[0]
+    }
+
+    return validationId
 }
 
 func getExploreUrlParams(c *gin.Context) (string, bool, error) {
@@ -441,4 +361,26 @@ func getExploreUrlParams(c *gin.Context) (string, bool, error) {
     }
 
     return query, annotationsOnly, nil 
+}
+
+func getParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string) string {
+    params := c.Request.URL.Query()
+
+    param := defaultIfNotFound
+    if temp, ok := params[name]; ok {
+        param = temp[0]
+    }
+
+    return param
+}
+
+func getImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) string {
+    imageUrl := apiBaseUrl
+    if unlocked {
+        imageUrl += "v1/donation/" + imageId
+    } else {
+        imageUrl += "v1/unverified-donation/" + imageId
+    }
+
+    return imageUrl
 }

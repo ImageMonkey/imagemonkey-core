@@ -165,6 +165,21 @@ func (p *AuthTokenHandler) GetAccessTokenInfo(c *gin.Context) AccessTokenInfo {
    	return _parseAccessToken(auth[1])
 }
 
+func (p *AuthTokenHandler) GetAccessTokenInfoFromUrl(c *gin.Context) AccessTokenInfo {
+	token := getParamFromUrlParams(c, "token", "")
+
+    if token == "" {
+    	var accessTokenInfo AccessTokenInfo
+		accessTokenInfo.Username = ""
+		accessTokenInfo.Token = ""
+		accessTokenInfo.Valid = false
+		accessTokenInfo.Empty = true
+    	return accessTokenInfo
+   	}
+
+   	return _parseAccessToken(token)
+}
+
 func (p *AuthTokenHandler) GetAPITokenInfo(c *gin.Context) APITokenInfo {
 	apiToken := c.Request.Header.Get("X-Api-Token")
 

@@ -6,24 +6,32 @@ import(
 	"strconv"
     "github.com/satori/go.uuid"
 	"regexp"
+    "strings"
+    "./commons"
 )
 
-type Token int
-
-const (
-	LABEL = iota
-	AND
-	OR
-	LPAR
-	RPAR 
-	UNKNOWN
-)
+type StaticQueryAttribute struct {
+    Operator string 
+    Value int
+    QueryName string
+}
 
 func IsLetter(s string) bool {
     for _, r := range s {
         if !unicode.IsLetter(r) {
             return false
         }
+    }
+    return true
+}
+
+func IsLetterOrSpace(s string) bool {
+    for _, r := range s {
+        if unicode.IsLetter(r) || unicode.IsSpace(r) {
+            continue
+        }
+
+        return false
     }
     return true
 }
@@ -37,65 +45,110 @@ func IsUuid(s string) bool {
 }
 
 func IsAssignment(s string) bool {
-	match, _ := regexp.MatchString("^[a-zA-Z]*\\.[a-zA-Z]*='[a-zA-Z\\s]*'$", s)
+	match, _ := regexp.MatchString("^([a-zA-Z]*\\.)?[a-zA-Z]*='[a-zA-Z\\s]*'$", s)
 	return match
 }
 
-func StrToToken(str string) Token {
+func IsStaticQueryAttribute(s string) (bool, commons.Token) {
+    attributes := commons.GetStaticQueryAttributes()
+    for _, v := range attributes { 
+        match, _ := regexp.MatchString(v.RegExp, s)
+        if match {
+            return true, v.BelongsToToken
+        }
+    }
+
+    return false, commons.UNKNOWN
+}
+
+func GetStaticQueryAttributeFromToken(s string, token commons.Token) (StaticQueryAttribute, error) {
+    var err error
+    staticQueryAttr := commons.GetStaticQueryAttributes()[token]
+
+    staticQueryAttribute := StaticQueryAttribute{Value: 0, Operator: ">=", QueryName: staticQueryAttr.QueryName}
+    r := regexp.MustCompile(staticQueryAttr.RegExp)
+    matches := r.FindStringSubmatch(s)
+    if len(matches) > 2 {
+        staticQueryAttribute.Operator = matches[1]
+        staticQueryAttribute.Value, err = strconv.Atoi(matches[2])
+        if err != nil {
+            return staticQueryAttribute, errors.New("Oops: " + matches[2])
+        }
+    }
+
+    return staticQueryAttribute, nil
+}
+
+func StrToToken(str string) commons.Token {
 	switch str {
 		case "&":
-			return AND
+			return commons.AND
 		case "|":
-			return OR
+			return commons.OR
 		case "(":
-			return LPAR
+			return commons.LPAR
 		case ")":
-			return RPAR
+			return commons.RPAR
+        case "~":
+            return commons.NOT
 		default:
-			if IsAssignment(str) || IsLetter(str) || IsUuid(str) {
-				return LABEL
+            isStaticQueryAttribute, tok := IsStaticQueryAttribute(str)
+            if isStaticQueryAttribute {
+                return tok
+            }
+
+			if IsAssignment(str) || IsLetterOrSpace(str) || IsUuid(str) {
+				return commons.LABEL
 			}
 	}
 
-	return UNKNOWN
+	return commons.UNKNOWN
 }
 
-func IsTokenValid(currentToken Token, lastToken Token) bool {
+func IsTokenValid(currentToken commons.Token, lastToken commons.Token) bool {
 	switch currentToken {
-		case AND:
-			if lastToken == LABEL {
+		case commons.AND:
+			if commons.IsGeneralLabelToken(lastToken) || (lastToken == commons.RPAR)  {
 				return true
 			}
 			return false
-		case OR:
-			if lastToken == LABEL {
+		case commons.OR:
+			if commons.IsGeneralLabelToken(lastToken) || (lastToken == commons.RPAR) {
 				return true
 			}
 			return false
-		case LABEL:
-			if (lastToken == OR) || (lastToken == AND) {
+		case commons.RPAR:
+			if commons.IsGeneralLabelToken(lastToken) {
 				return true
 			}
 			return false
-		case RPAR:
-			if lastToken == LABEL {
+		case commons.LPAR:
+			if commons.IsGeneralLabelToken(lastToken) || (lastToken == commons.AND) || (lastToken == commons.OR) || (lastToken == commons.NOT) {
 				return true
 			}
 			return false
-		case LPAR:
-			if (lastToken == LABEL) || (lastToken == AND) || (lastToken == OR) {
-				return true
-			}
-			return false
+        case commons.NOT:
+            if commons.IsGeneralLabelToken(lastToken) || (lastToken == commons.AND) || (lastToken == commons.OR) || (lastToken == commons.LPAR) {
+                return true
+            }
+            return false
+        default:
+            if commons.IsGeneralLabelToken(currentToken) {
+                if (lastToken == commons.OR) || (lastToken == commons.AND) || (lastToken == commons.LPAR) || (lastToken == commons.NOT) {
+                    return true
+                }
+            }
+
+            return false
 	}
 
 	return false
 } 
 
-func IsLastTokenValid(lastToken Token) bool {
-    if lastToken == AND {
+func IsLastTokenValid(lastToken commons.Token) bool {
+    if lastToken == commons.AND {
         return false
-    } else if lastToken == OR {
+    } else if lastToken == commons.OR {
         return false
     }
     return true
@@ -106,7 +159,7 @@ func Tokenize(input string) []string {
     label := ""
     in := StripWhitespaces(input)
     for _, ch := range in {
-        if ch == '&' || ch == '|' || ch == '(' || ch == ')' {
+        if ch == '&' || ch == '|' || ch == '(' || ch == ')' || ch == '~' {
             if label != "" {
                 output = append(output, label)
                 label = ""
@@ -134,8 +187,9 @@ func GetBaseLabel(s string) string {
     return s
 }
 
-func StripWhitespaces(s string) string {
+func StripWhitespacesExceptWithinQuotes(s string) string {
     output := ""
+
     insideAssignment := false
     for _, r := range s {
         if r == '\'' {
@@ -149,6 +203,46 @@ func StripWhitespaces(s string) string {
         }
     }
 
+    return output
+}
+
+func StripWhitespaces(s string) string {
+    output := ""
+    temp := ""
+    potentialMultiWordString := false
+    for _, r := range s {
+
+        if unicode.IsLetter(r) || unicode.IsSpace(r) || r == '\'' || r == '.' || r == '=' {
+            potentialMultiWordString = true
+        } else {
+            potentialMultiWordString = false
+
+            if temp != "" {
+                if strings.Contains(temp, ".") && strings.Contains(temp, "=") { //is it a label assignment?(e.q dog.has='mouth')
+                    output += StripWhitespacesExceptWithinQuotes(temp) //remove whitespaces except within the quotes
+                } else {
+                    output += temp
+                }
+            }
+
+            output += string(r)
+
+            temp = ""
+        }
+
+        if potentialMultiWordString {
+            temp += string(r)
+        }
+    }
+
+    if temp != "" {
+        if strings.Contains(temp, ".") && strings.Contains(temp, "=") { //is it a label assignment?(e.q dog.has='mouth')
+            output += StripWhitespacesExceptWithinQuotes(temp) //remove whitespaces except within the quotes
+        } else {
+            output += temp
+        }
+    }
+
     return output 
 }
 
@@ -158,16 +252,19 @@ type Parser interface {
 
 type QueryParser struct {
 	query string
-	lastToken Token
+	lastToken commons.Token
     lastStrToken string
 	isFirst bool
 	brackets int32
     isUuidQuery bool
+    version int32
+    allowStaticQueryAttributes bool
 }
 
 type ParseResult struct {
 	input string
 	query string
+    subquery string
     isUuidQuery bool
 	//validationQuery string
 	queryValues []interface{}
@@ -177,31 +274,67 @@ func NewQueryParser(query string) *QueryParser {
     return &QueryParser {
         query: query,
         isFirst: true,
+        version: 1,
+        allowStaticQueryAttributes: false,
     } 
 }
 
-func (p *QueryParser) Parse() (ParseResult, error) {
+func NewQueryParserV2(query string) *QueryParser {
+    return &QueryParser {
+        query: query,
+        isFirst: true,
+        version: 2,
+    } 
+}
+
+func (p *QueryParser) _getErrorMessage(token string, isFirst bool) string {
+    e := ""
+    if p.allowStaticQueryAttributes {
+        if isFirst {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ATTRIBUTE' (e.q " + 
+              commons.GetStaticQueryAttributes()[commons.ANNOTATION_COVERAGE].Name + "= 10%), '~' or '('"
+        } else {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ATTRIBUTE' (e.q " +
+                 commons.GetStaticQueryAttributes()[commons.ANNOTATION_COVERAGE].Name + "= 10%), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|', '&' or '~' "
+        }
+    } else {
+        if isFirst {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), '~' or '('"
+        } else {
+            e = "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|', '&' or '~' "
+        }
+    }
+
+    return e
+}
+
+func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
+    p.allowStaticQueryAttributes = allow
+}
+
+func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 	parseResult := ParseResult{}
 	parseResult.query = ""
-    parseResult.isUuidQuery = p.isUuidQuery
-
+    lastSubqueryOperator := ""
+    //parseResult.isUuidQuery = p.isUuidQuery
     parseResult.isUuidQuery = false
 
     tokens := Tokenize(p.query)
 
-    var temp []string
-    i := 1
+    i := offset
     numOfLabels := 1
     for _, token := range tokens {
-    	if token == "" {
-    		continue
-    	}
+        //strip tailing and leading white spaces
+        token = strings.TrimSpace(token)
+
+        if token == "" {
+            continue
+        }
 
     	t := StrToToken(token)
     	if p.isFirst {
-    		if t != LABEL {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|' "
-    			return parseResult, errors.New(e)
+    		if !((t == commons.LABEL) || (t == commons.LPAR) || (t == commons.NOT) || (p.allowStaticQueryAttributes && commons.IsGeneralLabelToken(t))) {
+    			return parseResult, errors.New(p._getErrorMessage(token, true))
     		}
 
             //use the first entry to determine whether its a UUID or not. We can't have both labels and UUIDs in the same query, so
@@ -212,39 +345,58 @@ func (p *QueryParser) Parse() (ParseResult, error) {
     		p.isFirst = false
     	} else {
     		if !IsTokenValid(t, p.lastToken) {
-    			e := "Error: invalid token\n" + token + "\n^\nExpecting 'LABEL' (e.q dog), 'ASSIGNMENT' (e.q dog.breed='Labrador'), '|' "
-    			return parseResult, errors.New(e)
+    			return parseResult, errors.New(p._getErrorMessage(token, false))
     		}
     	}
 
-    	if t == LABEL {
-            if parseResult.isUuidQuery {
-                parseResult.query += ("l.uuid = $" + strconv.Itoa(i))
+    	if t == commons.LABEL {
+            if p.version == 1 {
+                if parseResult.isUuidQuery {
+                    parseResult.query += ("l.uuid = $" + strconv.Itoa(i))
+                } else {
+                    parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+                }
             } else {
-                parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+                if !parseResult.isUuidQuery {
+                    parseResult.query += ("q.accessors @> ARRAY[$" + strconv.Itoa(i) + "]::text[]")
+                    
+                    if lastSubqueryOperator != "" {
+                        parseResult.subquery += (lastSubqueryOperator + " ")
+                        lastSubqueryOperator = ""
+                    }
+                    parseResult.subquery += ("a.accessor = $" + strconv.Itoa(i) + " ")
+                }
             }
     		parseResult.queryValues = append(parseResult.queryValues, token)
     		i += 1
     		numOfLabels += 1
-    	} else if t == AND {
+    	} else if t == commons.AND {
     		parseResult.query += "AND"
-    		temp = append(temp, "AND")
-    	} else if t == OR {
+            lastSubqueryOperator = "OR"
+    	} else if t == commons.OR {
     		parseResult.query += "OR"
-    		temp = append(temp, "OR")
-    	} else {
-    		parseResult.query += token
-    		temp = append(temp, "token")
-    	}
+            lastSubqueryOperator = "OR"
+        } else if t == commons.NOT {
+            parseResult.query += "NOT"
+            lastSubqueryOperator = "NOT"
+    	} else if t == commons.LPAR {
+            p.brackets += 1
+        } else if t == commons.RPAR {
+            p.brackets -= 1
+        } else if t != commons.UNKNOWN {
+            if p.allowStaticQueryAttributes {
+                if !parseResult.isUuidQuery {
+                    staticQueryAttribute, err := GetStaticQueryAttributeFromToken(token, t)
+                    if err != nil {
+                        return parseResult, err
+                    }
+                    parseResult.query += (staticQueryAttribute.QueryName + staticQueryAttribute.Operator + strconv.Itoa(staticQueryAttribute.Value))
+                }
+            } else {
+                return parseResult, errors.New(p._getErrorMessage(token, false))
+            }
+        }
     	parseResult.query += " "
-
-
-    	if t == LPAR {
-    		p.brackets += 1
-    	}
-    	if t == RPAR {
-    		p.brackets -= 1
-    	}
 
     	p.lastToken = t
         p.lastStrToken = token

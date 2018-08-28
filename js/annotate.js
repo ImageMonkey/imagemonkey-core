@@ -92,7 +92,8 @@ var Polygon = (function () {
       hasControls: false,
       originX:'center',
       originY:'center',
-      index: this.index
+      index: this.index,
+      id: generateRandomId()
     });
 
     this.index += 1;
@@ -299,15 +300,17 @@ var Polygon = (function () {
     });
     this.canvas.remove(this.activeShape).remove(this.activeLine);
     var polygon = new fabric.Polygon(points,{
-      stroke: 'red',
+      stroke: '#F00',
       strokeWidth: 5,
       fill: 'transparent',
       hasBorders: true,
       hasControls: false,
       objectCaching: false,
-      selectable: true,
+      selectable: false,
       lockMovementX: true,
       lockMovementY: true,
+      selected: false,
+      evented: false,
       id: this.currentId
     });
     this.canvas.add(polygon);
@@ -472,12 +475,56 @@ var Annotator = (function () {
     this.brushWidth = 1;
     this.brushType = "PencilBrush";
     this.smartAnnotationData = [];
+    this.defaultStrokeWidth = 5;
+    this.maxStrokeWidth = 5;
+    this.minStrokeWidth = 2;
+    this.isSelectMoveMode = false;
 
     this.setBrushType(this.brushType);
     this.setBrushColor(this.brushColor);
     this.setBrushWidth(this.brushWidth);
 
     this.bindEvents();
+  }
+
+  Annotator.prototype._selectObjectByMouse = function(pointer) {
+    var point = new fabric.Point(pointer.x, pointer.y);
+    var objects = this.canvas.getObjects();
+    var foundObj = null;
+    var hasControls;
+    for(var i = 0; i < objects.length; i++) {
+        var boundingRect = objects[i].getBoundingRect();
+        if((pointer.x >= boundingRect.left && pointer.x <= (boundingRect.left + boundingRect.width)) && 
+          (pointer.y >= boundingRect.top && pointer.y <= (boundingRect.top + boundingRect.height))){
+          if(foundObj) { //we already have found one object that lies within the position of the cursor
+            if(objects[i].isContainedWithinObject(foundObj)) { //is there another object that is even smaller? (i.e is fully contained with in existing one)
+              foundObj.set({hasBorders: false, hasControls: false, evented: false, selectable: false, selected: false}); //if so, remove the selected property again..it's not the object we are looking for
+            }
+          }
+
+
+          hasControls = true;
+          if(objects[i]["type"] === "polygon")
+            hasControls = false; //currently we do not support controls on polygon objects
+
+          objects[i].set({hasBorders: true, hasControls: hasControls, evented: true, selectable: true, selected: true});
+          foundObj = objects[i];
+        } else {
+          objects[i].set({hasBorders: false, hasControls: false, evented: false, selectable: false, selected: false});
+        }
+    }
+  }
+
+  //de-select any selected objects + group and make it non-selectable
+  Annotator.prototype._silenceAllObjects = function() {
+    var objects = this.canvas.getObjects();
+    for(var i = 0; i < objects.length; i++) {
+      objects[i].set({evented: false, selectable: false, selected: false});
+    }
+
+    this.canvas.discardActiveObject();
+    this.canvas.discardActiveGroup();
+    this.canvas.renderAll();
   }
 
   Annotator.prototype.bindEvents = function() {
@@ -502,6 +549,11 @@ var Annotator = (function () {
       inst.onMouseDown(o);
       if(inst.isPanMode)
         inst.panning = true;
+      if(inst.isSelectMoveMode) {
+        var pointer = inst.canvas.getPointer(o.e);
+        inst._selectObjectByMouse(pointer);
+      }
+
     });
     inst.canvas.on('mouse:move', function(o) {
       inst.onMouseMove(o);
@@ -550,8 +602,24 @@ var Annotator = (function () {
     inst.canvas.on('object:selected', function(o) {
       inst.objSelected();
     });
+
+    inst.canvas.on('object:scaling', function(o) {
+      var e = o.target;
+      //in case stroke width gets bigger, than max stroke width
+      //rescale it to max stroke width
+      if(e.strokeWidth * e.scaleX > inst.maxStrokeWidth) {
+        e.objectCaching = false;
+        e.strokeWidth = inst.maxStrokeWidth/((e.scaleX+e.scaleY)/2);
+      }
+      //in case stroke width gets smaller, than min stroke width
+      //rescale it to min stroke width
+      if(e.strokeWidth * e.scaleX < inst.minStrokeWidth) {
+        e.objectCaching = false;
+        e.strokeWidth = inst.minStrokeWidth/((e.scaleX+e.scaleY)/2);
+      }
+    });
+
     inst.canvas.on('object:modified', function(o) {
-      
     });
     inst.canvas.on('object:added', function(o) {
       inst.saveState();
@@ -564,7 +632,7 @@ var Annotator = (function () {
       else if(o.target){
         if(inst.type !== "Blocks"){
           inst.over();
-          inst.canvas.hoverCursor = 'move';
+          inst.canvas.hoverCursor = 'default';
         }
         else{
           inst.canvas.hoverCursor = 'default';
@@ -586,6 +654,8 @@ var Annotator = (function () {
       this.markBlocks();
       this.createHull();
     }
+
+
     /*else if(this.type === "FreeDrawing"){
       if(this.isDrawing && !this.freeDrawing.isClosedPathMode())
         this.freeDrawing.generatePolygon();
@@ -738,9 +808,9 @@ var Annotator = (function () {
 
       if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
         var activeObj = inst.canvas.getActiveObject();
-        activeObj.stroke= 'red';
-        activeObj.strokeWidth= 5;
-        activeObj.fill = 'transparent';
+        //activeObj.stroke= 'red';
+        //activeObj.strokeWidth= 5;
+        //activeObj.fill = 'transparent';
 
         if(origX > pointer.x){
           activeObj.set({ left: Math.abs(pointer.x) }); 
@@ -817,13 +887,13 @@ var Annotator = (function () {
 
   Annotator.prototype.deleteAll = function () {
     //remove all objects from canvas
-    var objects = canvas.fabric().getObjects();
+    var objects = this.canvas.getObjects();
     while(objects.length != 0 ){
       this.canvas.remove(objects[0]);
       this.canvas.discardActiveGroup();
     }
-
     this.polygon.reset();
+    this.canvas.renderAll();
   };
 
   Annotator.prototype.deleteSelected = function (o) {
@@ -858,9 +928,15 @@ var Annotator = (function () {
           width: pointer.x-origX,
           height: pointer.y-origY,
           angle: 0,
+          stroke: "#F00",
+          fill: "transparent",
           transparentCorners: false,
-          hasBorders: true,
-          hasControls: true
+          hasBorders: false,
+          hasControls: false,
+          selectable: false,
+          selected: false,
+          evented: false,
+          strokeWidth: inst.defaultStrokeWidth
         });
 
         inst.canvas.add(rect).setActiveObject(rect);
@@ -872,16 +948,22 @@ var Annotator = (function () {
           radius: 0,
           rx: 0,
           ry: 0,
+          fill: "transparent",
+          stroke: "#F00",
           transparentCorners: false,
-          hasBorders: true,
-          hasControls: true
+          hasBorders: false,
+          hasControls: false,
+          selectable: false,
+          selected: false,
+          evented: false,
+          strokeWidth: inst.defaultStrokeWidth
         });
 
         inst.canvas.add(circle).setActiveObject(circle);
       }
 
       if(inst.type === 'Polygon'){
-        if(o.target && o.target.id == this.polygon.firstId()){
+        if(o.target && o.target.id === this.polygon.firstId()){
           this.polygon.generatePolygon();
           this.polygon.clear();
         }
@@ -989,6 +1071,20 @@ var Annotator = (function () {
     });
   }
 
+  Annotator.prototype.enableSelectMoveMode = function() {
+    this.isSelectMoveMode = true;
+  }
+
+  Annotator.prototype.isSelectMoveModeEnabled = function() {
+    return this.isSelectMoveMode;
+  }  
+
+  Annotator.prototype.disableSelectMoveMode = function() {
+    this._silenceAllObjects();
+    this.objSelected();
+    this.isSelectMoveMode = false;
+  }
+
   Annotator.prototype.disablePanMode = function(){
     this.isPanMode = false;
     this.canvas.selection = true; //enable group selection again when pan mode ends
@@ -1028,6 +1124,34 @@ var Annotator = (function () {
     this.canvas.selection = true; //enable group selection when grid is hidden
   }
 
+  Annotator.prototype.setStrokeWidthOfSelected = function(strokeWidth){
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      activeObj.set({
+        strokeWidth: strokeWidth
+      });
+      this.canvas.renderAll();
+    }
+  }
+
+  Annotator.prototype.setStrokeColorOfSelected = function(strokeColor){
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      activeObj.set({
+        stroke: strokeColor
+      });
+      this.canvas.renderAll();
+    }
+  }
+
+  Annotator.prototype.getStrokeColorOfSelected = function(){
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      return activeObj.get("stroke");
+    }
+    return null;
+  }
+
   Annotator.prototype.toggleGrid = function(){
     if(this.gridVisible)
       this.hideGrid();
@@ -1053,7 +1177,8 @@ var Annotator = (function () {
 
     }
     else{
-      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, pointX, pointY, pX, pY;
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, 
+          pointX, pointY, pX, pY, strokeWidth, strokeColor;
 
       for(var i = 0; i < objs.length; i++){
         //skip polygon handles
@@ -1068,24 +1193,32 @@ var Annotator = (function () {
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
           width = Math.round(((objs[i]["width"] / imgScaleX) * objs[i]["scaleX"]), 0);
           height = Math.round(((objs[i]["height"] / imgScaleY) * objs[i]["scaleY"]), 0);
+          strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
+          strokeColor = objs[i]["stroke"];
 
           if((width != 0) && (height != 0))
-            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect"});
+            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", 
+                      "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
         else if(type === "ellipse"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
           rx = Math.round(((objs[i]["rx"] / imgScaleX) * objs[i]["scaleX"]), 0);
           ry = Math.round(((objs[i]["ry"] / imgScaleY) * objs[i]["scaleY"]), 0);
+          strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
+          strokeColor = objs[i]["stroke"];
 
           if((rx != 0) && (ry != 0))
-            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse"});
+            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", 
+                      "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
         else if(type === "polygon"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
           width = Math.round(((objs[i]["width"] / imgScaleX)), 0);
           height = Math.round(((objs[i]["height"] / imgScaleY)), 0);
+          strokeWidth = Math.round((objs[i]["strokeWidth"] * ((objs[i]["scaleX"] + objs[i]["scaleY"])/2)), 0);
+          strokeColor = objs[i]["stroke"];
 
 
           points = objs[i]["points"];
@@ -1099,7 +1232,7 @@ var Annotator = (function () {
             scaledPoints.push({"x" : pX, "y": pY});
           }
 
-          res.push({"points": scaledPoints, "angle": angle, "type": "polygon"});
+          res.push({"points": scaledPoints, "angle": angle, "type": "polygon", "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
       }
     }
@@ -1115,11 +1248,25 @@ var Annotator = (function () {
     }
   }
 
+  Annotator.prototype._handleLoadedAnnotation = function(obj) {
+    if(obj.type === "polygon"){
+      obj.id = generateRandomId();
+      obj.objectCaching = false;
+      this.polygon.addPolygon(obj);
+      this.polygon.showPolyPoints(obj.id);
+    }
+  }
+
   Annotator.prototype._simplifyAutoAnnotations = function(autoAnnotations) {
     for(var i = 0; i < autoAnnotations.length; i++){
       autoAnnotations[i].points = simplify(autoAnnotations[i].points, 4.0, false);
     }
     return autoAnnotations;
+  }
+
+  Annotator.prototype.loadAnnotations = function(annotations, scaleFactor = 1.0) {
+    this.deleteAll();
+    drawAnnotations(this.canvas, annotations, scaleFactor, this._handleLoadedAnnotation.bind(this));
   }
 
   Annotator.prototype.loadAutoAnnotations = function(autoAnnotations, scaleFactor = 1.0) {
@@ -1219,16 +1366,32 @@ var AnnotationSettings = (function () {
     return "small";
   }
 
+  AnnotationSettings.prototype.getAnnotationMode = function() {
+    var radioButtonId = $("#annotationModeCheckboxes :radio:checked").attr('id');
+    if(radioButtonId === "annotationDefaultModeCheckboxInput") {
+      return "default";
+    }
+    if(radioButtonId === "annotationBrowseModeCheckboxInput") {
+      return "browse";
+    }
+    return "default";
+  }
+
   AnnotationSettings.prototype.persistAll = function() {
+    var settings = new Settings();
+
     var preferedAnnotationTool = this.getPreferedAnnotationTool();
     localStorage.setItem('preferedAnnotationTool', preferedAnnotationTool); //store in local storage
     var workspaceSize = this.getWorkspaceSize();
     localStorage.setItem('annotationWorkspaceSize', workspaceSize);
+    var annotationMode = this.getAnnotationMode();
+    settings.setAnnotationMode(annotationMode);
   }
 
   AnnotationSettings.prototype.setAll = function() {
     this.setPreferedAnnotationTool();
     this.setWorkspaceSize();
+    this.setAnnotationMode();
   }
 
   AnnotationSettings.prototype.setWorkspaceSize = function() {
@@ -1265,6 +1428,19 @@ var AnnotationSettings = (function () {
       $("#preferedPolygonAnnotationToolCheckbox").checkbox("set unchecked");
       $("#preferedCircleAnnotationToolCheckbox").checkbox("set unchecked");
       $("#preferedPolygonAnnotationToolCheckbox").checkbox("set checked");
+    }
+  }
+
+  AnnotationSettings.prototype.setAnnotationMode = function() {
+    var settings = new Settings();
+    annotationMode = settings.getAnnotationMode();
+    if(annotationMode === "default") {
+      $("#annotationBrowseModeCheckbox").checkbox("set unchecked");
+      $("#annotationDefaultModeCheckbox").checkbox("set checked");
+    }
+    else if(annotationMode === "browse") {
+      $("#annotationDefaultModeCheckbox").checkbox("set unchecked");
+      $("#annotationBrowseModeCheckbox").checkbox("check");
     }
   }
 

@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  {{ template "favicon.html" .}}
+  
   <!-- Standard Meta -->
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
@@ -12,7 +14,6 @@
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
   <script src="js/semantic.min.js"></script> 
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
@@ -37,6 +38,7 @@
   //global image validation map that holds if a image is marked as valid or not
   var imageValidationMapping = {};
   var labelId = null;
+  var imageId = null;
 
   function populateImageGrid(data){
     imageValidationMapping = {};
@@ -50,7 +52,7 @@
     for(var i = 0; i < donations.length; i++){
       var imageEndpoint = "{{ .apiBaseUrl }}/v1/donation/" + donations[i].uuid;
       $('#imageGrid').append('<div class="img-container">' +
-        '<img src="' + imageEndpoint + '" imageId="' + donations[i].uuid + '" />' + 
+        '<img src="' + imageEndpoint + '" validationId="' + donations[i].uuid + '" />' + 
         '</div>');
 
       //we just loaded some images, so no image is marked as valid yet
@@ -73,47 +75,49 @@
   }
 
   function getRandomImages(){
-    var onlyOnce = {{ .onlyOnce }};
-    if(onlyOnce){
-      $("#loadingIndicator").hide();
-      $("#multiValidationContainer").hide();
-      $("#yesButton").hide();
-      $("#noButton").hide();
-      $("#image").attr("src", "");
-      $("#label").hide();
-      $("#singleValidationContainer").show();
-      $("#thankYouMessage").fadeIn("slow");
-    }
-    else{
-      var multiValidationMode = isMultiValidationMode();
-      var url = ("{{ .apiBaseUrl }}/v1/validate?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
-                + ((labelId === null) ? "" : ("&label_id=" + labelId)));
+    showHideControls(false, false);
 
-      $.ajax({
-        url: url,
-        dataType: 'json',
-        type: 'GET',
-        success: function(data){
-          if(multiValidationMode){
-            populateImageGrid(data);
-          }
-          else{
-            $("#image").attr("imageId", data.uuid);
-            setLabel(data.label, data.sublabel);
-            setPollData(data["validations"]["num_yes"], data["validations"]["num_no"]);
+    var multiValidationMode = isMultiValidationMode();
+    var url = ("{{ .apiBaseUrl }}/v1/validation?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
+                + ((labelId === null) ? "" : ("&label_id=" + labelId)) + ((imageId === null) ? "" : ("&image_id=" + imageId)));
 
-            var downloadingImage = new Image();
-            downloadingImage.onload = function(){
-            $("#image").attr("src", this.src);
-              showHideControls(true);
-              $("#fullscreenDlgContentImage").attr("src", this.src);
-            }
-            downloadingImage.src = "{{ .apiBaseUrl }}/v1/donation/" + data.uuid;
-
-          }
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        if(multiValidationMode){
+          populateImageGrid(data);
         }
-      });
-    }
+        else{
+          $("#image").attr("imageId", data.image.uuid);
+          $("#image").attr("validationId", data.uuid);
+          setLabel(data.label, data.sublabel);
+          setPollData(data["num_yes"], data["num_no"]);
+
+          var downloadingImage = new Image();
+          downloadingImage.onload = function(){
+          $("#image").attr("src", this.src);
+            showHideControls(true, data.image.unlocked);
+            $("#fullscreenDlgContentImage").attr("src", this.src);
+          }
+
+          var token = getCookie("imagemonkey");
+          if(token === "")
+            downloadingImage.src = data.image.url;
+          else{
+            if(data.image.unlocked)
+              downloadingImage.src = data.image.url;
+            else //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
+              downloadingImage.src = data.image.url + "?token=" + token;
+          }
+
+        }
+      }
+    });
   }
 
   function multiValidate(data, browserFingerprint){
@@ -124,7 +128,7 @@
     headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
     $.ajax({
-      url: '{{ .apiBaseUrl }}/v1/donation/validate',
+      url: '{{ .apiBaseUrl }}/v1/validation/validate',
       dataType: 'json',
       type: 'PATCH',
       headers: headers,
@@ -147,8 +151,6 @@
     }
 
     data["validations"] = validations;
-    data["label"] = $("#label").attr("label");
-    data["sublabel"] = $("#label").attr("sublabel");
     return {
       data : data,
       containsOnlyInvalid: containsOnlyInvalid
@@ -183,7 +185,7 @@
     }
   }
 
-  function showHideControls(show){
+  function showHideControls(show, imageUnlocked){
     if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
       if(show){
         $('#validationContainerSegment').css('visibility','visible');
@@ -197,6 +199,11 @@
           $('#showMePollButton').show();
         
         $('#image').css('visibility','visible');
+
+        if(imageUnlocked)
+          $("#imageLockedLabel").hide();
+        else
+          $("#imageLockedLabel").show();
       }
       else {
         $('#poll-chart').hide();
@@ -205,6 +212,7 @@
         $('#loadingIndicator').show();
         $('#showMePollButton').hide();
         $('#image').css('visibility','hidden');
+        $("#imageLockedLabel").hide();
       }
     }
   }
@@ -213,15 +221,19 @@
     var browserFingerprint = null;
 
     labelId = {{ .labelId }};
-    if(labelId === -1)
+    if(labelId === "")
       labelId = null;
+
+    imageId = {{ .imageId }};
+    if(imageId === "")
+      imageId = null;
 
     $("#multiValidationContainer").hide();
 
     setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
 
-    setPollData({{ .randomImage.NumOfValid }}, {{ .randomImage.NumOfInvalid }});
-    showHideControls(true);
+    setPollData({{ .randomImage.Validation.NumOfValid }}, {{ .randomImage.Validation.NumOfInvalid }});
+    showHideControls(false, false);
 
     //switch between multi-validation mode and single-validation mode with 'm'
     Mousetrap.bind('m', function() { 
@@ -258,10 +270,10 @@
 
     $("#imageGrid").selectable({
       selected: function(event, ui) {
-        imageValidationMapping[$(ui.selected).attr('imageId')] = true;
+        imageValidationMapping[$(ui.selected).attr('validationId')] = true;
       },
       unselected: function(event, ui) {
-        imageValidationMapping[$(ui.unselected).attr('imageId')] = false;
+        imageValidationMapping[$(ui.unselected).attr('validationId')] = false;
       }
     });
 
@@ -280,7 +292,7 @@
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
-      var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
+      //var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
 
       var headers = {}
       if(browserFingerprint !== null)
@@ -289,23 +301,34 @@
       headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
       if(!isMultiValidationMode()){
-        showHideControls(false);
+        showHideControls(false, false);
         showHidePoll(false);
       }
 
       e.preventDefault();
-      var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + '/validate/' + action;
+      var url = '{{ .apiBaseUrl }}/v1/validation/' + $("#image").attr("validationId") + '/validate/' + action;
       $.ajax({
         url: url,
         dataType: 'json',
         type: 'POST',
-        data: JSON.stringify(data),
+        //data: JSON.stringify(data),
         headers: headers,
         beforeSend: function(xhr) {
-            xhr.setRequestHeader("Authorization", "Bearer " + Cookies.get("imagemonkey"))
+            xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
         success: function(data){
+          {{ if .onlyOnce }}
+          $("#loadingIndicator").hide();
+          $("#multiValidationContainer").hide();
+          $("#yesButton").hide();
+          $("#noButton").hide();
+          $("#image").attr("src", "");
+          $("#label").hide();
+          $("#singleValidationContainer").show();
+          $("#thankYouMessage").fadeIn("slow");
+          {{ else }}
           getRandomImages();
+          {{ end }}
 
           {{ if .callback }}
           parent.postMessage("done button pressed", '*');
@@ -336,6 +359,8 @@
       }
     });
 
+    getRandomImages();
+
     new Fingerprint2().get(function(result, components){
       browserFingerprint = result;
     });
@@ -354,6 +379,7 @@
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
        <h2 class="ui inverted header">What do you see?</h2>
+       <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
    {{ else }}
@@ -361,12 +387,15 @@
       <script src="/js/cookies.min.js"></script>
    {{ end }}
 
-   <div class="ui stackable grid vertical stripe">
+   <div class="ui stackable grid vertical stripe" style="margin-top:-8em;">
+
+    {{ template "goto_mode.html" dict "validation" 0 "annotation" 1 "labeling" 1 "currentScreen" "labeling" "visible" true}}
+
     <div class="four wide column">
     </div>
     <div class="eight wide center aligned column" id="singleValidationContainer">
       <a href="#" id="imageClick">
-        <img class="ui large image centered" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}" imageId="{{ .randomImage.Id }}" id="image">
+        <img class="ui large image centered" src="" imageId = "" validationId="" id="image">
       </a>
       <div class="ui center aligned basic segment" id="validationContainerSegment">
         <h1 class="ui header" id="label" label="" sublabel=""></h1>
@@ -383,6 +412,7 @@
 
       {{ template "validate_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
+      {{ template "goto_labels_dlg.html" dict "validation" 0 "annotation" 1  "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" }}
     </div>
 
     <div class="eight wide center aligned column" id="multiValidationContainer">
@@ -402,7 +432,6 @@
           Confirmation
         </div>
         <div class="content" id="confirmNoValidDlgContent">
-          <p>Are you sure that there is no <b>{{ .randomImage.Label }}</b> in the image?</p>
         </div>
         <div class="actions">
           <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
@@ -422,7 +451,7 @@
           Close
         </div>
         <div class="image content" id="showImageFullscreenDlgContent">
-          <img class="ui centered image" id="fullscreenDlgContentImage" src="{{ .apiBaseUrl }}/v1/donation/{{ .randomImage.Id }}">
+          <img class="ui centered image" id="fullscreenDlgContentImage" src="">
         </div>
       </div>
 
@@ -436,6 +465,7 @@
       <canvas id="poll-chart" hidden/>
     </div>
 
+  </div>
 </div>
 {{ if .showFooter }} 
 {{ template "footer.html" .}}

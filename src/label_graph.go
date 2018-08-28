@@ -11,6 +11,13 @@ import (
 	"errors"
 )
 
+type LabelGraphMappingEntry struct {
+	Name string `json:"name"`
+	Description string `json:"description"`
+	Author string `json:"author"`
+	Homepage string `json:"homepage"`
+}
+
 type LabelGraphNode struct {
     Id int `json:"id"`
     Idenfifier string `json:"identifier"`
@@ -20,6 +27,7 @@ type LabelGraphNode struct {
     Color string `json:"color"`
     Uuid string `json:"uuid"`
     OnHover string `json:"onhover"`
+    Image string `json:"image"`
 }
 
 type LabelGraphEdge struct {
@@ -41,13 +49,19 @@ type LabelGraph struct {
     path string
     graphDefinition string
     graph *gographviz.Graph
+    labelGraphMetadata LabelGraphMappingEntry
 }
 
-func NewLabelGraph(path string) *LabelGraph {
+func NewLabelGraph(path string, labelGraphMetadata LabelGraphMappingEntry) *LabelGraph {
     return &LabelGraph{
         path: path,
         graphDefinition: "",
+        labelGraphMetadata: labelGraphMetadata,
     } 
+}
+
+func (p *LabelGraph) GetMetadata() LabelGraphMappingEntry {
+	return p.labelGraphMetadata
 }
 
 func (p *LabelGraph) Load() error {
@@ -76,6 +90,10 @@ func (p *LabelGraph) LoadFromString(buf string) error {
 	}
 
 	return nil
+}
+
+func (p *LabelGraph) GetDefinition() string {
+	return p.graphDefinition
 }
 
 
@@ -150,6 +168,11 @@ func (p *LabelGraph) GetJson() (LabelGraphJson, error) {
 			}
 		}
 
+
+		labelGraphNode.Image, err = strconv.Unquote(node.Attrs["image"])
+		if err != nil { //doesn't contain quotes
+			labelGraphNode.Image = node.Attrs["image"]
+		}
 
 
 		labelGraphNode.Color = node.Attrs["color"]
@@ -229,10 +252,6 @@ func (p *LabelGraphRepository) Get(id string) (*LabelGraph, error) {
 }
 
 func (p *LabelGraphRepository) Load() error {
-	type LabelGraphMappingEntry struct {
-	    Name string `json:"name"`
-	}
-
 	type LabelGraphMapping map[string]LabelGraphMappingEntry
 	var labelGraphMapping LabelGraphMapping
 
@@ -269,7 +288,7 @@ func (p *LabelGraphRepository) Load() error {
 		}
 
 
-		labelGraph := NewLabelGraph(path)
+		labelGraph := NewLabelGraph(path, val)
 		err = labelGraph.Load()
 		if err != nil {
 			return err

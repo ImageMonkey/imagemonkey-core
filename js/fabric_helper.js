@@ -68,7 +68,27 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var left = (annotations[i]["left"] * scaleFactor);
         var height = (annotations[i]["height"] * scaleFactor);
         var width = (annotations[i]["width"] * scaleFactor);
-        var angle = annotations[i]["angle"];
+
+        var angle = 0;
+        if("angle" in annotations[i]) 
+            angle = annotations[i]["angle"];
+
+        var fillColor = "transparent";
+        var fillOpacity = 1.0;
+        var fillInfo = annotations[i]["fill"];
+        if(fillInfo && "color" in fillInfo)
+            fillColor = fillInfo["color"];
+        if(fillInfo && "opacity" in fillInfo)
+            fillOpacity = fillInfo["opacity"];
+
+
+        var strokeWidth = 5;
+        var strokeColor = "red";
+        var strokeInfo = annotations[i]["stroke"];
+        if(strokeInfo && "width" in strokeInfo)
+            strokeWidth = strokeInfo["width"];
+        if(strokeInfo && "color" in strokeInfo)
+            strokeColor = strokeInfo["color"];
 
         var rect = new fabric.Rect({
             left: left,
@@ -78,9 +98,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             width: width,
             height: height,
             angle: angle,
-            stroke: 'red',
-            strokeWidth: 5,
-            fill: "transparent",
+            stroke: strokeColor,
+            strokeWidth: strokeWidth,
+            fill: fillColor,
+            opacity: fillOpacity,
             transparentCorners: false,
             hasBorders: false,
             hasControls: false,
@@ -94,7 +115,26 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         var left = (annotations[i]["left"] * scaleFactor);
         var rx = (annotations[i]["rx"] * scaleFactor);
         var ry = (annotations[i]["ry"] * scaleFactor);
-        var angle = annotations[i]["angle"];
+        
+        var angle = 0;
+        if("angle" in annotations[i]) 
+            angle = annotations[i]["angle"];
+
+        var fillColor = "transparent";
+        var fillOpacity = 1.0;
+        var fillInfo = annotations[i]["fill"];
+        if(fillInfo && "color" in fillInfo)
+            fillColor = fillInfo["color"];
+        if(fillInfo && "opacity" in fillInfo)
+            fillOpacity = fillInfo["opacity"];
+
+        var strokeWidth = 5;
+        var strokeColor = "red";
+        var strokeInfo = annotations[i]["stroke"];
+        if(strokeInfo && "width" in strokeInfo)
+            strokeWidth = strokeInfo["width"];
+        if(strokeInfo && "color" in strokeInfo)
+            strokeColor = strokeInfo["color"];
 
         var ellipsis = new fabric.Ellipse({
             left: left,
@@ -104,9 +144,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             rx: rx,
             ry: ry,
             angle: angle,
-            stroke: 'red',
-            strokeWidth: 5,
-            fill: "transparent",
+            stroke: strokeColor,
+            strokeWidth: strokeWidth,
+            fill: fillColor,
+            opacity: fillOpacity,
             transparentCorners: false,
             hasBorders: false,
             hasControls: false,
@@ -125,8 +166,29 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
         if(annotations[i]["left"] !== undefined)
             left = (annotations[i]["left"] * scaleFactor);
         
-        var angle = annotations[i]["angle"];
+        var angle = 0;
+        if("angle" in annotations[i]) 
+            angle = annotations[i]["angle"];
+        
         var points = annotations[i]["points"];
+
+        var fillColor = "transparent";
+        var fillOpacity = 1.0;
+        var fillInfo = annotations[i]["fill"];
+        if(fillInfo && "color" in fillInfo)
+            fillColor = fillInfo["color"];
+        if(fillInfo && "opacity" in fillInfo)
+            fillOpacity = fillInfo["opacity"];
+
+        var strokeWidth = 5;
+        var strokeColor = "red";
+        var strokeInfo = annotations[i]["stroke"];
+        if(strokeInfo && "width" in strokeInfo)
+            strokeWidth = strokeInfo["width"];
+        if(strokeInfo && "color" in strokeInfo)
+            strokeColor = strokeInfo["color"];
+
+
         var scaledPoints = [];
 
         for(var j = 0; j < points.length; j++){
@@ -139,9 +201,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 originX: 'left',
                 originY: 'top',
                 angle: angle,
-                stroke: 'red',
-                strokeWidth: 5,
-                fill: "transparent",
+                stroke: strokeColor,
+                strokeWidth: strokeWidth,
+                fill: fillColor,
+                opacity: fillOpacity,
                 transparentCorners: false,
                 hasBorders: false,
                 hasControls: false,
@@ -155,9 +218,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 originX: 'left',
                 originY: 'top',
                 angle: angle,
-                stroke: 'red',
-                strokeWidth: 5,
-                fill: "transparent",
+                stroke: strokeColor,
+                strokeWidth: strokeWidth,
+                fill: fillColor,
+                opacity: fillOpacity,
                 transparentCorners: false,
                 hasBorders: false,
                 hasControls: false,
@@ -243,7 +307,7 @@ var CanvasDrawer = (function () {
         fabric.Image.fromURL(url, function (img) {
             this.img = img;
             scaleAndPositionImg(inst.canvas, img, inst.canvasWidth, inst.canvasHeight, callback);
-        });
+        }, { crossOrigin: 'Anonymous' });
         } else {
             this.canvas.backgroundImage = 0;
             this.canvas.setBackgroundImage('', this.canvas.renderAll.bind(this.canvas));
@@ -262,6 +326,10 @@ var CanvasDrawer = (function () {
 
     CanvasDrawer.prototype.setData = function(data) {
         this.data = data;
+    }
+
+    CanvasDrawer.prototype.getData = function() {
+        return this.data;
     }
 
 
