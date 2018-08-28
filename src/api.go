@@ -1332,6 +1332,18 @@ func main(){
 			c.JSON(http.StatusOK, gin.H{"graph" : labelGraphJson, "metadata": labelGraph.GetMetadata()})
 		})
 
+		router.GET("/v1/label/graph/:labelgraphname/definition", func(c *gin.Context) {
+			labelGraphName := c.Param("labelgraphname")
+
+			labelGraph, err := labelGraphRepository.Get(labelGraphName) 
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid label graph name"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"definition": labelGraph.GetDefinition()})
+		})
+
 		router.POST("/v1/label/graph-editor/evaluate", func(c *gin.Context) {
 			type LabelGraphInput struct {
 			    Data string `json:"data"`

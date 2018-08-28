@@ -92,6 +92,10 @@ func (p *LabelGraph) LoadFromString(buf string) error {
 	return nil
 }
 
+func (p *LabelGraph) GetDefinition() string {
+	return p.graphDefinition
+}
+
 
 func (p *LabelGraph) GetChildren(identifier string) []*gographviz.Node {
 	var result []*gographviz.Node

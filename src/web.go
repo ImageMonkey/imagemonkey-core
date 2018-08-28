@@ -553,6 +553,7 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"defaultLabelGraphName": labelGraphName,
 				"editorMode" : editorMode,
+				"repository": "https://github.com/bbernhard/imagemonkey-core",
 			})
 		})
 
