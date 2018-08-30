@@ -235,6 +235,15 @@ func TestQueryAnnotationCoverage(t *testing.T) {
 	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage=10"), true)
 }
 
+func TestQueryAnnotationCoverage1(t *testing.T) {
+	queryParser := NewQueryParserV2("annotation.coverage < 50%")
+	queryParser.AllowStaticQueryAttributes(true)
+	parseResult, err := queryParser.Parse(1)
+	ok(t, err)
+	equals(t, len(parseResult.queryValues), 1)
+	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<50"), true)
+}
+
 func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage = 10%")
 	queryParser.AllowStaticQueryAttributes(true)
