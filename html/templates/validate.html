@@ -190,8 +190,7 @@
   function showHideControls(show, imageUnlocked){
     if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
       if(show){
-        $('#validationContainerSegment').css('visibility','visible');
-        $('#loadingIndicator').addClass('active');
+        $('#validationContainerSegment').show();
         $('#loadingIndicator').hide();
 
         if(isPollDataEmpty()){ //only show poll button if there is actual data available
@@ -200,7 +199,7 @@
         else
           $('#showMePollButton').show();
         
-        $('#image').css('visibility','visible');
+        $('#image').show();
 
         if(imageUnlocked)
           $("#imageLockedLabel").hide();
@@ -209,12 +208,11 @@
       }
       else {
         $('#poll-chart').hide();
-        $('#validationContainerSegment').css('visibility','hidden');
-        $('#loadingIndicator').removeClass('active');
-        $('#loadingIndicator').show();
+        $('#validationContainerSegment').hide();
         $('#showMePollButton').hide();
-        $('#image').css('visibility','hidden');
+        $('#image').hide();
         $("#imageLockedLabel").hide();
+        $('#loadingIndicator').show();
       }
     }
   }
