@@ -961,6 +961,41 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "651b2ef9-3c5c-4f73-900a-4f344de4b644"
+		},
+		"statue": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f641d6e9-a887-4d8c-ae9d-4d9e27fdc279"
+		},
+		"spectacles": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1a139fb1-9c1a-4f2d-8b3a-5dab56bd8e43"
+		},
+		"floor": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cab8e973-3c19-426b-8239-ccc5a899368b"
+		},
+		"basket": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "030f8011-453a-42d6-985f-ce7cdd17a6db"
+		},
+		"napkin": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f5dda70a-8316-4833-83be-f94b62c0e381"
+		},
+		"plant": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c98e3948-040b-43d8-bd3a-97536de10a9e"
+		},
+		"pen": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cabd5ba9-fd89-4310-be88-957a82cc481f"
 		}
 	}
 }
