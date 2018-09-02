@@ -8,6 +8,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"time"
 	"encoding/json"
+	"./datastructures"
 )
 
 var db *sql.DB
@@ -55,7 +56,7 @@ func main(){
 		data, err := redis.Bytes(redisConn.Do("LPOP", "contributions-per-country"))
     	if err == nil {
     		retryImmediately = true
-	    	var contributionsPerCountryRequest ContributionsPerCountryRequest
+	    	var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 	    	err = json.Unmarshal(data, &contributionsPerCountryRequest)
 	    	if err != nil{
 	    		retryImmediately = false
@@ -73,7 +74,7 @@ func main(){
 		data, err = redis.Bytes(redisConn.Do("LPOP", "contributions-per-app"))
 		if err == nil {
 			retryImmediately = true
-	    	var contributionsPerAppRequest ContributionsPerAppRequest
+	    	var contributionsPerAppRequest datastructures.ContributionsPerAppRequest
 	    	err = json.Unmarshal(data, &contributionsPerAppRequest)
 	    	if err != nil{
 	    		retryImmediately = false
