@@ -38,6 +38,11 @@
     width: 1060px;
   }*/
 
+  #blacklistButton[[data-tooltip] {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+
   .canvas-container{margin: 0 auto;}
 
 
@@ -782,6 +787,8 @@
         annotator.setStrokeColorOfSelected(color);
       });
 
+      $("#skipAnnotationDropdown").dropdown();
+
       Mousetrap.bind("r", function() { 
         $("#rectMenuItem").trigger("click");
       });
@@ -952,6 +959,12 @@
       });
 
       $('#blacklistButton').click(function(e) {
+        {{ if (eq .sessionInformation.LoggedIn false) }}
+        //in case we aren't logged in, do nothing
+        return;
+        {{ end }}
+
+
         {{ if (eq .sessionInformation.LoggedIn true) }}
         var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
           if(blacklistAnnotationUsageDlgAlreadyShown === null) {
@@ -1107,21 +1120,52 @@
       </div>
 
       <div class="row" style="display: none;" id="annotationButtons">
-        <div class="sixteen wide center aligned column">
+        <!--<div class="five wide column">
+        </div>
+        <div class="four wide center aligned column">
+          <button hidden class="ui fluid positive button center aligned" id="doneButton">DONE</button>
+        </div>-->
 
-          {{ if eq .showSkipAnnotationButtons true }}
-          <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
-          {{ end }}
+        <div class="five wide column">
+        </div>
 
-          <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
+        <div class="five wide center aligned column">
+          <div class="ui buttons">
+            <button hidden class="ui fluid positive button center aligned" id="doneButton">DONE</button>
+            <div class="or"></div>
+            <div class="ui negative buttons">
+              <div class="ui button">Skip</div>
+              <div class="ui floating dropdown icon button" id="skipAnnotationDropdown">
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                  {{ if eq .showSkipAnnotationButtons true }}
+                  <div class="item" id="notAnnotableButton">
+                    UN-ANNOTABLE
+                  </div>
+                  {{ end }}
 
-          {{ if eq .showSkipAnnotationButtons true }}
-          {{ if (eq .sessionInformation.LoggedIn true) }}
-          <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
-          {{ else }}
-          <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
-          {{ end }}
-          {{ end }}
+                  {{ if eq .showSkipAnnotationButtons true }}
+                  {{ if (eq .sessionInformation.LoggedIn true) }}
+                  <div class="item" id="blacklistButton">
+                    BLACKLIST
+                  </div>
+                  {{ else }}
+                    <div class="item" id="blacklistButton" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center">
+                      BLACKLIST
+                    </div>
+                  {{ end }}
+                  {{ end }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="six wide column">
+        </div>
+
+        <!--<div class="five wide column">
+        </div>-->
 
           <div hidden class="ui warning message" id="warningMsg">
             <i class="close icon"></i>
@@ -1130,10 +1174,9 @@
           </div>
         </div>
       </div>
-      <div class="row"></div>
-
+      <br>
+    </div>
   </div>
-</div>
   {{ template "footer.html" .}}
 
 </body>
