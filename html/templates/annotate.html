@@ -33,10 +33,15 @@
   <script src="js/lodash.core.min.js"></script>
 
   <style>
-  /*.justified {
+
+  .full-width{
+    width: 100vw;
     position: relative;
-    width: 1060px;
-  }*/
+    margin-left: -50vw;
+    height: 100px;
+    margin-top: 100px;
+    left: 50%;
+  }
 
   #blacklistButton[[data-tooltip] {
     pointer-events: auto !important;
@@ -130,6 +135,7 @@
       }
 
       setLabel(data.label, data.sublabel);
+      changeNavHeader("default");
     }
     else {
       annotationInfo.imageId = "";
@@ -151,7 +157,11 @@
     populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
     changeControl(annotator);
     numOfPendingRequests = 0;
+
     showHideControls(true);
+
+    if(data === null)
+      changeNavHeader("noimage");
 
     {{ if eq .annotationMode "browse" }}
     annotationSettings.loadPreferedAnnotationTool(annotator);
@@ -192,6 +202,29 @@
 
     populateRevisionsDropdown(data["num_revisions"], data["revision"]);
     showHideRevisionsDropdown();
+  }
+
+  function changeNavHeader(mode) {
+    if(mode === "default") {
+      $("#labelContainer").css("margin-top", "-2em");
+      $("#navHeader").css("min-height", "260px");
+      $("#navHeader").addClass("full-width");
+      $("#navHeader").visibility({type   : "fixed"});
+      $("#navHeader").show();
+    } else if(mode === "noimage") {
+      $("#labelContainer").css("margin-top", "0");
+      $("#navHeader").css("min-height", "200px");
+      $("#navHeader").removeClass("full-width");
+      $("#navHeader").visibility({type   : false});
+      $("#annotationControlsGrid").hide();
+      $("#navHeader").show();
+    } else {
+      $("#labelContainer").css("margin-top", "0");
+      $("#navHeader").css("min-height", "200px");
+      $("#navHeader").removeClass("full-width");
+      $("#navHeader").visibility({type   : false});
+      $("#navHeader").show();
+    }
   }
 
 
@@ -370,7 +403,8 @@
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
       $("#showSmartAnnotationHelpDlg").show();
-      $("#annotationControls").show();
+      $("#annotationControlsGrid").show();
+      $("#annotationControlsMainArea").show();
       $("#annotationButtons").show();
       $("#loadingSpinner").hide();
 
@@ -386,7 +420,8 @@
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
       $("#showSmartAnnotationHelpDlg").hide();
-      $("#annotationControls").hide();
+      $("#annotationControlsGrid").hide();
+      $("#annotationControlsMainArea").hide();
       $("#annotationButtons").hide();
       $("#loadingSpinner").show();
       $("#imageLockedLabel").hide();
@@ -599,8 +634,10 @@
 
     var spacer = '';
     var w = "sixteen";
-    if(isSmartAnnotationEnabled())
+    if(isSmartAnnotationEnabled()) {
       w = "eight";
+
+    }
     else {
       var workspaceSize = annotationSettings.loadWorkspaceSize();
       if(workspaceSize === "small"){
@@ -615,12 +652,14 @@
         w = "sixteen";
     }
 
+ 
     var data =  spacer +
                 '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
                  '<div id="annotationAreaContainer">' +
                     '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
                 '</div>';
+
     $("#annotationColumn").show();
     $("#annotationColumn").append(data);
 
@@ -778,9 +817,9 @@
         }
       });
 
-      {{ if eq .annotationMode "browse" }}
+      
       showHideSmartAnnotationControls(false);
-      {{ end }}
+      
 
       colorPicker = new Huebee($('#colorPicker')[0], {});
       colorPicker.on('change', function(color, hue, sat, lum) {
@@ -1036,12 +1075,18 @@
         {{ if ne .annotationId "" }}
         getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
         {{ end }}
+        changeNavHeader("refine");
+      {{ end }}
+
+      {{ if eq .annotationMode "browse" }}
+        changeNavHeader("browse");
       {{ end }}
 
       new Fingerprint2().get(function(result, components){
         browserFingerprint = result;
       });
 
+      
 });
 </script>
 </head>
@@ -1051,13 +1096,28 @@
 
   <!-- Page Contents -->
   <div class="pusher">
-    <div class="ui inverted vertical masthead center aligned segment">
+    <div hidden class="ui inverted vertical masthead center aligned segment full-width" id="navHeader">
      {{ template "pointing_menu.html" .}}  
-     <div class="ui text container" id="labelContainer">
+     <div class="ui text container" id="labelContainer"> <!--style="margin-top:-2em;">-->
       <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
       <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
+     </div>
+     <br>
+     <div class="ui inverted sixteen wide centered center aligned grid" id="annotationControlsGrid" style="display: none;">
+      <div class="row">
+       {{ template "annotation_menu.html" .}}
+      </div>
+      <div class="row">
+       <div hidden class="ui inverted toggle checkbox" id="smartAnnotation">
+          <input type="checkbox">
+          <label><font color="white">Smart Annotation</font></label>
+       </div>
+       <a href="#" id="showSmartAnnotationHelpDlg"> [?]</a>
+       <p></p>
+      </div>
+      {{ template "annotation_revisions.html" .}}
+     </div>
     </div>
-  </div>
 
 
   <div class="ui stackable grid" id="mainGrid">
@@ -1086,20 +1146,8 @@
         </div>
       </div>
 
-      <div class="row" style="display: none;" id="annotationControls">
+      <div class="row" style="display: none;" id="annotationControlsMainArea">
         <div class="sixteen wide center aligned column">
-          {{ template "annotation_revisions.html" .}}
-          <br>
-          <div class="row">
-            <div hidden class="ui toggle checkbox" id="smartAnnotation">
-              <input type="checkbox">
-              <label>Smart Annotation</label>
-            </div>
-            <a href="#" id="showSmartAnnotationHelpDlg">[?]</a>
-            <p></p>
-          </div>
-
-          {{ template "annotation_menu.html" .}}
 
           {{ template "smart_annotation_help_dlg.html" .}}
 
@@ -1120,12 +1168,6 @@
       </div>
 
       <div class="row" style="display: none;" id="annotationButtons">
-        <!--<div class="five wide column">
-        </div>
-        <div class="four wide center aligned column">
-          <button hidden class="ui fluid positive button center aligned" id="doneButton">DONE</button>
-        </div>-->
-
         <div class="five wide column">
         </div>
 
