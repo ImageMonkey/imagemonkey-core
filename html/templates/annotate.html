@@ -79,6 +79,7 @@
   var colorPicker = null;
   var existingAnnotations = null;
   var browserFingerprint = null;
+  var deleteObjectsPopupShown = false;
 
   function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
     var ret = "";
@@ -880,13 +881,31 @@
         changeMenuItem("FreeDrawing");
       });
 
+      Mousetrap.bind("y", function() {
+        if(deleteObjectsPopupShown)
+          $("#deletedObjectsYesButton").trigger("click");
+      });
+
+      Mousetrap.bind("n", function() {
+        if(deleteObjectsPopupShown)
+          $("#deleteObjectsPopup").modal("hide");
+      });
+
       Mousetrap.bind("del", function() { 
         $("#trashMenuItem").trigger("click");
       });
 
       $("#trashMenuItem").click(function(e) {
-        if(isTrashMenuButtonEnabled())
-          $('#deleteObjectsPopup').modal('show');
+        if(isTrashMenuButtonEnabled()) {
+          $('#deleteObjectsPopup').modal({
+            onShow: function() {
+              deleteObjectsPopupShown = true;
+            },
+            onHidden: function() {
+              deleteObjectsPopupShown = false;
+            }
+          }).modal('show');
+        }
       });
 
       $("#redoMenuItem").click(function(e) {
