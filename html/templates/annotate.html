@@ -753,6 +753,7 @@
         getUnannotatedImage();
         {{ else }}
         $("#loadingSpinner").hide();
+        changeNavHeader("browse");
         showBrowseAnnotationImageGrid();
         {{ end }}
 
@@ -1062,6 +1063,7 @@
           addAnnotations(res);
       });
 
+      changeNavHeader({{ .annotationMode }});
 
       {{ if eq .annotationMode "default" }}
         {{ if eq .validationId "" }}
@@ -1075,11 +1077,6 @@
         {{ if ne .annotationId "" }}
         getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
         {{ end }}
-        changeNavHeader("refine");
-      {{ end }}
-
-      {{ if eq .annotationMode "browse" }}
-        changeNavHeader("browse");
       {{ end }}
 
       new Fingerprint2().get(function(result, components){
