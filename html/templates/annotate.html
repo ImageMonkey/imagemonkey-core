@@ -835,10 +835,12 @@
       });
 
       $("#rectMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("Rectangle");
-        changeMenuItem("Rectangle");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Rectangle");
+          changeMenuItem("Rectangle");
+        }
       });
 
       Mousetrap.bind("c", function() { 
@@ -846,11 +848,12 @@
       });
 
       $("#circleMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("Circle");
-        changeMenuItem("Circle");
-
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Circle");
+          changeMenuItem("Circle");
+        }
       });
 
       Mousetrap.bind("p", function() { 
@@ -858,27 +861,33 @@
       });
 
       $("#polygonMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("Polygon");
-        changeMenuItem("Polygon");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Polygon");
+          changeMenuItem("Polygon");
+        }
       });
 
       $("#selectMoveMenutItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.setShape("");
-        annotator.enableSelectMoveMode();
-        changeMenuItem("SelectMove");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.setShape("");
+          annotator.enableSelectMoveMode();
+          changeMenuItem("SelectMove");
+        }
       });
 
       
 
        $("#freeDrawingMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("FreeDrawing");
-        annotator.setBrushColor("red");
-        changeMenuItem("FreeDrawing");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("FreeDrawing");
+          annotator.setBrushColor("red");
+          changeMenuItem("FreeDrawing");
+        }
       });
 
       Mousetrap.bind("y", function() {
@@ -909,11 +918,13 @@
       });
 
       $("#redoMenuItem").click(function(e) {
-        annotator.redo();
+        if(annotator !== undefined)
+          annotator.redo();
       });
 
       $("#undoMenuItem").click(function(e) {
-        annotator.undo();
+        if(annotator !== undefined)
+          annotator.undo();
       });
 
       Mousetrap.bind('+', function() { 
@@ -970,21 +981,25 @@
       });
 
       $("#smartAnnotationFgMenuItem").click(function(e) {
-        changeMenuItem("ForegroundSelection");
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
-        annotator.setBrushWidth(10);
-        annotator.setShape("FreeDrawing");
+        if(annotator !== undefined) {
+          changeMenuItem("ForegroundSelection");
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
+          annotator.setBrushWidth(10);
+          annotator.setShape("FreeDrawing");
+        }
       });
 
       $("#smartAnnotationBgMenuItem").click(function(e) {
-        changeMenuItem("BackgroundSelection");
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
-        annotator.setBrushWidth(10);
-        annotator.setShape("FreeDrawing");
+        if(annotator !== undefined) {
+          changeMenuItem("BackgroundSelection");
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
+          annotator.setBrushWidth(10);
+          annotator.setShape("FreeDrawing");
+        }
       });
 
       $("#loadAutoAnnotationsMenuItem").click(function(e) {
