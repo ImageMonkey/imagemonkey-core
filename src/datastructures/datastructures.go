@@ -206,6 +206,17 @@ type AnnotationsPerAppStat struct {
     Count int64 `json:"num"`
 }
 
+type AnnotatedStat struct {
+    Label struct {
+        Id string `json:"uuid"`
+        Name string `json:"name"`
+    } `json:"label"`
+    Num struct {
+        Completed int64 `json:"completed"`
+        Total int64 `json:"total"`
+    } `json:"num"`
+}
+
 type Statistics struct {
     Validations []ValidationStat `json:"validations"`
     DonationsPerCountry []DonationsPerCountryStat `json:"donations_per_country"`

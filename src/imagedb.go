@@ -2922,6 +2922,82 @@ func getAnnotationStatistics(period string) ([]datastructures.DataPoint, error) 
     return annotationStatistics, nil
 }
 
+func getAnnotatedStatistics(apiUser datastructures.APIUser) ([]datastructures.AnnotatedStat, error) {
+    var annotatedStats []datastructures.AnnotatedStat
+    var queryValues []interface{}
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = `OR (
+                                            EXISTS 
+                                            (
+                                                SELECT 1 
+                                                FROM user_image u
+                                                JOIN account a ON a.id = u.account_id
+                                                WHERE u.image_id = i.id AND a.name = $1
+                                            )
+                                            AND NOT EXISTS 
+                                            (
+                                                SELECT 1 
+                                                FROM image_quarantine q 
+                                                WHERE q.image_id = i.id 
+                                            )
+                                        )`
+        queryValues = append(queryValues, apiUser.Name)
+    }
+
+
+
+    q := fmt.Sprintf(`WITH num_validations AS (
+                        SELECT v.label_id, COUNT(v.label_id) as num
+                        FROM image_validation v
+                        JOIN image i ON v.image_id = i.id
+                        WHERE (i.unlocked = true %s)
+                        GROUP BY v.label_id
+                     ),
+                     num_annotations AS (
+                        SELECT a.label_id, COUNT(a.label_id) as num
+                        FROM image_annotation a
+                        JOIN image i ON a.image_id = i.id
+                        WHERE (i.unlocked = true %s)
+                        GROUP BY a.label_id
+                     )
+                     SELECT l.uuid, acc.accessor, COALESCE(v.num, 0) as num_total, COALESCE(a.num, 0) as num_completed
+                     FROM num_validations v
+                     JOIN label_accessor acc ON acc.label_id = v.label_id
+                     JOIN label l ON acc.label_id = l.id
+                     LEFT JOIN num_annotations a ON a.label_id = acc.label_id
+                     ORDER BY 
+                        CASE 
+                            WHEN v.num = 0 THEN 0
+                            ELSE a.num/v.num
+                        END DESC`, 
+                     includeOwnImageDonations, includeOwnImageDonations)
+
+    rows, err := db.Query(q, queryValues...)
+    if err != nil {
+        log.Debug("[Get Annotated Statistics] Couldn't get annotated statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotatedStats, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var annotatedStat datastructures.AnnotatedStat
+        err = rows.Scan(&annotatedStat.Label.Id, &annotatedStat.Label.Name, &annotatedStat.Num.Total, &annotatedStat.Num.Completed)
+        if err != nil {
+            log.Debug("[Get Annotated Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotatedStats, err
+        }
+
+        annotatedStats = append(annotatedStats, annotatedStat)
+    }
+
+    return annotatedStats, nil
+}
+
 
 func getValidationStatistics(period string) ([]datastructures.DataPoint, error) {
     var validationStatistics []datastructures.DataPoint
