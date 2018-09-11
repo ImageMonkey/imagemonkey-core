@@ -2959,7 +2959,7 @@ func getAnnotatedStatistics(apiUser datastructures.APIUser) ([]datastructures.An
                         SELECT a.label_id, COUNT(a.label_id) as num
                         FROM image_annotation a
                         JOIN image i ON a.image_id = i.id
-                        WHERE (i.unlocked = true %s)
+                        WHERE (i.unlocked = true %s) AND a.auto_generated = false
                         GROUP BY a.label_id
                      )
                      SELECT l.uuid, acc.accessor, COALESCE(v.num, 0) as num_total, COALESCE(a.num, 0) as num_completed
