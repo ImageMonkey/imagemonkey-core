@@ -2312,7 +2312,7 @@ func main(){
 		})
 
 
-		router.GET("/v1/statistics/annotation", func(c *gin.Context) {
+		router.GET("/v1/statistics/annotations", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			statistics, err := getAnnotationStatistics("last-month")
 			if err != nil {
@@ -2322,7 +2322,17 @@ func main(){
 			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
 		})
 
-		router.GET("/v1/statistics/validation", func(c *gin.Context) {
+		router.GET("/v1/statistics/annotations/refinements", func(c *gin.Context) {
+			//currently only last-month is allowed as period
+			statistics, err := getAnnotationRefinementStatistics("last-month")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
+		})
+
+		router.GET("/v1/statistics/validations", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			statistics, err := getValidationStatistics("last-month")
 			if err != nil {

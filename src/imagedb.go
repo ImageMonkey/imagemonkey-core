@@ -2876,6 +2876,54 @@ func changeProfilePicture(username string, uuid string) (string, error) {
 }
 
 
+func getAnnotationRefinementStatistics(period string) ([]datastructures.DataPoint, error) {
+    var annotationRefinementStatistics []datastructures.DataPoint
+
+    if period != "last-month" {
+        return annotationRefinementStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_annotation_refinements AS (
+                            SELECT sys_period FROM image_annotation_refinement_history h
+                            UNION ALL 
+                            SELECT sys_period FROM image_annotation_refinement h1
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_annotation_refinements s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Annotation Refinement Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationRefinementStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint datastructures.DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Debug("[Get Annotation Refinement Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationRefinementStatistics, err
+        }
+
+        annotationRefinementStatistics = append(annotationRefinementStatistics, datapoint)
+    }
+
+    return annotationRefinementStatistics, nil
+}
+
+
+
 func getAnnotationStatistics(period string) ([]datastructures.DataPoint, error) {
     var annotationStatistics []datastructures.DataPoint
 

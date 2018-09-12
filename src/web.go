@@ -196,6 +196,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"annotationStatistics": pick(getAnnotationStatistics("last-month"))[0],
 				"validationStatistics": pick(getValidationStatistics("last-month"))[0],
+				"annotationRefinementStatistics": pick(getAnnotationRefinementStatistics("last-month"))[0],
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {

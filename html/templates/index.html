@@ -37,9 +37,11 @@
   $(document).ready(function(){
     var annotationStatistics = {{ .annotationStatistics }};
     var validationStatistics = {{ .validationStatistics }};
+    var annotationRefinementStatistics = {{ .annotationRefinementStatistics }};
 
     var numOfAnnotations = [];
     var numOfValidations = [];
+    var numOfAnnotationRefinements = [];
     var dates = [];
     var detailedActivityData = null;
     var currentDetailedActivityIdx = -1;
@@ -50,10 +52,12 @@
     $('#showActivityDetailsButton').html('<i class="down arrow icon"></i> Show Details');
 
 
-    if(annotationStatistics.length === validationStatistics.length) {
+    if((annotationStatistics.length === validationStatistics.length) 
+      && (annotationStatistics.length === annotationRefinementStatistics.length)) {
       for(var i = 0; i < annotationStatistics.length; i++) {
         numOfAnnotations.push(annotationStatistics[i]["value"]);
         numOfValidations.push(validationStatistics[i]["value"]);
+        numOfAnnotationRefinements.push(annotationRefinementStatistics[i]["value"]);
         dates.push(annotationStatistics[i]["date"]);
       }
     }
@@ -134,14 +138,19 @@
         data: {
             datasets: [
               {
-                data:  numOfAnnotations,
+                data: numOfAnnotations,
                 backgroundColor: "#0584cd",
                 label: "Annotations"
               },
               {
-                data:  numOfValidations,
+                data: numOfValidations,
                 backgroundColor: "red",
                 label: "Validations"
+              },
+              {
+                data: numOfAnnotationRefinements,
+                backgroundColor: "green",
+                label: "Refinements"
               }
             ],
             labels: dates
@@ -217,7 +226,7 @@
 
       {{ template "pointing_menu.html" .}}  
 
-      <div class="ui text container">
+      <!--<div class="ui text container">-->
         <h1></h1>
         <h1></h1>
         <img class="ui centered medium image" src="img/logo.png">
@@ -229,13 +238,13 @@
         <h1 style="font-size:50px;">#{{ .numOfDonations }}</h1>
         <p style="font-size:25px; margin-top:-15px;">Donations</p>
 
-        <h1 class="ui inverted header"></h1>
+        <!--<h3 class="ui inverted header"></h3>-->
 
-        <div class="ui sixteen wide center aligned grid">
-          <div class="sixteen wide centered column">
+        <div class="ui sixteen wide center aligned grid" style="margin-top: 0.5em;">
+          <div class="ten wide centered column" id="statisticsChartContainer">
             <canvas id="statisticsChart"/>
           </div>
-          <div class="sixteen wide centered column">
+          <div class="ten wide centered column">
             <div class="ui fluid labeled icon button" id="showActivityDetailsButton"></div>
             <br><br>
 
@@ -267,7 +276,7 @@
 
         
 
-      </div>
+      <!--</div>-->
 
     </div>
     <div class="ui stackable center aligned grid vertical stripe">

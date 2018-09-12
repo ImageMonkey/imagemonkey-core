@@ -10,3 +10,9 @@ BEFORE INSERT OR UPDATE OR DELETE ON image_annotation
 FOR EACH ROW EXECUTE PROCEDURE versioning(
   'sys_period', 'image_annotation_history', true
 );
+
+CREATE TRIGGER image_annotation_refinement_versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON image_annotation_refinement
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'image_annotation_refinement_history', true
+);
