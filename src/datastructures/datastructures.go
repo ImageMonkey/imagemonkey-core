@@ -191,6 +191,11 @@ type AnnotationsPerCountryStat struct {
     Count int64 `json:"num"`
 }
 
+type AnnotationRefinementsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
 type DonationsPerAppStat struct {
     AppIdentifier string `json:"app_identifier"`
     Count int64 `json:"num"`
@@ -222,10 +227,17 @@ type Statistics struct {
     DonationsPerCountry []DonationsPerCountryStat `json:"donations_per_country"`
     ValidationsPerCountry []ValidationsPerCountryStat `json:"validations_per_country"`
     AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
+    AnnotationRefinementsPerCountry []AnnotationRefinementsPerCountryStat `json:"annotation_refinements_per_country"`
     DonationsPerApp []DonationsPerAppStat `json:"donations_per_app"`
     ValidationsPerApp []ValidationsPerAppStat `json:"validations_per_app"`
     AnnotationsPerApp []AnnotationsPerAppStat `json:"annotations_per_app"`
     NumOfUnlabeledDonations int64 `json:"num_of_unlabeled_donations"`
+    NumOfDonations int64 `json:"num_of_donations"`
+    NumOfValidations int64 `json:"num_of_validations"`
+    NumOfAnnotations int64 `json:"num_of_annotations"`
+    NumOfAnnotationRefinements int64 `json:"num_of_annotation_refinements"`
+    NumOfLabels int64 `json:"num_of_labels"`
+    NumOfLabelSuggestions int64 `json:"num_of_label_suggestions"`
 }
 
 type UnannotatedValidation struct {

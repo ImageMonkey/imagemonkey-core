@@ -381,7 +381,10 @@ func explore(words []string) (datastructures.Statistics, error) {
     }
     
     rows, err := tx.Query(`SELECT CASE WHEN pl.name is null THEN l.name ELSE l.name || '/' || pl.name END, count(l.name), 
-                           CASE WHEN SUM(v.num_of_valid + v.num_of_invalid) = 0 THEN 0 ELSE (CAST (SUM(v.num_of_invalid) AS float)/(SUM(v.num_of_valid) + SUM(v.num_of_invalid))) END as error_rate, 
+                           CASE 
+                            WHEN SUM(v.num_of_valid + v.num_of_invalid) = 0 THEN 0 
+                            ELSE (CAST (SUM(v.num_of_invalid) AS float)/(SUM(v.num_of_valid) + SUM(v.num_of_invalid))) 
+                           END as error_rate, 
                            SUM(v.num_of_valid + v.num_of_invalid) as total_validations
                            FROM image_validation v 
                            JOIN label l ON v.label_id = l.id 
@@ -493,6 +496,30 @@ func explore(words []string) (datastructures.Statistics, error) {
         statistics.AnnotationsPerCountry = append(statistics.AnnotationsPerCountry, annotationsPerCountryStat)
     }
 
+
+    //get annotation refinements grouped by country
+    annotationRefinementsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM annotation_refinements_per_country ORDER BY count DESC`)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore data: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+    defer annotationRefinementsPerCountryRows.Close()
+
+    for annotationRefinementsPerCountryRows.Next() {
+        var annotationRefinementsPerCountryStat datastructures.AnnotationRefinementsPerCountryStat
+        err = annotationRefinementsPerCountryRows.Scan(&annotationRefinementsPerCountryStat.CountryCode, &annotationRefinementsPerCountryStat.Count)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Explore] Couldn't scan data row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return statistics, err
+        }
+
+        statistics.AnnotationRefinementsPerCountry = append(statistics.AnnotationRefinementsPerCountry, annotationRefinementsPerCountryStat)
+    }
+
     //get all unlabeled donations
     err = tx.QueryRow(`SELECT count(i.id) from image i WHERE i.id NOT IN (SELECT image_id FROM image_validation)`).Scan(&statistics.NumOfUnlabeledDonations)
     if err != nil {
@@ -526,7 +553,188 @@ func explore(words []string) (datastructures.Statistics, error) {
         return statistics, err
     }
 
+    statistics.NumOfDonations, err = _getTotalDonations(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't get total donations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
+    statistics.NumOfAnnotations, err = _getTotalAnnotations(tx, false)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't get total annotations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
+    statistics.NumOfValidations, err = _getTotalValidations(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't get total validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
+    statistics.NumOfAnnotationRefinements, err = _getTotalAnnotationRefinements(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't get total annotation refinements: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
+    statistics.NumOfLabelSuggestions, err = _getTotalLabelSuggestions(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't get total label suggestions: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
+    statistics.NumOfLabels, err = _getTotalLabels(tx)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't get total labels: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+
     return statistics, tx.Commit()
+}
+
+func _getTotalDonations(tx *sql.Tx) (int64, error) {
+    var numOfTotalDonations int64
+    numOfTotalDonations = 0
+
+    rows, err := tx.Query(`SELECT count(*) FROM image i`)
+    if err != nil {
+        return numOfTotalDonations, nil
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&numOfTotalDonations)
+        if err != nil {
+            return numOfTotalDonations, err
+        }
+    }
+
+    return numOfTotalDonations, nil
+}
+
+func _getTotalLabels(tx *sql.Tx) (int64, error) {
+    var numOfTotalLabels int64
+    numOfTotalLabels = 0
+
+    rows, err := tx.Query(`SELECT count(*) FROM label l`)
+    if err != nil {
+        return numOfTotalLabels, nil
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&numOfTotalLabels)
+        if err != nil {
+            return numOfTotalLabels, err
+        }
+    }
+
+    return numOfTotalLabels, nil
+}
+
+func _getTotalLabelSuggestions(tx *sql.Tx) (int64, error) {
+    var numOfTotalLabelSuggestions int64
+    numOfTotalLabelSuggestions = 0
+
+    rows, err := tx.Query(`SELECT count(*) FROM label_suggestion l`)
+    if err != nil {
+        return numOfTotalLabelSuggestions, nil
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&numOfTotalLabelSuggestions)
+        if err != nil {
+            return numOfTotalLabelSuggestions, err
+        }
+    }
+
+    return numOfTotalLabelSuggestions, nil
+}
+
+func _getTotalAnnotations(tx *sql.Tx, includeAutoGeneratedAnnotations bool) (int64, error) {
+    var numOfAnnotations int64
+    numOfAnnotations = 0
+
+    q1 := ""
+    if !includeAutoGeneratedAnnotations {
+        q1 = "WHERE a.auto_generated = false"
+    }
+
+    q := fmt.Sprintf(`SELECT count(*) FROM image_annotation a %s`, q1)
+
+    rows, err := tx.Query(q)
+    if err != nil {
+        return numOfAnnotations, nil
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&numOfAnnotations)
+        if err != nil {
+            return numOfAnnotations, err
+        }
+    }
+
+    return numOfAnnotations, nil
+}
+
+func _getTotalValidations(tx *sql.Tx) (int64, error) {
+    var numOfValidations int64
+    numOfValidations = 0
+
+    rows, err := tx.Query(`SELECT count(*) FROM image_validation v`)
+    if err != nil {
+        return numOfValidations, nil
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&numOfValidations)
+        if err != nil {
+            return numOfValidations, err
+        }
+    }
+
+    return numOfValidations, nil
+}
+
+func _getTotalAnnotationRefinements(tx *sql.Tx) (int64, error) {
+    var numOfAnnotationRefinements int64
+    numOfAnnotationRefinements = 0
+
+    rows, err := tx.Query(`SELECT count(*) FROM image_annotation_refinement r`)
+    if err != nil {
+        return numOfAnnotationRefinements, nil
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&numOfAnnotationRefinements)
+        if err != nil {
+            return numOfAnnotationRefinements, err
+        }
+    }
+
+    return numOfAnnotationRefinements, nil
 }
 
 func _exploreAnnotationsPerApp(tx *sql.Tx) ([]datastructures.AnnotationsPerAppStat, error) {
@@ -1716,6 +1924,14 @@ func updateContributionsPerCountry(contributionType string, countryCode string) 
                             DO UPDATE SET count = annotations_per_country.count + 1`, countryCode, 1)
         if err != nil {
             log.Debug("[Update Contributions per Country] Couldn't insert into/update annotations_per_country: ", err.Error())
+            return err
+        }
+    } else if contributionType == "annotation-refinement" {
+        _, err := db.Exec(`INSERT INTO annotation_refinements_per_country (country_code, count)
+                            VALUES ($1, $2) ON CONFLICT (country_code)
+                            DO UPDATE SET count = annotation_refinements_per_country.count + 1`, countryCode, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per Country] Couldn't insert into/update annotation_refinements_per_country: ", err.Error())
             return err
         }
     }

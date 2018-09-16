@@ -1,0 +1,1 @@
+go build -o statworker.exe statworker.go common.go imagedb.go parser.go api_secrets.go && statworker.exe

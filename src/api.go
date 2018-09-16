@@ -1119,6 +1119,22 @@ func main(){
 				return
 			}
 
+
+			//get client IP address and try to determine country
+			contributionsPerCountryRequest := datastructures.ContributionsPerCountryRequest{Type: "annotation-refinement", 
+																							CountryCode: "--"}
+			ip := net.ParseIP(getIPAddress(c.Request))
+			if ip != nil {
+				record, err := geoipDb.Country(ip)
+				if err != nil { //just log, but don't abort...it's just for statistics
+					log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
+						
+				} else {
+					contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+				}
+			}
+			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+
 			c.JSON(204, nil)
 		});
 
@@ -1902,6 +1918,21 @@ func main(){
 				c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
 				return
 			}
+
+			//get client IP address and try to determine country
+			contributionsPerCountryRequest := datastructures.ContributionsPerCountryRequest{Type: "annotation-refinement", 
+																							CountryCode: "--"}
+			ip := net.ParseIP(getIPAddress(c.Request))
+			if ip != nil {
+				record, err := geoipDb.Country(ip)
+				if err != nil { //just log, but don't abort...it's just for statistics
+					log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
+						
+				} else {
+					contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+				}
+			}
+			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
 			c.JSON(201, nil)
 		})
