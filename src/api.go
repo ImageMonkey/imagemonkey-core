@@ -1330,6 +1330,15 @@ func main(){
 			c.JSON(http.StatusOK, popularLabels)
 		})
 
+		router.GET("/v1/label/accessors", func(c *gin.Context) {
+			labelAccessors, err := getLabelAccessors()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, labelAccessors)
+		})
+
 		router.GET("/v1/label/graph/:labelgraphname", func(c *gin.Context) {
 			labelGraphName := c.Param("labelgraphname")
 
