@@ -558,6 +558,16 @@ func main() {
 			})
 		})
 
+		router.GET("/moderator", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "moderator.html", gin.H{
+				"title": "Moderator",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				//"activeMenuNr": 14,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+			})
+		})
+
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{
 				"title": "Profile",

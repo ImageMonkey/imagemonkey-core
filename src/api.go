@@ -32,6 +32,7 @@ import (
     "github.com/getsentry/raven-go"
     "./datastructures"
     "./commons"
+    imagemonkeydb "./database"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -467,6 +468,8 @@ func main(){
 	listenPort := flag.Int("listen_port", 8081, "Specify the listen port")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081/", "API Base URL")
 
+	sentryEnvironment := "api"
+
 	flag.Parse()
 	if *releaseMode {
 		fmt.Printf("[Main] Starting gin in release mode!\n")
@@ -476,7 +479,7 @@ func main(){
 	if *useSentry {
 		fmt.Printf("Setting Sentry DSN\n")
 		raven.SetDSN(SENTRY_DSN)
-		raven.SetEnvironment("api")
+		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up api worker", nil)
 	}
@@ -502,6 +505,21 @@ func main(){
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
+
+	//currently, there is both the imageMonkeyDb and the db. 
+	//the reason for that is, that the database part initially started out really simple.
+	//as the database part now is pretty big its time to move it to an own library.
+	//until the migration is completed, we will have two database handles here.
+	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
+	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
+	if err != nil {
+		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+	}
+
+	if *useSentry {
+		imageMonkeyDatabase.InitializeSentry(SENTRY_DSN, sentryEnvironment)
+	}
+	defer imageMonkeyDatabase.Close()
 
 	labelGraphRepository := NewLabelGraphRepository(*labelGraphDefinitionsPath)
 	err = labelGraphRepository.Load()
@@ -927,6 +945,63 @@ func main(){
 			}
 		})
 
+		router.POST("/v1/donation/:imageid/description", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			var description datastructures.ImageDescription
+			if c.BindJSON(&description) != nil {
+				c.JSON(400, gin.H{"error": "Couldn't process request - description missing"})
+				return
+			}
+
+			err = imageMonkeyDatabase.AddImageDescription(imageId, description)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(201, nil)
+		})
+
+		router.POST("/v1/donation/:imageid/description/:descriptionid/unlock", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+			descriptionId := c.Param("descriptionid")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+			
+			hasModeratorPermissions := false
+			if isModerationRequest(c) {
+				if apiUser.Name != "" {
+					userInfo, err := getUserInfo(apiUser.Name)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
+
+					if userInfo.Permissions != nil && userInfo.Permissions.CanUnlockImageDescription {
+						hasModeratorPermissions = true
+					}
+				}
+			}
+
+			if !hasModeratorPermissions {
+				c.JSON(401, gin.H{"error": "Authentication required"})
+				return
+			}
+
+
+			errCode := imageMonkeyDatabase.UnlockImageDescription(imageId, descriptionId)
+			if errCode == imagemonkeydb.UnlockImageInternalError {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			} else if errCode == imagemonkeydb.UnlockImageInvalidId {
+				c.JSON(404, gin.H{"error": "Couldn't process request - resource doesn't exist"})
+				return
+			}
+			c.JSON(201, nil)
+		})
+
 		router.POST("/v1/donation/:imageid/labelme", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
@@ -956,7 +1031,7 @@ func main(){
 		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			img, err := getImageToLabel(imageId, "")
+			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, "")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1083,7 +1158,7 @@ func main(){
 
 			imageId := getParamFromUrlParams(c, "image_id", "")
 
-			image, err := getImageToLabel(imageId, apiUser.Name)
+			image, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1137,6 +1212,46 @@ func main(){
 
 			c.JSON(204, nil)
 		});
+
+		router.GET("/v1/donations/locked-descriptions", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			hasModeratorPermissions := false
+			if isModerationRequest(c) {
+				if apiUser.Name != "" {
+					userInfo, err := getUserInfo(apiUser.Name)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
+
+					if userInfo.Permissions != nil && userInfo.Permissions.CanUnlockImageDescription {
+						hasModeratorPermissions = true
+					}
+				}
+			}
+
+			if !hasModeratorPermissions {
+				c.JSON(401, gin.H{"error": "Authentication required"})
+				return
+			}
+
+
+			descriptionsPerImage, err := imageMonkeyDatabase.GetLockedImageDescriptions()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			if len(descriptionsPerImage) == 0 {
+				c.JSON(200, make([]string, 0))
+				return
+			}
+
+			c.JSON(200, descriptionsPerImage)
+		})
 
 		router.GET("/v1/donations/labels", func(c *gin.Context) {
 			query := getParamFromUrlParams(c, "query", "")

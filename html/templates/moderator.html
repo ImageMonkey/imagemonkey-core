@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {{ template "favicon.html" .}}
+  
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="/css/semantic.min.css"/>
+  <script src="/js/jquery.min.js"></script>
+  <script src="/js/semantic.min.js"></script> 
+  <link rel="stylesheet" href="/css/common.css"/>
+  <link rel="stylesheet" href="/css/common_sub.css"/>
+  <script src="/js/common.js"></script> 
+  <link rel="stylesheet" href="/css/common_sub.css"/>
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
+
+
+  <script>
+    function populateLockedImageDescriptionsList(data) {
+      var imageDescriptions;
+      var elem;
+      for(var i = 0; i < data.length; i++) {
+        imageDescriptions = data[i].image.descriptions;
+        for(var j = 0; j < imageDescriptions.length; j++) {
+          elem = $(('<tr>' +
+                    '<td>' + imageDescriptions[j].text + '</td>' +
+                    '<td class="right aligned"><div class="ui green basic button">Unlock</div><div class="ui red basic button">Decline</div></td>' +
+                    '</tr>'));
+          $("#lockedImageDescriptionsContent").append(elem);
+        }
+      }
+      $("#loadingIndicator").hide();
+    }
+
+    function getLockedImageDescriptions() {
+      $("#loadingIndicator").show();
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/donations/locked-descriptions',
+        type: 'GET', 
+        headers: {'X-Moderation': true},
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+        },
+        success: function(data){
+          populateLockedImageDescriptionsList(data);
+        }
+
+      });
+    }
+
+    $(document).ready(function(){
+      getLockedImageDescriptions();
+    });
+  
+  </script>
+</head>
+<body>
+
+  {{ template "menu.html" .}}
+
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Moderator
+      </h2>
+    </div>
+  </div>
+  <div class="ui stackable center aligned grid vertical stripe">
+    <div class="row" id="loadingIndicator" style="display: none;">
+      <div class="sk-wave overlay">
+        <div class="sk-rect sk-rect1"></div>
+        <div class="sk-rect sk-rect2"></div>
+        <div class="sk-rect sk-rect3"></div>
+        <div class="sk-rect sk-rect4"></div>
+        <div class="sk-rect sk-rect5"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="four wide center aligned column"></div>
+      <div class="eight wide center aligned column">
+        <div class="ui segment">
+          <table class="ui striped table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th class="right aligned"></th>
+              </tr>
+            </thead>
+            <tbody id="lockedImageDescriptionsContent">
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="four wide center aligned column"></div>
+    </div>
+  </div>
+</div>
+
+{{ template "footer.html" .}}
+
+</body>
+
+</html>

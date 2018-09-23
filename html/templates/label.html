@@ -36,6 +36,12 @@
 
   <style type="text/css">
     .canvas-container{margin: 0 auto;}
+
+    #overlayCanvasButton {
+      position: absolute;
+      top:0px;
+      /*left property will be set programmatically*/
+    }
   </style>
 
   <script type="text/javascript">
@@ -51,8 +57,12 @@
 
   buildColorMap();
 
+  function getImageContainerMaxWidth() {
+    return document.getElementById("imageContainer").clientWidth - 100; //margin
+  }
+
   function getCanvasScaleFactor(origImageWidth) {
-    var maxWidth = document.getElementById("imageContainer").clientWidth - 100; //margin
+    var maxWidth = getImageContainerMaxWidth();
     var scaleFactor = maxWidth/origImageWidth;
     if(scaleFactor > 1.0)
       scaleFactor = 1.0;
@@ -197,6 +207,8 @@
         canvas.setHeight(data.image.height*scaleFactor);
 
         canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
+          var overlayCanvasButtonPos = 80 + (getImageContainerMaxWidth() - (data.image.width * scaleFactor));
+          $("#overlayCanvasButton").css({left: overlayCanvasButtonPos});
           showHideMainArea(true);
           showHideControls(true, data.image.unlocked);
           //drawAnnotations(canvas.fabric(), [data.annotation.data], canvas.fabric().backgroundImage.scaleX);
@@ -749,6 +761,13 @@
 
       <h1></h1>
       <h1></h1>
+      <div id="imageDescriptions">
+        <h2 style="margin-bottom:0px;">Image Descriptions:</h2>
+        <p id="noImageDescriptionsDefined">There are currently no image descriptions defined. Add a description and help to improve our dataset.</p>
+      </div>
+
+      <h1></h1>
+      <h1></h1>
       <div id="mostPopularLabelsContainer" hidden>
         <h2 style="margin-bottom:0px;">Most Popular Labels:</h2>
         <p style="font-size:12px; margin-bottom:20px;">These are the most popular labels in the whole dataset</p>
@@ -760,6 +779,7 @@
     <div class="eight wide center aligned column" style="display: none;" id="mainContainer">
       <div id="imageContainer" style="margin-top:-4em;">
         <canvas imageId="" id="image"></canvas>
+        <button id="overlayCanvasButton" class="ui green icon button"><i class="edit icon"></i></button>
       </div>
 
       <p id="objectsWithoutLabelText">Do you see any objects without a label?</p>

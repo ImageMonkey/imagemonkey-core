@@ -77,6 +77,22 @@ type Image struct {
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
 
+type ImageToLabel struct {
+    Id string `json:"uuid"`
+    Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
+    Provider string `json:"provider"`
+    Probability float32 `json:"probability"`
+    NumOfValid int32 `json:"num_yes"`
+    NumOfInvalid int32 `json:"num_no"`
+    Unlocked bool `json:"unlocked,omitempty"`
+    Width int32 `json:"width,omitempty"`
+    Height int32 `json:"height,omitempty"`
+    Annotations []json.RawMessage `json:"annotations"`
+    AllLabels []LabelMeEntry `json:"all_labels"`
+    ImageDescriptions []json.RawMessage `json:"img_descriptions"`
+}
+
 type ValidationImage struct {
     Id string `json:"uuid"`
     Provider string `json:"provider"`
@@ -340,6 +356,7 @@ type UserStatistics struct {
 
 type UserPermissions struct {
     CanRemoveLabel bool `json:"can_remove_label"`
+    CanUnlockImageDescription bool `json:"can_unlock_image_description"`
 }
 
 type UserInfo struct {
@@ -540,4 +557,21 @@ type LabelMapRefinementEntry struct {
 type UpdateAnnotationCoverageRequest struct {
     Uuid string `json:"uuid"`
     Type string `json:"type"`
+}
+
+type ImageDescription struct {
+    Description string `json:"description"`
+}
+
+
+type ImageDesc struct {
+    Text string `json:"text"`
+    Uuid string `json:"uuid"`
+}
+
+type DescriptionsPerImage struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Descriptions []ImageDesc `json:"descriptions"`
+    } `json:"image"`
 }
