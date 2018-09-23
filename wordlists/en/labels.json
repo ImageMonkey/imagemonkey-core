@@ -996,6 +996,51 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "cabd5ba9-fd89-4310-be88-957a82cc481f"
+		},
+		"camera": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "51b99c35-8c36-4862-83f2-5b361df36aef"
+		},
+		"snow": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f958ea3d-5b45-4109-a606-9b6342712f00"
+		},
+		"flower": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7528260c-bc75-48d5-9f9a-30c8c3dcdf8f"
+		},
+		"umbrella": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "09d6f999-0e55-4bd7-a9bf-b658389d7a3d"
+		},
+		"bed": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "40735064-ecac-47c3-8020-3adafcad7a99"
+		},
+		"spider": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f7a12c25-bc80-4f58-883b-5c237f26d893"
+		},
+		"chain": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "5a427d30-b685-46e1-bbdb-2f19f47f56cd"
+		},
+		"jellyfish": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "16cc13ae-f7e8-4347-b362-9c70a61f74d8"
+		},
+		"strawberry": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "661797ef-31f9-4969-9c22-0b5704603969"
 		}
 	}
 }
