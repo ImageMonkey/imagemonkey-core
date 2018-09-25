@@ -571,7 +571,7 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId strin
 func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]ImageDescriptionSummary, error) {
 	var descriptionSummaries []ImageDescriptionSummary
 
-	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.unlocked
+	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state
 							 FROM image_description dsc
 							 JOIN image i ON i.id = dsc.image_id
 							 WHERE i.key = $1`, imageId)
@@ -583,9 +583,18 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]I
 
 	for rows.Next() {
 		var dsc ImageDescriptionSummary
-		err = rows.Scan(&dsc.Description, &dsc.NumOfValid, &dsc.Uuid, &dsc.Unlocked)
+		var state string
+		err = rows.Scan(&dsc.Description, &dsc.NumOfValid, &dsc.Uuid, &state)
 		if err != nil {
 			return descriptionSummaries, err
+		}
+
+		if state == "unknown" {
+			dsc.State = ImageDescriptionStateUnknown
+		} else if state == "locked" {
+			dsc.State = ImageDescriptionStateLocked
+		} else if state == "unlocked" {
+			dsc.State = ImageDescriptionStateUnlocked
 		}
 
 		descriptionSummaries = append(descriptionSummaries, dsc)

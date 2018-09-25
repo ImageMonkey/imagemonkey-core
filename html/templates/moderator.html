@@ -22,18 +22,65 @@
 
 
   <script>
-    function populateLockedImageDescriptionsList(data) {
-      var imageDescriptions;
-      var elem;
-      for(var i = 0; i < data.length; i++) {
-        imageDescriptions = data[i].image.descriptions;
-        for(var j = 0; j < imageDescriptions.length; j++) {
-          elem = $(('<tr>' +
-                    '<td>' + imageDescriptions[j].text + '</td>' +
-                    '<td class="right aligned"><div class="ui green basic button">Unlock</div><div class="ui red basic button">Decline</div></td>' +
-                    '</tr>'));
-          $("#lockedImageDescriptionsContent").append(elem);
+    function lockImageDescription(e) {
+      var imageDescriptionUuid = $(e).attr("data-image-description-uuid");
+      var imageId = $(e).attr("data-image-id");
+      $(e).addClass("disabled");
+
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/donation/' + imageId + '/description/' + imageDescriptionUuid + '/lock',
+        type: 'POST', 
+        headers: {'X-Moderation': true},
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+        },
+        success: function(data){
+          
         }
+      });
+    }
+
+    function unlockImageDescription(e) {
+      var imageDescriptionUuid = $(e).attr("data-image-description-uuid");
+      var imageId = $(e).attr("data-image-id");
+      $(e).addClass("disabled");
+
+      $.ajax({
+        url: '{{ .apiBaseUrl }}/v1/donation/' + imageId + '/description/' + imageDescriptionUuid + '/unlock',
+        type: 'POST', 
+        headers: {'X-Moderation': true},
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+        },
+        success: function(data){
+          
+        }
+      });
+    }
+
+    function populateLockedImageDescriptionsList(data) {
+      if(data.length > 0) {
+        var imageDescriptions;
+        var elem;
+        for(var i = 0; i < data.length; i++) {
+          imageDescriptions = data[i].image.descriptions;
+          for(var j = 0; j < imageDescriptions.length; j++) {
+            elem = $(('<tr>' +
+                      '<td>' + escapeHtml(imageDescriptions[j].text) + '</td>' +
+                      '<td class="right aligned">' +
+                        '<div onclick="unlockImageDescription(this);" data-image-description-uuid="' 
+                          + imageDescriptions[j].uuid  + '" data-image-id="' + data[i].image.uuid + '" class="ui green basic button">Unlock</div>' +
+                        '<div onclick="lockImageDescription(this);" data-image-description-uuid="' 
+                          + imageDescriptions[j].uuid + '" data-image-id="' + data[i].image.uuid + '" class="ui red basic button">Decline</div>' + 
+                      '</td>' +
+                      '</tr>'));
+            $("#lockedImageDescriptionsContent").append(elem);
+          }
+        }
+      } 
+      else {
+        $("#lockedImageDescriptionsContent").append($('<tr><td>No data available</td></tr>'));
+
       }
       $("#loadingIndicator").hide();
     }
@@ -41,7 +88,7 @@
     function getLockedImageDescriptions() {
       $("#loadingIndicator").show();
       $.ajax({
-        url: '{{ .apiBaseUrl }}/v1/donations/locked-descriptions',
+        url: '{{ .apiBaseUrl }}/v1/donations/unprocessed-descriptions',
         type: 'GET', 
         headers: {'X-Moderation': true},
         beforeSend: function(xhr) {
@@ -55,6 +102,7 @@
     }
 
     $(document).ready(function(){
+      $("#imageDescriptionModerationInfo").show();
       getLockedImageDescriptions();
     });
   
@@ -70,11 +118,32 @@
      {{ template "pointing_menu.html" .}}
      <div class="ui text container">
       <h2 class="ui inverted header">
-        Moderator
+        Content Moderation
       </h2>
     </div>
   </div>
   <div class="ui stackable center aligned grid vertical stripe">
+
+    <div class="row">
+      <div class="eight wide center aligned column">
+        <div hidden class="ui info message" id="imageDescriptionModerationInfo">
+          <i class="close icon"></i>
+          <div class="header">
+            Content Moderation Guidelines
+          </div>
+          <p>Please do <b>not</b> unlock content that can be classified as</p>
+          <ul class="list">
+            <li>racist</li>
+            <li>insulting</li>
+            <li>abusive</li>
+            <li>advertising</li>
+            <li>spam</li>
+          </ul>
+          Thanks for helping to keep ImageMonkey clean and organized!
+        </div>
+      </div>
+    </div>
+
     <div class="row" id="loadingIndicator" style="display: none;">
       <div class="sk-wave overlay">
         <div class="sk-rect sk-rect1"></div>

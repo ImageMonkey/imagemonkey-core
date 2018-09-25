@@ -49,6 +49,8 @@
   var colorMap = {}
   var oldLabelMap = {}
   var newlyAddedLabels = {}
+  var oldImageDescriptions = {}
+  var newlyAddedImageDescriptions = {}
   var labelMap = {{ .labels }};
   var canvas = null;
   var cachedAnnotations = null;
@@ -257,6 +259,15 @@
     }
   }
 
+  function showHideNoImageDescriptionsDefined(){
+    if((Object.keys(oldImageDescriptions).length === 0) && (Object.keys(newlyAddedImageDescriptions).length === 0)){
+      $("#noImageDescriptionsDefined").show();
+    }
+    else{
+      $("#noImageDescriptionsDefined").hide();
+    }
+  }
+
   function isLabelValid(numOfValid, numOfInvalid) {
     if((numOfValid + numOfInvalid) > 0) {
       var probabilityOfBeginValid = numOfValid / (numOfValid + numOfInvalid);
@@ -352,6 +363,13 @@
         }
       }
     });
+  }
+
+  function removeImageDescription(e) {
+    var imageDescriptionItem = $(e).parent().text();
+    $(e).parent().remove();
+    delete newlyAddedImageDescriptions[imageDescriptionItem];
+    showHideNoImageDescriptionsDefined();
   }
 
   var removeLabel = function(e){
@@ -507,6 +525,15 @@
     showHideNoLabelsDefined();
   }
 
+  function addImageDescription(imageDescription) {
+    var escapedImageDescription = escapeHtml(imageDescription);
+    $('#imageDescriptions').prepend($(('<div class="ui huge ' + 'red' + ' label">' +  
+                                          escapedImageDescription + 
+                                          '<i class="delete icon" onclick="removeImageDescription(this)"></i></div>')));
+    newlyAddedImageDescriptions[escapedImageDescription] = true;
+    showHideNoImageDescriptionsDefined();
+  }
+
   function addPopularLabel(label){
     $('#mostPopularLabels').prepend($(('<div class="ui big label button" onclick="createLabelFromMostPopularLabel(this)">' + label + '</div>')));
   }
@@ -548,6 +575,17 @@
     }
 
     getMostPopularLabels();
+
+    $('#overlayCanvasButton').click(function(e) {
+      $('#imageDescriptionInputDlg').modal('show');
+    });
+
+    $('#addImageDescriptionButton').click(function(e) {
+      var imageDescriptionInput = $("#addImageDescriptionInput").val();
+      $("#addImageDescriptionInput").val(''); //clear input
+      addImageDescription(imageDescriptionInput);
+
+    });
 
     $('#addLabelButton').click(function(e){
       var selectedLabel = getSelectedLabel();
@@ -761,9 +799,11 @@
 
       <h1></h1>
       <h1></h1>
-      <div id="imageDescriptions">
+      <div id="imageDescriptionsContainer">
         <h2 style="margin-bottom:0px;">Image Descriptions:</h2>
         <p id="noImageDescriptionsDefined">There are currently no image descriptions defined. Add a description and help to improve our dataset.</p>
+        <div class="ui labels" id="imageDescriptions">
+        </div>
       </div>
 
       <h1></h1>
@@ -818,6 +858,8 @@
             {{ end }}
 
           </div>
+
+          {{ template "image_description_input_dlg.html" .}}
 
 
           <div class="row" id="loadingIndicator" style="display: none;">

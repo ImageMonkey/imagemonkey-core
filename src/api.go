@@ -992,10 +992,50 @@ func main(){
 
 
 			errCode := imageMonkeyDatabase.UnlockImageDescription(imageId, descriptionId)
-			if errCode == imagemonkeydb.UnlockImageInternalError {
+			if errCode == imagemonkeydb.UnlockImageDescriptionInternalError {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
-			} else if errCode == imagemonkeydb.UnlockImageInvalidId {
+			} else if errCode == imagemonkeydb.UnlockImageDescriptionInvalidId {
+				c.JSON(404, gin.H{"error": "Couldn't process request - resource doesn't exist"})
+				return
+			}
+			c.JSON(201, nil)
+		})
+
+		router.POST("/v1/donation/:imageid/description/:descriptionid/lock", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+			descriptionId := c.Param("descriptionid")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+			
+			hasModeratorPermissions := false
+			if isModerationRequest(c) {
+				if apiUser.Name != "" {
+					userInfo, err := getUserInfo(apiUser.Name)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
+
+					if userInfo.Permissions != nil && userInfo.Permissions.CanUnlockImageDescription {
+						hasModeratorPermissions = true
+					}
+				}
+			}
+
+			if !hasModeratorPermissions {
+				c.JSON(401, gin.H{"error": "Authentication required"})
+				return
+			}
+
+
+			errCode := imageMonkeyDatabase.LockImageDescription(imageId, descriptionId)
+			if errCode == imagemonkeydb.LockImageDescriptionInternalError {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			} else if errCode == imagemonkeydb.LockImageDescriptionInvalidId {
 				c.JSON(404, gin.H{"error": "Couldn't process request - resource doesn't exist"})
 				return
 			}
@@ -1213,7 +1253,7 @@ func main(){
 			c.JSON(204, nil)
 		});
 
-		router.GET("/v1/donations/locked-descriptions", func(c *gin.Context) {
+		router.GET("/v1/donations/unprocessed-descriptions", func(c *gin.Context) {
 			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
@@ -1239,7 +1279,7 @@ func main(){
 			}
 
 
-			descriptionsPerImage, err := imageMonkeyDatabase.GetLockedImageDescriptions()
+			descriptionsPerImage, err := imageMonkeyDatabase.GetUnprocessedImageDescriptions()
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

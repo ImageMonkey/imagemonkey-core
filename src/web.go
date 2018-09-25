@@ -560,7 +560,7 @@ func main() {
 
 		router.GET("/moderator", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "moderator.html", gin.H{
-				"title": "Moderator",
+				"title": "Content Moderation",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
 				//"activeMenuNr": 14,

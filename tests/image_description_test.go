@@ -6,17 +6,25 @@ import (
 	"../src/datastructures"
 )
 
+type ImageDescriptionStateType int
+
+const (
+  ImageDescriptionStateUnknown ImageDescriptionStateType = 1 << iota
+  ImageDescriptionStateLocked
+  ImageDescriptionStateUnlocked
+)
+
 type ImageDescriptionSummary struct {
     Description string `json:"description"`
     NumOfValid int `json:"num_of_yes"`
     Uuid string `json:"uuid"`
-    Unlocked bool `json:"unlocked"`
+    State ImageDescriptionStateType `json:"state"`
 }
 
-func testGetLockedImageDescriptions(t *testing.T, token string, expectedStatusCode int) []datastructures.DescriptionsPerImage {
+func testGetUnprocessedImageDescriptions(t *testing.T, token string, expectedStatusCode int) []datastructures.DescriptionsPerImage {
 	var imageDescriptions []datastructures.DescriptionsPerImage
 
-	url := BASE_URL + API_VERSION + "/donations/locked-descriptions"
+	url := BASE_URL + API_VERSION + "/donations/unprocessed-descriptions"
 	req := resty.R().
 			SetResult(&imageDescriptions)
 
@@ -35,6 +43,21 @@ func testGetLockedImageDescriptions(t *testing.T, token string, expectedStatusCo
 
 func testUnlockImageDescription(t *testing.T, imageId string, descriptionId string, token string, expectedStatusCode int) {
 	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/description/" + descriptionId + "/unlock"
+	req := resty.R()
+
+	if token != "" {
+		req.SetAuthToken(token)
+		req.SetHeader("X-Moderation", "true")
+	}
+
+	resp, err := req.Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), expectedStatusCode)
+}
+
+func testLockImageDescription(t *testing.T, imageId string, descriptionId string, token string, expectedStatusCode int) {
+	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/description/" + descriptionId + "/lock"
 	req := resty.R()
 
 	if token != "" {
@@ -101,7 +124,7 @@ func TestGetImageDescription(t *testing.T) {
 
 	equals(t, len(descriptions), 1)
 	equals(t, descriptions[0].NumOfValid, 0)
-	equals(t, descriptions[0].Unlocked, false)
+	equals(t, descriptions[0].State, ImageDescriptionStateUnknown)
 }
 
 func TestGetImageDescriptionMultiple(t *testing.T) {
@@ -209,7 +232,7 @@ func TestUnlockImageDescriptionFromModerator(t *testing.T) {
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
-	equals(t, descriptions[0].Unlocked, true)
+	equals(t, descriptions[0].State, ImageDescriptionStateUnlocked)
 }
 
 func TestUnlockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
@@ -272,7 +295,7 @@ func TestUnlockImageDescriptionFromModeratorButInvalidDescriptionId(t *testing.T
 	testUnlockImageDescription(t, imageId, "", moderatorToken, 404)
 }
 
-func TestGetLockedImageDescriptionsNoPermissions(t *testing.T) {
+func TestGetUnprocessedImageDescriptionsNoPermissions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -283,10 +306,10 @@ func TestGetLockedImageDescriptionsNoPermissions(t *testing.T) {
 
 	testAddImageDescription(t, imageId, "apple on the floor")
 
-	testGetLockedImageDescriptions(t, "", 401)
+	testGetUnprocessedImageDescriptions(t, "", 401)
 }
 
-func TestGetLockedImageDescriptionsModeratorPermissions(t *testing.T) {
+func TestGetUnprocessedImageDescriptionsModeratorPermissions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -303,12 +326,12 @@ func TestGetLockedImageDescriptionsModeratorPermissions(t *testing.T) {
 	err = db.GiveUserModeratorRights("moderator")
 	ok(t, err)
 
-	imageDescriptions := testGetLockedImageDescriptions(t, moderatorToken, 200)
+	imageDescriptions := testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
 	equals(t, len(imageDescriptions), 1)
-	equals(t, len(imageDescriptions[0].Descriptions), 1)
+	equals(t, len(imageDescriptions[0].Image.Descriptions), 1)
 }
 
-func TestGetLockedImageDescriptionsModeratorPermissionsAndUnlock(t *testing.T) {
+func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlock(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -325,12 +348,74 @@ func TestGetLockedImageDescriptionsModeratorPermissionsAndUnlock(t *testing.T) {
 	err = db.GiveUserModeratorRights("moderator")
 	ok(t, err)
 
-	imageDescriptions := testGetLockedImageDescriptions(t, moderatorToken, 200)
+	imageDescriptions := testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
 	equals(t, len(imageDescriptions), 1)
-	equals(t, len(imageDescriptions[0].Descriptions), 1)
+	equals(t, len(imageDescriptions[0].Image.Descriptions), 1)
 
-	testUnlockImageDescription(t, imageId, imageDescriptions[0].Descriptions[0].Uuid, moderatorToken, 201)
+	testUnlockImageDescription(t, imageId, imageDescriptions[0].Image.Descriptions[0].Uuid, moderatorToken, 201)
 
-	imageDescriptions = testGetLockedImageDescriptions(t, moderatorToken, 200)
+	imageDescriptions = testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 0)
+}
+
+
+
+func TestLockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	descriptions, err := db.GetImageDescriptionForImageId(imageId)
+	ok(t, err)
+
+	equals(t, len(descriptions), 0)
+
+	testAddImageDescription(t, imageId, "apple on the floor")
+
+	descriptions, err = db.GetImageDescriptionForImageId(imageId)
+	ok(t, err)
+
+	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
+	moderatorToken := testLogin(t, "moderator", "moderator", 200)
+
+	err = db.GiveUserModeratorRights("moderator")
+	ok(t, err)
+
+	equals(t, len(descriptions), 1)
+
+	testLockImageDescription(t, "", descriptions[0].Uuid, moderatorToken, 404)
+}
+
+
+
+
+func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLock(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageDescription(t, imageId, "apple on the floor")
+
+	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
+	moderatorToken := testLogin(t, "moderator", "moderator", 200)
+
+	err = db.GiveUserModeratorRights("moderator")
+	ok(t, err)
+
+	imageDescriptions := testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 1)
+	equals(t, len(imageDescriptions[0].Image.Descriptions), 1)
+
+	testLockImageDescription(t, imageId, imageDescriptions[0].Image.Descriptions[0].Uuid, moderatorToken, 201)
+
+	imageDescriptions = testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
 	equals(t, len(imageDescriptions), 0)
 }
