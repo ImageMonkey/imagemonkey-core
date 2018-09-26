@@ -948,13 +948,13 @@ func main(){
 		router.POST("/v1/donation/:imageid/description", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			var description datastructures.ImageDescription
-			if c.BindJSON(&description) != nil {
+			var descriptions []datastructures.ImageDescription
+			if c.BindJSON(&descriptions) != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - description missing"})
 				return
 			}
 
-			err = imageMonkeyDatabase.AddImageDescription(imageId, description)
+			err = imageMonkeyDatabase.AddImageDescriptions(imageId, descriptions)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

@@ -56,6 +56,8 @@
   var cachedAnnotations = null;
   var annotationsShown = false;
   var annotationFetchingInProgress = false;
+  var numOfTotalRequests = 0;
+  var currentRequests = 0;
 
   buildColorMap();
 
@@ -185,6 +187,7 @@
     $('#mostPopularLabelsContainer').hide();
     oldLabelMap = {}
     newlyAddedLabels = {}
+    newlyAddedImageDescriptions = {}
 
     showHideControls(false, false);
 
@@ -299,6 +302,7 @@
   function showHideControls(show, imageUnlocked){
     if(show){
       $('#image').show();
+      $("#doneButton").removeClass('disabled');
       $('#doneButton').show();
       $('#labels').show();
       $('#loadingIndicator').hide();
@@ -546,6 +550,105 @@
     $('#labelDropdown').dropdown('restore placeholder text');
   }
 
+  function addImageDescriptionsToImage() {
+    var imageDescriptions = [];
+    for (var key in newlyAddedImageDescriptions){
+      if (newlyAddedImageDescriptions.hasOwnProperty(key)) {
+        imageDescriptions.push({"description": key});
+      }
+    }
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/description";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'POST',
+      data: JSON.stringify(imageDescriptions),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      complete: function(data){
+      },
+      success: function(data){
+        currentRequests += 1;
+        if(numOfTotalRequests === currentRequests) {
+          currentRequests = 0;
+          numOfTotalRequests = 0;
+
+          {{ if eq .mode "default" }}
+          getNextImage("");
+          {{ else }}
+          showHideMainArea(false);
+          showBrowseLabelImageGrid();
+          {{ end }}
+        }
+              
+      }
+    });
+  }
+
+  function addLabelsToImage() {
+    var labelsLst = [];
+    var strLabelsLst = "";
+
+    //dict to list
+    for (var key in newlyAddedLabels){
+      if (newlyAddedLabels.hasOwnProperty(key)) {
+        var sublabels = newlyAddedLabels[key];
+        var s = [];
+        strLabelsLst += (escapeHtml(key) + ", ");
+        for(var i = 0; i < sublabels.length; i++) {
+          s.push({"name": sublabels[i]});
+          strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
+        }
+        labelsLst.push({label: key, annotatable: true, sublabels: s});
+      }
+    }
+
+    if(strLabelsLst.length > 2)
+      strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
+
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/labelme";
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+    
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'POST',
+      data: JSON.stringify(labelsLst),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      complete: function(data){
+      },
+      success: function(data){
+        currentRequests += 1;
+        if(numOfTotalRequests === currentRequests) {
+          currentRequests = 0;
+          numOfTotalRequests = 0;
+
+          {{ if eq .mode "default" }}
+          getNextImage("");
+          {{ else }}
+          showHideMainArea(false);
+          updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
+          showBrowseLabelImageGrid();
+          {{ end }}
+        }
+              
+      }
+    });
+  }
+
   $(document).ready(function(){
     $('#mostPopularLabelsContainer').hide();
     addOldLabels({{ .image.AllLabels }});
@@ -600,61 +703,32 @@
     });
 
   $('#doneButton').click(function(e) {
-    var labelsLst = [];
-    var strLabelsLst = "";
+    currentRequests = 0;
+    numOfTotalRequests = 0;
+    $("#doneButton").addClass("disabled");
 
-        //dict to list
-        for (var key in newlyAddedLabels){
-          if (newlyAddedLabels.hasOwnProperty(key)) {
-            var sublabels = newlyAddedLabels[key];
-            var s = [];
-            strLabelsLst += (escapeHtml(key) + ", ");
-            for(var i = 0; i < sublabels.length; i++) {
-              s.push({"name": sublabels[i]});
-              strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
-            }
-            labelsLst.push({label: key, annotatable: true, sublabels: s});
-          }
-        }
-
-        if(strLabelsLst.length > 2)
-          strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
-
-        var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/labelme";
-        var headers = {}
-        if(browserFingerprint !== null)
-          headers['X-Browser-Fingerprint'] = browserFingerprint;
-
-        if(newlyAddedLabels.length === 0){ //if no label was added, just load next image
-          getNextImage("");
-        }
-        else {
-          e.preventDefault();
-          $.ajax({
-            url: url,
-            dataType: 'json',
-            type: 'POST',
-            data: JSON.stringify(labelsLst),
-            headers: headers,
-            beforeSend: function(xhr) {
-              xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-            },
-            complete: function(data){
-            },
-            success: function(data){
-              {{ if eq .mode "default" }}
-              getNextImage("");
-              {{ else }}
-              showHideMainArea(false);
-              updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
-              showBrowseLabelImageGrid();
-              {{ end }}
-              
-            }
-          });
-        }
-        
-      });
+    e.preventDefault();
+    if((Object.keys(newlyAddedLabels).length === 0) 
+        && (Object.keys(newlyAddedImageDescriptions).length === 0)) { //if no label or image description were added, just load next image
+      getNextImage("");
+    }
+    else if((Object.keys(newlyAddedLabels).length === 1) 
+      && (Object.keys(newlyAddedImageDescriptions).length === 0)) { //only labels were added
+      numOfTotalRequests = 1;
+      addLabelsToImage();  
+    }
+    else if((Object.keys(newlyAddedLabels).length === 0) 
+      && (Object.keys(newlyAddedImageDescriptions).length === 1)) { //only image descriptions were added
+      numOfTotalRequests = 1;
+      addImageDescriptionsToImage();
+    }
+    else if((Object.keys(newlyAddedLabels).length === 1) 
+      && (Object.keys(newlyAddedImageDescriptions).length === 1)) { //image descriptions and labels were added
+      numOfTotalRequests = 2;
+      addLabelsToImage(); 
+      addImageDescriptionsToImage();
+    }
+  });
 
   $('.ui.dropdown')
   .dropdown()

@@ -26,6 +26,7 @@
       var imageDescriptionUuid = $(e).attr("data-image-description-uuid");
       var imageId = $(e).attr("data-image-id");
       $(e).addClass("disabled");
+      $(('#unlock-' + imageDescriptionUuid)).addClass('disabled');
 
       $.ajax({
         url: '{{ .apiBaseUrl }}/v1/donation/' + imageId + '/description/' + imageDescriptionUuid + '/lock',
@@ -44,6 +45,7 @@
       var imageDescriptionUuid = $(e).attr("data-image-description-uuid");
       var imageId = $(e).attr("data-image-id");
       $(e).addClass("disabled");
+      $(('#lock-' + imageDescriptionUuid)).addClass('disabled');
 
       $.ajax({
         url: '{{ .apiBaseUrl }}/v1/donation/' + imageId + '/description/' + imageDescriptionUuid + '/unlock',
@@ -68,9 +70,9 @@
             elem = $(('<tr>' +
                       '<td>' + escapeHtml(imageDescriptions[j].text) + '</td>' +
                       '<td class="right aligned">' +
-                        '<div onclick="unlockImageDescription(this);" data-image-description-uuid="' 
+                        '<div onclick="unlockImageDescription(this);" id="' + 'unlock-' + imageDescriptions[j].uuid + '" data-image-description-uuid="' 
                           + imageDescriptions[j].uuid  + '" data-image-id="' + data[i].image.uuid + '" class="ui green basic button">Unlock</div>' +
-                        '<div onclick="lockImageDescription(this);" data-image-description-uuid="' 
+                        '<div onclick="lockImageDescription(this);" id="' + 'lock-' + imageDescriptions[j].uuid +  '" data-image-description-uuid="' 
                           + imageDescriptions[j].uuid + '" data-image-id="' + data[i].image.uuid + '" class="ui red basic button">Decline</div>' + 
                       '</td>' +
                       '</tr>'));

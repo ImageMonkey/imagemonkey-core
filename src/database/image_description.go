@@ -5,6 +5,7 @@ import (
 	"github.com/getsentry/raven-go"
 	log "github.com/Sirupsen/logrus"
 	"encoding/json"
+	"github.com/lib/pq"
 )
 
 type UnlockImageDescriptionErrorType int
@@ -24,11 +25,16 @@ const (
 )
 
 
-func (p *ImageMonkeyDatabase) AddImageDescription(imageId string, description datastructures.ImageDescription) error {
+func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions []datastructures.ImageDescription) error {
+	var lst []string
+	for _, val := range descriptions {
+		lst = append(lst, val.Description)
+	}
+
 	_, err := p.db.Query(`INSERT INTO image_description(image_id, description, num_of_valid, num_of_invalid, state, processed_by, uuid)
-							SELECT (SELECT i.id FROM image i WHERE i.key = $1), $2, 0, 0, 'unknown', null, uuid_generate_v4()
+							SELECT (SELECT i.id FROM image i WHERE i.key = $1), unnest($2::text[]), 0, 0, 'unknown', null, uuid_generate_v4()
 						  ON CONFLICT(image_id, description) DO UPDATE SET num_of_valid = image_description.num_of_valid + 1`, 
-							imageId, description.Description)
+							imageId, pq.Array(lst))
 	if err != nil {
         log.Error("[Adding image description] Couldn't add image description: ", err.Error())
         raven.CaptureError(err, nil)

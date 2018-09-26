@@ -89,14 +89,18 @@ func testGetImageDescriptions(t *testing.T, imageId string, token string, numOfD
 	equals(t, numOfDescriptions, len(img.ImageDescriptions))
 }
 
-func testAddImageDescription(t *testing.T, imageId string, description string) {
-	var imageDescription datastructures.ImageDescription
-	imageDescription.Description = description
+func testAddImageDescriptions(t *testing.T, imageId string, descriptions []string) {
+	var imageDescriptions []datastructures.ImageDescription
+	for _, val := range descriptions {
+		var imageDescription datastructures.ImageDescription
+		imageDescription.Description = val
+		imageDescriptions = append(imageDescriptions, imageDescription)
+	}
 
 	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/description"
 	resp, err := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(imageDescription).
+			SetBody(imageDescriptions).
 			Post(url)
 
 	ok(t, err)
@@ -117,7 +121,7 @@ func TestGetImageDescription(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -141,8 +145,8 @@ func TestGetImageDescriptionMultiple(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -165,8 +169,8 @@ func TestGetImageDescriptionMultipleDifferent(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
-	testAddImageDescription(t, imageId, "apple on the desk")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	testAddImageDescriptions(t, imageId, []string{"apple on the desk"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -190,7 +194,7 @@ func TestUnlockImageDescriptionNoModerator(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -215,7 +219,7 @@ func TestUnlockImageDescriptionFromModerator(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -249,7 +253,7 @@ func TestUnlockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -279,7 +283,7 @@ func TestUnlockImageDescriptionFromModeratorButInvalidDescriptionId(t *testing.T
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -304,7 +308,7 @@ func TestGetUnprocessedImageDescriptionsNoPermissions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	testGetUnprocessedImageDescriptions(t, "", 401)
 }
@@ -318,7 +322,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -340,7 +344,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlock(t *testing
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -374,7 +378,7 @@ func TestLockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -402,7 +406,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLock(t *testing.T
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescription(t, imageId, "apple on the floor")
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
