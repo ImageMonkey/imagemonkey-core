@@ -120,10 +120,11 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     %s
                                 ) q ON q.id = q1.image_id
                                 LEFT JOIN (
-                                    SELECT jsonb_agg(jsonb_build_object('description', dsc.description)) as image_descriptions,
+                                    SELECT jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text)) as image_descriptions,
                                     i.id as image_id
                                     FROM image_description dsc
                                     JOIN image i ON i.id = dsc.image_id
+                                    WHERE dsc.state != 'locked' --only show non locked image descriptions
                                     GROUP BY i.id, dsc.id
                                 ) q2 ON q2.image_id = q1.image_id
                                 `, q1)

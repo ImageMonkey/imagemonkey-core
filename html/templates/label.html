@@ -36,12 +36,6 @@
 
   <style type="text/css">
     .canvas-container{margin: 0 auto;}
-
-    #overlayCanvasButton {
-      position: absolute;
-      top:0px;
-      /*left property will be set programmatically*/
-    }
   </style>
 
   <script type="text/javascript">
@@ -56,8 +50,6 @@
   var cachedAnnotations = null;
   var annotationsShown = false;
   var annotationFetchingInProgress = false;
-  var numOfTotalRequests = 0;
-  var currentRequests = 0;
 
   buildColorMap();
 
@@ -180,13 +172,28 @@
     });
   }
 
+  function addExistingImageDescriptions(descriptions) {
+    oldImageDescriptions = {}
+    for(var i = 0; i < descriptions.length; i++) {
+      var isUnlocked = false;
+      if(descriptions[i].state === "unlocked")
+        isUnlocked = true;
+
+      addExistingImageDescription(descriptions[i].text);
+    }
+
+    showHideNoImageDescriptionsDefined();
+  }
+
   function getNextImage(imageId){
     showHideMainArea(true);
     clearSelectedLabel(); //clear current label
     removeAllLabels();
+    removeAllImageDescriptions();
     $('#mostPopularLabelsContainer').hide();
     oldLabelMap = {}
     newlyAddedLabels = {}
+    oldImageDescriptions = {}
     newlyAddedImageDescriptions = {}
 
     showHideControls(false, false);
@@ -212,13 +219,12 @@
         canvas.setHeight(data.image.height*scaleFactor);
 
         canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
-          var overlayCanvasButtonPos = 80 + (getImageContainerMaxWidth() - (data.image.width * scaleFactor));
-          $("#overlayCanvasButton").css({left: overlayCanvasButtonPos});
           showHideMainArea(true);
           showHideControls(true, data.image.unlocked);
           //drawAnnotations(canvas.fabric(), [data.annotation.data], canvas.fabric().backgroundImage.scaleX);
         });
 
+        {{ if eq .type "object" }}
 
         addOldLabels(data["all_labels"]);
 
@@ -247,6 +253,12 @@
                            }
           }
         ]);
+        {{ end }}
+        {{ end }}
+
+        {{ if eq .type "image" }}
+        if(data.image.descriptions !== undefined)
+          addExistingImageDescriptions(data.image.descriptions);
         {{ end }}
 
       }
@@ -288,6 +300,7 @@
       $("#imgInfo").show();
       $("#labelInfo").show();
       $("#mostPopularLabelsContainer").fadeIn("slow");
+      $("#imageDescriptionsContainer").show();
       $("#gotoModeContainer").show();
     } 
     else {
@@ -295,6 +308,7 @@
       $("#imgInfo").hide();
       $("#mostPopularLabelsContainer").hide();
       $("#labelInfo").hide();
+      $("#imageDescriptionsContainer").hide();
       $("#gotoModeContainer").hide();
     }
   }
@@ -307,7 +321,14 @@
       $('#labels').show();
       $('#loadingIndicator').hide();
       $('#labelForm').show();
+
+      {{ if eq .type "object" }}
       $('#objectsWithoutLabelText').show();
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      $('#imageWithoutImageDescriptionText').show();
+      {{ end }}
 
       if(imageUnlocked)
         $("#imageLockedLabel").hide();
@@ -320,7 +341,15 @@
       $('#labels').hide();
       $('#loadingIndicator').show();
       $('#labelForm').hide();
+
+      {{ if eq .type "object" }}
       $('#objectsWithoutLabelText').hide();
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      $('#imageWithoutImageDescriptionText').hide();
+      {{ end }}
+
       $("#imageLockedLabel").hide();
     }
   }
@@ -412,6 +441,13 @@
   var removeAllLabels = function(){
     $('#labels').children().each(function (){
       delete newlyAddedLabels[$(this).text()];
+      $(this).remove();
+    })
+  }
+
+  var removeAllImageDescriptions = function(){
+    $('#imageDescriptions').children().each(function (){
+      delete newlyAddedImageDescriptions[$(this).text()];
       $(this).remove();
     })
   }
@@ -530,12 +566,39 @@
   }
 
   function addImageDescription(imageDescription) {
+    var added = false;
     var escapedImageDescription = escapeHtml(imageDescription);
-    $('#imageDescriptions').prepend($(('<div class="ui huge ' + 'red' + ' label">' +  
-                                          escapedImageDescription + 
-                                          '<i class="delete icon" onclick="removeImageDescription(this)"></i></div>')));
-    newlyAddedImageDescriptions[escapedImageDescription] = true;
+
+    if(!(escapedImageDescription in newlyAddedImageDescriptions) && !(escapedImageDescription in oldImageDescriptions)) {
+      $('#imageDescriptions').prepend($(('<div class="ui huge ' + 'red' + ' label">' +  
+                                            escapedImageDescription + 
+                                            '<i class="delete icon" onclick="removeImageDescription(this)"></i></div>')));
+      newlyAddedImageDescriptions[escapedImageDescription] = true;
+      added = true;
+    }
+    else {
+      $('#warningMessageBoxContent').text("Image description already exists");
+      $('#warningMessageBox').show(200).delay(1500).hide(200);
+    }
     showHideNoImageDescriptionsDefined();
+
+    return added;
+  }
+
+  function addExistingImageDescription(imageDescription, isUnlocked) {
+    var escapedImageDescription = escapeHtml(imageDescription);
+
+    var basicLabelStr = "";
+    var tooltipStr = "";
+    if(!isUnlocked) {
+      basicLabelStr = 'basic '
+      tooltipStr = 'data-tooltip="Waiting for moderator approval"'
+    }
+
+    $('#imageDescriptions').prepend($(('<div class="ui huge ' + basicLabelStr + 'red' + ' label" ' + tooltipStr + '>' +  
+                                          escapedImageDescription + 
+                                          '</div>')));
+    oldImageDescriptions[escapedImageDescription] = true;
   }
 
   function addPopularLabel(label){
@@ -575,19 +638,12 @@
       complete: function(data){
       },
       success: function(data){
-        currentRequests += 1;
-        if(numOfTotalRequests === currentRequests) {
-          currentRequests = 0;
-          numOfTotalRequests = 0;
-
-          {{ if eq .mode "default" }}
-          getNextImage("");
-          {{ else }}
-          showHideMainArea(false);
-          showBrowseLabelImageGrid();
-          {{ end }}
-        }
-              
+        {{ if eq .mode "default" }}
+        getNextImage("");
+        {{ else }}
+        showHideMainArea(false);
+        showBrowseLabelImageGrid();
+        {{ end }}
       }
     });
   }
@@ -631,20 +687,13 @@
       complete: function(data){
       },
       success: function(data){
-        currentRequests += 1;
-        if(numOfTotalRequests === currentRequests) {
-          currentRequests = 0;
-          numOfTotalRequests = 0;
-
-          {{ if eq .mode "default" }}
-          getNextImage("");
-          {{ else }}
-          showHideMainArea(false);
-          updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
-          showBrowseLabelImageGrid();
-          {{ end }}
-        }
-              
+        {{ if eq .mode "default" }}
+        getNextImage("");
+        {{ else }}
+        showHideMainArea(false);
+        updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
+        showBrowseLabelImageGrid();
+        {{ end }}      
       }
     });
   }
@@ -679,15 +728,16 @@
 
     getMostPopularLabels();
 
-    $('#overlayCanvasButton').click(function(e) {
-      $('#imageDescriptionInputDlg').modal('show');
-    });
-
     $('#addImageDescriptionButton').click(function(e) {
       var imageDescriptionInput = $("#addImageDescriptionInput").val();
-      $("#addImageDescriptionInput").val(''); //clear input
-      addImageDescription(imageDescriptionInput);
-
+      if(imageDescriptionInput !== "") {
+        if(addImageDescription(imageDescriptionInput))
+          $("#addImageDescriptionInput").val(''); //clear input
+      }
+      else {
+        $('#warningMessageBoxContent').text("Please enter a image description");
+        $('#warningMessageBox').show(200).delay(1500).hide(200);
+      }
     });
 
     $('#addLabelButton').click(function(e){
@@ -703,31 +753,29 @@
     });
 
   $('#doneButton').click(function(e) {
-    currentRequests = 0;
-    numOfTotalRequests = 0;
     $("#doneButton").addClass("disabled");
 
     e.preventDefault();
-    if((Object.keys(newlyAddedLabels).length === 0) 
-        && (Object.keys(newlyAddedImageDescriptions).length === 0)) { //if no label or image description were added, just load next image
-      getNextImage("");
-    }
-    else if((Object.keys(newlyAddedLabels).length === 1) 
-      && (Object.keys(newlyAddedImageDescriptions).length === 0)) { //only labels were added
-      numOfTotalRequests = 1;
-      addLabelsToImage();  
-    }
-    else if((Object.keys(newlyAddedLabels).length === 0) 
-      && (Object.keys(newlyAddedImageDescriptions).length === 1)) { //only image descriptions were added
-      numOfTotalRequests = 1;
-      addImageDescriptionsToImage();
-    }
-    else if((Object.keys(newlyAddedLabels).length === 1) 
-      && (Object.keys(newlyAddedImageDescriptions).length === 1)) { //image descriptions and labels were added
-      numOfTotalRequests = 2;
-      addLabelsToImage(); 
-      addImageDescriptionsToImage();
-    }
+    
+    {{ if eq .type "object" }}
+      if(Object.keys(newlyAddedLabels).length === 0) {
+        getNextImage("");
+      }
+      else {
+        addLabelsToImage(); 
+      }
+
+    {{ end }}
+
+
+    {{ if eq .type "image" }}
+      if(Object.keys(newlyAddedImageDescriptions).length === 0) {
+        getNextImage("");
+      }
+      else {
+        addImageDescriptionsToImage(); 
+      }
+    {{ end }}
   });
 
   $('.ui.dropdown')
@@ -848,7 +896,7 @@
     <div class="ui inverted vertical masthead center aligned segment">
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
-       <h2 class="ui inverted header">Label all objects</h2>
+       <h2 class="ui inverted header">{{ .subtitle }}</h2>
        <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
@@ -865,21 +913,27 @@
     </div>
 
     <div class="three wide center aligned column" style="display: none;" id="labelInfo">
+      {{ if eq .type "object" }}
       <p><h2 id="labelsHeader">Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
       <div class="ui labels" id="labels">
       </div>
+      {{ end }}
 
+      {{ if eq .type "image" }}
       <h1></h1>
       <h1></h1>
-      <div id="imageDescriptionsContainer">
+      <div id="imageDescriptionsContainer" hidden>
         <h2 style="margin-bottom:0px;">Image Descriptions:</h2>
-        <p id="noImageDescriptionsDefined">There are currently no image descriptions defined. Add a description and help to improve our dataset.</p>
+        <br>
+        <p hidden id="noImageDescriptionsDefined">There are currently no image descriptions defined. Add a description and help to improve our dataset.</p>
         <div class="ui labels" id="imageDescriptions">
         </div>
       </div>
+      {{ end }}
 
+      {{ if eq .type "object" }}
       <h1></h1>
       <h1></h1>
       <div id="mostPopularLabelsContainer" hidden>
@@ -888,19 +942,28 @@
         <div class="ui labels" id="mostPopularLabels">
         </div>
       </div>
+      {{ end }}
 
     </div>
     <div class="eight wide center aligned column" style="display: none;" id="mainContainer">
       <div id="imageContainer" style="margin-top:-4em;">
         <canvas imageId="" id="image"></canvas>
-        <button id="overlayCanvasButton" class="ui green icon button"><i class="edit icon"></i></button>
       </div>
 
+      {{ if eq .type "object" }}
+      <br>
       <p id="objectsWithoutLabelText">Do you see any objects without a label?</p>
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      <br>
+      <p id="imageWithoutImageDescriptionText">Do you see an image without description?</p>
+      {{ end }}
+
       <div class="ui centered grid">
         <div class="row">
+          {{ if eq .type "object" }}
           <div class="ui form">
-
             {{ if (eq .sessionInformation.LoggedIn false) }}
             <div class="field">
               <div class="ui search">
@@ -930,10 +993,21 @@
               </div>
             </div>
             {{ end }}
-
           </div>
+          {{ end }}
 
-          {{ template "image_description_input_dlg.html" .}}
+          {{ if eq .type "image" }}
+          <div class="ui form">
+            <div class="field">
+              <div class="ui center aligned action input" id="labelForm">
+                <div class="ui input">
+                  <input placeholder="Enter image description..." type="text" id="addImageDescriptionInput" class="mousetrap">
+                </div>
+                <button class="ui button" id="addImageDescriptionButton">Add</button>
+              </div>
+            </div>
+          </div>
+          {{ end }}
 
 
           <div class="row" id="loadingIndicator" style="display: none;">

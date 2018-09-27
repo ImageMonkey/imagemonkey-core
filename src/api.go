@@ -1211,7 +1211,8 @@ func main(){
 
 				c.JSON(http.StatusOK, gin.H{"image": gin.H{"uuid": image.Id, "provider": image.Provider, 
 															"url": imageUrl, "unlocked": image.Unlocked,
-															"width": image.Width, "height": image.Height}, 
+															"width": image.Width, "height": image.Height,
+															"descriptions": image.ImageDescriptions}, 
 											"all_labels": image.AllLabels})
 			}
 		})

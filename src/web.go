@@ -215,6 +215,7 @@ func main() {
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
 			mode := getParamFromUrlParams(c, "mode", "default")
+			operationType := getParamFromUrlParams(c, "type", "object")
 
 			imageId := ""
 			if mode == "default" {
@@ -229,11 +230,23 @@ func main() {
 				}
 			}
 
+			title := ""
+			subtitle := ""
+			if operationType == "object" {
+				title = "Add Labels"
+				subtitle = "Label all objects"
+			} else {
+				title = "Add Image Description"
+				subtitle = "Describe the Image"
+			}
+
 
 			c.HTML(http.StatusOK, "label.html", gin.H{
-				"title": "Add Labels",
+				"title": title,
+				"subtitle": subtitle,
 				"imageId": imageId,
 				"mode": mode,
+				"type": operationType,
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
