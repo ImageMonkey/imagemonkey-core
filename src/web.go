@@ -20,6 +20,7 @@ import (
 	"errors"
 	"./datastructures"
 	"./commons"
+	imagemonkeydb "./database"
 )
 
 var db *sql.DB
@@ -65,8 +66,7 @@ func main() {
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
-
-	sessionCookieHandler := NewSessionCookieHandler()
+	sentryEnvironment := "web"
 
 	flag.Parse()
 	if *releaseMode {
@@ -77,7 +77,7 @@ func main() {
 	if *useSentry {
 		fmt.Printf("Setting Sentry DSN\n")
 		raven.SetDSN(SENTRY_DSN)
-		raven.SetEnvironment("web")
+		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up web worker", nil)
 	}
@@ -159,6 +159,23 @@ func main() {
 	}
 
 
+	//currently, there is both the imageMonkeyDb and the db. 
+	//the reason for that is, that the database part initially started out really simple.
+	//as the database part now is pretty big its time to move it to an own library.
+	//until the migration is completed, we will have two database handles here.
+	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
+	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
+	if err != nil {
+		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+	}
+	defer imageMonkeyDatabase.Close()
+
+	if *useSentry {
+		imageMonkeyDatabase.InitializeSentry(SENTRY_DSN, sentryEnvironment)
+	}
+
+	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase)
+
 	//if file exists, start in maintenance mode
 	maintenanceMode := false
 	if _, err := os.Stat(*maintenanceModeFile); err == nil {
@@ -224,7 +241,7 @@ func main() {
 
 			isModerator := false
 			if sessionInformation.LoggedIn {
-				userInfo, _ := getUserInfo(sessionInformation.Username)
+				userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
 				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanRemoveLabel {
 					isModerator = true
 				}
@@ -505,7 +522,7 @@ func main() {
 		router.GET("/profile/:username", func(c *gin.Context) {
 			username := c.Param("username")
 
-			userInfo, _ := getUserInfo(username)
+			userInfo, _ := imageMonkeyDatabase.GetUserInfo(username)
 			if userInfo.Name == "" {
 				c.String(404, "404 page not found")
 				return
@@ -571,8 +588,8 @@ func main() {
 			})
 		})
 
-		router.GET("/moderator", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "moderator.html", gin.H{
+		router.GET("/moderation", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "moderation.html", gin.H{
 				"title": "Content Moderation",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,

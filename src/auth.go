@@ -6,11 +6,13 @@ import (
 	"errors"
 	log "github.com/Sirupsen/logrus"
 	"strings"
+	imagemonkeydb "./database"
 )
 
 type SessionInformation struct {
 	Username string
 	LoggedIn bool
+	IsModerator bool
 }
 
 type AccessTokenInfo struct {
@@ -113,12 +115,12 @@ type AuthTokenHandlerInterface interface {
 }
 
 type SessionCookieHandler struct {
-	//accessTokenStorage *AccessTokenStorage
+	db *imagemonkeydb.ImageMonkeyDatabase
 }
 
-func NewSessionCookieHandler() *SessionCookieHandler {
+func NewSessionCookieHandler(db *imagemonkeydb.ImageMonkeyDatabase) *SessionCookieHandler {
     return &SessionCookieHandler{
-    	//accessTokenStorage: NewAccessTokenStorage(),
+    	db: db,
     } 
 }
 
@@ -126,6 +128,7 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
 	var sessionInformation SessionInformation
 	sessionInformation.LoggedIn = false
 	sessionInformation.Username = ""
+	sessionInformation.IsModerator = false
 
 	cookie, err := c.Request.Cookie("imagemonkey")
 
@@ -135,6 +138,16 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
     		accessTokenInfo := _parseAccessToken(tokenString)
     		sessionInformation.LoggedIn = accessTokenInfo.Valid
     		sessionInformation.Username = accessTokenInfo.Username
+
+    		if sessionInformation.Username != "" {
+    			userInfo, err := p.db.GetUserInfo(sessionInformation.Username)
+    			if err != nil {
+    				sessionInformation.IsModerator = false
+    			} else {
+    				sessionInformation.IsModerator = userInfo.IsModerator
+    			}
+    		}
+
     	}
     }
 

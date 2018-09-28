@@ -973,7 +973,7 @@ func main(){
 			hasModeratorPermissions := false
 			if isModerationRequest(c) {
 				if apiUser.Name != "" {
-					userInfo, err := getUserInfo(apiUser.Name)
+					userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
 					if err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -1013,7 +1013,7 @@ func main(){
 			hasModeratorPermissions := false
 			if isModerationRequest(c) {
 				if apiUser.Name != "" {
-					userInfo, err := getUserInfo(apiUser.Name)
+					userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
 					if err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -1153,7 +1153,7 @@ func main(){
 			moderatorAction := false
 			if isModerationRequest(c) {
 				if apiUser.Name != "" {
-					userInfo, err := getUserInfo(apiUser.Name)
+					userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
 					if err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -1262,7 +1262,7 @@ func main(){
 			hasModeratorPermissions := false
 			if isModerationRequest(c) {
 				if apiUser.Name != "" {
-					userInfo, err := getUserInfo(apiUser.Name)
+					userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
 					if err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -2445,7 +2445,7 @@ func main(){
 				return
 			}
 
-			userInfo, err := getUserInfo(username)
+			userInfo, err := imageMonkeyDatabase.GetUserInfo(username)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

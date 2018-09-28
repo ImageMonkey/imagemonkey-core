@@ -2628,40 +2628,6 @@ func userExists(username string) (bool, error) {
     return false, nil
 }
 
-func getUserInfo(username string) (datastructures.UserInfo, error) {
-    var userInfo datastructures.UserInfo
-    var removeLabelPermission bool
-    var unlockImageDescriptionPermission bool
-    removeLabelPermission = false
-    unlockImageDescriptionPermission = false
-
-    userInfo.Name = ""
-    userInfo.Created = 0
-    userInfo.ProfilePicture = ""
-    userInfo.IsModerator = false
-
-    err := db.QueryRow(`SELECT a.name, COALESCE(a.profile_picture, ''), a.created, a.is_moderator,
-                        COALESCE(p.can_remove_label, false) as remove_label_permission,
-                        COALESCE(p.can_unlock_image_description, false) as unlock_image_description
-                        FROM account a 
-                        LEFT JOIN account_permission p ON p.account_id = a.id 
-                        WHERE a.name = $1`, username).Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created, 
-                                                            &userInfo.IsModerator, &removeLabelPermission, &unlockImageDescriptionPermission)
-    if err != nil {
-        log.Debug("[User Info] Couldn't get user info: ", err.Error())
-        raven.CaptureError(err, nil)
-        return userInfo, err
-    }
-
-    if userInfo.IsModerator {
-        permissions := &datastructures.UserPermissions {CanRemoveLabel: removeLabelPermission, 
-                                                        CanUnlockImageDescription: unlockImageDescriptionPermission}
-        userInfo.Permissions = permissions
-    }
-
-    return userInfo, nil
-}
-
 func emailExists(email string) (bool, error) {
     var numOfExistingUsers int32
     err := db.QueryRow("SELECT count(*) FROM account u WHERE u.email = $1", email).Scan(&numOfExistingUsers)
