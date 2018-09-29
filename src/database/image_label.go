@@ -129,7 +129,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     FROM image_description dsc
                                     JOIN image i ON i.id = dsc.image_id
                                     WHERE dsc.state != 'locked' --only show non locked image descriptions
-                                    GROUP BY i.id, dsc.id
+                                    GROUP BY i.id
                                 ) q2 ON q2.image_id = q1.image_id
                                 `, q1)
 

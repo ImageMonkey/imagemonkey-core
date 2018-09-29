@@ -570,7 +570,7 @@
     var escapedImageDescription = escapeHtml(imageDescription);
 
     if(!(escapedImageDescription in newlyAddedImageDescriptions) && !(escapedImageDescription in oldImageDescriptions)) {
-      $('#imageDescriptions').prepend($(('<div class="ui huge ' + 'red' + ' label">' +  
+      $('#imageDescriptions').prepend($(('<div class="ui huge basic ' + 'red' + ' label">' +  
                                             escapedImageDescription + 
                                             '<i class="delete icon" onclick="removeImageDescription(this)"></i></div>')));
       newlyAddedImageDescriptions[escapedImageDescription] = true;
@@ -851,8 +851,15 @@
 
   var settings = new Settings();
   Mousetrap.bind(settings.getAddLabelHotkey(), function(e, combo) { 
+    {{ if eq .type "object" }}
     $('#labelSuggestion').autocomplete('close'); //close autocomplete dropdown
     onAddLabelSuggestion();
+    {{ end }}
+
+    {{ if eq .type "image" }}
+    $("#addImageDescriptionButton").trigger("click");
+    {{ end }}
+
   });
 
   Mousetrap.bind("alt+a", function(e, combo) { 
