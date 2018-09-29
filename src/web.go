@@ -575,12 +575,19 @@ func main() {
 		})
 
 		router.GET("/moderation", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			if !sessionInformation.IsModerator {
+				ShowErrorPage(c)
+				return
+			} 
+
 			c.HTML(http.StatusOK, "moderation.html", gin.H{
 				"title": "Content Moderation",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
 				//"activeMenuNr": 14,
-				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"sessionInformation": sessionInformation,
 			})
 		})
 
