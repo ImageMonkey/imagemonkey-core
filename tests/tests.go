@@ -14,7 +14,7 @@ func init() {
 	db = NewImageMonkeyDatabase()
 	err := db.Initialize()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[Main] Couldn't initialize database: ", err.Error())
 		panic(err)
 	}
 

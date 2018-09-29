@@ -4,14 +4,12 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"flag"
-	"database/sql"
 	"github.com/garyburd/redigo/redis"
 	"time"
 	"encoding/json"
 	"./datastructures"
+	imagemonkeydb "./database"
 )
-
-var db *sql.DB
 
 func main(){
 	fmt.Printf("Starting Statistics Worker...\n")
@@ -25,16 +23,12 @@ func main(){
 
 	var err error
 
-	//open database and make sure that we can ping it
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
+	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
-		log.Fatal("[Main] Couldn't open database: ", err.Error())
+		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
-
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("[Main] Couldn't ping database: ", err.Error())
-	}
+	defer imageMonkeyDatabase.Close()
 
 	//create redis pool
 	redisPool := redis.NewPool(func() (redis.Conn, error) {
@@ -63,8 +57,8 @@ func main(){
 	    		log.Debug("[Main] Couldn't unmarshal contributions_per_country request: ", err.Error())
 	    		
 	    	} else {
-		    	err = updateContributionsPerCountry(contributionsPerCountryRequest.Type, 
-		    									 	contributionsPerCountryRequest.CountryCode)
+		    	err = imageMonkeyDatabase.UpdateContributionsPerCountry(contributionsPerCountryRequest.Type, 
+		    									 						contributionsPerCountryRequest.CountryCode)
 		    	if err != nil {
 		    		retryImmediately = false
 		    	}
@@ -81,8 +75,8 @@ func main(){
 	    		log.Debug("[Main] Couldn't unmarshal contributions_per_app request: ", err.Error())
 	    		
 	    	} else {
-		    	err = updateContributionsPerApp(contributionsPerAppRequest.Type, 
-		    									 	contributionsPerAppRequest.AppIdentifier)
+		    	err = imageMonkeyDatabase.UpdateContributionsPerApp(contributionsPerAppRequest.Type, 
+		    									 					contributionsPerAppRequest.AppIdentifier)
 		    	if err != nil {
 		    		retryImmediately = false
 		    	}

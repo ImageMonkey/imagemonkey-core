@@ -1,1 +1,1 @@
-go build -o api.exe api.go api_secrets.go common.go imagedb.go parser.go auth.go label_graph.go && api.exe
+go build -o api.exe api.go api_secrets.go auth.go label_graph.go && api.exe

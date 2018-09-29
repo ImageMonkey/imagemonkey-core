@@ -7,7 +7,10 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 	"context"
-	"./datastructures"
+	datastructures "./datastructures"
+	commons "./commons"
+	imagemonkeydb "./database"
+
 )
 
 var db *sql.DB
@@ -157,13 +160,13 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
 
     for _, elem := range results {
     	if elem.Annotatable {
-			_, err = _addLabelsToImage("", elem.ImageId, labels, 0, 0, tx)  
+			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 0, tx)  
 			if err != nil {
 				return err
 			} 	
 		} else {
 			//if label is not annotatable, set num_of_not_annotatable to 10
-			_, err = _addLabelsToImage("", elem.ImageId, labels, 0, 10, tx)
+			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 10, tx)
 			if err != nil {
 				return err
 			}
@@ -183,7 +186,7 @@ func makeLabelMeEntry(name string, annotatable bool, sublabels []datastructures.
 }
 
 func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, label datastructures.LabelMeEntry) bool {
-	return isLabelValid(labelMap, label.Label, label.Sublabels)
+	return commons.IsLabelValid(labelMap, label.Label, label.Sublabels)
 }
 
 
@@ -204,7 +207,7 @@ func main() {
 	}
 
 
-	labelMap, _, err := getLabelMap(*wordlistPath)
+	labelMap, _, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		log.Error("[Main] Couldn't read label map...terminating!")
 		return

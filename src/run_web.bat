@@ -1,1 +1,1 @@
-go build -o web.exe web.go web_secrets.go common.go imagedb.go parser.go auth.go && web.exe
+go build -o web.exe web.go web_secrets.go auth.go && web.exe

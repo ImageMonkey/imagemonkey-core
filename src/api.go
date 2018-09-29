@@ -8,7 +8,6 @@ import (
 	"gopkg.in/h2non/filetype.v1"
 	log "github.com/Sirupsen/logrus"
 	"flag"
-	"database/sql"
 	"os"
 	"strconv"
 	"github.com/oschwald/geoip2-golang"
@@ -30,13 +29,13 @@ import (
     "golang.org/x/crypto/bcrypt"
     "time"
     "github.com/getsentry/raven-go"
-    "./datastructures"
-    "./commons"
+    datastructures "./datastructures"
     imagemonkeydb "./database"
+    commons "./commons"
+    parser "./parser"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
-var db *sql.DB
 var geoipDb *geoip2.Reader
 
 func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
@@ -312,8 +311,9 @@ func getUsernameFromContext(c *gin.Context, authTokenHandler *AuthTokenHandler) 
 	return username, nil
 }
 
-func donate(c *gin.Context, username string, imageSource datastructures.ImageSource, labelMap map[string]datastructures.LabelMapEntry, dir string, 
-				redisPool *redis.Pool, statisticsPusher *StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
+func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username string, imageSource datastructures.ImageSource, 
+			labelMap map[string]datastructures.LabelMapEntry, dir string, redisPool *redis.Pool, statisticsPusher *commons.StatisticsPusher, 
+			geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
 
 	file, header, err := c.Request.FormFile("image")
@@ -343,12 +343,12 @@ func donate(c *gin.Context, username string, imageSource datastructures.ImageSou
     }
 
     //check if image already exists by using an image hash
-    imageInfo, err := getImageInfo(file)
+    imageInfo, err := commons.GetImageInfo(file)
     if err != nil {
         c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         return
     }
-    exists, err := imageExists(imageInfo.Hash)
+    exists, err := db.ImageExists(imageInfo.Hash)
     if err != nil {
         c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
         return 
@@ -359,7 +359,7 @@ func donate(c *gin.Context, username string, imageSource datastructures.ImageSou
     }
 
     if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        if !isLabelValid(labelMap, label, []datastructures.Sublabel{}) {
+        if !commons.IsLabelValid(labelMap, label, []datastructures.Sublabel{}) {
         	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
         	return
         }
@@ -403,7 +403,7 @@ func donate(c *gin.Context, username string, imageSource datastructures.ImageSou
 	imageInfo.Source = imageSource
 	imageInfo.Name = uuid
 
-	err = addDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
+	err = db.AddDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 		return
@@ -413,7 +413,7 @@ func donate(c *gin.Context, username string, imageSource datastructures.ImageSou
 	var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 	contributionsPerCountryRequest.Type = "donation"
 	contributionsPerCountryRequest.CountryCode = "--"
-	ip := net.ParseIP(getIPAddress(c.Request))
+	ip := net.ParseIP(commons.GetIPAddress(c.Request))
 	if ip != nil {
 		record, err := geodb.Country(ip)
 		if err != nil { //just log, but don't abort...it's just for statistics
@@ -485,7 +485,7 @@ func main(){
 	}
 
 	log.Debug("[Main] Reading Label Map")
-	labelMap, words, err := getLabelMap(*wordlistPath)
+	labelMap, words, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
@@ -494,17 +494,6 @@ func main(){
 	//if the mostPopularLabels gets extended with sublabels, 
 	//adapt getRandomGroupedImages() and validateImages() also!
 	mostPopularLabels := []string{"cat", "dog"}
-
-	//open database and make sure that we can ping it
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-	if err != nil {
-		log.Fatal("[Main] Couldn't open database: ", err.Error())
-	}
-
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("[Main] Couldn't ping database: ", err.Error())
-	}
 
 	//currently, there is both the imageMonkeyDb and the db. 
 	//the reason for that is, that the database part initially started out really simple.
@@ -547,14 +536,14 @@ func main(){
 	}, *redisMaxConnections)
 	defer redisPool.Close()
 
-	statisticsPusher := NewStatisticsPusher(redisPool)
+	statisticsPusher := commons.NewStatisticsPusher(redisPool)
 	err = statisticsPusher.Load()
 	if err != nil {
 		log.Fatal("[Main] Couldn't load statistics pusher: ", err.Error())
 	}
 
-	sampleExportQueries := GetSampleExportQueries()
-	authTokenHandler := NewAuthTokenHandler()
+	sampleExportQueries := commons.GetSampleExportQueries()
+	authTokenHandler := NewAuthTokenHandler(imageMonkeyDatabase)
 
 	//if file exists, start in maintenance mode
 	maintenanceMode := false
@@ -603,7 +592,7 @@ func main(){
 				return
 			} 
 
-			unlocked, err := isImageUnlocked(imageId) 
+			unlocked, err := imageMonkeyDatabase.IsImageUnlocked(imageId) 
 			if err != nil {
 				c.String(500, "Couldn't process request, please try again later")
 				return
@@ -665,7 +654,7 @@ func main(){
 				return
 			} 
 
-			unlocked, err := isOwnDonation(imageId, apiUser.Name) 
+			unlocked, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
 			if err != nil {
 				c.String(500, "Couldn't process request, please try again later")
 				return
@@ -705,15 +694,14 @@ func main(){
 			clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
 			clientAuth.GET("/v1/internal/unverified-donations", func(c *gin.Context) {
 
-				imageProvider := getParamFromUrlParams(c, "image_provider", "")
-				shuffle := getParamFromUrlParams(c, "shuffle", "")
+				imageProvider := commons.GetParamFromUrlParams(c, "image_provider", "")
+				shuffle := commons.GetParamFromUrlParams(c, "shuffle", "")
 				orderRandomly := false
 				if shuffle == "true" {
 					orderRandomly = true
 				}
 
-				images, err := getAllUnverifiedImages(imageProvider, orderRandomly)
-				use(images)
+				images, err := imageMonkeyDatabase.GetAllUnverifiedImages(imageProvider, orderRandomly)
 				if err != nil {
 					c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"}) 
 				} else {
@@ -745,7 +733,7 @@ func main(){
 
 				//we trust images from the labelme database, so we automatically save them
 				//into the donations folder and unlock them per default.
-				donate(c, "", imageSource, labelMap, dir, redisPool, statisticsPusher, geoipDb, autoUnlock)
+				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, dir, redisPool, statisticsPusher, geoipDb, autoUnlock)
 			})
 
 			clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {
@@ -772,7 +760,7 @@ func main(){
 				apiUser.ClientFingerprint = ""
 				apiUser.Name = ""
 
-				_, err = addAnnotations(apiUser, imageId, annotations, true)
+				_, err = imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, true)
 				if(err != nil){
 					c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 					return
@@ -795,7 +783,7 @@ func main(){
 
 				labels := strings.Split(labelsStr, ",")
 
-				images, err := getImagesForAutoAnnotation(labels)
+				images, err := imageMonkeyDatabase.GetImagesForAutoAnnotation(labels)
 				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't get images - please try again later"})
 					return
@@ -828,7 +816,7 @@ func main(){
 						return
 					}
 
-					err = unlockImage(imageId)
+					err = imageMonkeyDatabase.UnlockImage(imageId)
 					if err != nil {
 						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -836,7 +824,7 @@ func main(){
 				} else if param == "bad" { //not handled at the moment, add later if needed
 
 				} else if param == "delete" {
-					err = deleteImage(imageId)
+					err = imageMonkeyDatabase.DeleteImage(imageId)
 					if err != nil {
 						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -860,7 +848,7 @@ func main(){
 						return
 					}
 
-					err = putImageInQuarantine(imageId)
+					err = imageMonkeyDatabase.PutImageInQuarantine(imageId)
 					if err != nil {
 						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 						return
@@ -906,11 +894,11 @@ func main(){
 			if grouped {
 				pos := 0
 				if len(mostPopularLabels) > 0 {
-					pos = random(0, (len(mostPopularLabels) - 1))
+					pos = commons.Random(0, (len(mostPopularLabels) - 1))
 				}
 					
 
-				randomGroupedImages, err := getRandomGroupedImages(mostPopularLabels[pos], limit)
+				randomGroupedImages, err := imageMonkeyDatabase.GetRandomGroupedImages(mostPopularLabels[pos], limit)
 				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
@@ -918,13 +906,13 @@ func main(){
 				c.JSON(http.StatusOK, gin.H{"label": mostPopularLabels[pos], "donations": randomGroupedImages})
 
 			} else {
-				labelId, err := getLabelIdFromUrlParams(params) 
+				labelId, err := commons.GetLabelIdFromUrlParams(params) 
 				if err != nil {
 					c.JSON(422, gin.H{"error": "label id needs to be an integer"})
 					return
 				}
 
-				image, err := getImageToValidate(imageId, labelId, apiUser.Name)
+				image, err := imageMonkeyDatabase.GetImageToValidate(imageId, labelId, apiUser.Name)
 				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
@@ -938,7 +926,7 @@ func main(){
 				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, 
 															 "provider": image.Provider, 
 															 "unlocked": image.Unlocked, 
-															 "url": getImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked),
+															 "url": commons.GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked),
 														   }, 
 											"label": image.Label, "sublabel": image.Sublabel, "num_yes": image.Validation.NumOfValid, 
 											"num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
@@ -1060,7 +1048,7 @@ func main(){
 				return
 			} 
 			
-			err := addLabelsToImage(apiUser, labelMap, imageId, labels)
+			err := imageMonkeyDatabase.AddLabelsToImage(apiUser, labelMap, imageId, labels)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1087,7 +1075,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			ids, err := getUnannotatedValidations(apiUser, imageId)
+			ids, err := imageMonkeyDatabase.GetUnannotatedValidations(apiUser, imageId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1102,7 +1090,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			annotatedImages, err := getAnnotations(apiUser, ParseResult{}, imageId, *apiBaseUrl)
+			annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parser.ParseResult{}, imageId, *apiBaseUrl)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1119,7 +1107,7 @@ func main(){
 		router.GET("/v1/donation/:imageid/annotations/coverage", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			imageCoverages, err := getAnnotationCoverage(imageId)
+			imageCoverages, err := imageMonkeyDatabase.GetAnnotationCoverage(imageId)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1165,7 +1153,7 @@ func main(){
 				}
 			}
 
-			err := validateImages(apiUser, imageValidationBatch, moderatorAction)
+			err := imageMonkeyDatabase.ValidateImages(apiUser, imageValidationBatch, moderatorAction)
 			if(err != nil){
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1175,7 +1163,7 @@ func main(){
 			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "validation"
 			contributionsPerCountryRequest.CountryCode = "--"
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -1196,7 +1184,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			imageId := getParamFromUrlParams(c, "image_id", "")
+			imageId := commons.GetParamFromUrlParams(c, "image_id", "")
 
 			image, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name)
 			if err != nil {
@@ -1207,7 +1195,7 @@ func main(){
 			if image.Id == "" {
 				c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
 			} else {
-				imageUrl := getImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked)
+				imageUrl := commons.GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked)
 
 				c.JSON(http.StatusOK, gin.H{"image": gin.H{"uuid": image.Id, "provider": image.Provider, 
 															"url": imageUrl, "unlocked": image.Unlocked,
@@ -1229,7 +1217,7 @@ func main(){
 				return
 			}
 
-			err = batchAnnotationRefinement(annotationRefinements, apiUser)
+			err = imageMonkeyDatabase.BatchAnnotationRefinement(annotationRefinements, apiUser)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1239,7 +1227,7 @@ func main(){
 			//get client IP address and try to determine country
 			contributionsPerCountryRequest := datastructures.ContributionsPerCountryRequest{Type: "annotation-refinement", 
 																							CountryCode: "--"}
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -1295,10 +1283,10 @@ func main(){
 		})
 
 		router.GET("/v1/donations/labels", func(c *gin.Context) {
-			query := getParamFromUrlParams(c, "query", "")
+			query := commons.GetParamFromUrlParams(c, "query", "")
 
 			orderRandomly := false
-			shuffle := getParamFromUrlParams(c, "shuffle", "")
+			shuffle := commons.GetParamFromUrlParams(c, "shuffle", "")
 		    if shuffle == "true" {
 		    	orderRandomly = true
 		    }
@@ -1318,7 +1306,7 @@ func main(){
 				return
 		    }
 
-			queryParser := NewQueryParserV2(query)
+			queryParser := parser.NewQueryParserV2(query)
 			queryParser.AllowStaticQueryAttributes(true)
 	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
@@ -1326,7 +1314,7 @@ func main(){
 	            return
 	        }
 
-			imageInfos, err := getImagesLabels(apiUser, parseResult, *apiBaseUrl, orderRandomly)
+			imageInfos, err := imageMonkeyDatabase.GetImagesLabels(apiUser, parseResult, *apiBaseUrl, orderRandomly)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1349,7 +1337,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err := validateImages(apiUser, imageValidationBatch, false)
+			err := imageMonkeyDatabase.ValidateImages(apiUser, imageValidationBatch, false)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1359,7 +1347,7 @@ func main(){
 			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "validation"
 			contributionsPerCountryRequest.CountryCode = "--"
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -1376,20 +1364,20 @@ func main(){
 		})
 
 		router.GET("/v1/export", func(c *gin.Context) {
-			query, annotationsOnly, err := getExploreUrlParams(c)
+			query, annotationsOnly, err := commons.GetExploreUrlParams(c)
 			if err != nil {
 				c.JSON(422, gin.H{"error": err.Error()})
 				return
 			}
 
-			queryParser := NewQueryParser(query)
+			queryParser := parser.NewQueryParser(query)
 	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
 	        }
 
-	        jsonData, err := export(parseResult, annotationsOnly)
+	        jsonData, err := imageMonkeyDatabase.Export(parseResult, annotationsOnly)
 	        if err == nil {
 	            c.JSON(http.StatusOK, jsonData)
 	            return
@@ -1401,7 +1389,7 @@ func main(){
 
 
 		router.GET("/v1/export/sample", func(c *gin.Context) {
-			q := sampleExportQueries[random(0, len(sampleExportQueries) - 1)]
+			q := sampleExportQueries[commons.Random(0, len(sampleExportQueries) - 1)]
 			c.JSON(http.StatusOK, q)
 		})
 
@@ -1433,7 +1421,7 @@ func main(){
 
 
 		router.GET("/v1/label/random", func(c *gin.Context) {
-			label := words[random(0, len(words) - 1)]
+			label := words[commons.Random(0, len(words) - 1)]
 			c.JSON(http.StatusOK, gin.H{"label": label})
 		})
 
@@ -1451,7 +1439,7 @@ func main(){
 			}
 
 			escapedLabel := html.EscapeString(suggestedLabel.Name)
-			err = addLabelSuggestion(escapedLabel)
+			err = imageMonkeyDatabase.AddLabelSuggestion(escapedLabel)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1478,7 +1466,7 @@ func main(){
 		})*/
 
 		router.GET("/v1/label/popular", func(c *gin.Context) {
-			popularLabels, err := getMostPopularLabels(10) //limit to 10
+			popularLabels, err := imageMonkeyDatabase.GetMostPopularLabels(10) //limit to 10
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1613,7 +1601,7 @@ func main(){
 			}
 
 
-			donate(c, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
+			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 		})
 
 		router.POST("/v1/report/:imageid", func(c *gin.Context) {
@@ -1628,7 +1616,7 @@ func main(){
 			s := "Someone reported a violation (uuid: " + imageId + ", reason: " + report.Reason + ")" 
 			raven.CaptureMessage(s, nil)
 
-			err := reportImage(imageId, report.Reason)
+			err := imageMonkeyDatabase.ReportImage(imageId, report.Reason)
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't report image - please try again later"})
 				return
@@ -1637,7 +1625,7 @@ func main(){
 		})
 
 		router.GET("/v1/validations/unannotated", func(c *gin.Context) {
-			query := getParamFromUrlParams(c, "query", "")
+			query := commons.GetParamFromUrlParams(c, "query", "")
 			if query != "" {
 				query, err = url.QueryUnescape(query)
 		        if err != nil {
@@ -1645,7 +1633,7 @@ func main(){
 					return
 		        }
 
-		        queryParser := NewQueryParserV2(query)
+		        queryParser := parser.NewQueryParserV2(query)
 		        queryParser.AllowStaticQueryAttributes(true)
 		        parseResult, err := queryParser.Parse(1)
 		        if err != nil {
@@ -1654,7 +1642,7 @@ func main(){
 		        }
 
 		        orderRandomly := false
-		        shuffle := getParamFromUrlParams(c, "shuffle", "")
+		        shuffle := commons.GetParamFromUrlParams(c, "shuffle", "")
 		        if shuffle == "true" {
 		        	orderRandomly = true
 		        }
@@ -1663,12 +1651,12 @@ func main(){
 				apiUser.ClientFingerprint = getBrowserFingerprint(c)
 				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-				if len(parseResult.queryValues) == 0 {
+				if len(parseResult.QueryValues) == 0 {
 					c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid query!"})
 					return	
 				}
 
-		        annotationTasks, err := getAvailableAnnotationTasks(apiUser, parseResult, orderRandomly, *apiBaseUrl)
+		        annotationTasks, err := imageMonkeyDatabase.GetAvailableAnnotationTasks(apiUser, parseResult, orderRandomly, *apiBaseUrl)
 		        if err != nil {
 		        	c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 					return
@@ -1693,7 +1681,7 @@ func main(){
 				return
 			}
 
-			err := blacklistForAnnotation(validationId, apiUser)
+			err := imageMonkeyDatabase.BlacklistForAnnotation(validationId, apiUser)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't blacklist annotation - please try again later"})
 				return
@@ -1705,7 +1693,7 @@ func main(){
 		router.POST("/v1/validation/:validationid/not-annotatable", func(c *gin.Context) {
 			validationId := c.Param("validationid")
 
-			err := markValidationAsNotAnnotatable(validationId)
+			err := imageMonkeyDatabase.MarkValidationAsNotAnnotatable(validationId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't mark validation as not-annotatable - please try again later"})
 				return
@@ -1734,7 +1722,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err = updateAnnotation(apiUser, annotationId, annotations)
+			err = imageMonkeyDatabase.UpdateAnnotation(apiUser, annotationId, annotations)
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't update annotation - please try again later"})
 				return
@@ -1745,7 +1733,7 @@ func main(){
 			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "annotation"
 			contributionsPerCountryRequest.CountryCode = "--"
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -1790,7 +1778,7 @@ func main(){
 
 			browserFingerprint := getBrowserFingerprint(c)
 
-			err := validateAnnotatedImage(browserFingerprint, annotationId, labelValidationEntry, parameter)
+			err := imageMonkeyDatabase.ValidateAnnotatedImage(browserFingerprint, annotationId, labelValidationEntry, parameter)
 			if(err != nil){
 				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Database Error: Couldn't update data"})
 				return
@@ -1800,7 +1788,7 @@ func main(){
 			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "validation"
 			contributionsPerCountryRequest.CountryCode = "--"
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -1841,7 +1829,7 @@ func main(){
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
 
-			annotationId, err := addAnnotations(apiUser, imageId, annotations, false)
+			annotationId, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, false)
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 				return
@@ -1852,7 +1840,7 @@ func main(){
 			var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 			contributionsPerCountryRequest.Type = "annotation"
 			contributionsPerCountryRequest.CountryCode = "--"
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -1886,15 +1874,15 @@ func main(){
 				}
 			}
 
-			labelId, err := getLabelIdFromUrlParams(params) 
+			labelId, err := commons.GetLabelIdFromUrlParams(params) 
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
 				return
 			}
 
-			validationId := getValidationIdFromUrlParams(params)
+			validationId := commons.GetValidationIdFromUrlParams(params)
 
-			img, err := getImageForAnnotation(apiUser.Name, addAutoAnnotations, validationId, labelId)
+			img, err := imageMonkeyDatabase.GetImageForAnnotation(apiUser.Name, addAutoAnnotations, validationId, labelId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1905,7 +1893,7 @@ func main(){
 				return
 			}
 
-			img.Url = getImageUrlFromImageId(*apiBaseUrl, img.Id, img.Unlocked)
+			img.Url = commons.GetImageUrlFromImageId(*apiBaseUrl, img.Id, img.Unlocked)
 			
 			c.JSON(http.StatusOK, img)
 		})
@@ -1915,7 +1903,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			query := getParamFromUrlParams(c, "query", "")
+			query := commons.GetParamFromUrlParams(c, "query", "")
 			query, err = url.QueryUnescape(query)
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": "Please provide a valid query"})
@@ -1927,7 +1915,7 @@ func main(){
 		    	return
 		    }
 
-			queryParser := NewQueryParser(query)
+			queryParser := parser.NewQueryParser(query)
 			queryParser.AllowStaticQueryAttributes(true)
 	        parseResult, err := queryParser.Parse(1)
 	        if err != nil {
@@ -1935,7 +1923,7 @@ func main(){
 	            return
 	        }
 
-			annotatedImages, err := getAnnotations(apiUser, parseResult, "", *apiBaseUrl)
+			annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parseResult, "", *apiBaseUrl)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1961,16 +1949,16 @@ func main(){
 				}
 			}
 
-			annotationId := getParamFromUrlParams(c, "annotation_id", "")
+			annotationId := commons.GetParamFromUrlParams(c, "annotation_id", "")
 
-			rev := getParamFromUrlParams(c, "rev", "-1")
+			rev := commons.GetParamFromUrlParams(c, "rev", "-1")
 			revision, err := strconv.ParseInt(rev, 10, 32)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "Invalid request - please provide a valid revision"})
 				return
 			}
 
-			annotatedImage, err := getAnnotatedImage(apiUser, annotationId, autoGenerated, int32(revision))
+			annotatedImage, err := imageMonkeyDatabase.GetAnnotatedImage(apiUser, annotationId, autoGenerated, int32(revision))
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1981,14 +1969,14 @@ func main(){
 				return
 			}
 
-			annotatedImage.Image.Url = getImageUrlFromImageId(*apiBaseUrl, annotatedImage.Image.Id, annotatedImage.Image.Unlocked)
+			annotatedImage.Image.Url = commons.GetImageUrlFromImageId(*apiBaseUrl, annotatedImage.Image.Id, annotatedImage.Image.Unlocked)
 
 
 			c.JSON(http.StatusOK, annotatedImage)
 		})
 
 		router.GET("/v1/quiz-refine", func(c *gin.Context) {
-			randomImage, err := getRandomAnnotationForQuizRefinement()
+			randomImage, err := imageMonkeyDatabase.GetRandomAnnotationForQuizRefinement()
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2003,10 +1991,10 @@ func main(){
 		})
 
 		router.GET("/v1/refine", func(c *gin.Context) {
-			annotationDataId := getParamFromUrlParams(c, "annotation_data_id", "")
+			annotationDataId := commons.GetParamFromUrlParams(c, "annotation_data_id", "")
 
-			var parseResult ParseResult
-			query := getParamFromUrlParams(c, "query", "")
+			var parseResult parser.ParseResult
+			query := commons.GetParamFromUrlParams(c, "query", "")
 			if query != "" {
 				query, err = url.QueryUnescape(query)
 		        if err != nil {
@@ -2014,7 +2002,7 @@ func main(){
 		            return
 		        }
 
-				queryParser := NewQueryParserV2(query)
+				queryParser := parser.NewQueryParserV2(query)
 		        parseResult, err = queryParser.Parse(1)
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
@@ -2027,7 +2015,7 @@ func main(){
 		    	return
 		    }
 		    
-			annotations, err := getAnnotationsForRefinement(parseResult, *apiBaseUrl, annotationDataId)
+			annotations, err := imageMonkeyDatabase.GetAnnotationsForRefinement(parseResult, *apiBaseUrl, annotationDataId)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2069,7 +2057,7 @@ func main(){
 
 			browserFingerprint := getBrowserFingerprint(c)
 
-			err := addOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
+			err := imageMonkeyDatabase.AddOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
 				return
@@ -2078,7 +2066,7 @@ func main(){
 			//get client IP address and try to determine country
 			contributionsPerCountryRequest := datastructures.ContributionsPerCountryRequest{Type: "annotation-refinement", 
 																							CountryCode: "--"}
-			ip := net.ParseIP(getIPAddress(c.Request))
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
 			if ip != nil {
 				record, err := geoipDb.Country(ip)
 				if err != nil { //just log, but don't abort...it's just for statistics
@@ -2144,7 +2132,7 @@ func main(){
 	        }
 			pair := strings.SplitN(string(payload), ":", 2)
 
-			userExists, err := userExists(pair[0])
+			userExists, err := imageMonkeyDatabase.UserExists(pair[0])
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2156,7 +2144,7 @@ func main(){
 			}
 
 
-			hashedPassword, err := getHashedPasswordForUser(pair[0])
+			hashedPassword, err := imageMonkeyDatabase.GetHashedPasswordForUser(pair[0])
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2184,7 +2172,7 @@ func main(){
 	            	return
 				}
 
-				err = addAccessToken(pair[0], tokenString, expirationTime.Unix())
+				err = imageMonkeyDatabase.AddAccessToken(pair[0], tokenString, expirationTime.Unix())
 				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            	return
@@ -2200,7 +2188,7 @@ func main(){
 
 		router.POST("/v1/logout", func(c *gin.Context) {
 			accessTokenInfo := authTokenHandler.GetAccessTokenInfo(c)
-			err := removeAccessToken(accessTokenInfo.Token)
+			err := imageMonkeyDatabase.RemoveAccessToken(accessTokenInfo.Token)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2222,12 +2210,12 @@ func main(){
 	            return
 			}
 
-			if(!isAlphaNumeric(userSignupRequest.Username)){
+			if(!commons.IsAlphaNumeric(userSignupRequest.Username)){
 				c.JSON(422, gin.H{"error": "Username contains invalid characters"})
 	            return
 			}
 
-			userExists, err := userExists(userSignupRequest.Username)
+			userExists, err := imageMonkeyDatabase.UserExists(userSignupRequest.Username)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2238,7 +2226,7 @@ func main(){
 	            return
 			}
 
-			emailExists, err := emailExists(userSignupRequest.Email)
+			emailExists, err := imageMonkeyDatabase.EmailExists(userSignupRequest.Email)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2255,7 +2243,7 @@ func main(){
 	            return
 			}
 
-			err = createUser(userSignupRequest.Username, hashedPassword, userSignupRequest.Email)
+			err = imageMonkeyDatabase.CreateUser(userSignupRequest.Username, hashedPassword, userSignupRequest.Email)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2271,7 +2259,7 @@ func main(){
 				return
 			}
 
-			userExists, err := userExists(username) 
+			userExists, err := imageMonkeyDatabase.UserExists(username) 
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2282,7 +2270,7 @@ func main(){
 				return
 			}
 
-			userStatistics, err := getUserStatistics(username)
+			userStatistics, err := imageMonkeyDatabase.GetUserStatistics(username)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            return
@@ -2357,7 +2345,7 @@ func main(){
 				return
 			}
 
-			oldProfilePicture, err := changeProfilePicture(username, uuid)
+			oldProfilePicture, err := imageMonkeyDatabase.ChangeProfilePicture(username, uuid)
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't set profile picture - please try again later"})	
 				return
@@ -2398,7 +2386,7 @@ func main(){
 				return
 			}
 
-			apiToken, err := generateApiToken(username, apiTokenRequest.Description)
+			apiToken, err := imageMonkeyDatabase.GenerateApiToken(JWT_SECRET, username, apiTokenRequest.Description)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't generate API token - please try again later"})	
 				return
@@ -2423,7 +2411,7 @@ func main(){
 				return
 			}
 
-			revoked, err := revokeApiToken(username, token)
+			revoked, err := imageMonkeyDatabase.RevokeApiToken(username, token)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't revoke API token - please try again later"})	
 				return
@@ -2501,7 +2489,7 @@ func main(){
 
 		router.GET("/v1/statistics/annotations", func(c *gin.Context) {
 			//currently only last-month is allowed as period
-			statistics, err := getAnnotationStatistics("last-month")
+			statistics, err := imageMonkeyDatabase.GetAnnotationStatistics("last-month")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2511,7 +2499,7 @@ func main(){
 
 		router.GET("/v1/statistics/annotations/refinements", func(c *gin.Context) {
 			//currently only last-month is allowed as period
-			statistics, err := getAnnotationRefinementStatistics("last-month")
+			statistics, err := imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2521,7 +2509,7 @@ func main(){
 
 		router.GET("/v1/statistics/validations", func(c *gin.Context) {
 			//currently only last-month is allowed as period
-			statistics, err := getValidationStatistics("last-month")
+			statistics, err := imageMonkeyDatabase.GetValidationStatistics("last-month")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2534,7 +2522,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			annotatedStatistics, err := getAnnotatedStatistics(apiUser)
+			annotatedStatistics, err := imageMonkeyDatabase.GetAnnotatedStatistics(apiUser)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2565,7 +2553,7 @@ func main(){
 
 		router.GET("/v1/activity", func(c *gin.Context) {
 			//currently only last-month is allowed as period
-			activity, err := getActivity("last-month")
+			activity, err := imageMonkeyDatabase.GetActivity("last-month")
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

@@ -1,1 +1,1 @@
-go build -o trendinglabelsworker.exe trendinglabelsworker.go shared_secrets.go common.go api_secrets.go && trendinglabelsworker.exe
+go build -o trendinglabelsworker.exe trendinglabelsworker.go shared_secrets.go api_secrets.go && trendinglabelsworker.exe

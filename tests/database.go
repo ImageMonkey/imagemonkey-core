@@ -77,7 +77,7 @@ func installTriggers() error {
 
 func populateLabels() error {
 	var out, stderr bytes.Buffer
-	cmd := exec.Command("go", "run", "populate_labels.go", "common.go", "api_secrets.go", "--dryrun=false")
+	cmd := exec.Command("go", "run", "populate_labels.go", "api_secrets.go", "--dryrun=false")
 	cmd.Dir = "../src/"
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
@@ -232,7 +232,7 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {
