@@ -1,4 +1,4 @@
-package main
+package parser
 
 import(
 	"unicode"
@@ -7,7 +7,7 @@ import(
     "github.com/satori/go.uuid"
 	"regexp"
     "strings"
-    "./commons"
+    "../commons"
 )
 
 type StaticQueryAttribute struct {
@@ -262,12 +262,12 @@ type QueryParser struct {
 }
 
 type ParseResult struct {
-	input string
-	query string
-    subquery string
-    isUuidQuery bool
+	Input string
+	Query string
+    Subquery string
+    IsUuidQuery bool
 	//validationQuery string
-	queryValues []interface{}
+	QueryValues []interface{}
 }
 
 func NewQueryParser(query string) *QueryParser {
@@ -314,10 +314,10 @@ func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
 
 func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 	parseResult := ParseResult{}
-	parseResult.query = ""
+	parseResult.Query = ""
     lastSubqueryOperator := ""
     //parseResult.isUuidQuery = p.isUuidQuery
-    parseResult.isUuidQuery = false
+    parseResult.IsUuidQuery = false
 
     tokens := Tokenize(p.query)
 
@@ -339,7 +339,7 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 
             //use the first entry to determine whether its a UUID or not. We can't have both labels and UUIDs in the same query, so
             //we use the first entry to determine the type of the query.
-            parseResult.isUuidQuery = IsUuid(token)
+            parseResult.IsUuidQuery = IsUuid(token)
 
 
     		p.isFirst = false
@@ -351,33 +351,33 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
 
     	if t == commons.LABEL {
             if p.version == 1 {
-                if parseResult.isUuidQuery {
-                    parseResult.query += ("l.uuid = $" + strconv.Itoa(i))
+                if parseResult.IsUuidQuery {
+                    parseResult.Query += ("l.uuid = $" + strconv.Itoa(i))
                 } else {
-                    parseResult.query += ("a.accessor = $" + strconv.Itoa(i))
+                    parseResult.Query += ("a.accessor = $" + strconv.Itoa(i))
                 }
             } else {
-                if !parseResult.isUuidQuery {
-                    parseResult.query += ("q.accessors @> ARRAY[$" + strconv.Itoa(i) + "]::text[]")
+                if !parseResult.IsUuidQuery {
+                    parseResult.Query += ("q.accessors @> ARRAY[$" + strconv.Itoa(i) + "]::text[]")
                     
                     if lastSubqueryOperator != "" {
-                        parseResult.subquery += (lastSubqueryOperator + " ")
+                        parseResult.Subquery += (lastSubqueryOperator + " ")
                         lastSubqueryOperator = ""
                     }
-                    parseResult.subquery += ("a.accessor = $" + strconv.Itoa(i) + " ")
+                    parseResult.Subquery += ("a.accessor = $" + strconv.Itoa(i) + " ")
                 }
             }
-    		parseResult.queryValues = append(parseResult.queryValues, token)
+    		parseResult.QueryValues = append(parseResult.QueryValues, token)
     		i += 1
     		numOfLabels += 1
     	} else if t == commons.AND {
-    		parseResult.query += "AND"
+    		parseResult.Query += "AND"
             lastSubqueryOperator = "OR"
     	} else if t == commons.OR {
-    		parseResult.query += "OR"
+    		parseResult.Query += "OR"
             lastSubqueryOperator = "OR"
         } else if t == commons.NOT {
-            parseResult.query += "NOT"
+            parseResult.Query += "NOT"
             lastSubqueryOperator = "NOT"
     	} else if t == commons.LPAR {
             p.brackets += 1
@@ -385,18 +385,18 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
             p.brackets -= 1
         } else if t != commons.UNKNOWN {
             if p.allowStaticQueryAttributes {
-                if !parseResult.isUuidQuery {
+                if !parseResult.IsUuidQuery {
                     staticQueryAttribute, err := GetStaticQueryAttributeFromToken(token, t)
                     if err != nil {
                         return parseResult, err
                     }
-                    parseResult.query += (staticQueryAttribute.QueryName + staticQueryAttribute.Operator + strconv.Itoa(staticQueryAttribute.Value))
+                    parseResult.Query += (staticQueryAttribute.QueryName + staticQueryAttribute.Operator + strconv.Itoa(staticQueryAttribute.Value))
                 }
             } else {
                 return parseResult, errors.New(p._getErrorMessage(token, false))
             }
         }
-    	parseResult.query += " "
+    	parseResult.Query += " "
 
     	p.lastToken = t
         p.lastStrToken = token

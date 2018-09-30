@@ -6,11 +6,14 @@ import (
 	"errors"
 	log "github.com/Sirupsen/logrus"
 	"strings"
+	imagemonkeydb "./database"
+	commons "./commons"
 )
 
 type SessionInformation struct {
 	Username string
 	LoggedIn bool
+	IsModerator bool
 }
 
 type AccessTokenInfo struct {
@@ -42,15 +45,15 @@ func _strToToken(tokenString string) (*jwt.Token, error) {
 	return token, err
 }
 
-func _isAccessTokenRevoked(accessToken string) bool {
-	if accessTokenExists(accessToken) {
+func _isAccessTokenRevoked(db *imagemonkeydb.ImageMonkeyDatabase, accessToken string) bool {
+	if db.AccessTokenExists(accessToken) {
 		return false
 	}
 
 	return true
 }
 
-func _parseAccessToken(tokenString string) AccessTokenInfo {
+func _parseAccessToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string) AccessTokenInfo {
 	var accessTokenInfo AccessTokenInfo
 	accessTokenInfo.Username = ""
 	accessTokenInfo.Token = ""
@@ -69,7 +72,7 @@ func _parseAccessToken(tokenString string) AccessTokenInfo {
 		//token is valid and signed by the backend, check now if the token was revoked
 		//or if it is still valid
 
-		if !_isAccessTokenRevoked(tokenString) { //still valid - not revoked
+		if !_isAccessTokenRevoked(db, tokenString) { //still valid - not revoked
 			accessTokenInfo.Valid = true
 			accessTokenInfo.Token = tokenString
 			accessTokenInfo.Username = token.Claims.(jwt.MapClaims)["username"].(string)
@@ -79,7 +82,7 @@ func _parseAccessToken(tokenString string) AccessTokenInfo {
 	return accessTokenInfo
 }
 
-func _parseApiToken(tokenString string) APITokenInfo {
+func _parseApiToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string) APITokenInfo {
 	var apiTokenInfo APITokenInfo
 	apiTokenInfo.Username = ""
 	apiTokenInfo.Token = ""
@@ -97,7 +100,7 @@ func _parseApiToken(tokenString string) APITokenInfo {
 		//token is valid and signed by the backend, check now if the token was revoked
 		//or if it is still valid
 
-		revoked, _ := isApiTokenRevoked(tokenString) 
+		revoked, _ := db.IsApiTokenRevoked(tokenString) 
 		if !revoked { //still valid - not revoked
 			apiTokenInfo.Valid = true
 			apiTokenInfo.Token = tokenString
@@ -113,12 +116,12 @@ type AuthTokenHandlerInterface interface {
 }
 
 type SessionCookieHandler struct {
-	//accessTokenStorage *AccessTokenStorage
+	db *imagemonkeydb.ImageMonkeyDatabase
 }
 
-func NewSessionCookieHandler() *SessionCookieHandler {
+func NewSessionCookieHandler(db *imagemonkeydb.ImageMonkeyDatabase) *SessionCookieHandler {
     return &SessionCookieHandler{
-    	//accessTokenStorage: NewAccessTokenStorage(),
+    	db: db,
     } 
 }
 
@@ -126,15 +129,26 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
 	var sessionInformation SessionInformation
 	sessionInformation.LoggedIn = false
 	sessionInformation.Username = ""
+	sessionInformation.IsModerator = false
 
 	cookie, err := c.Request.Cookie("imagemonkey")
 
     if err == nil {
     	tokenString := cookie.Value
     	if tokenString != "" {
-    		accessTokenInfo := _parseAccessToken(tokenString)
+    		accessTokenInfo := _parseAccessToken(p.db, tokenString)
     		sessionInformation.LoggedIn = accessTokenInfo.Valid
     		sessionInformation.Username = accessTokenInfo.Username
+
+    		if sessionInformation.Username != "" {
+    			userInfo, err := p.db.GetUserInfo(sessionInformation.Username)
+    			if err != nil {
+    				sessionInformation.IsModerator = false
+    			} else {
+    				sessionInformation.IsModerator = userInfo.IsModerator
+    			}
+    		}
+
     	}
     }
 
@@ -143,10 +157,12 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
 
 
 type AuthTokenHandler struct {
+	db *imagemonkeydb.ImageMonkeyDatabase
 }
 
-func NewAuthTokenHandler() *AuthTokenHandler {
+func NewAuthTokenHandler(db *imagemonkeydb.ImageMonkeyDatabase) *AuthTokenHandler {
     return &AuthTokenHandler{
+    	db: db,
     } 
 }
 
@@ -162,11 +178,11 @@ func (p *AuthTokenHandler) GetAccessTokenInfo(c *gin.Context) AccessTokenInfo {
     	return accessTokenInfo
    	}
 
-   	return _parseAccessToken(auth[1])
+   	return _parseAccessToken(p.db, auth[1])
 }
 
 func (p *AuthTokenHandler) GetAccessTokenInfoFromUrl(c *gin.Context) AccessTokenInfo {
-	token := getParamFromUrlParams(c, "token", "")
+	token := commons.GetParamFromUrlParams(c, "token", "")
 
     if token == "" {
     	var accessTokenInfo AccessTokenInfo
@@ -177,11 +193,11 @@ func (p *AuthTokenHandler) GetAccessTokenInfoFromUrl(c *gin.Context) AccessToken
     	return accessTokenInfo
    	}
 
-   	return _parseAccessToken(token)
+   	return _parseAccessToken(p.db, token)
 }
 
 func (p *AuthTokenHandler) GetAPITokenInfo(c *gin.Context) APITokenInfo {
 	apiToken := c.Request.Header.Get("X-Api-Token")
 
-	return _parseApiToken(apiToken)
+	return _parseApiToken(p.db, apiToken)
 }

@@ -9,7 +9,7 @@ import (
 	"os"
 	log "github.com/Sirupsen/logrus"
 	"flag"
-	"database/sql"
+	//"database/sql"
 	"math"
 	"github.com/getsentry/raven-go"
 	"html"
@@ -20,9 +20,8 @@ import (
 	"errors"
 	"./datastructures"
 	"./commons"
+	imagemonkeydb "./database"
 )
-
-var db *sql.DB
 
 func ShowErrorPage(c *gin.Context) {
 	c.HTML(404, "404.html", gin.H{
@@ -65,8 +64,7 @@ func main() {
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
-
-	sessionCookieHandler := NewSessionCookieHandler()
+	sentryEnvironment := "web"
 
 	flag.Parse()
 	if *releaseMode {
@@ -77,7 +75,7 @@ func main() {
 	if *useSentry {
 		fmt.Printf("Setting Sentry DSN\n")
 		raven.SetDSN(SENTRY_DSN)
-		raven.SetEnvironment("web")
+		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up web worker", nil)
 	}
@@ -134,30 +132,35 @@ func main() {
 	}
 
 	log.Debug("[Main] Reading labels")
-	labelMap, words, err := getLabelMap(*wordlistPath)
+	labelMap, words, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
 		log.Fatal(err)
 	}
 
 	log.Debug("[Main] Reading label refinements")
-	labelRefinementsMap, err := getLabelRefinementsMap(*labelRefinementsPath)
+	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
 		log.Fatal(err)
 	}
 
-	//open database and make sure that we can ping it
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	//currently, there is both the imageMonkeyDb and the db. 
+	//the reason for that is, that the database part initially started out really simple.
+	//as the database part now is pretty big its time to move it to an own library.
+	//until the migration is completed, we will have two database handles here.
+	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
+	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
-		log.Fatal("[Main] Couldn't open database: ", err.Error())
+		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+	}
+	defer imageMonkeyDatabase.Close()
+
+	if *useSentry {
+		imageMonkeyDatabase.InitializeSentry(SENTRY_DSN, sentryEnvironment)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("[Main] Couldn't ping database: ", err.Error())
-	}
-
+	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase)
 
 	//if file exists, start in maintenance mode
 	maintenanceMode := false
@@ -191,18 +194,18 @@ func main() {
 			c.HTML(http.StatusOK, "index.html", gin.H{
 				"title": "ImageMonkey",
 				"activeMenuNr": 1,
-				"numOfDonations": pick(getNumOfDonatedImages())[0],
+				"numOfDonations": commons.Pick(imageMonkeyDatabase.GetNumOfDonatedImages())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"apiBaseUrl": apiBaseUrl,
-				"annotationStatistics": pick(getAnnotationStatistics("last-month"))[0],
-				"validationStatistics": pick(getValidationStatistics("last-month"))[0],
-				"annotationRefinementStatistics": pick(getAnnotationRefinementStatistics("last-month"))[0],
+				"annotationStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationStatistics("last-month"))[0],
+				"validationStatistics": commons.Pick(imageMonkeyDatabase.GetValidationStatistics("last-month"))[0],
+				"annotationRefinementStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month"))[0],
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "donate.html", gin.H{
 				"title": "Donate Image",
-				"randomWord": words[random(0, len(words) - 1)],
+				"randomWord": words[commons.Random(0, len(words) - 1)],
 				"activeMenuNr": 2,
 				"apiBaseUrl": apiBaseUrl,
 				"words": words,
@@ -214,33 +217,46 @@ func main() {
 		router.GET("/label", func(c *gin.Context) {
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
-			mode := getParamFromUrlParams(c, "mode", "default")
+			mode := commons.GetParamFromUrlParams(c, "mode", "default")
+			operationType := commons.GetParamFromUrlParams(c, "type", "object")
 
 			imageId := ""
 			if mode == "default" {
-				imageId = getParamFromUrlParams(c, "image_id", "")
+				imageId = commons.GetParamFromUrlParams(c, "image_id", "")
 			}
 
 			isModerator := false
 			if sessionInformation.LoggedIn {
-				userInfo, _ := getUserInfo(sessionInformation.Username)
+				userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
 				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanRemoveLabel {
 					isModerator = true
 				}
 			}
 
+			title := ""
+			subtitle := ""
+			if operationType == "object" {
+				title = "Add Labels"
+				subtitle = "Label all objects"
+			} else {
+				title = "Add Image Description"
+				subtitle = "Describe the Image"
+			}
+
 
 			c.HTML(http.StatusOK, "label.html", gin.H{
-				"title": "Add Labels",
+				"title": title,
+				"subtitle": subtitle,
 				"imageId": imageId,
 				"mode": mode,
+				"type": operationType,
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
-				"labelSuggestions": pick(getLabelSuggestions())[0],
+				"labelSuggestions": commons.Pick(imageMonkeyDatabase.GetLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
-				"labelAccessors": pick(getLabelAccessors())[0],
+				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
@@ -252,13 +268,13 @@ func main() {
 			//sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 			
 
-			labelId, err := getLabelIdFromUrlParams(params)
+			labelId, err := commons.GetLabelIdFromUrlParams(params)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
 				return
 			}
 
-			mode := getParamFromUrlParams(c, "mode", "default")
+			mode := commons.GetParamFromUrlParams(c, "mode", "default")
 			onlyOnce := false
 			var revision int64
 			revision = -1
@@ -268,14 +284,14 @@ func main() {
 
 			if mode == "default" {
 
-				annotationId = getParamFromUrlParams(c, "annotation_id", "")
+				annotationId = commons.GetParamFromUrlParams(c, "annotation_id", "")
 				if annotationId != "" {
 					mode = "refine"
 					onlyOnce = true
 					showSkipAnnotationButtons = false //if there are already annotations, 
 													 //then we do not need to show the blacklist annotation and unannotatable buttons
 
-					revisionStr := getParamFromUrlParams(c, "rev", "-1")
+					revisionStr := commons.GetParamFromUrlParams(c, "rev", "-1")
 					revision, err = strconv.ParseInt(revisionStr, 10, 32)
 					if err != nil {
 						ShowErrorPage(c)
@@ -283,7 +299,7 @@ func main() {
 					}
 
 				} else {
-					validationId = getValidationIdFromUrlParams(params)
+					validationId = commons.GetValidationIdFromUrlParams(params)
 					if validationId != "" {
 						//it doesn't make sene to use the validation id and the label id for querying - so we
 						//give the validation id preference.
@@ -308,7 +324,7 @@ func main() {
 				"annotationMode": mode,
 				"onlyOnce": onlyOnce,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"labelAccessors": pick(getLabelAccessors())[0],
+				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
@@ -357,7 +373,7 @@ func main() {
 				imageId = temp[0]
 			}
 
-			labelId, err := getLabelIdFromUrlParams(params)
+			labelId, err := commons.GetLabelIdFromUrlParams(params)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
 				return
@@ -390,14 +406,14 @@ func main() {
 			c.HTML(http.StatusOK, "quiz.html", gin.H{
 				"title": "Quiz",
 				"randomQuiz": "",
-				"randomAnnotatedImage": pick(getRandomAnnotationForQuizRefinement())[0],
+				"randomAnnotatedImage": commons.Pick(imageMonkeyDatabase.GetRandomAnnotationForQuizRefinement())[0],
 				"activeMenuNr": 7,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})	
 		router.GET("/refine", func(c *gin.Context) {
-			mode := getParamFromUrlParams(c, "mode", "default")
+			mode := commons.GetParamFromUrlParams(c, "mode", "default")
 
 			c.HTML(http.StatusOK, "refinement.html", gin.H{
 				"title": "Refinement",
@@ -406,8 +422,8 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"mode": mode,
 				"labels": labelRefinementsMap,
-				"labelAccessors": pick(getLabelAccessors())[0],
-				"labelCategories": pick(getLabelCategories())[0],
+				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
+				"labelCategories": commons.Pick(imageMonkeyDatabase.GetLabelCategories())[0],
 			})
 		})
 		router.GET("/statistics", func(c *gin.Context) {
@@ -415,7 +431,7 @@ func main() {
 				"title": "Statistics",
 				"words": words,
 				"activeMenuNr": 8,
-				"statistics": pick(explore(words))[0],
+				"statistics": commons.Pick(imageMonkeyDatabase.Explore(words))[0],
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
@@ -428,13 +444,13 @@ func main() {
 
 			var queryInfo QueryInfo
 
-			queryInfo.Query, queryInfo.AnnotationsOnly, _ = getExploreUrlParams(c)
+			queryInfo.Query, queryInfo.AnnotationsOnly, _ = commons.GetExploreUrlParams(c)
 
 			c.HTML(http.StatusOK, "explore.html", gin.H{
 				"title": "Explore Dataset",
 				"activeMenuNr": 9,
 				"apiBaseUrl": apiBaseUrl,
-				"labelAccessors": pick(getLabelAccessors())[0],
+				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"queryInfo": queryInfo,
 			})
@@ -492,7 +508,7 @@ func main() {
 		router.GET("/profile/:username", func(c *gin.Context) {
 			username := c.Param("username")
 
-			userInfo, _ := getUserInfo(username)
+			userInfo, _ := imageMonkeyDatabase.GetUserInfo(username)
 			if userInfo.Name == "" {
 				c.String(404, "404 page not found")
 				return
@@ -502,7 +518,7 @@ func main() {
 
 			var apiTokens []datastructures.APIToken
 			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
-				apiTokens, err = getApiTokens(username)
+				apiTokens, err = imageMonkeyDatabase.GetApiTokens(username)
 				if err != nil {
 					c.String(500, "Internal server error - please try again later")
 					return
@@ -513,7 +529,7 @@ func main() {
 				"title": "Profile",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
-				"statistics": pick(getUserStatistics(username))[0],
+				"statistics": commons.Pick(imageMonkeyDatabase.GetUserStatistics(username))[0],
 				"userInfo": userInfo,
 				"sessionInformation": sessionInformation,
 				"apiTokens": apiTokens,
@@ -555,6 +571,23 @@ func main() {
 				"defaultLabelGraphName": labelGraphName,
 				"editorMode" : editorMode,
 				"repository": "https://github.com/bbernhard/imagemonkey-core",
+			})
+		})
+
+		router.GET("/moderation", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			if !sessionInformation.IsModerator {
+				ShowErrorPage(c)
+				return
+			} 
+
+			c.HTML(http.StatusOK, "moderation.html", gin.H{
+				"title": "Content Moderation",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				//"activeMenuNr": 14,
+				"sessionInformation": sessionInformation,
 			})
 		})
 

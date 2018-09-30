@@ -5,7 +5,8 @@ import(
 	_ "github.com/lib/pq"
 	log "github.com/Sirupsen/logrus"
 	"flag"
-	"./datastructures"
+	datastructures "./datastructures"
+	commons "./commons"
 )
 
 
@@ -348,12 +349,12 @@ func main(){
     	log.Fatal("Couldn't start transaction: ", err.Error())
     }
 
-    labelMap, _, err := getLabelMap("../wordlists/en/labels.json")
+    labelMap, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
 	if err != nil {
 		log.Fatal("Couldn't get label map: ", err.Error())
 	}
 
-	labelMapRefinements, err := getLabelRefinementsMap("../wordlists/en/label-refinements.json")
+	labelMapRefinements, err := commons.GetLabelRefinementsMap("../wordlists/en/label-refinements.json")
 	if err != nil {
 		log.Fatal("Couldn't get label map refinements: ", err.Error())
 	}

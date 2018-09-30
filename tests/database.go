@@ -77,7 +77,7 @@ func installTriggers() error {
 
 func populateLabels() error {
 	var out, stderr bytes.Buffer
-	cmd := exec.Command("go", "run", "populate_labels.go", "common.go", "api_secrets.go", "--dryrun=false")
+	cmd := exec.Command("go", "run", "populate_labels.go", "api_secrets.go", "--dryrun=false")
 	cmd.Dir = "../src/"
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
@@ -232,7 +232,7 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {
@@ -250,8 +250,8 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 		return err
 	}
 
-	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label) 
-							SELECT a.id, true FROM account a WHERE a.name = $1`, name)
+	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description) 
+							SELECT a.id, true, true FROM account a WHERE a.name = $1`, name)
 	if err != nil {
 		return err
 	}
@@ -566,6 +566,41 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId strin
 		return coverage, nil
 	}
 	return 0, errors.New("missing result set")
+}
+
+func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]ImageDescriptionSummary, error) {
+	var descriptionSummaries []ImageDescriptionSummary
+
+	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state
+							 FROM image_description dsc
+							 JOIN image i ON i.id = dsc.image_id
+							 WHERE i.key = $1`, imageId)
+	if err != nil {
+		return descriptionSummaries, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var dsc ImageDescriptionSummary
+		var state string
+		err = rows.Scan(&dsc.Description, &dsc.NumOfValid, &dsc.Uuid, &state)
+		if err != nil {
+			return descriptionSummaries, err
+		}
+
+		if state == "unknown" {
+			dsc.State = ImageDescriptionStateUnknown
+		} else if state == "locked" {
+			dsc.State = ImageDescriptionStateLocked
+		} else if state == "unlocked" {
+			dsc.State = ImageDescriptionStateUnlocked
+		}
+
+		descriptionSummaries = append(descriptionSummaries, dsc)
+	}
+
+	return descriptionSummaries, nil
 }
 
 func (p *ImageMonkeyDatabase) Close() {

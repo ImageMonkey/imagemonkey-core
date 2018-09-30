@@ -208,7 +208,7 @@
   function changeNavHeader(mode) {
     if(mode === "default") {
       $("#labelContainer").css("margin-top", "-2em");
-      $("#navHeader").css("min-height", "260px");
+      $("#navHeader").css("min-height", "290px");
       $("#navHeader").addClass("full-width");
       $("#navHeader").visibility({type   : "fixed"});
       $("#navHeader").show();
@@ -1130,21 +1130,27 @@
     <div hidden class="ui inverted vertical masthead center aligned segment full-width" id="navHeader">
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer"> <!--style="margin-top:-2em;">-->
-      <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
+      <h2 class="ui inverted header" id="label" label="" sublabel="" style="margin-bottom: 0.2em;"></h2>
+      
+      <button class="ui {{ if eq .annotationMode "default" }}white{{ else }}inverted basic{{ end }} button" 
+        onclick="window.location='/annotate?mode=default';" data-tooltip="Default Mode">Default</button>
+      <button class="ui {{ if eq .annotationMode "default" }}inverted basic{{ else }}white{{ end }} button" 
+        onclick="window.location='/annotate?mode=browse';" data-tooltip="Browse Mode">Browse</button>
+      
       <div style="display: none;margin-right: 10px;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
-     <br>
-     <div class="ui inverted sixteen wide centered center aligned grid" id="annotationControlsGrid" style="display: none;">
-      <div class="row">
-       {{ template "annotation_menu.html" .}}
-      </div>
+     <div class="ui inverted sixteen wide centered center aligned grid" id="annotationControlsGrid" 
+      style="display: none; margin-top: 1em;">
       <div class="row">
        <div hidden class="ui inverted toggle checkbox" id="smartAnnotation">
           <input type="checkbox">
           <label><font color="white">Smart Annotation</font></label>
        </div>
        <a href="#" id="showSmartAnnotationHelpDlg"> [?]</a>
-       <p></p>
+      </div>
+
+      <div class="row" style="margin-top: -1em;">
+       {{ template "annotation_menu.html" .}}
       </div>
       {{ template "annotation_revisions.html" .}}
      </div>

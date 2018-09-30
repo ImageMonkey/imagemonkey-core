@@ -5,10 +5,22 @@
     </a>
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
-  <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Add Labels</a>
+  <div class="ui dropdown item" id="labelPointingMenuDropdown">
+    Label<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/label';">Objects</div>
+      <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
+    </div>
+  </div>
   <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationPointingMenuItem" href="/annotate">Annotate</a>
-  <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
-  <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
+
+  <div class="ui dropdown item" id="validatePointingMenuDropdown">
+    Validate<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/verify';">Label</div>
+      <div class="center aligned item" onclick="window.location='/verify_annotation';">Annotation</div>
+    </div>
+  </div>
   
   <div class="ui dropdown item" id="refinementPointingMenuDropdown">
       Refinement<i class="dropdown icon"></i>
@@ -47,6 +59,9 @@
     <i class="user icon"></i> {{ .sessionInformation.Username }} <i class="dropdown icon"></i>
     <div class="menu">
       <div class="item" id="mainMenuProfileButton"><i class="user icon"></i>Profile</div>
+      {{if eq .sessionInformation.IsModerator true }}
+      <div class="item" onclick="window.location='/moderation';"><i class="bullhorn icon"></i>Moderation</div>
+      {{ end }}
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
     </div>
   </div>
@@ -61,6 +76,8 @@
     $('#developersPointingMenuDropdown').dropdown();
     $('#datasetPointingMenuDropdown').dropdown();
     $('#refinementPointingMenuDropdown').dropdown();
+    $('#labelPointingMenuDropdown').dropdown();
+    $('#validatePointingMenuDropdown').dropdown();
 
     function parseJwt(token){
       var base64Url = token.split('.')[1];
