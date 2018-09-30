@@ -140,6 +140,14 @@
     }
   }
 
+  function updateImageDescriptionsForImage(imageId, imageDesriptions) {
+    if(imageDesriptions !== "") {
+      var oldImageDescriptions = $("#galleryitem" + imageId + "container").attr("data-balloon");
+      var newImageDescriptions = oldImageDescriptions + ((imageDesriptions === "") ? "" : ", ") + imageDesriptions;
+      $("#galleryitem" + imageId + "container").attr("data-balloon", newImageDescriptions);
+    }
+  }
+
   function getUrlFromImageUrl(imageUrl, imageUnlocked){
     var url = imageUrl;
 
@@ -182,8 +190,10 @@
                 +    Math.round(justifiedLayoutGeometry.boxes[i].width, 0)
                 +    "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
 
-      var labels = imageGridData[i]["labels"];
       var tooltipText = "";
+
+      {{ if eq .type "object" }}
+      var labels = imageGridData[i]["labels"];
       for(var j = 0; j < labels.length; j++) {
         var labelName = (isLabelValid(labels[j]["num_yes"], labels[j]["num_no"]) 
                           ? escapeHtml(labels[j]["name"]) : strikethroughText(escapeHtml(labels[j]["name"])));
@@ -196,6 +206,16 @@
           tooltipText += ", ";
         }
       }
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      var imageDescriptions = imageGridData[i]["image"]["descriptions"];
+      for(var j = 0; j < imageDescriptions.length; j++) {
+        tooltipText += imageDescriptions[j]["text"] + "; ";
+      }
+      {{ end }}
+
+
       if(tooltipText.length > 2)
         tooltipText = tooltipText.substring(0, tooltipText.length - 2); //remove last comma + space
 

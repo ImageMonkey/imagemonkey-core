@@ -536,11 +536,20 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                 JOIN image i ON i.id = q2.image_id
                             ) q
                             WHERE %s
+                        ),
+                        img_descriptions AS (
+                            SELECT i.id as image_id, 
+                            jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text)) as descriptions
+                            FROM image i
+                            JOIN image_description dsc ON dsc.image_id = i.id
+                            WHERE dsc.state != 'locked' --do not show when locked
+                            GROUP BY i.id
                         )
 
 
                         SELECT image_key, image_width, image_height, image_unlocked,
-                        json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels))
+                        json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels)),
+                        coalesce(imgdsc.descriptions, '[]'::jsonb)
                         FROM
                         (
                             SELECT q3.image_id, q3.label, q3.num_of_valid, q3.num_of_invalid,
@@ -573,7 +582,8 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                             ) q3
                             GROUP BY image_id, image_key, image_width, image_height, image_unlocked, label, num_of_valid, num_of_invalid
                         ) q4
-                        GROUP BY image_key, image_width, image_height, image_unlocked
+                        LEFT JOIN img_descriptions imgdsc ON imgdsc.image_id = q4.image_id
+                        GROUP BY image_key, image_width, image_height, image_unlocked, imgdsc.descriptions
                         %s`, 
                       includeOwnImageDonations, includeOwnImageDonations, parseResult.Query, shuffleStr)
 
@@ -595,7 +605,9 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
     for rows.Next() {
         var imageLabel datastructures.ImageLabel
         var labels []byte
-        err = rows.Scan(&imageLabel.Image.Id, &imageLabel.Image.Width, &imageLabel.Image.Height, &imageLabel.Image.Unlocked, &labels)
+        var imageDescriptionBytes []byte
+        err = rows.Scan(&imageLabel.Image.Id, &imageLabel.Image.Width, &imageLabel.Image.Height, 
+                            &imageLabel.Image.Unlocked, &labels, &imageDescriptionBytes)
         if err != nil {
             log.Debug("[Get Image Labels] Couldn't scan rows: ", err.Error())
             raven.CaptureError(err, nil)
@@ -604,7 +616,14 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 
         err := json.Unmarshal(labels, &imageLabel.Labels)
         if err != nil {
-            log.Debug("[Export] Couldn't unmarshal image labels: ", err.Error())
+            log.Debug("[Get Image Labels] Couldn't unmarshal image labels: ", err.Error())
+            raven.CaptureError(err, nil)
+            return nil, err
+        }
+
+        err = json.Unmarshal(imageDescriptionBytes, &imageLabel.Image.Descriptions)
+        if err != nil {
+            log.Debug("[Get Image Labels] Couldn't unmarshal image descriptions: ", err.Error())
             raven.CaptureError(err, nil)
             return nil, err
         }

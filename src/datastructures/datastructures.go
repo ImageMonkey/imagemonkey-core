@@ -131,6 +131,7 @@ type ImageLabel struct {
         Provider string `json:"provider"`
         Width int32 `json:"width"`
         Height int32 `json:"height"`
+        Descriptions []json.RawMessage `json:"descriptions"`
     } `json:"image"`
 
     Labels[] struct {

@@ -615,11 +615,16 @@
 
   function addImageDescriptionsToImage() {
     var imageDescriptions = [];
+    var strImageDescriptionsLst = "";
     for (var key in newlyAddedImageDescriptions){
       if (newlyAddedImageDescriptions.hasOwnProperty(key)) {
         imageDescriptions.push({"description": key});
+        strImageDescriptionsLst += key + "; ";
       }
     }
+
+    if(strImageDescriptionsLst.length > 2)
+      strImageDescriptionsLst = strImageDescriptionsLst.substring(0, strImageDescriptionsLst.length - 2); //remove last ';' + space
 
     var headers = {}
     if(browserFingerprint !== null)
@@ -642,6 +647,7 @@
         getNextImage("");
         {{ else }}
         showHideMainArea(false);
+        updateImageDescriptionsForImage($("#image").attr("imageId"), strImageDescriptionsLst);
         showBrowseLabelImageGrid();
         {{ end }}
       }
