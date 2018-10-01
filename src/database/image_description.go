@@ -44,13 +44,13 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) UnlockImageDescription(imageId string, descriptionId string) (UnlockImageDescriptionErrorType) {
+func (p *ImageMonkeyDatabase) UnlockImageDescription(apiUser datastructures.APIUser, imageId string, descriptionId string) (UnlockImageDescriptionErrorType) {
 	rows, err := p.db.Query(`UPDATE image_description AS d
-							SET state = 'unlocked' 
+							SET state = 'unlocked', processed_by = (SELECT id FROM account WHERE name = $3)
 							FROM image AS i
 							WHERE i.id = d.image_id AND i.key = $1 AND uuid = $2
 							RETURNING d.id`, 
-							imageId, descriptionId)
+							imageId, descriptionId, apiUser.Name)
 	if err != nil {
         log.Error("[Unlocking image description] Couldn't unlock image description: ", err.Error())
         raven.CaptureError(err, nil)
@@ -67,13 +67,13 @@ func (p *ImageMonkeyDatabase) UnlockImageDescription(imageId string, description
 }
 
 
-func (p *ImageMonkeyDatabase) LockImageDescription(imageId string, descriptionId string) (LockImageDescriptionErrorType) {
+func (p *ImageMonkeyDatabase) LockImageDescription(apiUser datastructures.APIUser, imageId string, descriptionId string) (LockImageDescriptionErrorType) {
 	rows, err := p.db.Query(`UPDATE image_description AS d
-							SET state = 'locked' 
+							SET state = 'locked', processed_by = (SELECT id FROM account WHERE name = $3)
 							FROM image AS i
 							WHERE i.id = d.image_id AND i.key = $1 AND uuid = $2
 							RETURNING d.id`, 
-							imageId, descriptionId)
+							imageId, descriptionId, apiUser.Name)
 	if err != nil {
         log.Error("[Unlocking image description] Couldn't lock image description: ", err.Error())
         raven.CaptureError(err, nil)

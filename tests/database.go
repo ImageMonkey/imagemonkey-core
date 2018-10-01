@@ -603,6 +603,32 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]I
 	return descriptionSummaries, nil
 }
 
+
+func (p *ImageMonkeyDatabase) GetModeratorWhoProcessedImageDescription(imageId string, imageDescription string) (string, error) {
+	rows, err := p.db.Query(`SELECT a.name
+							 FROM image_description dsc
+							 JOIN image i ON i.id = dsc.image_id
+							 JOIN account a ON a.id = dsc.processed_by
+							 WHERE i.key = $1 AND dsc.description = $2`, imageId, imageDescription)
+	if err != nil {
+		return "", err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var moderator string
+		err = rows.Scan(&moderator)
+		if err != nil {
+			return "", err
+		}
+
+		return moderator, nil
+	}
+	return "", errors.New("missing result set")
+}
+
+
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
 }

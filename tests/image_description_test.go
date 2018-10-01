@@ -423,3 +423,66 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLock(t *testing.T
 	imageDescriptions = testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
 	equals(t, len(imageDescriptions), 0)
 }
+
+
+func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLockCheckProcessedBy(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+
+	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
+	moderatorToken := testLogin(t, "moderator", "moderator", 200)
+
+	err = db.GiveUserModeratorRights("moderator")
+	ok(t, err)
+
+	imageDescriptions := testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 1)
+	equals(t, len(imageDescriptions[0].Image.Descriptions), 1)
+
+	testLockImageDescription(t, imageId, imageDescriptions[0].Image.Descriptions[0].Uuid, moderatorToken, 201)
+
+	imageDescriptions = testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 0)
+
+	processedBy, err := db.GetModeratorWhoProcessedImageDescription(imageId, "apple on the floor")
+	ok(t, err)
+	equals(t, processedBy, "moderator")
+}
+
+func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlockCheckProcessedBy(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+
+	testSignUp(t, "nicemoderator", "nice-moderator", "moderator@imagemonkey.io")
+	moderatorToken := testLogin(t, "nicemoderator", "nice-moderator", 200)
+
+	err = db.GiveUserModeratorRights("nicemoderator")
+	ok(t, err)
+
+	imageDescriptions := testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 1)
+	equals(t, len(imageDescriptions[0].Image.Descriptions), 1)
+
+	testUnlockImageDescription(t, imageId, imageDescriptions[0].Image.Descriptions[0].Uuid, moderatorToken, 201)
+
+	imageDescriptions = testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 0)
+
+	processedBy, err := db.GetModeratorWhoProcessedImageDescription(imageId, "apple on the floor")
+	ok(t, err)
+	equals(t, processedBy, "nicemoderator")
+}

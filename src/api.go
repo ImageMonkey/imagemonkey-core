@@ -979,7 +979,7 @@ func main(){
 			}
 
 
-			errCode := imageMonkeyDatabase.UnlockImageDescription(imageId, descriptionId)
+			errCode := imageMonkeyDatabase.UnlockImageDescription(apiUser, imageId, descriptionId)
 			if errCode == imagemonkeydb.UnlockImageDescriptionInternalError {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1019,7 +1019,7 @@ func main(){
 			}
 
 
-			errCode := imageMonkeyDatabase.LockImageDescription(imageId, descriptionId)
+			errCode := imageMonkeyDatabase.LockImageDescription(apiUser, imageId, descriptionId)
 			if errCode == imagemonkeydb.LockImageDescriptionInternalError {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1475,7 +1475,7 @@ func main(){
 		})
 
 		router.GET("/v1/label/accessors", func(c *gin.Context) {
-			labelAccessors, err := getLabelAccessors()
+			labelAccessors, err := imageMonkeyDatabase.GetLabelAccessors()
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
