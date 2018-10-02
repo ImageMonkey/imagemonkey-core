@@ -113,8 +113,8 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token, X-Moderation")
-	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Total-Count, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token, X-Moderation")
+	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, HEAD")
 
 		if c.Request.Method == "OPTIONS" {
              c.AbortWithStatus(200)
@@ -933,6 +933,8 @@ func main(){
 			}
 		})
 
+		
+
 		router.POST("/v1/donation/:imageid/description", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
@@ -1240,7 +1242,20 @@ func main(){
 			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
 			c.JSON(204, nil)
-		});
+		})
+
+		router.HEAD("/v1/donations/unprocessed-descriptions", func(c *gin.Context) {
+			if values, _ := c.Request.Header["X-Total-Count"]; len(values) > 0 {
+				num, err := imageMonkeyDatabase.GetNumOfUnprocessedDescriptions()
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+				c.Writer.Header().Set("X-Total-Count", strconv.Itoa(num))
+				c.Writer.Header().Set("Access-Control-Expose-Headers", "X-Total-Count")
+				return
+			}
+		})
 
 		router.GET("/v1/donations/unprocessed-descriptions", func(c *gin.Context) {
 			var apiUser datastructures.APIUser

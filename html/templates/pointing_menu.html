@@ -57,10 +57,13 @@
   {{ else }}
   <div class="ui dropdown item" id="mainMenuDropdown">
     <i class="user icon"></i> {{ .sessionInformation.Username }} <i class="dropdown icon"></i>
+    <div class="floating ui red circular label" id="numOfMainModeratorNotifications" style="display: none;"></div>
     <div class="menu">
       <div class="item" id="mainMenuProfileButton"><i class="user icon"></i>Profile</div>
       {{if eq .sessionInformation.IsModerator true }}
-      <div class="item" onclick="window.location='/moderation';"><i class="bullhorn icon"></i>Moderation</div>
+      <div class="item" onclick="window.location='/moderation';"><i class="bullhorn icon" id="moderatorButtonIcon"></i>
+      Moderation
+      </div>
       {{ end }}
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
     </div>
@@ -71,6 +74,34 @@
 
 
 <script type="text/javascript">
+  {{ if eq .sessionInformation.IsModerator true }}
+  function getNumOfUnprocessedImageDescriptions() {
+    var url = '{{ .apiBaseUrl }}/v1/donations/unprocessed-descriptions';
+    $.ajax({
+      url: url,
+      type: 'HEAD',
+      headers: {'X-Total-Count': ''},
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data, textStatus, xhr) {
+        var numOfNotifications = xhr.getResponseHeader('X-Total-Count');
+        if(numOfNotifications === "0") {
+          $("#numOfMainModeratorNotifications").hide();
+          $("#moderatorButtonIcon").removeClass("red");
+        }
+        else {
+          $("#numOfMainModeratorNotifications").text(numOfNotifications);
+          $("#numOfMainModeratorNotifications").show();
+          $("#moderatorButtonIcon").addClass("red");
+        }
+      }
+    });
+  }
+
+  {{ end }}
+
+
   $(document).ready(function(){
     $('#mainMenuDropdown').dropdown();
     $('#developersPointingMenuDropdown').dropdown();
@@ -112,6 +143,10 @@
     var settings = new Settings();
     if(settings.getAnnotationMode() === "browse")
       $("#annotationPointingMenuItem").attr("href", "/annotate?mode=browse");
+
+    {{ if eq .sessionInformation.IsModerator true }}
+    getNumOfUnprocessedImageDescriptions();
+    {{ end }}
   });
 
 </script>

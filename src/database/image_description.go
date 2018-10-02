@@ -130,3 +130,16 @@ func (p *ImageMonkeyDatabase) GetUnprocessedImageDescriptions() ([]datastructure
 }
 
 
+func (p *ImageMonkeyDatabase) GetNumOfUnprocessedDescriptions() (int, error) {
+	var num int
+	num = 0
+
+	err := p.db.QueryRow(`SELECT count(*) FROM image_description WHERE state = 'unknown'`).Scan(&num)
+	if err != nil {
+		return num, err
+	}
+
+	return num, nil
+}
+
+

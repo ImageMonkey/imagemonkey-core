@@ -4,6 +4,7 @@ import (
 	"testing"
 	"gopkg.in/resty.v1"
 	"../src/datastructures"
+	"strconv"
 )
 
 type ImageDescriptionStateType int
@@ -19,6 +20,20 @@ type ImageDescriptionSummary struct {
     NumOfValid int `json:"num_of_yes"`
     Uuid string `json:"uuid"`
     State ImageDescriptionStateType `json:"state"`
+}
+
+func testGetNumOfUnprocessedImageDescriptions(t *testing.T, expectedCount int, expectedStatusCode int) {
+	url := BASE_URL + API_VERSION + "/donations/unprocessed-descriptions"
+	req := resty.R().
+			SetHeader("X-Total-Count", "")
+
+	resp, err := req.Head(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), expectedStatusCode)
+
+	count := resp.Header().Get("X-Total-Count")
+	equals(t, strconv.Itoa(expectedCount), count)
 }
 
 func testGetUnprocessedImageDescriptions(t *testing.T, token string, expectedStatusCode int) []datastructures.DescriptionsPerImage {
@@ -485,4 +500,30 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlockCheckProces
 	processedBy, err := db.GetModeratorWhoProcessedImageDescription(imageId, "apple on the floor")
 	ok(t, err)
 	equals(t, processedBy, "nicemoderator")
+}
+
+func TestGetNumOfUnprocessedImageDescriptions(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	testGetNumOfUnprocessedImageDescriptions(t, 1, 200)
+
+	testSignUp(t, "nicemoderator", "nice-moderator", "moderator@imagemonkey.io")
+	moderatorToken := testLogin(t, "nicemoderator", "nice-moderator", 200)
+
+	err = db.GiveUserModeratorRights("nicemoderator")
+	ok(t, err)
+
+	imageDescriptions := testGetUnprocessedImageDescriptions(t, moderatorToken, 200)
+	equals(t, len(imageDescriptions), 1)
+	equals(t, len(imageDescriptions[0].Image.Descriptions), 1)
+
+	testUnlockImageDescription(t, imageId, imageDescriptions[0].Image.Descriptions[0].Uuid, moderatorToken, 201)
+	testGetNumOfUnprocessedImageDescriptions(t, 0, 200)
 }
