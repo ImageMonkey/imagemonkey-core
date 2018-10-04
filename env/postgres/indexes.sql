@@ -28,3 +28,8 @@ CREATE INDEX image_quarantine_image_id_index ON image_quarantine(image_id);
 
 -- image_annotation_coverage table
 CREATE INDEX image_annotation_coverage_image_id_index ON image_annotation_coverage(image_id);
+
+--image_description table
+
+CREATE INDEX image_description_image_id_index ON image_description(image_id);
+CREATE INDEX image_description_state_index ON image_description(state);
