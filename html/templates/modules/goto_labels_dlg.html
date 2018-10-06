@@ -3,17 +3,30 @@
   {{ if eq .currentScreen "labeling" }}
   function persistGeneralLabelingSettings() {
     var settings = new Settings();
+
+    {{ if eq .type "object" }}
     settings.setAddLabelHotkey($("#recordAddLabelKeyInput").val());
     settings.setLabelSeparator($('#labelSeparatorDropdown').dropdown('get value'));
+    {{ end }}
+
+    {{ if eq .type "image" }}
+    settings.setDefaultImageDescriptionLanguage($("#defaultImageDescriptionLanguageDropdown").dropdown('get value'));
+    {{ end }}
 
     $("#generalSettingsRefreshBrowserPopup").modal("show");
   }
 
   function loadGeneralLabelingSettings() {
     var settings = new Settings();
+
+    {{ if eq .type "object" }}
     $("#recordAddLabelKeyInput").val(settings.getAddLabelHotkey());
     $('#labelSeparatorDropdown').dropdown('set selected', settings.getLabelSeparator());
+    {{ end }}
 
+    {{ if eq .type "image" }}
+    $('#defaultImageDescriptionLanguageDropdown').dropdown('set selected', settings.getDefaultImageDescriptionLanguage());
+    {{ end }}
   }
 
   function openGeneralLabelingSettingsDlg() {
@@ -223,7 +236,7 @@
     <h2 class="ui header">Settings</h2>
   </div>
   <div class="scrolling content" id="generalLabelingSettingsDlgContent">
-    
+    {{ if eq .type "object" }}
     <div class="ui raised segment">
       <div class="ui grid">
         <div class="eight wide column">
@@ -239,7 +252,9 @@
         </div>
       </div>
     </div>
+    {{ end }}
 
+    {{ if eq .type "object" }}
     <div class="ui raised segment">
       <div class="ui grid">
         <div class="eight wide column">
@@ -253,6 +268,24 @@
           </select>
         </div>
       </div>
+    </div>
+    {{ end }}
+
+    {{ if eq .type "image" }}
+    <div class="ui raised segment">
+      <div class="ui grid">
+        <div class="eight wide column">
+          <b>Default Image Description Language</b>
+          <p>Specify your preferred image description language</p>
+          <select class="ui dropdown" id="defaultImageDescriptionLanguageDropdown">
+            {{ range $key, $value := .languages }}
+            <option value="{{ $key }}">{{ $value.Name }}</option>
+            {{ end }}
+          </select>
+        </div>
+      </div>
+      {{ end }}
+
     </div>
 
   </div>

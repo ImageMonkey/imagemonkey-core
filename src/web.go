@@ -21,6 +21,7 @@ import (
 	"./datastructures"
 	"./commons"
 	imagemonkeydb "./database"
+	languages "./languages"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -253,6 +254,7 @@ func main() {
 				"activeMenuNr": 3,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
+				"languages": languages.GetAllSupported(),
 				"labelSuggestions": commons.Pick(imageMonkeyDatabase.GetLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,

@@ -195,7 +195,11 @@ func TestBrowseLabelOneImageDescription(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDsc := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDsc)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	images := testBrowseLabel(t, "apple", "", 1, 200)
 
@@ -224,7 +228,11 @@ func TestBrowseLabelOneImageDescriptionLocked(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -252,7 +260,11 @@ func TestBrowseLabelOneImageDescriptionUnlocked(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDsc := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDsc)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)

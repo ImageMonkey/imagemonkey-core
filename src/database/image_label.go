@@ -124,9 +124,10 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     %s
                                 ) q ON q.id = q1.image_id
                                 LEFT JOIN (
-                                    SELECT jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text)) as image_descriptions,
+                                    SELECT jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text, 'language', l.fullname)) as image_descriptions,
                                     i.id as image_id
                                     FROM image_description dsc
+                                    JOIN language l ON l.id = dsc.language_id
                                     JOIN image i ON i.id = dsc.image_id
                                     WHERE dsc.state != 'locked' --only show non locked image descriptions
                                     GROUP BY i.id
@@ -539,9 +540,10 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                         ),
                         img_descriptions AS (
                             SELECT i.id as image_id, 
-                            jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text)) as descriptions
+                            jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text, 'language', l.fullname)) as descriptions
                             FROM image i
                             JOIN image_description dsc ON dsc.image_id = i.id
+                            JOIN language l ON l.id = dsc.language_id
                             WHERE dsc.state != 'locked' --do not show when locked
                             GROUP BY i.id
                         )

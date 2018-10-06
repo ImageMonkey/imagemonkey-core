@@ -562,12 +562,14 @@ type UpdateAnnotationCoverageRequest struct {
 
 type ImageDescription struct {
     Description string `json:"description"`
+    Language string `json:"language"`
 }
 
 
 type ImageDesc struct {
     Text string `json:"text"`
     Uuid string `json:"uuid"`
+    Language string `json:"language"`
 }
 
 type DescriptionsPerImage struct {

@@ -944,9 +944,15 @@ func main(){
 				return
 			}
 
-			err = imageMonkeyDatabase.AddImageDescriptions(imageId, descriptions)
-			if err != nil {
+			err := imageMonkeyDatabase.AddImageDescriptions(imageId, descriptions)
+			if err == imagemonkeydb.AddImageDescriptionInternalError {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			} else if err == imagemonkeydb.AddImageDescriptionInvalidLanguage {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid language"})
+				return
+			} else if err == imagemonkeydb.AddImageDescriptionInvalidImageDescription {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid image description"})
 				return
 			}
 			c.JSON(201, nil)

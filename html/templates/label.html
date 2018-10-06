@@ -24,7 +24,7 @@
   <script src="js/justified-layout.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
   <script src="js/mousetrap-record.min.js"></script>
-  <script src="js/settings.js?v=2"></script>
+  <script src="js/settings.js?v=3"></script>
   <script src="js/contextjs/context.js"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
   <script src="js/infinitescroll.js?v=2"></script>
@@ -189,8 +189,7 @@
       var isUnlocked = false;
       if(descriptions[i].state === "unlocked")
         isUnlocked = true;
-
-      addExistingImageDescription(descriptions[i].text);
+      addExistingImageDescription(descriptions[i].text, isUnlocked, descriptions[i].language);
     }
 
     showHideNoImageDescriptionsDefined();
@@ -583,15 +582,17 @@
     showHideNoLabelsDefined();
   }
 
-  function addImageDescription(imageDescription) {
+  function addImageDescription(imageDescription, lang) {
     var added = false;
     var escapedImageDescription = escapeHtml(imageDescription);
 
+    var color = getColorForImageDescriptionLanguage(lang);
+
     if(!(escapedImageDescription in newlyAddedImageDescriptions) && !(escapedImageDescription in oldImageDescriptions)) {
-      $('#imageDescriptions').prepend($(('<div class="ui huge basic ' + 'red' + ' label">' +  
+      $('#imageDescriptions').prepend($(('<div class="ui huge basic ' + color + ' label">' +  
                                             escapedImageDescription + 
                                             '<i class="delete icon" onclick="removeImageDescription(this)"></i></div>')));
-      newlyAddedImageDescriptions[escapedImageDescription] = true;
+      newlyAddedImageDescriptions[escapedImageDescription] = lang;
       added = true;
     }
     else {
@@ -603,7 +604,15 @@
     return added;
   }
 
-  function addExistingImageDescription(imageDescription, isUnlocked) {
+  function getColorForImageDescriptionLanguage(lang) {
+    if((lang === "en") || (lang === "English"))
+      return "red";
+    else if((lang === "ger") || (lang === "German"))
+      return "blue";
+    return "grey";
+  }
+
+  function addExistingImageDescription(imageDescription, isUnlocked, lang) {
     var escapedImageDescription = escapeHtml(imageDescription);
 
     var basicLabelStr = "";
@@ -613,7 +622,9 @@
       tooltipStr = 'data-tooltip="Waiting for moderator approval"'
     }
 
-    $('#imageDescriptions').prepend($(('<div class="ui huge ' + basicLabelStr + 'red' + ' label" ' + tooltipStr + '>' +  
+    var color = getColorForImageDescriptionLanguage(lang);
+
+    $('#imageDescriptions').prepend($(('<div class="ui huge ' + basicLabelStr + color + ' label" ' + tooltipStr + '>' +  
                                           escapedImageDescription + 
                                           '</div>')));
     oldImageDescriptions[escapedImageDescription] = true;
@@ -636,7 +647,7 @@
     var strImageDescriptionsLst = "";
     for (var key in newlyAddedImageDescriptions){
       if (newlyAddedImageDescriptions.hasOwnProperty(key)) {
-        imageDescriptions.push({"description": key});
+        imageDescriptions.push({"description": key, "language": newlyAddedImageDescriptions[key]});
         strImageDescriptionsLst += key + "; ";
       }
     }
@@ -750,12 +761,18 @@
       }
     }
 
+    {{ if eq .type "image" }}
+    var defaultImageDescriptionLanguage = new Settings().getDefaultImageDescriptionLanguage();
+    $("#languageSelection").dropdown('set value', defaultImageDescriptionLanguage);
+    {{ end }}
+
     getMostPopularLabels();
 
     $('#addImageDescriptionButton').click(function(e) {
       var imageDescriptionInput = $("#addImageDescriptionInput").val();
+      var lang = $("#languageSelection").dropdown('get value');
       if(imageDescriptionInput !== "") {
-        if(addImageDescription(imageDescriptionInput))
+        if(addImageDescription(imageDescriptionInput, lang))
           $("#addImageDescriptionInput").val(''); //clear input
       }
       else {
@@ -1044,6 +1061,18 @@
           <div class="ui form">
             <div class="field">
               <div class="ui center aligned action input" id="labelForm">
+                <div class="ui dropdown labeled search icon button" id="languageSelection">
+                  <i class="world icon"></i>
+                  <span class="text">Select Language</span>
+                  <div class="menu">
+                    {{ range $key, $value := .languages }}
+                    <div class="item" data-value="{{ $key }}">{{ $value.Abbreviation }}</div>
+                    {{ end }}
+                    
+                    <!--<div class="item" data-value="ger">GER</div>-->
+                  </div>
+                </div>
+                <!--<div class="ui icon button" id="addImageDescriptionButton" data-tooltip="Lanuage (english)"><i class="globe icon"></i>ENG</div>-->
                 <div class="ui input">
                   <input placeholder="Enter image description..." type="text" id="addImageDescriptionInput" class="mousetrap">
                 </div>
@@ -1093,7 +1122,7 @@
       </div>
 
       {{ template "report_dlg.html" .}}
-      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" }}
+      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" "languages" .languages "type" .type }}
 
       {{ if eq .isModerator true }}
       {{ template "moderator_label_remove_dlg.html" dict "apiBaseUrl" .apiBaseUrl}}

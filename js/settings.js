@@ -35,6 +35,10 @@ var Settings = (function () {
     return this.get("annotationmode", "default");
   }
 
+  Settings.prototype.getDefaultImageDescriptionLanguage = function() {
+    return this.get("defaultimagedescriptionlanguage", "en");
+  }
+
   Settings.prototype.setAnnotationMode = function(value) {
     return this.set("annotationmode", value);
   }
@@ -45,6 +49,10 @@ var Settings = (function () {
 
   Settings.prototype.setLabelViewFirstTimeOpened = function(opened) {
     this.set("labelviewfirsttimeopened", opened);
+  }
+
+  Settings.prototype.setDefaultImageDescriptionLanguage = function(language) {
+    this.set("defaultimagedescriptionlanguage", language);
   }
 
   return Settings;

@@ -20,6 +20,7 @@ type ImageDescriptionSummary struct {
     NumOfValid int `json:"num_of_yes"`
     Uuid string `json:"uuid"`
     State ImageDescriptionStateType `json:"state"`
+    Language string `json:"language"`
 }
 
 func testGetNumOfUnprocessedImageDescriptions(t *testing.T, expectedCount int, expectedStatusCode int) {
@@ -104,18 +105,11 @@ func testGetImageDescriptions(t *testing.T, imageId string, token string, numOfD
 	equals(t, numOfDescriptions, len(img.ImageDescriptions))
 }
 
-func testAddImageDescriptions(t *testing.T, imageId string, descriptions []string) {
-	var imageDescriptions []datastructures.ImageDescription
-	for _, val := range descriptions {
-		var imageDescription datastructures.ImageDescription
-		imageDescription.Description = val
-		imageDescriptions = append(imageDescriptions, imageDescription)
-	}
-
+func testAddImageDescriptions(t *testing.T, imageId string, descriptions []datastructures.ImageDescription) {
 	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/description"
 	resp, err := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(imageDescriptions).
+			SetBody(descriptions).
 			Post(url)
 
 	ok(t, err)
@@ -136,7 +130,10 @@ func TestGetImageDescription(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -160,8 +157,13 @@ func TestGetImageDescriptionMultiple(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -184,8 +186,17 @@ func TestGetImageDescriptionMultipleDifferent(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
-	testAddImageDescriptions(t, imageId, []string{"apple on the desk"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
+
+	var imageDescriptions2 []datastructures.ImageDescription
+	imageDescription2 := datastructures.ImageDescription{Description: "apple on the desk", Language: "en"}
+	imageDescriptions2 = append(imageDescriptions2, imageDescription2)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions2)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -209,7 +220,10 @@ func TestUnlockImageDescriptionNoModerator(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -234,7 +248,11 @@ func TestUnlockImageDescriptionFromModerator(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -268,7 +286,11 @@ func TestUnlockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -298,7 +320,11 @@ func TestUnlockImageDescriptionFromModeratorButInvalidDescriptionId(t *testing.T
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -323,7 +349,12 @@ func TestGetUnprocessedImageDescriptionsNoPermissions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	testGetUnprocessedImageDescriptions(t, "", 401)
 }
@@ -337,7 +368,11 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -359,7 +394,11 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlock(t *testing
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -393,7 +432,11 @@ func TestLockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
 
 	equals(t, len(descriptions), 0)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
 
 	descriptions, err = db.GetImageDescriptionForImageId(imageId)
 	ok(t, err)
@@ -421,7 +464,11 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLock(t *testing.T
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -449,7 +496,11 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLockCheckProcesse
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
@@ -480,7 +531,11 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlockCheckProces
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 
 	testSignUp(t, "nicemoderator", "nice-moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "nicemoderator", "nice-moderator", 200)
@@ -511,7 +566,11 @@ func TestGetNumOfUnprocessedImageDescriptions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testAddImageDescriptions(t, imageId, []string{"apple on the floor"})
+	var imageDscs []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "apple on the floor", Language: "en"}
+	imageDscs = append(imageDscs, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDscs)
 	testGetNumOfUnprocessedImageDescriptions(t, 1, 200)
 
 	testSignUp(t, "nicemoderator", "nice-moderator", "moderator@imagemonkey.io")
@@ -526,4 +585,66 @@ func TestGetNumOfUnprocessedImageDescriptions(t *testing.T) {
 
 	testUnlockImageDescription(t, imageId, imageDescriptions[0].Image.Descriptions[0].Uuid, moderatorToken, 201)
 	testGetNumOfUnprocessedImageDescriptions(t, 0, 200)
+}
+
+
+func TestAddImageDescriptionGermanLanguage(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	descriptions, err := db.GetImageDescriptionForImageId(imageId)
+	ok(t, err)
+
+	equals(t, len(descriptions), 0)
+
+
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "Ein Apfel, der am Boden liegt.", Language: "ger"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
+
+	descriptions, err = db.GetImageDescriptionForImageId(imageId)
+	ok(t, err)
+
+	equals(t, len(descriptions), 1)
+	equals(t, descriptions[0].Language, "German")
+}
+
+func TestAddImageDescriptionMultipleLanguages(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	descriptions, err := db.GetImageDescriptionForImageId(imageId)
+	ok(t, err)
+
+	equals(t, len(descriptions), 0)
+
+
+	var imageDescriptions []datastructures.ImageDescription
+	imageDescription := datastructures.ImageDescription{Description: "Ein Apfel, der am Boden liegt.", Language: "ger"}
+	imageDescription2 := datastructures.ImageDescription{Description: "apple on the floor.", Language: "en"}
+	imageDescriptions = append(imageDescriptions, imageDescription)
+	imageDescriptions = append(imageDescriptions, imageDescription2)
+
+	testAddImageDescriptions(t, imageId, imageDescriptions)
+
+	descriptions, err = db.GetImageDescriptionForImageId(imageId)
+	ok(t, err)
+
+	equals(t, len(descriptions), 2)
+	equals(t, descriptions[0].Language, "German")
+	equals(t, descriptions[0].Description, "Ein Apfel, der am Boden liegt.")
+	equals(t, descriptions[1].Language, "English")
+	equals(t, descriptions[1].Description, "apple on the floor.")
 }

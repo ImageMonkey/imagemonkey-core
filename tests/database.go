@@ -571,10 +571,12 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId strin
 func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]ImageDescriptionSummary, error) {
 	var descriptionSummaries []ImageDescriptionSummary
 
-	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state
+	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state, l.name
 							 FROM image_description dsc
+							 JOIN language l ON l.id = dsc.language_id
 							 JOIN image i ON i.id = dsc.image_id
-							 WHERE i.key = $1`, imageId)
+							 WHERE i.key = $1
+							 ORDER BY dsc.id asc`, imageId)
 	if err != nil {
 		return descriptionSummaries, err
 	}
@@ -584,7 +586,7 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]I
 	for rows.Next() {
 		var dsc ImageDescriptionSummary
 		var state string
-		err = rows.Scan(&dsc.Description, &dsc.NumOfValid, &dsc.Uuid, &state)
+		err = rows.Scan(&dsc.Description, &dsc.NumOfValid, &dsc.Uuid, &state, &dsc.Language)
 		if err != nil {
 			return descriptionSummaries, err
 		}

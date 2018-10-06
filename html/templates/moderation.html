@@ -19,7 +19,7 @@
   <script src="/js/common.js"></script> 
   <link rel="stylesheet" href="/css/common_sub.css"/>
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
-
+  <script src="js/tablesort/tablesort.js"></script>
 
   <script>
     var toBeDiscardedImageDescription = null;
@@ -76,6 +76,7 @@
           for(var j = 0; j < imageDescriptions.length; j++) {
             elem = $(('<tr>' +
                       '<td>' + escapeHtml(imageDescriptions[j].text) + '</td>' +
+                      '<td>' + escapeHtml(imageDescriptions[j].language) + '</td>' +
                       '<td class="right aligned">' +
                         '<div onclick="unlockImageDescription(this);" id="' + 'unlock-' + imageDescriptions[j].uuid + '" data-image-description-uuid="' 
                           + imageDescriptions[j].uuid  + '" data-image-id="' + data[i].image.uuid + '" class="ui green basic button">Unlock</div>' +
@@ -86,6 +87,8 @@
             $("#lockedImageDescriptionsContent").append(elem);
           }
         }
+
+        $("#unprocessedImageDescriptionsTable").tablesort();
       } 
       else {
         $("#lockedImageDescriptionsContent").append($('<tr><td>No data available</td></tr>'));
@@ -171,10 +174,11 @@
       <div class="four wide center aligned column"></div>
       <div class="eight wide center aligned column">
         <div class="ui segment">
-          <table class="ui striped table">
+          <table class="ui striped sortable table" id="unprocessedImageDescriptionsTable">
             <thead>
               <tr>
                 <th>Description</th>
+                <th>Language</th>
                 <th class="right aligned"></th>
               </tr>
             </thead>

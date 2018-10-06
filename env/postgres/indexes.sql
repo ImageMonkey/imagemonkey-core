@@ -33,3 +33,4 @@ CREATE INDEX image_annotation_coverage_image_id_index ON image_annotation_covera
 
 CREATE INDEX image_description_image_id_index ON image_description(image_id);
 CREATE INDEX image_description_state_index ON image_description(state);
+CREATE INDEX image_description_language_id_index ON image_description(language_id);

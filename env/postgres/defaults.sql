@@ -10,3 +10,8 @@ insert into image_provider(name) values('labelme');
 CREATE TYPE label_type AS ENUM ('normal', 'refinement', 'refinement_category');
 
 CREATE TYPE state_type AS ENUM ('unknown', 'locked', 'unlocked');
+
+
+
+insert into language(name, fullname) values('en', 'English');
+insert into language(name, fullname) values('ger', 'German');
