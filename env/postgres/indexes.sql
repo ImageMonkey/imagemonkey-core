@@ -9,6 +9,7 @@ CREATE INDEX image_unlocked_index ON image (unlocked);
 CREATE INDEX image_validation_image_id_index ON image_validation (image_id);
 CREATE INDEX image_validation_label_id_index ON image_validation (label_id);
 CREATE INDEX image_validation_uuid_index ON image_validation (uuid);
+CREATE INDEX image_validation_sys_period_index ON image_validation(sys_period);
 
 -- Label table
 CREATE INDEX label_name_index ON label (name);
@@ -34,3 +35,11 @@ CREATE INDEX image_annotation_coverage_image_id_index ON image_annotation_covera
 CREATE INDEX image_description_image_id_index ON image_description(image_id);
 CREATE INDEX image_description_state_index ON image_description(state);
 CREATE INDEX image_description_language_id_index ON image_description(language_id);
+CREATE INDEX image_description_sys_period_index ON image_description(sys_period);
+
+--image_annotation table
+CREATE INDEX image_annotation_sys_period_index ON image_annotation(sys_period);
+
+
+
+

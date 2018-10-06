@@ -201,6 +201,7 @@ func main() {
 				"annotationStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationStatistics("last-month"))[0],
 				"validationStatistics": commons.Pick(imageMonkeyDatabase.GetValidationStatistics("last-month"))[0],
 				"annotationRefinementStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month"))[0],
+				"imageDescriptionStatistics": commons.Pick(imageMonkeyDatabase.GetImageDescriptionStatistics("last-month"))[0],
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {

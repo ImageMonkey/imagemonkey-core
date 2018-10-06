@@ -23,6 +23,52 @@ func (p *ImageMonkeyDatabase) GetNumOfDonatedImages() (int64, error) {
     return num, nil
 }
 
+func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]datastructures.DataPoint, error) {
+    var imageDescriptionStatistics []datastructures.DataPoint
+
+    if period != "last-month" {
+        return imageDescriptionStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := p.db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_image_descriptions AS (
+                            SELECT sys_period FROM image_description_history h
+                            UNION ALL 
+                            SELECT sys_period FROM image_description h1
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_image_descriptions s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Debug("[Get Statistics] Couldn't get image description statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return imageDescriptionStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint datastructures.DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Debug("[Get Statistics] Couldn't scan image description row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return imageDescriptionStatistics, err
+        }
+
+        imageDescriptionStatistics = append(imageDescriptionStatistics, datapoint)
+    }
+
+    return imageDescriptionStatistics, nil
+}
+
 
 func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastructures.DataPoint, error) {
     var annotationStatistics []datastructures.DataPoint

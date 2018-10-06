@@ -38,9 +38,11 @@
     var annotationStatistics = {{ .annotationStatistics }};
     var validationStatistics = {{ .validationStatistics }};
     var annotationRefinementStatistics = {{ .annotationRefinementStatistics }};
+    var imageDescriptionStatistics = {{ .imageDescriptionStatistics }};
 
     var numOfAnnotations = [];
     var numOfValidations = [];
+    var numOfImageDescriptions = [];
     var numOfAnnotationRefinements = [];
     var dates = [];
     var detailedActivityData = null;
@@ -53,11 +55,13 @@
 
 
     if((annotationStatistics.length === validationStatistics.length) 
-      && (annotationStatistics.length === annotationRefinementStatistics.length)) {
+      && (annotationStatistics.length === annotationRefinementStatistics.length)
+      && (annotationStatistics.length === imageDescriptionStatistics.length)) {
       for(var i = 0; i < annotationStatistics.length; i++) {
         numOfAnnotations.push(annotationStatistics[i]["value"]);
         numOfValidations.push(validationStatistics[i]["value"]);
         numOfAnnotationRefinements.push(annotationRefinementStatistics[i]["value"]);
+        numOfImageDescriptions.push(imageDescriptionStatistics[i]["value"]);
         dates.push(annotationStatistics[i]["date"]);
       }
     }
@@ -140,17 +144,26 @@
               {
                 data: numOfAnnotations,
                 backgroundColor: "#0584cd",
-                label: "Annotations"
-              },
-              {
-                data: numOfValidations,
-                backgroundColor: "red",
-                label: "Validations"
+                label: "Annotations",
+                stack: 2 //stack annotations
               },
               {
                 data: numOfAnnotationRefinements,
                 backgroundColor: "green",
-                label: "Refinements"
+                label: "Refinements",
+                stack: 2 //...and refinements
+              },
+              {
+                data: numOfValidations,
+                backgroundColor: "red",
+                label: "Validations",
+                stack: 0
+              },
+              {
+                data: numOfImageDescriptions,
+                backgroundColor: "orange",
+                label: "Descriptions",
+                stack: 1
               }
             ],
             labels: dates
@@ -165,14 +178,16 @@
             },
             scales: {
               xAxes: [{ 
-                  ticks: {
-                    fontColor: "white", // this here
-                  },
+                stacked: true,
+                ticks: {
+                  fontColor: "white",
+                },
               }],
               yAxes: [{
-                  ticks: {
-                    fontColor: "white", // this here
-                  },
+                stacked: true,
+                ticks: {
+                  fontColor: "white",
+                },
               }],
             },
             legend: {
