@@ -209,8 +209,8 @@
     if(mode === "default") {
       $("#labelContainer").css("margin-top", "-2em");
       $("#navHeader").css("min-height", "290px");
-      $("#navHeader").addClass("full-width");
-      $("#navHeader").visibility({type   : "fixed"});
+      $("#navHeader").removeClass("full-width");
+      $("#navHeader").visibility({type   : false});
       $("#navHeader").show();
     } else if(mode === "noimage") {
       $("#labelContainer").css("margin-top", "0");
@@ -657,7 +657,7 @@
     var data =  spacer +
                 '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
                  '<div id="annotationAreaContainer">' +
-                    '<canvas id="annotationArea" imageId=""></canvas>' +
+                    '<canvas id="annotationArea" style="border:1px solid #000000;" imageId=""></canvas>' +
                  '</div>' +
                 '</div>';
 
@@ -1158,13 +1158,12 @@
     </div>
 
 
-    <div class="ui stackable grid" id="mainGrid">
+    <div class="ui stackable grid" id="mainGrid" style="margin-top: 3em;">
       {{ if eq .annotationMode "browse" }}
       {{ template "annotation_browse_select_mode.html" .}}
       {{ end }}
 
 
-      <div class="row"></div>
       <div class="row" id="loadingSpinner" style="display: none;">
         <div class="sk-wave overlay">
           <div class="sk-rect sk-rect1"></div>
@@ -1184,6 +1183,11 @@
         </div>
       </div>
 
+      <div class="row" id="annotationColumn" style="display: none;">
+      </div>
+
+      {{ template "annotation_buttons.html" .}}
+
       <div class="row" style="display: none;" id="annotationControlsMainArea">
         <div class="sixteen wide center aligned column">
 
@@ -1201,15 +1205,7 @@
 
         </div>
       </div>
-
-      <div class="row" id="annotationColumn" style="display: none;">
-      </div>
-
-      {{ template "annotation_buttons.html" .}}
-
-      <div class="row">
-      </div>
-
+      
       <div hidden class="ui warning message" id="warningMsg">
         <i class="close icon"></i>
         <div class="header" id="warningMsgText">
