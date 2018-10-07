@@ -1036,9 +1036,8 @@
         {{ if (eq .sessionInformation.LoggedIn false) }}
         //in case we aren't logged in, do nothing
         return;
-        {{ end }}
 
-
+        {{else}}
         {{ if (eq .sessionInformation.LoggedIn true) }}
         var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
           if(blacklistAnnotationUsageDlgAlreadyShown === null) {
@@ -1049,6 +1048,8 @@
           }
         {{ else }}
           $("#blacklistAnnotationUsageDlg").modal("show");
+        {{ end }}
+
         {{ end }}
         
       });
@@ -1157,7 +1158,7 @@
     </div>
 
 
-  <div class="ui stackable grid" id="mainGrid">
+    <div class="ui stackable grid" id="mainGrid">
       {{ if eq .annotationMode "browse" }}
       {{ template "annotation_browse_select_mode.html" .}}
       {{ end }}
@@ -1204,56 +1205,16 @@
       <div class="row" id="annotationColumn" style="display: none;">
       </div>
 
-      <div class="row" style="display: none;" id="annotationButtons">
-        <div class="five wide column">
-        </div>
+      {{ template "annotation_buttons.html" .}}
 
-        <div class="five wide center aligned column">
-          <div class="ui buttons">
-            <button hidden class="ui fluid positive button center aligned" id="doneButton">DONE</button>
-            <div class="or"></div>
-            <div class="ui negative buttons">
-              <div class="ui button">Skip</div>
-              <div class="ui floating dropdown icon button" id="skipAnnotationDropdown">
-                <i class="dropdown icon"></i>
-                <div class="menu">
-                  {{ if eq .showSkipAnnotationButtons true }}
-                  <div class="item" id="notAnnotableButton">
-                    UN-ANNOTABLE
-                  </div>
-                  {{ end }}
+      <div class="row">
+      </div>
 
-                  {{ if eq .showSkipAnnotationButtons true }}
-                  {{ if (eq .sessionInformation.LoggedIn true) }}
-                  <div class="item" id="blacklistButton">
-                    BLACKLIST
-                  </div>
-                  {{ else }}
-                    <div class="item" id="blacklistButton" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center">
-                      BLACKLIST
-                    </div>
-                  {{ end }}
-                  {{ end }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="six wide column">
-        </div>
-
-        <!--<div class="five wide column">
-        </div>-->
-
-          <div hidden class="ui warning message" id="warningMsg">
-            <i class="close icon"></i>
-            <div class="header" id="warningMsgText">
-            </div>
-          </div>
+      <div hidden class="ui warning message" id="warningMsg">
+        <i class="close icon"></i>
+        <div class="header" id="warningMsgText">
         </div>
       </div>
-      <br>
     </div>
   </div>
   {{ template "footer.html" .}}
