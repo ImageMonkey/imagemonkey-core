@@ -18,6 +18,7 @@ func main(){
 
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 10, "Max connections to Redis")
+	singleshot := flag.Bool("singleshot", false, "Terminate after work is done")
 
 	flag.Parse()
 
@@ -86,6 +87,9 @@ func main(){
 		redisConn.Close()
 
 		if !retryImmediately {
+			if *singleshot {
+				return
+			}
 			time.Sleep((time.Second * 2)) //sleep for two seconds
 		}
 

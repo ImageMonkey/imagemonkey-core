@@ -156,6 +156,19 @@
     {{ end }}
 
 
+    var imageDescriptionsPerCountry = []
+    var imageDescriptionsPerCountryCCode = []
+    var imageDescriptionsPerCountryColorPalette = []
+
+    {{ range .statistics.ImageDescriptionsPerCountry }}
+      {{ if (ne .Count 0) }}
+        imageDescriptionsPerCountry.push({{ .Count }});
+        imageDescriptionsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        imageDescriptionsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
     var validationsPerApp = []
     var validationsPerAppLabels = []
     var validationsPerAppColorPalette = []
@@ -348,6 +361,25 @@
         }
     };
 
+    var imageDescriptionsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  imageDescriptionsPerCountry,
+                backgroundColor: imageDescriptionsPerCountryColorPalette,
+                label: 'Image Descriptions per Country'
+            }],
+            labels: imageDescriptionsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Image Descriptions per Country'
+            }
+        }
+    };
+
 
 
 
@@ -366,6 +398,9 @@
 
         var annotationRefinementsPerCountryChartCtx = document.getElementById("annotation-refinements-per-country-chart").getContext("2d");
         window.annotationRefinementsPerCountry = new Chart(annotationRefinementsPerCountryChartCtx, annotationRefinementsPerCountryChartConfig);
+
+        var imageDescriptionsPerCountryChartCtx = document.getElementById("image-descriptions-per-country-chart").getContext("2d");
+        window.imageDescriptionsPerCountry = new Chart(imageDescriptionsPerCountryChartCtx, imageDescriptionsPerCountryChartConfig);
 
         var validationsPerAppChartCtx = document.getElementById("validations-per-app-chart").getContext("2d");
         window.validationsPerApp = new Chart(validationsPerAppChartCtx, validationsPerAppChartConfig);
@@ -567,6 +602,10 @@
       <br><br><br>
       <div class="row">
         <canvas id="annotation-refinements-per-country-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="image-descriptions-per-country-chart"/>
       </div>
       <br><br><br>
       <div class="row">

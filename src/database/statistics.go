@@ -425,6 +425,30 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         statistics.AnnotationRefinementsPerCountry = append(statistics.AnnotationRefinementsPerCountry, annotationRefinementsPerCountryStat)
     }
 
+
+    //get image descriptions grouped by country
+    imageDescriptionsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM image_descriptions_per_country ORDER BY count DESC`)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Explore] Couldn't explore data: ", err.Error())
+        raven.CaptureError(err, nil)
+        return statistics, err
+    }
+    defer imageDescriptionsPerCountryRows.Close()
+
+    for imageDescriptionsPerCountryRows.Next() {
+        var imageDescriptionsPerCountryStat datastructures.ImageDescriptionsPerCountryStat
+        err = imageDescriptionsPerCountryRows.Scan(&imageDescriptionsPerCountryStat.CountryCode, &imageDescriptionsPerCountryStat.Count)
+        if err != nil {
+            tx.Rollback()
+            log.Debug("[Explore] Couldn't scan data row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return statistics, err
+        }
+
+        statistics.ImageDescriptionsPerCountry = append(statistics.ImageDescriptionsPerCountry, imageDescriptionsPerCountryStat)
+    }
+
     //get all unlabeled donations
     err = tx.QueryRow(`SELECT count(i.id) from image i WHERE i.id NOT IN (SELECT image_id FROM image_validation)`).Scan(&statistics.NumOfUnlabeledDonations)
     if err != nil {
@@ -721,6 +745,14 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType str
                             DO UPDATE SET count = annotation_refinements_per_country.count + 1`, countryCode, 1)
         if err != nil {
             log.Debug("[Update Contributions per Country] Couldn't insert into/update annotation_refinements_per_country: ", err.Error())
+            return err
+        }
+    } else if contributionType == "image-description" {
+        _, err := p.db.Exec(`INSERT INTO image_descriptions_per_country (country_code, count)
+                            VALUES ($1, $2) ON CONFLICT (country_code)
+                            DO UPDATE SET count = image_descriptions_per_country.count + 1`, countryCode, 1)
+        if err != nil {
+            log.Debug("[Update Contributions per Country] Couldn't insert into/update image_descriptions_per_country: ", err.Error())
             return err
         }
     }

@@ -613,7 +613,7 @@ func TestAddImageDescriptionGermanLanguage(t *testing.T) {
 	ok(t, err)
 
 	equals(t, len(descriptions), 1)
-	equals(t, descriptions[0].Language, "German")
+	equals(t, descriptions[0].Language, "ger")
 }
 
 func TestAddImageDescriptionMultipleLanguages(t *testing.T) {
@@ -643,8 +643,8 @@ func TestAddImageDescriptionMultipleLanguages(t *testing.T) {
 	ok(t, err)
 
 	equals(t, len(descriptions), 2)
-	equals(t, descriptions[0].Language, "German")
+	equals(t, descriptions[0].Language, "ger")
 	equals(t, descriptions[0].Description, "Ein Apfel, der am Boden liegt.")
-	equals(t, descriptions[1].Language, "English")
+	equals(t, descriptions[1].Language, "en")
 	equals(t, descriptions[1].Description, "apple on the floor.")
 }

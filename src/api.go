@@ -955,6 +955,25 @@ func main(){
 				c.JSON(400, gin.H{"error": "Couldn't process request - invalid image description"})
 				return
 			}
+
+			//get client IP address and try to determine country
+			contributionsPerCountryRequest := datastructures.ContributionsPerCountryRequest{Type: "image-description", 
+																							CountryCode: "--"}
+			ip := net.ParseIP(commons.GetIPAddress(c.Request))
+			if ip != nil {
+				record, err := geoipDb.Country(ip)
+				if err != nil { //just log, but don't abort...it's just for statistics
+					log.Debug("[Donation] Couldn't determine geolocation from ", err.Error())
+						
+				} else {
+					contributionsPerCountryRequest.CountryCode = record.Country.IsoCode
+				}
+			}
+
+			for _ = range descriptions {
+				pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
+			}
+
 			c.JSON(201, nil)
 		})
 
@@ -2514,6 +2533,15 @@ func main(){
 	            c.String(500, "Couldn't process request - please try again later")
 	            return
 	        }
+		})
+
+		router.GET("/v1/statistics", func(c *gin.Context) {
+			statistics, err := imageMonkeyDatabase.Explore(words)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, statistics)
 		})
 
 

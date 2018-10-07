@@ -193,6 +193,11 @@ type ValidationStat struct {
     TotalValidations int `json:"total_validations"`
 }
 
+type ImageDescriptionsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
 type DonationsPerCountryStat struct {
     CountryCode string `json:"country_code"`
     Count int64 `json:"num"`
@@ -245,6 +250,7 @@ type Statistics struct {
     ValidationsPerCountry []ValidationsPerCountryStat `json:"validations_per_country"`
     AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
     AnnotationRefinementsPerCountry []AnnotationRefinementsPerCountryStat `json:"annotation_refinements_per_country"`
+    ImageDescriptionsPerCountry []ImageDescriptionsPerCountryStat `json:"image_descriptions_per_country"`
     DonationsPerApp []DonationsPerAppStat `json:"donations_per_app"`
     ValidationsPerApp []ValidationsPerAppStat `json:"validations_per_app"`
     AnnotationsPerApp []AnnotationsPerAppStat `json:"annotations_per_app"`
