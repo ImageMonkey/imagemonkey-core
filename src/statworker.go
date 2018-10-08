@@ -7,6 +7,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"time"
 	"encoding/json"
+	"github.com/getsentry/raven-go"
 	"./datastructures"
 	imagemonkeydb "./database"
 )
@@ -19,6 +20,7 @@ func main(){
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 10, "Max connections to Redis")
 	singleshot := flag.Bool("singleshot", false, "Terminate after work is done")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 
 	flag.Parse()
 
@@ -30,6 +32,12 @@ func main(){
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
 	defer imageMonkeyDatabase.Close()
+
+	if *useSentry {
+		log.Debug("Setting Sentry DSN")
+		raven.SetDSN(SENTRY_DSN)
+		raven.SetEnvironment("statworker")
+	}
 
 	//create redis pool
 	redisPool := redis.NewPool(func() (redis.Conn, error) {
