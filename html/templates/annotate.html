@@ -34,13 +34,10 @@
 
   <style>
 
-  .full-width{
-    width: 100vw;
-    position: relative;
-    margin-left: -50vw;
-    height: 100px;
-    margin-top: 100px;
-    left: 50%;
+  #bottomLabel {
+    position: fixed;
+    bottom: 2px;
+    right: 10px; 
   }
 
   #blacklistButton[data-tooltip] {
@@ -209,21 +206,15 @@
     if(mode === "default") {
       $("#labelContainer").css("margin-top", "-2em");
       $("#navHeader").css("min-height", "290px");
-      $("#navHeader").removeClass("full-width");
-      $("#navHeader").visibility({type   : false});
       $("#navHeader").show();
     } else if(mode === "noimage") {
       $("#labelContainer").css("margin-top", "0");
       $("#navHeader").css("min-height", "200px");
-      $("#navHeader").removeClass("full-width");
-      $("#navHeader").visibility({type   : false});
       $("#annotationControlsGrid").hide();
       $("#navHeader").show();
     } else {
       $("#labelContainer").css("margin-top", "0");
       $("#navHeader").css("min-height", "200px");
-      $("#navHeader").removeClass("full-width");
-      $("#navHeader").visibility({type   : false});
       $("#navHeader").show();
     }
   }
@@ -555,11 +546,13 @@
     if(annotationInfo.imageId === ""){
       $("#labelContainer").hide();
       $("#doneButton").hide();
+      $("#bottomLabel").hide();
       annotator.block();
     }
     else{
       $("#labelContainer").show();
       $("#doneButton").show();
+      $("#bottomLabel").show();
       annotator.unblock();
     }
   }
@@ -569,9 +562,11 @@
     $("#label").attr("sublabel", sublabel)
     if(sublabel === ""){
       $("#label").text(("Annotate all: " + label));
+      $("#bottomLabel").text(("Annotate all: " + label));
     } 
     else {
       $("#label").text(("Annotate all: " + sublabel + "/" + label));
+      $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
     }
   }
 
@@ -1128,7 +1123,7 @@
 
   <!-- Page Contents -->
   <div class="pusher">
-    <div hidden class="ui inverted vertical masthead center aligned segment full-width" id="navHeader">
+    <div hidden class="ui inverted vertical masthead center aligned segment" id="navHeader">
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer"> <!--style="margin-top:-2em;">-->
       <h2 class="ui inverted header" id="label" label="" sublabel="" style="margin-bottom: 0.2em;"></h2>
@@ -1158,7 +1153,7 @@
     </div>
 
 
-    <div class="ui stackable grid" id="mainGrid" style="margin-top: 3em;">
+    <div class="ui stackable grid" id="mainGrid" style="margin-top: 1em;">
       {{ if eq .annotationMode "browse" }}
       {{ template "annotation_browse_select_mode.html" .}}
       {{ end }}
@@ -1212,6 +1207,7 @@
         </div>
       </div>
     </div>
+    <div class="ui big blue label computer only" id="bottomLabel" style="display: none;"></div>
   </div>
   {{ template "footer.html" .}}
 
