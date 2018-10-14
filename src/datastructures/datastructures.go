@@ -584,3 +584,18 @@ type DescriptionsPerImage struct {
         Descriptions []ImageDesc `json:"descriptions"`
     } `json:"image"`
 }
+
+type Validation struct {
+    Id string `json:"uuid"`
+    Image struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+    } `json:"image"`
+
+    Label struct {
+        Name string `json:"name"`
+    } `json:"label"`
+}

@@ -3,7 +3,9 @@ package imagemonkeydb
 import (
     "github.com/getsentry/raven-go"
     log "github.com/Sirupsen/logrus"
-    "../datastructures"
+    datastructures "../datastructures"
+    parser "../parser"
+    commons "../commons"
     "database/sql"
     "github.com/lib/pq"
     "errors"
@@ -142,28 +144,14 @@ func (p *ImageMonkeyDatabase) ValidateImages(apiUser datastructures.APIUser,
 }
 
 
-func (p *ImageMonkeyDatabase) GetImageToValidate(imageId string, labelId string, username string) (datastructures.ValidationImage, error) {
+func (p *ImageMonkeyDatabase) GetImageToValidate(validationId string, username string) (datastructures.ValidationImage, error) {
 	var image datastructures.ValidationImage
 
 	image.Id = ""
 	image.Label = ""
 	image.Provider = "donation"
 
-    nextParam := 1
-    labelIdStr := ""
-    if labelId != "" {
-        if imageId == "" {
-            labelIdStr = " AND l.uuid = $1"
-            nextParam = 2
-        } else {
-            labelIdStr = " AND l.uuid = $2"
-            nextParam = 3
-        }
-    } else {
-        if imageId != "" {
-            nextParam = 2
-        }
-    }
+    var queryParams []interface{}
 
     includeOwnImageDonations := ""
     if username != "" {
@@ -181,14 +169,19 @@ func (p *ImageMonkeyDatabase) GetImageToValidate(imageId string, labelId string,
                                                         FROM image_quarantine q 
                                                         WHERE q.image_id = i.id 
                                                     )
-                                               )`, nextParam)
+                                               )`, len(queryParams) + 1)
+        queryParams = append(queryParams, username)
     }
+
+    orderRandomly := "ORDER BY RANDOM()"
 
     //either select a specific image with a given image id or try to select 
     //an image that's not already validated (as they have preference). 
-    imageIdStr := "(v.num_of_valid = 0) AND (v.num_of_invalid = 0)"
-    if imageId != "" {
-        imageIdStr = "i.key = $1"
+    validationIdStr := "(v.num_of_valid = 0) AND (v.num_of_invalid = 0)"
+    if validationId != "" {
+        orderRandomly = ""
+        validationIdStr = fmt.Sprintf("v.uuid::text = $%d", len(queryParams) +1)
+        queryParams = append(queryParams, validationId)
     }
 
     q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, ''), v.num_of_valid, v.num_of_invalid, v.uuid, i.unlocked
@@ -198,25 +191,12 @@ func (p *ImageMonkeyDatabase) GetImageToValidate(imageId string, labelId string,
                         JOIN label l ON v.label_id = l.id
                         LEFT JOIN label pl ON l.parent_id = pl.id
                         WHERE ((i.unlocked = true %s) AND (p.name = 'donation') 
-                        AND %s%s) LIMIT 1`,includeOwnImageDonations, imageIdStr, labelIdStr)
+                        AND %s) %s LIMIT 1`,includeOwnImageDonations, validationIdStr, orderRandomly)
 
 	var rows *sql.Rows
     var err error
-    var queryParams []interface{}
-    if imageId != "" {
-        queryParams = append(queryParams, imageId) 
-    }
-
-    if labelId != "" {
-        queryParams = append(queryParams, labelId) 
-    }
-
-    if username != "" {
-        queryParams = append(queryParams, username) 
-    }
 
     rows, err = p.db.Query(q, queryParams...)
-	
 
     if err != nil {
 		log.Debug("[Fetch image] Couldn't fetch random image: ", err.Error())
@@ -228,11 +208,15 @@ func (p *ImageMonkeyDatabase) GetImageToValidate(imageId string, labelId string,
     var label1 string
     var label2 string
 	if !rows.Next() {
-        //if we provided a image id, but we get no result, its an error. So return here
-        if imageId != "" {
+        //if we provided a validation id, but we get no result, its an error. So return here
+        if validationId != "" {
             return image, nil
         }
 
+        queryParams = nil
+        if username != "" {
+            queryParams = append(queryParams, username)
+        }
 
         var otherRows *sql.Rows
 
@@ -242,29 +226,17 @@ func (p *ImageMonkeyDatabase) GetImageToValidate(imageId string, labelId string,
                             JOIN image_validation v ON v.image_id = i.id
                             JOIN label l ON v.label_id = l.id
                             LEFT JOIN label pl ON l.parent_id = pl.id
-                            WHERE (i.unlocked = true %s) AND p.name = 'donation'%s 
+                            WHERE (i.unlocked = true %s) AND p.name = 'donation'
                             OFFSET floor(random() * 
                                 ( SELECT count(*) FROM image i 
                                   JOIN image_provider p ON i.image_provider_id = p.id 
                                   JOIN image_validation v ON v.image_id = i.id 
                                   JOIN label l ON v.label_id = l.id
-                                  WHERE (i.unlocked = true %s) AND p.name = 'donation'%s
+                                  WHERE (i.unlocked = true %s) AND p.name = 'donation'
                                 )
-                            ) LIMIT 1`, includeOwnImageDonations, labelIdStr, includeOwnImageDonations, labelIdStr)
+                            ) LIMIT 1`, includeOwnImageDonations, includeOwnImageDonations)
 
-        if labelId != "" {
-            if username != "" {
-                otherRows, err = p.db.Query(q1, labelId, username)
-            } else {
-                otherRows, err = p.db.Query(q1, labelId)
-            }
-        } else {
-            if username != "" {
-                otherRows, err = p.db.Query(q1, username)
-            } else {
-                otherRows, err = p.db.Query(q1)
-            }
-        }
+        otherRows, err := p.db.Query(q1, queryParams...)
 
         if err != nil {
             log.Debug("[Fetch random image] Couldn't fetch random image: ", err.Error())
@@ -327,6 +299,88 @@ func (p *ImageMonkeyDatabase) MarkValidationAsNotAnnotatable(validationId string
     }
 
     return nil
+}
+
+func (p *ImageMonkeyDatabase) GetImagesForValidation(apiUser datastructures.APIUser, parseResult parser.ParseResult, 
+        orderRandomly bool, apiBaseUrl string) ([]datastructures.Validation, error) {
+    validations := []datastructures.Validation{}
+
+    q1 := ""
+    if orderRandomly {
+        q1 = " ORDER BY RANDOM()"
+    }
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = fmt.Sprintf(`OR (
+                                                    EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM user_image u
+                                                        JOIN account a ON a.id = u.account_id
+                                                        WHERE u.image_id = i.id AND a.name = $%d
+                                                    )
+                                                    AND NOT EXISTS 
+                                                    (
+                                                        SELECT 1 
+                                                        FROM image_quarantine q 
+                                                        WHERE q.image_id = i.id 
+                                                    )
+                                                )`, len(parseResult.QueryValues) + 1)
+    }
+
+    q := fmt.Sprintf(`WITH 
+                        image_productive_labels AS (
+                            SELECT i.id as image_id, i.key as image_key, i.width as image_width, i.height as image_height, i.unlocked as image_unlocked, 
+                                array_agg(accessor)::text[] as accessors, COALESCE(c.annotated_percentage, 0) as annotated_percentage
+                                FROM image_validation v 
+                                JOIN label_accessor a ON v.label_id = a.label_id
+                                JOIN image i ON v.image_id = i.id
+                                LEFT JOIN image_annotation_coverage c ON c.image_id = i.id
+                                WHERE (i.unlocked = true %s)
+                                GROUP BY i.id, i.width, i.height, c.annotated_percentage
+                        )
+
+                        SELECT v.uuid::text, a.accessor, q.image_key, q.image_width, q.image_height, q.image_unlocked
+                             FROM image_validation v 
+                             JOIN image_productive_labels q ON q.image_id = v.image_id
+                             JOIN label_accessor a ON a.label_id = v.label_id 
+                             WHERE %s
+                             %s`, includeOwnImageDonations, parseResult.Query, q1)
+
+    var rows *sql.Rows
+    var err error
+
+    if apiUser.Name != "" {
+        parseResult.QueryValues = append(parseResult.QueryValues, apiUser.Name)
+    }
+
+    rows, err = p.db.Query(q, parseResult.QueryValues...)
+    
+    if err != nil {
+        log.Error("[Get Validations] Couldn't get validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return validations, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var validation datastructures.Validation
+        err = rows.Scan(&validation.Id, &validation.Label.Name, &validation.Image.Id, &validation.Image.Width, 
+                        &validation.Image.Height, &validation.Image.Unlocked)
+        if err != nil {
+            log.Debug("[Get Validations] Couldn't scan rows: ", err.Error())
+            raven.CaptureError(err, nil)
+            return validations, err
+        }
+
+        validation.Image.Url = commons.GetImageUrlFromImageId(apiBaseUrl, validation.Image.Id, validation.Image.Unlocked)
+
+        validations = append(validations, validation)
+    }
+
+    return validations, nil
 }
 
 func (p *ImageMonkeyDatabase) GetUnannotatedValidations(apiUser datastructures.APIUser, imageId string) ([]datastructures.UnannotatedValidation, error) {

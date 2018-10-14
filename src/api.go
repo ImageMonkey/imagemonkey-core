@@ -493,7 +493,7 @@ func main(){
 
 	//if the mostPopularLabels gets extended with sublabels, 
 	//adapt getRandomGroupedImages() and validateImages() also!
-	mostPopularLabels := []string{"cat", "dog"}
+	//mostPopularLabels := []string{"cat", "dog"}
 
 	//currently, there is both the imageMonkeyDb and the db. 
 	//the reason for that is, that the database part initially started out really simple.
@@ -863,74 +863,56 @@ func main(){
 		}
 
 		router.GET("/v1/validation", func(c *gin.Context) {
-			params := c.Request.URL.Query()
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			image, err := imageMonkeyDatabase.GetImageToValidate("", apiUser.Name)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			if image.Id == "" {
+				c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
+				return
+			}
+				
+			c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, 
+														 "provider": image.Provider, 
+														 "unlocked": image.Unlocked, 
+													     "url": commons.GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked),
+													   }, 
+										"label": image.Label, "sublabel": image.Sublabel, "num_yes": image.Validation.NumOfValid, 
+										"num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
+		})
+
+		router.GET("/v1/validation/:validationid", func(c *gin.Context) {
+			validationId := c.Param("validationid")
 
 			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			grouped := false
-			if temp, ok := params["grouped"]; ok {
-				if temp[0] == "true" {
-					grouped = true
-				}
+
+			image, err := imageMonkeyDatabase.GetImageToValidate(validationId, apiUser.Name)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
 			}
 
-			limit := 20
-			if temp, ok := params["limit"]; ok {
-				limit, err = strconv.Atoi(temp[0])
-				if err != nil {
-					c.JSON(400, gin.H{"error": "Couldn't process request - invalid limit parameter"})
-					return
-				}
+			if image.Id == "" {
+				c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
+				return
 			}
-
-			imageId := ""
-			if temp, ok := params["image_id"]; ok {
-				imageId = temp[0]
-			}
-
-
-			if grouped {
-				pos := 0
-				if len(mostPopularLabels) > 0 {
-					pos = commons.Random(0, (len(mostPopularLabels) - 1))
-				}
-					
-
-				randomGroupedImages, err := imageMonkeyDatabase.GetRandomGroupedImages(mostPopularLabels[pos], limit)
-				if err != nil {
-					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-					return
-				}
-				c.JSON(http.StatusOK, gin.H{"label": mostPopularLabels[pos], "donations": randomGroupedImages})
-
-			} else {
-				labelId, err := commons.GetLabelIdFromUrlParams(params) 
-				if err != nil {
-					c.JSON(422, gin.H{"error": "label id needs to be an integer"})
-					return
-				}
-
-				image, err := imageMonkeyDatabase.GetImageToValidate(imageId, labelId, apiUser.Name)
-				if err != nil {
-					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-					return
-				}
-
-				if image.Id == "" {
-					c.JSON(422, gin.H{"error": "Couldn't process request - empty result set"})
-					return
-				}
 				
-				c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, 
-															 "provider": image.Provider, 
-															 "unlocked": image.Unlocked, 
-															 "url": commons.GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked),
-														   }, 
-											"label": image.Label, "sublabel": image.Sublabel, "num_yes": image.Validation.NumOfValid, 
-											"num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
-			}
+			c.JSON(http.StatusOK, gin.H{"image" : gin.H{ "uuid": image.Id, 
+														 "provider": image.Provider, 
+														 "unlocked": image.Unlocked, 
+													     "url": commons.GetImageUrlFromImageId(*apiBaseUrl, image.Id, image.Unlocked),
+													   }, 
+										"label": image.Label, "sublabel": image.Sublabel, "num_yes": image.Validation.NumOfValid, 
+										"num_no": image.Validation.NumOfInvalid, "uuid": image.Validation.Id })
 		})
 
 		
@@ -1671,6 +1653,51 @@ func main(){
 				return
 			}
 			c.JSON(http.StatusOK, nil)
+		})
+
+		router.GET("/v1/validations", func(c *gin.Context) {
+			query := commons.GetParamFromUrlParams(c, "query", "")
+			if query != "" {
+				query, err = url.QueryUnescape(query)
+		        if err != nil {
+		            c.JSON(422, gin.H{"error": "please provide a valid query"})
+					return
+		        }
+
+		        queryParser := parser.NewQueryParserV2(query)
+		        queryParser.AllowStaticQueryAttributes(true)
+		        parseResult, err := queryParser.Parse(1)
+		        if err != nil {
+		            c.JSON(422, gin.H{"error": err.Error()})
+		            return
+		        }
+
+		        orderRandomly := false
+		        shuffle := commons.GetParamFromUrlParams(c, "shuffle", "")
+		        if shuffle == "true" {
+		        	orderRandomly = true
+		        }
+
+		        var apiUser datastructures.APIUser
+				apiUser.ClientFingerprint = getBrowserFingerprint(c)
+				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+				if len(parseResult.QueryValues) == 0 {
+					c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid query!"})
+					return	
+				}
+
+				validations, err := imageMonkeyDatabase.GetImagesForValidation(apiUser, parseResult, orderRandomly, *apiBaseUrl)
+		        if err != nil {
+		        	c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+		        }
+
+				c.JSON(http.StatusOK, validations)	
+				return
+		    }
+
+		    c.JSON(422, gin.H{"error": "please provide a valid query"})
 		})
 
 		router.GET("/v1/validations/unannotated", func(c *gin.Context) {

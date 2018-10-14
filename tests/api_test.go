@@ -264,81 +264,6 @@ func testLabelImage(t *testing.T, imageId string, label string) {
 	equals(t, oldNum+1, newNum)
 }
 
-
-func testValidate(t *testing.T) {
-	url := BASE_URL + API_VERSION + "/validate"
-	_, err := resty.R().
-			SetResult(&ValidateResult{}).
-			Get(url)
-	ok(t, err)
-}
-
-func testImageValidation(t *testing.T, uuid string, param string, moderated bool, token string) {
-	url := BASE_URL + API_VERSION + "/validation/" + uuid + "/validate/" + param
-
-	var resp *resty.Response
-	var err error
-	if moderated {
-		resp, err = resty.R().
-				SetHeader("X-Moderation", "true").
-				SetAuthToken(token).
-				Post(url)
-	} else {
-		resp, err = resty.R().
-				Post(url)
-	}
-
-	equals(t, resp.StatusCode(), 200)
-	ok(t, err)
-}
-
-func testRandomImageValidation(t *testing.T, num int) {
-	for i := 0; i < num; i++ {
-		param := ""
-		randomBool := randomBool()
-		if randomBool {
-			param = "yes"
-		} else {
-			param = "no"
-		}
-
-		randomValidationId, err := db.GetRandomValidationId()
-		ok(t, err)
-
-		beforeChangeNumValid, beforeChangeNumInvalid, err := db.GetValidationCount(randomValidationId)
-		ok(t, err)
-
-		testImageValidation(t, randomValidationId, param, false, "")
-
-		afterChangeNumValid, afterChangeNumInvalid, err := db.GetValidationCount(randomValidationId)
-		ok(t, err)
-
-		if param == "yes" {
-			equals(t, afterChangeNumValid, (beforeChangeNumValid + 1))
-		} else {
-			equals(t, afterChangeNumInvalid, (beforeChangeNumInvalid + 1))
-		}
-	}
-}
-
-func testRandomModeratedImageValidation(t *testing.T, num int, token string) {
-	for i := 0; i < num; i++ {
-		randomValidationId, err := db.GetRandomValidationId()
-		ok(t, err)
-
-		_, beforeChangeNumInvalid, err := db.GetValidationCount(randomValidationId)
-		ok(t, err)
-
-		testImageValidation(t, randomValidationId, "no", true, token)
-
-		_, afterChangeNumInvalid, err := db.GetValidationCount(randomValidationId)
-		ok(t, err)
-
-
-		equals(t, afterChangeNumInvalid, (beforeChangeNumInvalid + 5))
-	}
-}
-
 func testGetImageForAnnotation(t *testing.T, imageId string, token string, validationId string, requiredStatusCode int) {
 	url := BASE_URL + API_VERSION + "/annotate"
 	req := resty.R()
@@ -400,33 +325,6 @@ func testGetImageToLabel(t *testing.T, imageId string, token string, requiredSta
 
 	resp, err := req.
 				Get(url)
-
-	ok(t, err)
-	equals(t, resp.StatusCode(), requiredStatusCode)
-}
-
-func testGetImageToValidate(t *testing.T, imageId string, token string, labelId string, requiredStatusCode int) {
-	url := BASE_URL + API_VERSION + "/validation"
-
-	req := resty.R()
-
-	if token != "" {
-		req.SetAuthToken(token)
-	}
-
-	if imageId != "" {
-		req.SetQueryParams(map[string]string{
-		      "image_id": imageId,
-		    })
-	}
-
-	if labelId != "" {
-		req.SetQueryParams(map[string]string{
-		      "label_id": labelId,
-		    })
-	}
-
-	resp, err := req.Get(url)
 
 	ok(t, err)
 	equals(t, resp.StatusCode(), requiredStatusCode)
@@ -533,14 +431,6 @@ func TestLoginShouldFailDueToWrongUsername(t *testing.T) {
 	testLogin(t, "wronguser", "testpassword", 401)
 }
 
-func TestRandomImageValidation(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testMultipleDonate(t)
-	testRandomImageValidation(t, 100)
-}
-
 func TestRandomAnnotationRework(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
@@ -548,18 +438,6 @@ func TestRandomAnnotationRework(t *testing.T) {
 	testMultipleDonate(t)
 	testRandomAnnotate(t, 2, `[{"top":100,"left":200,"type":"rect","angle":0,"width":40,"height":60,"stroke":{"color":"red","width":1}}]`)
 	testRandomAnnotationRework(t, 2, `[{"top":200,"left":300,"type":"rect","angle":10,"width":50,"height":30,"stroke":{"color":"blue","width":3}}]`)
-}
-
-
-func TestRandomModeratedImageValidation(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testMultipleDonate(t)
-	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
-	moderatorToken := testLogin(t, "moderator", "moderator", 200)
-	db.GiveUserModeratorRights("moderator") //give user moderator rights
-	testRandomModeratedImageValidation(t, 100, moderatorToken)
 }
 
 
@@ -749,147 +627,7 @@ func TestGetImageByIdOwnDonationButPutInQuarantine(t *testing.T) {
 	testGetImageToLabel(t, imageId, userToken, 422)
 }
 
-func TestGetImageToValidate(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
-
-	testGetImageToValidate(t, "", "", "", 200)
-}
-
-func TestGetImageToValidateById(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
-
-	imageId, err := db.GetLatestDonatedImageId()
-	ok(t, err)
-
-	testGetImageToValidate(t, imageId, "", "", 200)
-}
-
-func TestGetImageToValidateAuthenticated(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
-	userToken := testLogin(t, "user", "pwd", 200)
-
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken)
-
-	testGetImageToValidate(t, "", userToken, "", 200)
-}
-
-func TestGetImageToValidateByIdAuthenticated(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
-	userToken := testLogin(t, "user", "pwd", 200)
-
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken)
-
-	imageId, err := db.GetLatestDonatedImageId()
-	ok(t, err)
-
-
-	testGetImageToValidate(t, imageId, userToken, "", 200)
-}
-
-func TestGetImageToValidateLocked(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
-
-	testGetImageToValidate(t, "", "", "", 422)
-}
-
-func TestGetImageToValidateLockedButOwnDonation(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
-	userToken := testLogin(t, "user", "pwd", 200)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
-
-	testGetImageToValidate(t, "", userToken, "", 200)
-}
-
-func TestGetImageToValidateByLabel(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
-
-	uuid, err := db.GetLabelUuidFromName("apple")
-	ok(t, err)
-
-	testGetImageToValidate(t, "", "", uuid, 200)
-}
-
-func TestGetImageToValidateByLabelMoreThanOne(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
-	testDonate(t, "./images/apples/apple2.jpeg", "apple", true, "")
-
-	uuid, err := db.GetLabelUuidFromName("apple")
-	ok(t, err)
-
-	testGetImageToValidate(t, "", "", uuid, 200)
-}
-
-func TestGetImageToValidateByLabelLocked(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
-
-	uuid, err := db.GetLabelUuidFromName("apple")
-	ok(t, err)
-
-	testGetImageToValidate(t, "", "", uuid, 422)
-}
-
-func TestGetImageToValidateByLabelLockedButOwnDonation(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
-	userToken := testLogin(t, "user", "pwd", 200)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
-
-	uuid, err := db.GetLabelUuidFromName("apple")
-	ok(t, err)
-
-	testGetImageToValidate(t, "", userToken, uuid, 200)
-}
-
-func TestGetImageToValidateByLabelLockedButForeignDonation(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
-	userToken := testLogin(t, "user", "pwd", 200)
-
-	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
-	userToken1 := testLogin(t, "user1", "pwd1", 200)
-
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
-
-	uuid, err := db.GetLabelUuidFromName("apple")
-	ok(t, err)
-
-	testGetImageToValidate(t, "", userToken1, uuid, 422)
-}
 
 
 func TestGetImageToAnnotateButNotEnoughValidation(t *testing.T) {

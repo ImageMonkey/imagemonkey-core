@@ -237,12 +237,15 @@ func main() {
 
 			title := ""
 			subtitle := ""
+			activeMenuNr := 3
 			if operationType == "object" {
 				title = "Add Labels"
 				subtitle = "Label all objects"
+				activeMenuNr = 3
 			} else {
 				title = "Add Image Description"
 				subtitle = "Describe the Image"
+				activeMenuNr = 15
 			}
 
 
@@ -252,7 +255,7 @@ func main() {
 				"imageId": imageId,
 				"mode": mode,
 				"type": operationType,
-				"activeMenuNr": 3,
+				"activeMenuNr": activeMenuNr,
 				"apiBaseUrl": apiBaseUrl,
 				"labels": labelMap,
 				"languages": languages.GetAllSupported(),
@@ -351,6 +354,13 @@ func main() {
 				}
 			}
 
+			showSettings := true
+			if temp, ok := params["show_settings"]; ok {
+				if temp[0] == "false" {
+					showSettings = false
+				}
+			}
+
 			onlyOnce := false
 			if temp, ok := params["only_once"]; ok {
 				if temp[0] == "true" {
@@ -371,28 +381,21 @@ func main() {
 				}
 			}
 
-			imageId := ""
-			if temp, ok := params["image_id"]; ok {
-				imageId = temp[0]
-			}
-
-			labelId, err := commons.GetLabelIdFromUrlParams(params)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
-				return
-			}
+			mode := commons.GetParamFromUrlParams(c, "mode", "default")
 
 			c.HTML(http.StatusOK, "validate.html", gin.H{
 				"title": "Validate Label",
-				"imageId": imageId,
 				"activeMenuNr": 5,
 				"showHeader": showHeader,
 				"showFooter": showFooter,
+				"showSettings": showSettings,
 				"onlyOnce": onlyOnce,
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": appIdentifier,
 				"callback": callback,
-				"labelId": labelId,
+				"mode": mode,
+				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
+				"queryAttributes": commons.GetStaticQueryAttributes(),
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})
