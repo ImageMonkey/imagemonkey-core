@@ -136,6 +136,13 @@
       });
     }
 
+    var isMobile = false;
+    var maintainAspectRatio = true;
+    if (/Mobi/.test(navigator.userAgent)) {
+      isMobile = true;
+      maintainAspectRatio = false;
+    }
+
 
     var statisticsChartConfig = {
         type: "bar",
@@ -170,6 +177,7 @@
         },
         options: {
             responsive: true,
+            maintainAspectRatio: maintainAspectRatio,
             title: {
               display: true,
               text: "Activity (last 30 days)",
@@ -201,6 +209,9 @@
 
     var statisticsChartCtx = document.getElementById("statisticsChart").getContext("2d");
     window.statisticsChart = new Chart(statisticsChartCtx, statisticsChartConfig);
+
+    if (isMobile)
+      $("#statisticsChartContainer").height("300px");
 
     $("#showActivityDetailsButton").click(function(e) {
       $('#detailedActivity').transition('fly down');   
