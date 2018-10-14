@@ -1382,7 +1382,7 @@ func main(){
 			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 			statisticsPusher.PushAppAction(getAppIdentifier(c), "validation")
 
-			c.JSON(200, nil)
+			c.JSON(204, nil)
 		})
 
 		router.GET("/v1/export", func(c *gin.Context) {

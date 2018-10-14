@@ -124,6 +124,23 @@ func testGetImagesForValidation(t *testing.T, query string, token string, requir
 }
 
 
+func testBatchValidation(t *testing.T, validations []datastructures.ImageValidation, requiredStatusCode int) {
+	var imageValidationBatch datastructures.ImageValidationBatch
+
+	imageValidationBatch.Validations = validations
+
+	u := BASE_URL + API_VERSION + "/validation/validate"
+
+	req := resty.R().
+				SetBody(imageValidationBatch)
+
+	resp, err := req.Patch(u)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+}
+
+
 func TestRandomImageValidation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
@@ -301,4 +318,37 @@ func TestGetImagesForValidationLockedButForeignDonation(t *testing.T) {
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
 
 	testGetImagesForValidation(t, "apple", userToken1, 200, 0)
+}
+
+func TestBatchValidation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t)
+
+	validationIds, err := db.GetAllValidationIds()
+	ok(t, err)
+
+	validationId1NumOfValidBefore, validationId1NumOfInvalidBefore, err := db.GetValidationCount(validationIds[0])
+	ok(t, err)
+	validationId2NumOfValidBefore, validationId2NumOfInvalidBefore, err := db.GetValidationCount(validationIds[1])
+	ok(t, err)
+
+	var validations []datastructures.ImageValidation
+	validation1 := datastructures.ImageValidation{Uuid: validationIds[0], Valid: "yes"}
+	validations = append(validations, validation1)
+	validation2 := datastructures.ImageValidation{Uuid: validationIds[1], Valid: "no"}
+	validations = append(validations, validation2)
+	testBatchValidation(t, validations, 204)
+
+
+	validationId1NumOfValidAfter, validationId1NumOfInvalidAfter, err := db.GetValidationCount(validationIds[0])
+	ok(t, err)
+	validationId2NumOfValidAfter, validationId2NumOfInvalidAfter, err := db.GetValidationCount(validationIds[1])
+	ok(t, err)
+
+	equals(t, (validationId1NumOfValidBefore + 1), validationId1NumOfValidAfter)
+	equals(t, validationId1NumOfInvalidBefore, validationId1NumOfInvalidAfter)
+	equals(t, validationId2NumOfValidBefore, validationId2NumOfValidAfter)
+	equals(t, (validationId2NumOfInvalidBefore + 1), validationId2NumOfInvalidAfter)
 }
