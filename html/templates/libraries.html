@@ -60,11 +60,19 @@
       <div class="row">
         One of the best things about ImageMonkey is our tight integration with Machine learning frameworks like <a href="https://www.tensorflow.org/">Tensorflow</a> and <a href="https://github.com/matterport/Mask_RCNN">Mask RCNN</a>.<br>You want to train your own image classifier based on the ImageMonkey dataset?<br> <br>
         It's as easy as that:<br><br>
-
+        <b>CPU version</b>
         <div class="ui segment">
           <pre><code class="bash">
     docker pull bbernhard/imagemonkey-train:latest
-    docker run -it bbernhard/imagemonkey-train
+    docker run -it bbernhard/imagemonkey-train:latest
+          </code></pre>
+        </div>
+        <br>
+        <b>GPU version</b>
+        <div class="ui segment">
+          <pre><code class="bash">
+    docker pull bbernhard/imagemonkey-train:latest-gpu
+    docker run --runtime=nvidia -it bbernhard/imagemonkey-train:latest-gpu
           </code></pre>
         </div>
         <br>

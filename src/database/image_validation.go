@@ -345,8 +345,8 @@ func (p *ImageMonkeyDatabase) GetImagesForValidation(apiUser datastructures.APIU
                              FROM image_validation v 
                              JOIN image_productive_labels q ON q.image_id = v.image_id
                              JOIN label_accessor a ON a.label_id = v.label_id 
-                             WHERE %s
-                             %s`, includeOwnImageDonations, parseResult.Query, q1)
+                             WHERE (%s) AND %s
+                             %s`, includeOwnImageDonations, parseResult.Query, parseResult.Subquery, q1)
 
     var rows *sql.Rows
     var err error

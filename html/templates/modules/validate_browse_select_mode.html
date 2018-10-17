@@ -140,6 +140,7 @@
     }
 
     clearImageGrid();
+    $("#imageGrid").hide();
 
     if(validations.length === 0)
       return;
@@ -206,22 +207,6 @@
     return d;
   }
 
-  function updateLabelsForImage(imageId, labels) {
-    if(labels !== "") {
-      var oldLabels = $("#galleryitem" + imageId + "container").attr("data-balloon");
-      var newLabels = oldLabels + ((oldLabels === "") ? "" : ", ") + labels;
-      $("#galleryitem" + imageId + "container").attr("data-balloon", newLabels);
-    }
-  }
-
-  function updateImageDescriptionsForImage(imageId, imageDesriptions) {
-    if(imageDesriptions !== "") {
-      var oldImageDescriptions = $("#galleryitem" + imageId + "container").attr("data-balloon");
-      var newImageDescriptions = oldImageDescriptions + ((imageDesriptions === "") ? "" : ", ") + imageDesriptions;
-      $("#galleryitem" + imageId + "container").attr("data-balloon", newImageDescriptions);
-    }
-  }
-
   function getUrlFromImageUrl(imageUrl, imageUnlocked){
     var url = imageUrl;
 
@@ -264,9 +249,9 @@
                 +    Math.round(justifiedLayoutGeometry.boxes[i].width, 0)
                 +    "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
 
-      var imageId = ("galleryitem" + imageGridData[i]["image"]["uuid"]);
+      var validationId = ("galleryitem" + imageGridData[i]["uuid"]);
       var tooltipText = imageGridData[i]["label"]["name"];
-      item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+      item = newImageItem(validationId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
       $("#imageGrid").append(item); 
 
