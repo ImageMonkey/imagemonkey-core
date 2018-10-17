@@ -11,7 +11,7 @@
     <div class="ui dropdown item" id="labelMenuDropdown">
       Label<i class="dropdown icon"></i>
       <div class="menu">
-        <div class="center aligned item" onclick="window.location='/label';">Objects</div>
+        <div class="center aligned item" onclick="window.location='/label';">Object</div>
         <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
       </div>
     </div>
@@ -20,7 +20,7 @@
     <div class="ui dropdown item" id="validateMenuDropdown">
       Label<i class="dropdown icon"></i>
       <div class="menu">
-        <div class="center aligned item" onclick="window.location='/verify';">Label</div>
+        <div class="center aligned item" onclick="window.location='/verify';">Object</div>
         <div class="center aligned item" onclick="window.location='/verify_annotation';">Annotation</div>
       </div>
     </div>
@@ -66,10 +66,10 @@
 <div class="ui vertical inverted sidebar menu">
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
-  <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Label Objects</a>
+  <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Label Object</a>
   <a class="{{if (eq .activeMenuNr 15)}}active {{end}}item" href="/label?type=image">Label Image</a>
   <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationSidebarMenuItem" href="/annotate">Annotate</a>
-  <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
+  <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Object</a>
   <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
   <a class="{{if (eq .activeMenuNr 7)}}active {{end}}item" href="/quiz">Quiz</a>
   <a class="{{if (eq .activeMenuNr 14)}}active {{end}}item" href="/refine?mode=browse">Refinement</a>
