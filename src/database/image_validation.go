@@ -341,7 +341,7 @@ func (p *ImageMonkeyDatabase) GetImagesForValidation(apiUser datastructures.APIU
                                 GROUP BY i.id, i.width, i.height, c.annotated_percentage
                         )
 
-                        SELECT v.uuid::text, a.accessor, q.image_key, q.image_width, q.image_height, q.image_unlocked
+                        SELECT v.uuid::text, v.num_of_valid, v.num_of_invalid, a.accessor, q.image_key, q.image_width, q.image_height, q.image_unlocked
                              FROM image_validation v 
                              JOIN image_productive_labels q ON q.image_id = v.image_id
                              JOIN label_accessor a ON a.label_id = v.label_id 
@@ -367,7 +367,8 @@ func (p *ImageMonkeyDatabase) GetImagesForValidation(apiUser datastructures.APIU
 
     for rows.Next() {
         var validation datastructures.Validation
-        err = rows.Scan(&validation.Id, &validation.Label.Name, &validation.Image.Id, &validation.Image.Width, 
+        err = rows.Scan(&validation.Id, &validation.NumOfYes, &validation.NumOfNo, 
+                        &validation.Label.Name, &validation.Image.Id, &validation.Image.Width, 
                         &validation.Image.Height, &validation.Image.Unlocked)
         if err != nil {
             log.Debug("[Get Validations] Couldn't scan rows: ", err.Error())

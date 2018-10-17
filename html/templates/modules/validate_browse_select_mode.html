@@ -11,6 +11,16 @@
     transform: translate(-50%, -50%);
   }
 
+  .noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+  }
+
   .object-valid { border: 5px solid #00ff00; }
   .object-invalid { border: 5px solid #ff0000; }
 
@@ -203,7 +213,7 @@
             +'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><img id="' + id +'" src="' + url 
             + '" data-validationid="' + validationId + '" onclick="onImageGridItemClicked(this);" style="cursor: pointer;">'
-            + '<div class="centered-img-text" id="' + (id + "text") + '"></div>' + '</div>');
+            + '<div class="noselect centered-img-text" id="' + (id + "text") + '"></div>' + '</div>');
     return d;
   }
 
@@ -250,7 +260,8 @@
                 +    "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
 
       var validationId = ("galleryitem" + imageGridData[i]["uuid"]);
-      var tooltipText = imageGridData[i]["label"]["name"];
+      var tooltipText = (imageGridData[i]["label"]["name"] + " (" + imageGridData[i]["num_of_yes"] 
+                          + " &#128077; " + imageGridData[i]["num_of_no"] + " &#128078;)");
       item = newImageItem(validationId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
       $("#imageGrid").append(item); 

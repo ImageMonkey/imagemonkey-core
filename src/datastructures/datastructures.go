@@ -587,6 +587,8 @@ type DescriptionsPerImage struct {
 
 type Validation struct {
     Id string `json:"uuid"`
+    NumOfYes string `json:"num_of_yes"`
+    NumOfNo string `json:"num_of_no"`
     Image struct {
         Id string `json:"uuid"`
         Width int32 `json:"width"`
