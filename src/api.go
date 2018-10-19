@@ -113,7 +113,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Total-Count, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token, X-Moderation")
+	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Total-Count, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token, X-Moderation, X-Client-Id, X-Client-Secret")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, HEAD")
 
 		if c.Request.Method == "OPTIONS" {

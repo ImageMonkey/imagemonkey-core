@@ -8,12 +8,14 @@ import (
 	"strings"
 	imagemonkeydb "./database"
 	commons "./commons"
+	datastructures "./datastructures"
 )
 
 type SessionInformation struct {
 	Username string
 	LoggedIn bool
 	IsModerator bool
+	UserPermissions *datastructures.UserPermissions `json:"permissions,omitempty"`
 }
 
 type AccessTokenInfo struct {
@@ -144,8 +146,13 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
     			userInfo, err := p.db.GetUserInfo(sessionInformation.Username)
     			if err != nil {
     				sessionInformation.IsModerator = false
+    				sessionInformation.UserPermissions = &datastructures.UserPermissions{CanRemoveLabel: false,
+    													   				   			 CanUnlockImageDescription: false,
+    													   				   			 CanUnlockImage: false,
+    													  				 			}
     			} else {
     				sessionInformation.IsModerator = userInfo.IsModerator
+    				sessionInformation.UserPermissions = userInfo.Permissions
     			}
     		}
 

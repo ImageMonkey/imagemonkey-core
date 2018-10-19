@@ -597,6 +597,32 @@ func main() {
 			})
 		})
 
+		router.GET("/image_unlock", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			isAuthenticated := false
+			if sessionInformation.LoggedIn {
+				userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
+				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanUnlockImage {
+					isAuthenticated = true
+				}
+			}
+
+			if !isAuthenticated {
+				ShowErrorPage(c)
+				return
+			}
+
+			c.HTML(http.StatusOK, "image_unlock.html", gin.H{
+				"title": "Unlock Image",
+				"clientSecret": X_CLIENT_SECRET, 
+				"clientId": X_CLIENT_ID, 
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+			})
+		})
+
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{
 				"title": "Profile",

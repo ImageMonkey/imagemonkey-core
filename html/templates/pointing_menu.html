@@ -65,6 +65,14 @@
       Moderation
       </div>
       {{ end }}
+      {{ if .sessionInformation.UserPermissions }}
+      {{ if eq .sessionInformation.UserPermissions.CanUnlockImage true }}
+      <div class="item" onclick="window.location='/image_unlock';"><i class="check circle outline icon"></i>
+      Unlock Image
+      </div>
+      {{ end }}
+      {{ end }}
+
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
     </div>
   </div>
