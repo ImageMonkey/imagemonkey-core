@@ -56,6 +56,13 @@
     pendingValidations = {};
   }
 
+  function onValidatedStatisticsLabelClicked(elem) {
+    var labelName = elem.getAttribute("data-label-name");
+    $("#validationQuery").val(labelName);
+    $("#browseValidationGoButton").trigger("click");
+    $("#validatedStatisticsPopup").modal("hide");
+  }
+
   function showBrowseLabelImageGrid() {
     //if the image grid gets shown again, the image in question was successfully labeled
     //We now grey the image out and change the mouse cursor to default again.
@@ -104,6 +111,47 @@
     }
 
     $('#browseValidationsLoadingSpinner').hide();
+  }
+
+  function handleValidatedStatisticsRes(data) {
+    var elem = '';
+    var val; 
+    var labelUrl = '';
+    for(var i = 0; i < data.length; i++) {
+      if(data[i].num.total === 0)
+        val = 0;
+      else
+        val = Math.round(((data[i].num.completed / data[i].num.total) * 100));
+
+      labelUrl = ('<a href="javascript:void(0);" data-label-name="' + data[i].label.name + '" onclick="onValidatedStatisticsLabelClicked(this);">' + 
+                  data[i].label.name + ' (' + data[i].num.completed + '/' +  data[i].num.total +  ')' + '</a>');
+
+      elem = $(('<div class="ui progress" data-value="' + val + '" data-total="100">' + 
+                '<div class="bar">' +
+                  '<div class="progress"></div>' +
+                '</div>' +
+               '<div class="label">' + labelUrl + '</div>'+
+               '</div>'));
+      elem.progress();
+
+      $("#validatedStatisticsPopupContent").append(elem);
+    }
+
+    $("#validatedStatisticsButton").removeClass("disabled");
+  }
+
+  function getValidatedStatistics() {
+    var url = '{{ .apiBaseUrl }}/v1/statistics/validated';
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(d) {
+        handleValidatedStatisticsRes(d);
+      }
+    });
   }
 
   function populateImageGrid() {
@@ -303,6 +351,10 @@
       validateBatch();
     });
 
+    $('#validatedStatisticsButton').click(function(e){
+      $('#validatedStatisticsPopup').modal('show');
+    });
+
 
     $("#validationQuery")
       // don't navigate away from the field on tab when selecting an item
@@ -336,6 +388,8 @@
         return false;
       }
     });
+
+    getValidatedStatistics();
   });
 </script>
 
@@ -351,7 +405,11 @@
        <input placeholder="Query..." type="text" id="validationQuery">
       </div>
 
-      <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
+      <div class="ui primary submit button" id="browseValidationGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui right aligned disabled button" id="validatedStatisticsButton">
+        <i class="chart bar icon"></i>
+        Statistics
+      </div>
     </form>
     <p id="numberOfQueryResults"></p>
     <button class="ui huge positive button" id="validateDoneButton" style="display: none;">Done</button>
@@ -381,4 +439,22 @@
     </div>
   </div>
   <div class="one wide column"></div>
+</div>
+
+
+<div class="ui modal" id="validatedStatisticsPopup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Validation Statistics
+  </div>
+  <div class="scrolling content">
+    <p>This list contains all the validatable labels and the percentage of completeness.<br>Click on a label to search for it.</p>
+    <div id="validatedStatisticsPopupContent">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel button">
+      Close
+    </div>
+  </div>
 </div>

@@ -867,6 +867,86 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
     return annotatedStats, nil
 }
 
+
+
+
+func (p *ImageMonkeyDatabase) GetValidatedStatistics(apiUser datastructures.APIUser) ([]datastructures.ValidatedStat, error) {
+    var validatedStats []datastructures.ValidatedStat
+    var queryValues []interface{}
+
+    includeOwnImageDonations := ""
+    if apiUser.Name != "" {
+        includeOwnImageDonations = `OR (
+                                            EXISTS 
+                                            (
+                                                SELECT 1 
+                                                FROM user_image u
+                                                JOIN account a ON a.id = u.account_id
+                                                WHERE u.image_id = i.id AND a.name = $1
+                                            )
+                                            AND NOT EXISTS 
+                                            (
+                                                SELECT 1 
+                                                FROM image_quarantine q 
+                                                WHERE q.image_id = i.id 
+                                            )
+                                        )`
+        queryValues = append(queryValues, apiUser.Name)
+    }
+
+
+
+    q := fmt.Sprintf(`WITH validated_images AS (
+                        SELECT v.label_id as label_id, count(*) as num
+                        FROM image_validation v 
+                        JOIN image i ON v.image_id = i.id
+                        WHERE v.num_of_valid <> 0 OR v.num_of_invalid <> 0 AND (i.unlocked = true %s)
+                        GROUP BY v.label_id
+                     ),
+                     total_image_validations AS (
+                        SELECT v.label_id as label_id, count(*) as num
+                        FROM image_validation v 
+                        JOIN image i ON v.image_id = i.id
+                        WHERE (i.unlocked = true %s)
+                        GROUP BY v.label_id
+                     )
+                     SELECT l.uuid, acc.accessor, COALESCE(v.num, 0) as num_total, COALESCE(a.num, 0) as num_completed
+                     FROM total_image_validations t
+                     JOIN label_accessor acc ON acc.label_id = v.label_id
+                     JOIN label l ON acc.label_id = l.id
+                     LEFT JOIN validated_images v ON v.label_id = t.label_id
+                     ORDER BY 
+                        CASE 
+                            WHEN v.num = 0 THEN 0
+                            ELSE v.num/t.num
+                        END DESC`, 
+                     includeOwnImageDonations, includeOwnImageDonations)
+
+    rows, err := p.db.Query(q, queryValues...)
+    if err != nil {
+        log.Debug("[Get Validated Statistics] Couldn't get validated statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return validatedStats, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var validatedStat datastructures.ValidatedStat
+        err = rows.Scan(&validatedStat.Label.Id, &validatedStat.Label.Name, &validatedStat.Num.Total, &validatedStat.Num.Completed)
+        if err != nil {
+            log.Debug("[Get Validated Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return validatedStats, err
+        }
+
+        validatedStats = append(validatedStats, validatedStat)
+    }
+
+    return validatedStats, nil
+}
+
+
 func (p *ImageMonkeyDatabase) GetActivity(period string) ([]datastructures.Activity, error) {
     var activity []datastructures.Activity
 

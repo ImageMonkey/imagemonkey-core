@@ -2616,6 +2616,20 @@ func main(){
 			c.JSON(200, annotatedStatistics)
 		})
 
+		router.GET("/v1/statistics/validated", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			validatedStatistics, err := imageMonkeyDatabase.GetValidatedStatistics(apiUser)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			c.JSON(200, validatedStatistics)
+		})
+
 		/*router.GET("/v1/activity/validation", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			activity, err := getValidationActivity("last-month")
