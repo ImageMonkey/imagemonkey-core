@@ -910,9 +910,9 @@ func (p *ImageMonkeyDatabase) GetValidatedStatistics(apiUser datastructures.APIU
                         WHERE (i.unlocked = true %s)
                         GROUP BY v.label_id
                      )
-                     SELECT l.uuid, acc.accessor, COALESCE(v.num, 0) as num_total, COALESCE(a.num, 0) as num_completed
+                     SELECT l.uuid, acc.accessor, COALESCE(t.num, 0) as num_total, COALESCE(v.num, 0) as num_completed
                      FROM total_image_validations t
-                     JOIN label_accessor acc ON acc.label_id = v.label_id
+                     JOIN label_accessor acc ON acc.label_id = t.label_id
                      JOIN label l ON acc.label_id = l.id
                      LEFT JOIN validated_images v ON v.label_id = t.label_id
                      ORDER BY 

@@ -149,7 +149,8 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(d) {
-        handleValidatedStatisticsRes(d);
+        if(d !== null)
+          handleValidatedStatisticsRes(d);
       }
     });
   }
