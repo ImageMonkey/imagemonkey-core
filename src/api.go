@@ -660,8 +660,17 @@ func main(){
 				return
 			}
 			if !unlocked {
-				c.String(403, "You do not have the appropriate permissions to access the image")
-				return
+				//check if user has unlock permission
+				userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
+				if err != nil {
+					c.String(500, "Couldn't process request, please try again later")
+					return
+				}
+
+				if !userInfo.Permissions.CanUnlockImage {
+					c.String(403, "You do not have the appropriate permissions to access the image")
+					return
+				}
 			}
 
 			imgBytes, format, err := ResizeImage((*unverifiedDonationsDir + imageId), width, height)
