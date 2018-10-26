@@ -304,8 +304,8 @@ func (p *ImageMonkeyDatabase) ReportImage(imageId string, reason string) error{
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool) ([]datastructures.Image, error){
-    var images []datastructures.Image
+func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool) ([]datastructures.LockedImage, error){
+    var images []datastructures.LockedImage
 
     orderRandomly := ""
     if shuffle {
@@ -319,12 +319,12 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
         q1 = "WHERE (p.name = $1) AND q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
     }
 
-    q := fmt.Sprintf(`SELECT q.image_key, string_agg(q.label_name::text, ',') as labels, 
-                      MAX(p.name) as image_provider
+    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, string_agg(q.label_name::text, ',') as labels, 
+                      p.name as image_provider
                       FROM 
                       (
-                        SELECT i.key as image_key, l.name  as label_name, 
-                        i.image_provider_id as image_provider_id, i.id as image_id
+                        SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
+                        l.name  as label_name, i.image_provider_id as image_provider_id, i.id as image_id
                         FROM image i  
                         LEFT JOIN image_validation v ON v.image_id = i.id
                         JOIN label l ON v.label_id = l.id
@@ -332,8 +332,8 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
 
                         UNION
                         
-                        SELECT i.key as image_key, g.name  as label_name, 
-                        i.image_provider_id as image_provider_id, i.id as image_id
+                        SELECT i.key as image_key, i.width as image_width, i.height as image_height,
+                        g.name  as label_name, i.image_provider_id as image_provider_id, i.id as image_id
                         FROM image i
                         LEFT JOIN image_label_suggestion s ON s.image_id = i.id
                         JOIN label_suggestion g ON g.id = s.label_suggestion_id
@@ -341,7 +341,7 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                      ) q
                     JOIN image_provider p ON p.id = q.image_provider_id
                     %s
-                    GROUP BY image_key
+                    GROUP BY image_key, image_width, image_height, p.name
                     %s`, q1, orderRandomly)
 
     var err error
@@ -361,8 +361,8 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
     defer rows.Close()
 
     for rows.Next() {
-        var image datastructures.Image
-        err = rows.Scan(&image.Id, &image.Label, &image.Provider)
+        var image datastructures.LockedImage
+        err = rows.Scan(&image.Id, &image.Width, &image.Height, &image.Labels, &image.Provider)
         if err != nil {
             log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -376,7 +376,7 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
 }
 
 func (p *ImageMonkeyDatabase) DeleteImage(uuid string) error {
-    var deletedId int64
+    var imageId int64
 
     tx, err := p.db.Begin()
     if err != nil {
@@ -386,12 +386,22 @@ func (p *ImageMonkeyDatabase) DeleteImage(uuid string) error {
     }
 
 
-    deletedId = -1
-    err = tx.QueryRow(`DELETE FROM image_validation
-                       WHERE image_id IN (
+    _, err = tx.Exec(`DELETE FROM user_image
+                      WHERE image_id IN (
                         SELECT id FROM image WHERE key = $1 
-                       )
-                       RETURNING id`, uuid).Scan(&deletedId)
+                      )`, uuid)
+    if err != nil {
+        tx.Rollback()
+        log.Debug("[Delete image] Couldn't delete user_image entry: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+
+    _, err = tx.Exec(`DELETE FROM image_validation
+                      WHERE image_id IN (
+                        SELECT id FROM image WHERE key = $1 
+                      )`, uuid)
     if err != nil {
         tx.Rollback()
         log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
@@ -399,40 +409,30 @@ func (p *ImageMonkeyDatabase) DeleteImage(uuid string) error {
         return err
     }
 
-    if deletedId == -1 {
-        tx.Rollback()
-        err = errors.New("nothing deleted")
-        log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
 
-    deletedId = -1
+    imageId = -1
     err = tx.QueryRow(`DELETE FROM image i WHERE key = $1
-                       RETURNING i.id`, uuid).Scan(&deletedId)
+                       RETURNING i.id`, uuid).Scan(&imageId)
     if err != nil {
         tx.Rollback()
         log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
-    imageId := deletedId
-    if deletedId == -1 {
+
+    if imageId == -1 {
         tx.Rollback()
         err = errors.New("nothing deleted")
         log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
-    
 
-    deletedId = -1 
-    err = tx.QueryRow(`DELETE FROM image_label_suggestion s 
-                       WHERE image_id = $1 RETURNING s.id`, imageId).Scan(&deletedId)
+    _, err = tx.Exec(`DELETE FROM image_label_suggestion s 
+                       WHERE image_id = $1`, imageId)
 
-    if deletedId == -1 {
+    if err != nil {
         tx.Rollback()
-        err = errors.New("nothing deleted")
         log.Debug("[Delete image] Couldn't delete image_label_suggestion entry: ", err.Error())
         raven.CaptureError(err, nil)
         return err

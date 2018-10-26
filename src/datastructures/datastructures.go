@@ -77,6 +77,14 @@ type Image struct {
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
 
+type LockedImage struct {
+    Id string `json:"uuid"`
+    Labels string `json:"labels"`
+    Provider string `json:"provider"`
+    Width int32 `json:"width,omitempty"`
+    Height int32 `json:"height,omitempty"`
+}
+
 type ImageToLabel struct {
     Id string `json:"uuid"`
     Label string `json:"label"`
@@ -612,4 +620,9 @@ type Validation struct {
     Label struct {
         Name string `json:"name"`
     } `json:"label"`
+}
+
+type LockedImageAction struct {
+    ImageId string `json:"uuid"`
+    Action string `json:"action"`
 }

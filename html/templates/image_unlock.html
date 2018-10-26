@@ -18,11 +18,202 @@
   <link rel="stylesheet" href="/css/common_sub.css"/>
   <script src="/js/common.js"></script> 
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
+  <script src="js/infinitescroll.js?v=2"></script>
+  <script src="js/justified-layout.min.js"></script>
+
+  <style>
+  .justified {
+    position: relative;
+    width: 100%;
+  }
+
+  .centered-img-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+  }
+
+  .image-valid { border: 5px solid #00ff00; }
+  .image-delete { border: 5px solid #ff0000; }
+  .image-quarantine { border: 5px solid #ffa500; }
+
+  .justified-layout-item {
+    position: absolute;
+  }
+
+  .grey-out {
+    opacity: 0.4;
+    filter: alpha(opacity=40);
+  }
+
+  #imageUnlockDoneButton{
+    /*display: none;*/ /* Hidden by default */
+    position: fixed; /* Fixed/sticky position */
+    bottom: 20px; /* Place the button at the bottom of the page */
+    /*right: 30px;*/ /* Place the button 30px from the right */
+    z-index: 99; /* Make sure it does not overlap */
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  </style>
 
   <script>
     var unverifiedImageEntries = [];
     var currentIdx = 0;
     var currentEntry = null;
+    var justifiedLayoutGeometry, imageGridData;
+    var numOfLastFetchedImg = 0;
+    var defaultBatchSize = 50;
+    var currentLabeledImageGridElement = null;
+    var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
+    var numberOfQueryResults = 0;
+    var numberOfCurrentlyShownResults = 0;
+    var pendingImages = {};
+
+    var clearImageGrid = function() {
+      justifiedLayoutGeometry = null;
+      imageGridData = null;
+      numOfLastFetchedImg = 0;
+      infiniteScroll.deactivate();
+      $('#imageGrid').children().each(function () {
+        $(this).remove();
+      });
+      pendingImages = {};
+    }
+
+    function getUrlFromImageUuid(imageUuid){
+      var url = '{{ .apiBaseUrl }}/v1/unverified-donation/' + imageUuid + "?token=" + getCookie("imagemonkey");
+      return url;
+    }
+
+    function newImageItem(id, url, imageId, top, left, width, height, tooltip){
+      var d = ('<div class="justified-layout-item"' + ' id="' + (id + "container") 
+              + '" data-balloon-visible data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"' + ' style="width: ' + width 
+              +'px; height: ' + height + 'px; top: ' 
+              + top  + 'px; left: ' +  left + 'px"><img id="' + id +'" src="' + url 
+              + '" data-imageid="' + imageId + '" onclick="onImageGridItemClicked(this);" style="cursor: pointer;">'
+              + '<div class="noselect centered-img-text" id="' + (id + "text") + '"></div>' + '</div>');
+      return d;
+    }
+
+    function showHideImageUnlockDoneButton() {
+      if(Object.keys(pendingImages).length === 0)
+        $("#imageUnlockDoneButton").hide();
+      else
+        $("#imageUnlockDoneButton").show();
+    }
+
+    function onImageGridItemClicked(elem) {
+      var imageId = $(elem).attr("data-imageid");
+      if(imageId in pendingImages)
+        delete pendingImages[imageId];
+
+      var textItem = $("#"+$(elem).attr("id")+"text");
+
+      if($(elem).hasClass("image-valid")) {
+        $(elem).removeClass("image-valid");
+        $(elem).removeClass("image-delete");
+        $(elem).addClass("image-quarantine");
+        pendingImages[imageId] = "quarantine";
+        textItem.text("QUARANTINE");
+        textItem.css({ 'color': 'orange', 'font-size': '5em', 'font-weight': 'bold' });
+      } else if($(elem).hasClass("image-quarantine")) {
+        $(elem).removeClass("image-quarantine");
+        $(elem).removeClass("image-valid");
+        $(elem).addClass("image-delete");
+        pendingImages[imageId] = "delete";
+        textItem.text("DELETE");
+        textItem.css({ 'color': 'red', 'font-size': '5em', 'font-weight': 'bold' });
+      } else if($(elem).hasClass("image-delete")) {
+        $(elem).removeClass("image-delete");
+        $(elem).removeClass("image-valid");
+        $(elem).removeClass("image-quarantine");
+        textItem.text("");
+      } else {
+        $(elem).removeClass("image-quarantine");
+        $(elem).removeClass("image-delete");
+        $(elem).addClass("image-valid");
+        pendingImages[imageId] = "good";
+        textItem.text("VALID");
+        textItem.css({ 'color': 'green', 'font-size': '5em', 'font-weight': 'bold' });
+      }
+
+      showHideImageUnlockDoneButton();
+    }
+
+    function loadNextImagesInImageGrid() {
+      var from = numOfLastFetchedImg;
+      var n = defaultBatchSize;
+      if((numOfLastFetchedImg + defaultBatchSize) > imageGridData.length){
+        n = imageGridData.length - numOfLastFetchedImg;
+      }
+
+      if(n === 0)
+        return;
+
+      var imageUrl;
+      var item;
+      for(var i = from; i < (from + n); i++){
+        var url = getUrlFromImageUuid(imageGridData[i]["uuid"]) 
+                  + "&width=" + Math.round(justifiedLayoutGeometry.boxes[i].width, 0)
+                  + "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
+
+        var imageId = ("galleryitem" + imageGridData[i]["uuid"]);
+        var tooltipText = imageGridData[i]["labels"];
+        item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+                                justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
+        $("#imageGrid").append(item); 
+
+        document.getElementById("imageGrid").style.height = (justifiedLayoutGeometry.boxes[(from + n - 1)].top 
+                                                              + justifiedLayoutGeometry.boxes[(from + n - 1)].height)  + "px";
+      }
+
+      numOfLastFetchedImg += n;
+      numberOfCurrentlyShownResults = numOfLastFetchedImg;
+
+      $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
+    }
+
+    function populateImageGrid(d) {
+      $("#imageGrid").show();
+
+      if(d.length > 0) {
+        imageGridData = d;
+        sizes = [];
+
+        numberOfQueryResults = 0;
+
+        for(var i = 0; i < imageGridData.length; i++){
+          numberOfQueryResults += 1;
+          sizes.push({"width": imageGridData[i]["width"], "height": imageGridData[i]["height"]});
+        }
+
+        var justifiedLayout = require('justified-layout');
+        justifiedLayoutGeometry = justifiedLayout(sizes, {
+          "fullWidthBreakoutRowCadence": false,
+          "containerWidth": document.getElementById("imageGrid").clientWidth,
+          "boxSpacing": {
+            "horizontal": 10,
+            "vertical": 100
+          }
+        });
+
+        loadNextImagesInImageGrid();
+        infiniteScroll.activate();
+      }
+    }
 
     function getNextEntry() {
       $('#loadingIndicator').show();
@@ -38,12 +229,12 @@
       }
 
       currentEntry = unverifiedImageEntries[currentIdx];
-      var imageUrl = '{{ .apiBaseUrl }}/v1/unverified-donation/' + currentEntry["uuid"] + '?token=' + getCookie("imagemonkey");
+      var imageUrl = getUrlFromImageUuid(currentEntry["uuid"]);
 
       var img = new Image();
       img.onload = function() {
          $('#image').attr("src", this.src);
-         $('#labels').text(currentEntry["label"]);
+         $('#labels').text(currentEntry["labels"]);
          $('#controls').show();
          $('#image').show();
          $('#loadingIndicator').hide();
@@ -89,6 +280,49 @@
       });
     }
 
+    function unlockImagesBatch() {
+      $("#imageUnlockDoneButton").hide();
+      $("#numberOfQueryResults").text("");
+      $("#loadingIndicator").show();
+
+      var imgs = [];
+      for(var key in pendingImages) {
+        if(pendingImages.hasOwnProperty(key)) {
+          imgs.push({"uuid": key, "action": pendingImages[key]});
+        }
+      }
+
+      clearImageGrid();
+      $("#imageGrid").hide();
+
+      if(imgs.length === 0) {
+        $("#loadingIndicator").hide();
+        getAllUnverifiedImageEntries();
+        return;
+      }
+
+
+      var headers = {};
+      headers['X-Client-Id'] = {{ .clientId }};
+      headers['X-Client-Secret'] = {{ .clientSecret }};
+
+      var url = '{{ .apiBaseUrl }}/v1/unverified/donation';
+      $.ajax({
+        url: url,
+        type: 'PATCH',
+        dataType: 'json',
+        headers: headers,
+        data: JSON.stringify(imgs),
+        beforeSend: function(xhr) {
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+        },
+        success: function(d) {
+          $("#loadingIndicator").hide();
+          getAllUnverifiedImageEntries();
+        }
+      });
+    }
+
 
 
 
@@ -115,9 +349,21 @@
         },
         success: function(data) {
           $('#loadingIndicator').hide();
+          currentEntry = null;
           unverifiedImageEntries = data;
-          if(unverifiedImageEntries)
+
+          if(unverifiedImageEntries) {
+            {{ if eq .mode "default" }}
             getNextEntry();
+            {{ else }}
+            populateImageGrid(data);
+            {{ end }}
+          }
+          else {
+            $('#warningMessageBoxContent').text("No more images to unlock");
+            $('#warningMessageBox').show(200).delay(1500).hide(200);
+            $('#loadingIndicator').hide();
+          }
         }
       });
     }
@@ -128,6 +374,11 @@
       $('#noButton').click( function(e) {
         //just skip entry
         getNextEntry();
+      });
+
+      $("#imageUnlockDoneButton").click(function(e) {
+        e.preventDefault();
+        unlockImagesBatch();
       });
 
       $('#yesButton').click( function(e) {
@@ -146,38 +397,61 @@
     <div class="ui inverted vertical masthead center aligned segment">
      {{ template "pointing_menu.html" .}}
      <div class="ui text container">
-      <h2 class="ui inverted header">
-        Unlock Image
-      </h2>
-    </div>
-  </div>
-  <div class="ui stackable center aligned grid vertical stripe">
-    <div class="sixteen wide center aligned column">
-      <img class="ui big centered image" id="image"/>
-
-      <div class="ui center aligned basic segment" id="controls" style="display: none;">
-        <h1 class="ui header" id="labels"></h1>
-        <button class="negative ui button center aligned" id="noButton">NO</button>
-        <button class="positive ui button center aligned" id="yesButton">YES</button>
-      </div>
-
-      <div class="row" id="loadingIndicator" style="display: none;">
-        <div class="sk-wave overlay">
-          <div class="sk-rect sk-rect1"></div>
-          <div class="sk-rect sk-rect2"></div>
-          <div class="sk-rect sk-rect3"></div>
-          <div class="sk-rect sk-rect4"></div>
-          <div class="sk-rect sk-rect5"></div>
+       <h2 class="ui inverted header">Image Unlock</h2>
+        <div id="modeButtons">
+          <button class="ui {{ if eq .mode "default" }}white{{ else }}inverted basic{{ end }} button" 
+            onclick="window.location='/image_unlock?mode=default';" data-tooltip="Default Mode">Default</button>
+          <button class="ui {{ if eq .mode "default" }}inverted basic{{ else }}white{{ end }} button" 
+            onclick="window.location='/image_unlock?mode=browse';" data-tooltip="Browse Mode">Browse</button>
         </div>
+       <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
+     </div>
+  </div>
+  <div class="ui stackable center aligned grid">
+    <div class="row"></div>
+    <div class="row" id="loadingIndicator" style="display: none;">
+      <div class="sk-wave overlay">
+        <div class="sk-rect sk-rect1"></div>
+        <div class="sk-rect sk-rect2"></div>
+        <div class="sk-rect sk-rect3"></div>
+        <div class="sk-rect sk-rect4"></div>
+        <div class="sk-rect sk-rect5"></div>
       </div>
+    </div>
 
+    <div class="row">
       <div hidden class="ui warning message" hidden id="warningMessageBox">
         <i class="close icon"></i>
         <div class="header" id="warningMessageBoxContent">
         </div>
       </div>
-
     </div>
+
+
+    {{ if eq .mode "browse" }}
+    <div class="row">
+      <div class="one wide column"></div>
+      <div class="fourteen wide centered column">
+        <h3 class="ui header" id="numberOfQueryResults"></h3>
+        <button class="ui huge positive button" id="imageUnlockDoneButton" style="display: none;">Done</button>
+        <div hidden class="justified" id="imageGrid">
+        </div>
+      </div>
+      <div class="one wide column"></div>
+    </div>
+    {{ else }}
+    <div class="row">
+      <div class="sixteen wide center aligned column" style="margin-top: 2em;">
+        <img class="ui big centered image" id="image"/>
+
+        <div class="ui center aligned basic segment" id="controls" style="display: none;">
+          <h1 class="ui header" id="labels"></h1>
+          <button class="negative ui button center aligned" id="noButton">NO</button>
+          <button class="positive ui button center aligned" id="yesButton">YES</button>
+        </div>
+      </div> 
+    </div>
+    {{ end }}
   </div>
 </div>
 

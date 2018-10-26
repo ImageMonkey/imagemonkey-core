@@ -83,6 +83,64 @@ func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
 	return buf.Bytes(), imgFormat, nil
 }
 
+func handleUnverifiedDonation(imageId string, action string, 
+								donationsDir string, unverifiedDonationsDir string, imageQuarantineDir string,
+								imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase) (int, error) {
+	//verify that uuid is a valid UUID (to prevent path injection)
+	_, err := uuid.FromString(imageId)
+	if err != nil {
+		return 400, errors.New("Couldn't process request - not a valid image id")
+	}
+				
+
+	if action == "good" {
+		src := unverifiedDonationsDir + imageId
+		dst := donationsDir + imageId
+		err := os.Rename(src, dst)
+		if err != nil {
+			log.Debug("[Main] Couldn't move file ", src, " to ", dst)
+			return 500, errors.New("Couldn't process request - please try again later")
+		}
+
+		err = imageMonkeyDatabase.UnlockImage(imageId)
+		if err != nil {
+			return 500, errors.New("Couldn't process request - please try again later")
+		}
+	} else if action == "bad" { //not handled at the moment, add later if needed
+
+	} else if action == "delete" {
+		err = imageMonkeyDatabase.DeleteImage(imageId)
+		if err != nil {
+			return 500, errors.New("Couldn't process request - please try again later")
+		}
+
+		dst := unverifiedDonationsDir + imageId
+		err := os.Remove(dst)
+		if err != nil {
+			log.Debug("[Main] Couldn't remove file ", dst)
+			return 500, errors.New("Couldn't process request - please try again later")
+		}
+
+	} else if action == "quarantine" {
+		src := unverifiedDonationsDir + imageId
+		dst := imageQuarantineDir + imageId
+		err := os.Rename(src, dst)
+		if err != nil {
+			log.Debug("[Main] Couldn't move file ", src, " to ", dst)
+			return 500, errors.New("Couldn't process request - please try again later")
+		}
+
+		err = imageMonkeyDatabase.PutImageInQuarantine(imageId)
+		if err != nil {
+			return 500, errors.New("Couldn't process request - please try again later")
+		}
+	} else{
+		return 404, errors.New("Couldn't process request - invalid parameter")
+	}
+
+	return 201, nil
+}
+
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
 func ClientAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -667,7 +725,7 @@ func main(){
 					return
 				}
 
-				if !userInfo.Permissions.CanUnlockImage {
+				if userInfo.Permissions == nil || !userInfo.Permissions.CanUnlockImage {
 					c.String(403, "You do not have the appropriate permissions to access the image")
 					return
 				}
@@ -805,69 +863,34 @@ func main(){
 
 			clientAuth.POST("/v1/unverified/donation/:imageid/:param",  func(c *gin.Context) {
 				imageId := c.Param("imageid")
+				action := c.Param("param")
 
-				//verify that uuid is a valid UUID (to prevent path injection)
-				_, err := uuid.FromString(imageId)
+				retCode, err := handleUnverifiedDonation(imageId, action, *donationsDir, 
+															*unverifiedDonationsDir, *imageQuarantineDir, imageMonkeyDatabase)
 				if err != nil {
-					c.JSON(400, gin.H{"error" : "Couldn't process request - not a valid image id"})
+					c.JSON(retCode, gin.H{"error": err})
+					return
+				}
+				c.JSON(retCode, nil)
+			})
+
+			clientAuth.PATCH("/v1/unverified/donation",  func(c *gin.Context) {
+				var lockedImages []datastructures.LockedImageAction
+
+				if c.BindJSON(&lockedImages) != nil {
+					c.JSON(422, gin.H{"error": "Couldn't process request - invalid request"})
 					return
 				}
 
-				param := c.Param("param")
-
-				if param == "good" {
-					src := *unverifiedDonationsDir + imageId
-					dst := *donationsDir + imageId
-					err := os.Rename(src, dst)
+				for _, val := range lockedImages {
+					retCode, err := handleUnverifiedDonation(val.ImageId, val.Action, *donationsDir, 
+															*unverifiedDonationsDir, *imageQuarantineDir, imageMonkeyDatabase)
 					if err != nil {
-						log.Debug("[Main] Couldn't move file ", src, " to ", dst)
-						c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
+						c.JSON(retCode, gin.H{"error": err})
 						return
 					}
-
-					err = imageMonkeyDatabase.UnlockImage(imageId)
-					if err != nil {
-						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-						return
-					}
-				} else if param == "bad" { //not handled at the moment, add later if needed
-
-				} else if param == "delete" {
-					err = imageMonkeyDatabase.DeleteImage(imageId)
-					if err != nil {
-						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-						return
-					}
-
-					dst := *unverifiedDonationsDir + imageId
-					err := os.Remove(dst)
-					if err != nil {
-						log.Debug("[Main] Couldn't remove file ", dst)
-						c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
-						return
-					}
-
-				} else if param == "quarantine" {
-					src := *unverifiedDonationsDir + imageId
-					dst := *imageQuarantineDir + imageId
-					err := os.Rename(src, dst)
-					if err != nil {
-						log.Debug("[Main] Couldn't move file ", src, " to ", dst)
-						c.JSON(500, gin.H{"error" : "Couldn't process request - please try again later"})
-						return
-					}
-
-					err = imageMonkeyDatabase.PutImageInQuarantine(imageId)
-					if err != nil {
-						c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-						return
-					}
-				} else{
-					c.JSON(404, gin.H{"error": "Couldn't process request - invalid parameter"})
-					return
 				}
-
-				c.JSON(http.StatusOK, nil)
+				c.JSON(204, nil)
 			})
 		}
 

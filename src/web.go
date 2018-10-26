@@ -600,6 +600,8 @@ func main() {
 		router.GET("/image_unlock", func(c *gin.Context) {
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
+			mode := commons.GetParamFromUrlParams(c, "mode", "default")
+
 			isAuthenticated := false
 			if sessionInformation.LoggedIn {
 				userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
@@ -620,6 +622,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
 				"sessionInformation": sessionInformation,
+				"mode": mode,
 			})
 		})
 
