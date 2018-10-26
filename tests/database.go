@@ -630,6 +630,53 @@ func (p *ImageMonkeyDatabase) GetModeratorWhoProcessedImageDescription(imageId s
 	return "", errors.New("missing result set")
 }
 
+func (p *ImageMonkeyDatabase) IsImageUnlocked(imageId string) (bool, error) {
+	rows, err := p.db.Query(`SELECT unlocked FROM image i WHERE i.key = $1`, imageId)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var unlocked bool
+		err = rows.Scan(&unlocked)
+		if err != nil {
+			return false, err
+		}
+
+		return unlocked, nil
+	}
+	return false, errors.New("missing result set")
+}
+
+func (p *ImageMonkeyDatabase) IsImageInQuarantine(imageId string) (bool, error) {
+	rows, err := p.db.Query(`SELECT CASE 
+									 WHEN COUNT(*) <> 0 THEN true 
+									 ELSE false
+									END as in_quarantine
+							 FROM image_quarantine q 
+							 WHERE q.image_id IN (
+							 	SELECT i.id FROM image i WHERE i.key = $1
+							 )`, imageId)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var inQuarantine bool
+		err = rows.Scan(&inQuarantine)
+		if err != nil {
+			return false, err
+		}
+
+		return inQuarantine, nil
+	}
+	return false, errors.New("missing result set")
+}
+
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()

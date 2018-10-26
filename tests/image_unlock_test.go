@@ -252,4 +252,31 @@ func TestBatchHandleLockedImages(t *testing.T) {
 
 	testBatchHandleUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, imageBatch, 204)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 0)
+
+	//first image
+	unlocked, err := db.IsImageUnlocked(imageIds[0])
+	ok(t, err)
+	equals(t, unlocked, false)
+
+	inQuarantine, err := db.IsImageInQuarantine(imageIds[0])
+	ok(t, err)
+	equals(t, inQuarantine, true)
+
+	//second image
+	unlocked, err = db.IsImageUnlocked(imageIds[1])
+	ok(t, err)
+	equals(t, unlocked, true)
+
+	inQuarantine, err = db.IsImageInQuarantine(imageIds[1])
+	ok(t, err)
+	equals(t, inQuarantine, false)
+
+	//third image
+	unlocked, err = db.IsImageUnlocked(imageIds[2])
+	ok(t, err)
+	equals(t, unlocked, true)
+
+	inQuarantine, err = db.IsImageInQuarantine(imageIds[2])
+	ok(t, err)
+	equals(t, inQuarantine, false)
 }
