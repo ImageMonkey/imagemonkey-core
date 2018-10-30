@@ -328,7 +328,7 @@
 
     function getAllUnverifiedImageEntries() {
       $('#loadingIndicator').show();
-      var url = '{{ .apiBaseUrl }}/v1/internal/unverified-donations';
+      var url = '{{ .apiBaseUrl }}/v1/internal/unverified-donations?shuffle=true';
 
       var headers = {};
       headers['X-Client-Id'] = {{ .clientId }};
