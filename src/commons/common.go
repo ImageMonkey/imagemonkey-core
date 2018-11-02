@@ -384,3 +384,19 @@ func GetImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) st
 
     return imageUrl
 }
+
+func GetPublicBackups(path string) ([]datastructures.PublicBackup, error){
+    var publicBackups []datastructures.PublicBackup
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return publicBackups, err
+    }
+
+    err = json.Unmarshal(data, &publicBackups)
+    if err != nil {
+        return publicBackups, err
+    }
+
+    return publicBackups, nil
+}

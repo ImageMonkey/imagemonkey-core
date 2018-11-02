@@ -62,6 +62,7 @@ func main() {
 	maintenanceModeFile := flag.String("maintenance_mode_file", "../maintenance.tmp", "maintenance mode file")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	listenPort := flag.Int("listen_port", 8080, "Specify the listen port")
+	publicBackupsPath := flag.String("public_backups_path", "../public_backups/public_backups.json", "Path to public backups")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -143,6 +144,13 @@ func main() {
 	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
+		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading public backups")
+	publicBackups, err := commons.GetPublicBackups(*publicBackupsPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read public backups: %s...terminating!", *publicBackupsPath)
 		log.Fatal(err)
 	}
 
@@ -547,6 +555,16 @@ func main() {
 				"title": "Libraries",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": 13,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+			})
+		})
+
+		router.GET("/public_backup", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "public_backup.html", gin.H{
+				"title": "Public Backup",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				"publicBackups": publicBackups,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})

@@ -626,3 +626,26 @@ type LockedImageAction struct {
     ImageId string `json:"uuid"`
     Action string `json:"action"`
 }
+
+type PublicBackup struct {
+    Name string `json:"name"`
+    Created string `json:"created"`
+    Size struct {
+        Value float32 `json:"value"`
+        Unit string `json:"unit"`
+    } `json:"size"`
+    Download struct {
+        Http string `json:"http"`
+        Torrent string `json:"torrent"`
+    } `json:"download"`
+}
+
+type ValidationCount struct {
+    Label string `json:"label"`
+    Count int `json:"count"`
+}
+
+type AnnotationCount struct {
+    Label string `json:"label"`
+    Count int `json:"count"`
+}

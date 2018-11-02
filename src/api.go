@@ -2614,6 +2614,31 @@ func main(){
 			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
 		})
 
+		router.GET("/v1/statistics/annotations/count", func(c *gin.Context) {
+			minProbabilityStr := commons.GetParamFromUrlParams(c, "min_probability", "0")
+			minCountStr := commons.GetParamFromUrlParams(c, "min_count", "0")
+
+			minCount, err := strconv.Atoi(minCountStr)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid 'min_count' parameter"})
+				return
+			}
+
+			minProbability, err := strconv.ParseFloat(minProbabilityStr, 64)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid 'min_probability' parameter"})
+				return
+			}
+
+
+			annotationsCount, err := imageMonkeyDatabase.GetAnnotationsCount(minProbability, minCount)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, annotationsCount)
+		})
+
 		router.GET("/v1/statistics/annotations/refinements", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			statistics, err := imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month")
@@ -2632,6 +2657,30 @@ func main(){
 				return
 			}
 			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
+		})
+
+		router.GET("/v1/statistics/validations/count", func(c *gin.Context) {
+			minProbabilityStr := commons.GetParamFromUrlParams(c, "min_probability", "0")
+			minCountStr := commons.GetParamFromUrlParams(c, "min_count", "0")
+
+			minCount, err := strconv.Atoi(minCountStr)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid 'min_count' parameter"})
+				return
+			}
+
+			minProbability, err := strconv.ParseFloat(minProbabilityStr, 64)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "Couldn't process request - invalid 'min_probability' parameter"})
+				return
+			}
+
+			validationsCount, err := imageMonkeyDatabase.GetValidationsCount(minProbability, minCount)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, validationsCount)
 		})
 
 		router.GET("/v1/statistics/annotated", func(c *gin.Context) {

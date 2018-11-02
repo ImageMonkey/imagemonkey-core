@@ -1096,10 +1096,10 @@ func (p *ImageMonkeyDatabase) GetActivity(period string) ([]datastructures.Activ
 }
 
 
-func (p *ImageMonkeyDatabase) GetNumOfAnnotatedImages() (int64, error){
+func (p *ImageMonkeyDatabase) GetNumOfAnnotatedImages() (int64, error) {
     var num int64
     err := p.db.QueryRow("SELECT count(*) FROM image_annotation").Scan(&num)
-    if(err != nil){
+    if err != nil {
         log.Debug("[Fetch images] Couldn't get num of annotated images: ", err.Error())
         raven.CaptureError(err, nil)
         return 0, err
@@ -1109,14 +1109,97 @@ func (p *ImageMonkeyDatabase) GetNumOfAnnotatedImages() (int64, error){
 }
 
 
-func (p *ImageMonkeyDatabase) GetNumOfValidatedImages() (int64, error){
+func (p *ImageMonkeyDatabase) GetNumOfValidatedImages() (int64, error) {
     var num int64
     err := p.db.QueryRow("SELECT count(*) FROM image_validation").Scan(&num)
-    if(err != nil){
+    if err != nil {
         log.Debug("[Fetch images] Couldn't get num of validated images: ", err.Error())
         raven.CaptureError(err, nil)
         return 0, err
     }
 
     return num, nil
+}
+
+func (p *ImageMonkeyDatabase) GetValidationsCount(minProbability float64, minCount int) ([]datastructures.ValidationCount, error) {
+    validationCounts := []datastructures.ValidationCount{}
+
+    rows, err := p.db.Query(`SELECT a.accessor, COUNT(*) 
+                             FROM
+                             (
+                                SELECT v.id as validation_id, v.label_id as label_id 
+                                FROM image_validation v
+                                JOIN image i on i.id = v.image_id 
+                                WHERE i.unlocked = true
+                                GROUP BY v.id, v.label_id 
+                                HAVING (SUM(v.num_of_valid)/NULLIF((SUM(v.num_of_valid) + SUM(v.num_of_invalid)), 0)) >= $1::float
+                             ) q
+                             JOIN label_accessor a ON a.label_id = q.label_id
+                             GROUP BY a.accessor
+                             HAVING COUNT(*) >= $2`, minProbability, minCount)
+
+    if err != nil {
+        log.Error("[Num of validations] Couldn't get num of validations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return validationCounts, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var validationCount datastructures.ValidationCount
+
+        err = rows.Scan(&validationCount.Label, &validationCount.Count)
+        if err != nil {
+            log.Error("[Num of validations] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return validationCounts, err
+        }
+
+        validationCounts = append(validationCounts, validationCount)
+    }
+
+    return validationCounts, nil
+}
+
+
+func (p *ImageMonkeyDatabase) GetAnnotationsCount(minProbability float64, minCount int) ([]datastructures.AnnotationCount, error) {
+    annotationCounts := []datastructures.AnnotationCount{}
+
+    rows, err := p.db.Query(`SELECT a.accessor, COUNT(*) 
+                             FROM
+                             (
+                                SELECT a.id as annotation_id, a.label_id as label_id 
+                                FROM image_annotation a
+                                JOIN image i on i.id = a.image_id
+                                WHERE i.unlocked = true and a.auto_generated = false
+                                GROUP BY a.id, a.label_id 
+                                HAVING COALESCE((SUM(a.num_of_valid)/NULLIF((SUM(a.num_of_valid) + SUM(a.num_of_invalid)), 0)), 0) >= $1::float
+                             ) q
+                             JOIN label_accessor a ON a.label_id = q.label_id
+                             GROUP BY a.accessor
+                             HAVING COUNT(*) >= $2`, minProbability, minCount)
+
+    if err != nil {
+        log.Error("[Num of annotations] Couldn't get num of annotations: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationCounts, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var annotationCount datastructures.AnnotationCount
+
+        err = rows.Scan(&annotationCount.Label, &annotationCount.Count)
+        if err != nil {
+            log.Error("[Num of annotations] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationCounts, err
+        }
+
+        annotationCounts = append(annotationCounts, annotationCount)
+    }
+
+    return annotationCounts, nil
 }
