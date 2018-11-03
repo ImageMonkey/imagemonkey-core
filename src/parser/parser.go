@@ -409,8 +409,8 @@ func (p *QueryParser) Parse(offset int) (ParseResult, error) {
         }
     }
 
-    if numOfLabels > 10 {
-    	return parseResult, errors.New("Please limit your query to 10 label expressions")
+    if numOfLabels > 20 {
+    	return parseResult, errors.New("Please limit your query to 20 label expressions")
     }
 
     if p.brackets != 0 {
