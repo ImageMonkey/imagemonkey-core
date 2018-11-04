@@ -78,6 +78,10 @@
   var browserFingerprint = null;
   var deleteObjectsPopupShown = false;
 
+  {{ if eq .annotationMode "browse" }}
+  var browseModeLastSelectedAnnotatorMenuItem = null;
+  {{ end }}
+
   function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
     var ret = "";
     $("#annotatorMenu").children().each(function (){
@@ -156,13 +160,16 @@
     changeControl(annotator);
     numOfPendingRequests = 0;
 
-    showHideControls(true);
-
     if(data === null)
       changeNavHeader("noimage");
 
     {{ if eq .annotationMode "browse" }}
-    annotationSettings.loadPreferedAnnotationTool(annotator);
+    if(browseModeLastSelectedAnnotatorMenuItem === null)
+      annotationSettings.loadPreferedAnnotationTool(annotator);
+    else {
+      changeMenuItem(browseModeLastSelectedAnnotatorMenuItem);
+      annotator.setShape(browseModeLastSelectedAnnotatorMenuItem);
+    }
     {{ end }}
 
     populateRevisionsDropdown(0, 0);
@@ -357,6 +364,10 @@
     else if(type === "SelectMove")
       id = "selectMoveMenutItem";
 
+    {{ if eq .annotationMode "browse" }}
+    browseModeLastSelectedAnnotatorMenuItem = type;
+    {{ end }}
+
     $("#annotatorMenu").children().each(function (){
       if($(this).attr("id") === id)
         $(this).addClass("active");
@@ -404,6 +415,9 @@
         $("#imageLockedLabel").hide();
       else
         $("#imageLockedLabel").show();
+
+      $("#annotationColumnContent").show();
+      $("#annotationColumnSpacer").show();
     }
     else{
       $("#doneButton").hide();
@@ -417,6 +431,8 @@
       $("#annotationButtons").hide();
       $("#loadingSpinner").show();
       $("#imageLockedLabel").hide();
+      $("#annotationColumnContent").hide();
+      $("#annotationColumnSpacer").hide();
     }
   }
 
@@ -607,6 +623,11 @@
                                                 //export them in order to make sure that we don't accidentially detect 
                                                 //a rounding errors as changes.
     }
+
+    showHideControls(true);
+    $("#annotationArea").css({"border-width":"1px",
+                              "border-style": "solid",
+                              "border-color": "#000000"});
   }
 
   function isLoadingIndicatorVisible(){
@@ -652,7 +673,7 @@
     var data =  spacer +
                 '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
                  '<div id="annotationAreaContainer">' +
-                    '<canvas id="annotationArea" style="border:1px solid #000000;" imageId=""></canvas>' +
+                    '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
                 '</div>';
 
@@ -1085,7 +1106,6 @@
         }
 
         e.preventDefault();
-
         
         if(existingAnnotations !== null)
           updateAnnotations(res);
@@ -1201,11 +1221,17 @@
         </div>
       </div>
       
-      <div hidden class="ui warning message" id="warningMsg">
-        <i class="close icon"></i>
-        <div class="header" id="warningMsgText">
+      <div class="row">
+        <div class="ten wide center aligned centered column">
+          <div hidden class="ui warning message" id="warningMsg">
+            <i class="close icon"></i>
+            <div class="header" id="warningMsgText">
+            </div>
+          </div>
         </div>
       </div>
+      <div class="row"></div>
+
     </div>
     <div class="ui big blue label computer only" id="bottomLabel" style="display: none;"></div>
   </div>
