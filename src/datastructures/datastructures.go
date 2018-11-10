@@ -649,3 +649,17 @@ type AnnotationCount struct {
     Label string `json:"label"`
     Count int `json:"count"`
 }
+
+type ImageCollection struct {
+    Name string `json:"name"`
+    Description string `json:"description"`
+    Count string `json:"count"`
+
+    SampleImage struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+    } `json:"sample_image"`
+}

@@ -19,6 +19,8 @@
   <script src="/js/common.js"></script> 
   <link rel="stylesheet" href="/css/common_sub.css"/>
   <script src="/js/chart.bundle.min.js"></script>
+  <link rel="stylesheet" href="/css/spinner/spinners/3-wave.css"/>
+
 
   <style>
   .noselect {
@@ -34,6 +36,7 @@
 
   <script>
   var revokeTokenButton = null;
+  var imageCollectionsLoaded = false;
 
   var showRevokeConfirmationDlg = function(elem) {
     revokeTokenButton = $(elem);
@@ -56,6 +59,98 @@
     return date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
   }
 
+  function getUrlFromImageUrl(imageUrl, imageUnlocked){
+    var url = imageUrl;
+
+    if(imageUrl !== ""){
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+    }
+
+    return url;
+  }
+
+  function addImageCollection(imageUrl, name, description, numOfImages) {
+    var imageCollectionImagePreviewId = 'imageCollectionImagePreview' + name;
+    var imageCollectionImagePreviewPopupId = 'imageCollectionImagePreviewPopup' + name;
+
+    var row = ('<tr><td>' + 
+                    '<h4 class="ui image header">' +
+                      '<img id="' + imageCollectionImagePreviewId + '" src="' + imageUrl + 
+                      '" class="ui tiny rounded image">' +
+                    '</h4></td>' +
+                 '<td>' + name  + '</td>' +
+                 '<td>' + description + '</td>' +
+                 '<td>' + numOfImages + '</td>' +
+                 '</tr>');
+    $("#imageCollectionsTableContent").append(row);
+
+    var imageCollectionImagePreviewItem = ('<div class="ui popup" id="' + imageCollectionImagePreviewPopupId + '">' +
+                                            '<img src="' + imageUrl + '" class="ui small image">' +
+                                           '</div>');
+    $("#imageCollectionImagePreviews").append(imageCollectionImagePreviewItem);
+
+    $("#"+imageCollectionImagePreviewId).popup({
+      popup: ('#'+imageCollectionImagePreviewPopupId)
+    });
+  }
+
+  function addImageCollections(data) {
+    for(var i = 0; i < data.length; i++) {
+      addImageCollection(getUrlFromImageUrl(data[i]["sample_image"]["url"], data[i]["sample_image"]["unlocked"]), 
+                        escapeHtml(data[i]["name"]), escapeHtml(data[i]["description"]), data[i]["count"]);
+    }
+  }
+
+  function createNewImageCollection(name, description) {
+    $("#imageCollectionsLoadingIndicator").show();
+
+    var url = '{{ .apiBaseUrl }}/v1/user/' + {{ .sessionInformation.Username }} + '/imagecollection';
+    $.ajax({
+      url: url,
+      type: 'POST',
+      dataType: 'json',
+      data: JSON.stringify({'name': name, 'description': description}),
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        $("#imageCollectionsLoadingIndicator").hide();
+      },
+      success: function(data) {
+        $("#imageCollectionsLoadingIndicator").hide();
+        addImageCollection(getUrlFromImageUrl("/img/default.png", true), name, description, 0);
+      }
+    });
+  }
+
+  function getImageCollections() {
+    $("#imageCollectionsLoadingIndicator").show();
+    imageCollectionsLoaded = true;
+    var url = '{{ .apiBaseUrl }}/v1/user/' + {{ .sessionInformation.Username }} + '/imagecollections';
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        $("#imageCollectionsLoadingIndicator").hide();
+        $("#noImageCollections").text("Couldn't get collections - please try again later");
+      },
+      success: function(data) {
+        $("#imageCollectionsLoadingIndicator").hide();
+        if(data.length === 0) {
+          $("#noImageCollections").text("no collections");
+        }
+        else {
+          addImageCollections(data);
+        }
+      }
+    });
+  }
+
   $(document).ready(function(){
     var ownProfile = false;
 
@@ -68,9 +163,50 @@
     {{ end }}
 
 
-    if(ownProfile){
+    if(ownProfile) {
+      var formValidationRules = {
+        fields: {
+          name: {
+            identifier: 'name',
+            rules: [
+              {
+                type   : 'empty',
+                prompt : 'Please enter your name'
+              }
+            ]
+          }
+        }
+      };
+
+      var formSettings = {
+        onSuccess : function() 
+        {
+          $('#addImageCollectionDlg').modal('hide');
+        }
+      }
+      $('#imageCollectionsInputForm').form(formValidationRules, formSettings);
+
+
+
       $("#userProfileCardImage").dimmer({
         on: 'hover'
+      });
+
+      $("#addImageCollectionButton").click(function(e) {
+        $("#addImageCollectionDlg").modal({
+          onApprove : function() {
+            $('#imageCollectionsInputForm').form('validate form');
+            if($('#imageCollectionsInputForm').form('is valid')) {
+              var name = escapeHtml($("#newImageCollectionName").val());
+              var description = escapeHtml($("#newImageCollectionDescription").val());
+              createNewImageCollection(name, description);
+              return true;
+            }
+
+            //Return false as to not close modal dialog
+            return false;
+          }
+        }).modal("show");
       });
     }
 
@@ -127,10 +263,19 @@
       if(id === "userProfileMenuOverviewTab") {
         $("#statisticsTabContent").show();
         $("#apiTokensTabContent").hide();
+        $("#imageCollectionsTabContent").hide();
       }
       if(id === "userProfileMenuApiTokensTab") {
         $("#apiTokensTabContent").show();
         $("#statisticsTabContent").hide();
+        $("#imageCollectionsTabContent").hide();
+      }
+      if(id === "userProfileMenuImageCollectionsTab") {
+        $("#imageCollectionsTabContent").show();
+        $("#apiTokensTabContent").hide();
+        $("#statisticsTabContent").hide();
+        if(!imageCollectionsLoaded)
+          getImageCollections();
       }
     }
 
@@ -196,8 +341,6 @@
            preview.src = "";
        }
     }
-
-
 
 
     function uploadImage(file){
@@ -300,12 +443,9 @@
                       style="display: none;"
                     />
                   </span>
-
-                  <!--<div class="ui inverted button" id="changeProfilePictureButton">Change Picture</div>-->
                 </div>
               </div>
             </div>
-            <!--<img src=<"https://semantic-ui.com/images/wireframe/square-image.png" id="userProfileImage">-->
             <img src="{{ .apiBaseUrl }}/v1/user/{{ .userInfo.Name }}/profile/avatar">
           </div>
           <div class="content">
@@ -330,7 +470,11 @@
         <a class="item" id="userProfileMenuApiTokensTab">
           API Tokens
         </a>
+        <a class="item" id="userProfileMenuImageCollectionsTab">
+          Collections
+        </a>
         {{ end }}
+
       </div>
       <div class="ui bottom attached segment" id="statisticsTabContent">
         <div class="ui stackable center aligned grid">
@@ -391,6 +535,44 @@
         </div>
       </div>
       {{ end }}
+
+      {{ if eq .sessionInformation.Username .userInfo.Name }}
+      <div hidden class="ui bottom attached segment" id="imageCollectionsTabContent">
+        <button class="ui right floated button" id="addImageCollectionButton">
+          <i class="plus icon"></i>
+          Image Collection
+        </button>
+        <div id="noImageCollections"></div>
+        <div class="ui sixteen wide center aligned grid" style="margin-top: 3em;">
+          <div class="sixteen wide column">
+            <table class="ui striped table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>#Images</th>
+                </tr>
+              </thead>
+              <tbody id="imageCollectionsTableContent">                
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="row" id="imageCollectionsLoadingIndicator" style="display: none;">
+          <div class="sk-wave overlay">
+            <div class="sk-rect sk-rect1"></div>
+            <div class="sk-rect sk-rect2"></div>
+            <div class="sk-rect sk-rect3"></div>
+            <div class="sk-rect sk-rect4"></div>
+            <div class="sk-rect sk-rect5"></div>
+          </div>
+        </div>
+        <br>
+      </div>
+      {{ end }}
+
     </div>
 
 
@@ -415,6 +597,10 @@
     </div>
     {{ end }}
 
+    {{ if eq .sessionInformation.Username .userInfo.Name }}
+    <div id="imageCollectionImagePreviews"></div>
+    {{ end }}
+
     <div class="ui longer modal" id="addApiTokenDlg">
       <i class="close icon"></i>
       <div class="center aligned header">
@@ -433,6 +619,35 @@
           Discard
         </div>
         <div class="ui positive right labeled icon button" id="addApiTokenDlgDoneButton">
+          Done
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="ui longer modal" id="addImageCollectionDlg">
+      <i class="close icon"></i>
+      <div class="center aligned header">
+        Create a new collection
+      </div>
+      <div class="scrolling content">
+        <form class="ui form" id="imageCollectionsInputForm">
+          <div class="field">
+            <label>Name</label>
+            <input placeholder="Name of the collection" name="name" type="text" id="newImageCollectionName">
+          </div>
+          <div class="field">
+            <label>Optional Description</label>
+            <input placeholder="Additional description" type="text" id="newImageCollectionDescription">
+          </div>
+        </form>
+      </div>
+      <div class="actions">
+        <div class="ui cancel button">
+          Discard
+        </div>
+        <div class="ui positive right labeled icon button" id="addImageCollectionDlgDoneButton">
           Done
           <i class="checkmark icon"></i>
         </div>

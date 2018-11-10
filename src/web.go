@@ -47,6 +47,22 @@ func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, e
     return templ, err
 }
 
+func GetImages(path string) (map[string]string, error) {
+	files := make(map[string]string, 0)
+	err := filepath.Walk(path, func(path string, f os.FileInfo, err error) error {
+		if !f.IsDir() {
+			files[filepath.Base(path)] = path
+		}
+		return err
+	})
+
+	if err != nil {
+		return files, err
+	}
+
+	return files, nil
+}
+
 func main() {
 	fmt.Printf("Starting Web Service...\n")
 
@@ -183,6 +199,11 @@ func main() {
 		log.Fatal("[Main] Couldn't parse templates", err.Error())
 	}
 
+	imgs, err := GetImages("../img")
+	if err != nil {
+		log.Fatal("[Main] Couldn't read images", err.Error())
+	}
+
 	router := gin.Default()
 	router.SetHTMLTemplate(tmpl)
 	router.Static("./js", "../js") //serve javascript files
@@ -195,7 +216,53 @@ func main() {
     		})
 		})	
 	} else {
-		router.Static("./img", "../img") //serve images
+		//router.Static("./img", "../img") //serve images
+		router.GET("/img/:name", func(c *gin.Context) { //serve images
+			imageName := c.Param("name")
+			params := c.Request.URL.Query()
+
+			if _, ok := imgs[imageName]; !ok {
+    			ShowErrorPage(c)
+    			return
+			}
+
+			var width uint
+			width = 0
+			if temp, ok := params["width"]; ok {
+				n, err := strconv.ParseUint(temp[0], 10, 32)
+			    if err == nil {
+			        width = uint(n)
+			    }
+			}
+
+			var height uint
+			height = 0
+			if temp, ok := params["height"]; ok {
+				n, err := strconv.ParseUint(temp[0], 10, 32)
+			    if err == nil {
+	            	height = uint(n)
+			    }
+			}
+
+			imgBytes, format, err := commons.ResizeImage(("../img/" + imageName), width, height)
+			if err != nil {
+				log.Error("[Serving Image] Couldn't serve img: ", err.Error())
+				c.String(500, "Couldn't process request - please try again later")
+				return
+
+			}
+
+			c.Writer.Header().Set("Content-Type", ("image/" + format))
+	        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
+	        _, err = c.Writer.Write(imgBytes) 
+	        if err != nil {
+	            log.Error("[Serving Image] Couldn't serve img: ", err.Error())
+	            c.String(500, "Couldn't process request - please try again later")
+	            return
+	        }
+		})
+
+
 		router.Static("./api", "../html/static/api")
 		router.Static("./donations", *donationsDir) //DEPRECTATED; USE /donation API endpoint 
 		router.Static("./blog", "../html/static/blog")

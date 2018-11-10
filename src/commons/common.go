@@ -21,6 +21,11 @@ import (
     "errors"
     "github.com/gin-gonic/gin"
     "../datastructures"
+    "os"
+    "github.com/nfnt/resize"
+    "image/gif"
+    "image/jpeg"
+    "image/png"
 )
 
 
@@ -399,4 +404,49 @@ func GetPublicBackups(path string) ([]datastructures.PublicBackup, error){
     }
 
     return publicBackups, nil
+}
+
+func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
+    buf := new(bytes.Buffer) 
+    imgFormat := ""
+
+    file, err := os.Open(path)
+    if err != nil {
+        log.Debug("[Resize Image Handler] Couldn't open image: ", err.Error())
+        return buf.Bytes(), imgFormat, err
+    }
+
+    // decode jpeg into image.Image
+    img, format, err := image.Decode(file)
+    if err != nil {
+        log.Debug("[Resize Image Handler] Couldn't decode image: ", err.Error())
+        return buf.Bytes(), imgFormat, err
+    }
+    file.Close()
+
+    resizedImg := resize.Resize(width, height, img, resize.NearestNeighbor)
+
+
+    if format == "png" {
+        err = png.Encode(buf, resizedImg)
+        if err != nil {
+            log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+            return buf.Bytes(), imgFormat, err
+        }
+    } else if format == "gif" {
+        err = gif.Encode(buf, resizedImg, nil)
+        if err != nil {
+            log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+            return buf.Bytes(), imgFormat, err
+        }
+    } else {
+        err = jpeg.Encode(buf, resizedImg, nil)
+        if err != nil {
+            log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
+            return buf.Bytes(), imgFormat, err
+        }
+    }
+    imgFormat = format
+
+    return buf.Bytes(), imgFormat, nil
 }

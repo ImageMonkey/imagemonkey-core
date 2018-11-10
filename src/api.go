@@ -17,12 +17,7 @@ import (
 	"errors"
 	"html"
 	"net/url"
-	"image"
-	"github.com/nfnt/resize"
 	"bytes"
-	"image/gif"
-    "image/jpeg"
-    "image/png"
     "strings"
     "encoding/base64"
     "github.com/dgrijalva/jwt-go"
@@ -37,51 +32,6 @@ import (
 )
 
 var geoipDb *geoip2.Reader
-
-func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
-	buf := new(bytes.Buffer) 
-	imgFormat := ""
-
-	file, err := os.Open(path)
-	if err != nil {
-		log.Debug("[Resize Image Handler] Couldn't open image: ", err.Error())
-		return buf.Bytes(), imgFormat, err
-	}
-
-	// decode jpeg into image.Image
-	img, format, err := image.Decode(file)
-	if err != nil {
-		log.Debug("[Resize Image Handler] Couldn't decode image: ", err.Error())
-		return buf.Bytes(), imgFormat, err
-	}
-	file.Close()
-
-	resizedImg := resize.Resize(width, height, img, resize.NearestNeighbor)
-
-
-	if format == "png" {
-		err = png.Encode(buf, resizedImg)
-		if err != nil {
-			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
-	    	return buf.Bytes(), imgFormat, err
-		}
-	} else if format == "gif" {
-		err = gif.Encode(buf, resizedImg, nil)
-		if err != nil {
-			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
-	    	return buf.Bytes(), imgFormat, err
-		}
-	} else {
-		err = jpeg.Encode(buf, resizedImg, nil)
-		if err != nil {
-			log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
-	    	return buf.Bytes(), imgFormat, err
-		}
-	}
-	imgFormat = format
-
-	return buf.Bytes(), imgFormat, nil
-}
 
 func handleUnverifiedDonation(imageId string, action string, 
 								donationsDir string, unverifiedDonationsDir string, imageQuarantineDir string,
@@ -139,6 +89,19 @@ func handleUnverifiedDonation(imageId string, action string,
 	}
 
 	return 201, nil
+}
+
+func IsImageCollectionNameValid(s string) bool {
+    for _, c := range s {
+        if (!(c > 47 && c < 58) && // numeric (0-9)
+            !(c > 64 && c < 91) && // upper alpha (A-Z)
+            !(c > 96 && c < 123) && // lower alpha (a-z)
+            !(c == 45) && //hyphen (-)
+            !(c == 95)) { //underline (_)  
+            return false
+        }
+    }
+    return true
 }
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
@@ -660,7 +623,7 @@ func main(){
 				return
 			}
 
-			imgBytes, format, err := ResizeImage((*donationsDir + imageId), width, height)
+			imgBytes, format, err := commons.ResizeImage((*donationsDir + imageId), width, height)
 			if err != nil {
 				log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
 				c.String(500, "Couldn't process request, please try again later")
@@ -731,7 +694,7 @@ func main(){
 				}
 			}
 
-			imgBytes, format, err := ResizeImage((*unverifiedDonationsDir + imageId), width, height)
+			imgBytes, format, err := commons.ResizeImage((*unverifiedDonationsDir + imageId), width, height)
 			if err != nil {
 				log.Debug("[Serving unverified Donation] Couldn't serve donation: ", err.Error())
 				c.String(500, "Couldn't process request, please try again later")
@@ -2360,6 +2323,126 @@ func main(){
 			c.JSON(201, nil)
 		})
 
+
+		router.GET("/v1/user/:username/imagecollections", func(c *gin.Context) {
+			username := c.Param("username")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(401, gin.H{"error": "Please authenticate first"})
+				return
+			}
+
+			if username != apiUser.Name {
+				c.JSON(403, gin.H{"error": "You are not allowed to perform this action"})
+				return
+			}
+
+
+			imageCollections, err := imageMonkeyDatabase.GetImageCollections(apiUser, *apiBaseUrl)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+	            return
+			}
+
+			c.JSON(200, imageCollections)
+		})
+
+		router.POST("/v1/user/:username/imagecollection/:name/image/:imageid", func(c *gin.Context) {
+			imageCollectionName := c.Param("name")
+			imageId := c.Param("imageid")
+			username := c.Param("username")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(401, gin.H{"error": "Please authenticate first"})
+				return
+			}
+
+			if username != apiUser.Name {
+				c.JSON(403, gin.H{"error": "You are not allowed to perform this action"})
+				return
+			}
+
+			if imageCollectionName == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - image collection name is empty"})
+	            return
+			}
+
+			if imageId == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - image id is empty"})
+	            return
+			}
+
+			err := imageMonkeyDatabase.AddImageToImageCollection(apiUser, imageCollectionName, imageId)
+			if err == imagemonkeydb.AddImageToImageCollectionInternalError {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+	            return
+			} else if err == imagemonkeydb.AddImageToImageCollectionInvalidInputError {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid input"})
+	            return
+			} else if err == imagemonkeydb.AddImageToImageCollectionDuplicateEntryError {
+				c.JSON(409, gin.H{"error": "Couldn't add image to collection - resource already exists"})
+	            return
+			}
+
+			c.JSON(201, nil)
+		})
+
+		router.POST("/v1/user/:username/imagecollection", func(c *gin.Context) {
+			var imageCollection datastructures.ImageCollection
+
+			username := c.Param("username")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(401, gin.H{"error": "Please authenticate first"})
+				return
+			}
+
+			if username != apiUser.Name {
+				c.JSON(403, gin.H{"error": "You are not allowed to perform this action"})
+				return
+			}
+
+			if c.BindJSON(&imageCollection) != nil {
+				c.JSON(400, gin.H{"error": "Couldn't process request - invalid data"})
+				return
+			}
+
+			if imageCollection.Name == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - image collection name is empty"})
+				return
+			}
+
+			if !IsImageCollectionNameValid(imageCollection.Name) {
+				c.JSON(400, gin.H{"error": "Couldn't process request - image collection name contains unsopported characters"})
+				return
+			}
+
+			err := imageMonkeyDatabase.AddImageCollection(apiUser, imageCollection.Name, imageCollection.Description)
+			if err == imagemonkeydb.AddImageCollectionInternalError {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+	            return
+			}
+
+			if err == imagemonkeydb.AddImageCollectionAlreadyExistsError {
+				c.JSON(409, gin.H{"error": "Couldn't process request - image collection already exists"})
+	            return
+			}
+
+			c.JSON(201, nil)			
+		})
+
 		router.GET("/v1/user/:username/profile", func(c *gin.Context) {
 			username := c.Param("username")
 			if username == "" {
@@ -2576,7 +2659,7 @@ func main(){
 				fname = "default.png"
 			}
 
-			imgBytes, format, err := ResizeImage((*userProfilePicturesDir + fname), width, height)
+			imgBytes, format, err := commons.ResizeImage((*userProfilePicturesDir + fname), width, height)
 			if err != nil {
 				log.Debug("[Serving Avatar] Couldn't serve avatar: ", err.Error())
 				c.String(500, "Couldn't process request - please try again later")

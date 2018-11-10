@@ -41,5 +41,15 @@ CREATE INDEX image_description_sys_period_index ON image_description(sys_period)
 CREATE INDEX image_annotation_sys_period_index ON image_annotation(sys_period);
 
 
+--user_image_collection table
+CREATE INDEX user_image_collection_account_id_index ON user_image_collection(account_id);
+CREATE INDEX user_image_collection_name_index ON user_image_collection(name);
+
+--image_collection_image table
+CREATE INDEX image_collection_image_image_id_index ON image_collection_image(image_id);
+CREATE INDEX image_collection_image_user_image_collection_id_index ON image_collection_image(user_image_collection_id);
+
+
+
 
 
