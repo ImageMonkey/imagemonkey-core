@@ -6,6 +6,7 @@ import (
 	"../src/datastructures"
 )
 
+
 func testGetImageCollections(t *testing.T, username string, token string, requiredStatusCode int) []datastructures.ImageCollection {
 	var imageCollections []datastructures.ImageCollection
 
@@ -159,7 +160,7 @@ func TestAddImageToImageCollection(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -175,7 +176,7 @@ func TestAddImageToImageCollectionTwiceShouldFail(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -192,7 +193,7 @@ func TestAddImageToImageCollectionWrongTokenShouldFail(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -212,7 +213,7 @@ func TestAddImageToImageCollectionWrongTokenShouldFail2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -222,4 +223,26 @@ func TestAddImageToImageCollectionWrongTokenShouldFail2(t *testing.T) {
 
 	testAddImageCollection(t, "user", token, "new-image-collection", "my-new-image-collection", 201)
 	addImageToImageCollection(t, "user", "a", "new-image-collection", imageId, 401) 
+}
+
+func TestDonateImageAndAssignToImageCollection(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testAddImageCollection(t, "user", token, "new-image-collection", "my-new-image-collection", 201)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, token, "new-image-collection") 
+}
+
+func TestDonateImageCouldntAssignToImageCollectionAsImageCollectionDoesntExit(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testAddImageCollection(t, "user", token, "new-image-collection", "my-new-image-collection", 201)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, token, "image-collection-doesnt-exist") 
 }

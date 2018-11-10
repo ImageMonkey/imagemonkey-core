@@ -37,7 +37,7 @@ func TestBrowseLabel(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testBrowseLabel(t, "apple", "", 1, 200)
 }
@@ -46,7 +46,7 @@ func TestBrowseLabel1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -62,7 +62,7 @@ func TestBrowseLabel2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testBrowseLabel(t, "apple&egg", "", 0, 200)
 }
@@ -71,7 +71,7 @@ func TestBrowseLabelLocked(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
 
 	testBrowseLabel(t, "apple", "", 0, 200)
 }
@@ -83,7 +83,7 @@ func TestBrowseLabelLockedAndOwnDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	testBrowseLabel(t, "apple", userToken, 1, 200)
 }
@@ -98,7 +98,7 @@ func TestBrowseLabelLockedButForeignDonation(t *testing.T) {
 	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
 	userToken1 := testLogin(t, "user1", "pwd1", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	testBrowseLabel(t, "apple", userToken1, 0, 200)
 }
@@ -110,7 +110,7 @@ func TestBrowseLabelLockedAndOwnDonationButInQuarantine(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -125,7 +125,7 @@ func TestBrowseLabelImageDimensions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testBrowseLabel(t, "apple & image.width > 15px & image.height > 15px", "", 1, 200)
 }
@@ -134,7 +134,7 @@ func TestBrowseLabelImageDimensionsWithoutLabel(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testBrowseLabel(t, "image.width > 15px & image.height > 15px", "", 1, 200)
 }
@@ -143,7 +143,7 @@ func TestBrowseLabelWrongImageDimensionsSyntax(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testBrowseLabel(t, "apple & image.width > 15", "", 0, 422)
 }
@@ -153,7 +153,7 @@ func TestBrowseLabelAnnotationCoverage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testBrowseLabel(t, "apple & annotation.coverage = 0%", "", 1, 200)
 }
@@ -162,7 +162,7 @@ func TestBrowseLabelAnnotationCoverage2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -179,7 +179,7 @@ func TestBrowseLabelNoImageDescription(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	images := testBrowseLabel(t, "apple", "", 1, 200)
 
@@ -190,7 +190,7 @@ func TestBrowseLabelOneImageDescription(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -223,7 +223,7 @@ func TestBrowseLabelOneImageDescriptionLocked(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -255,7 +255,7 @@ func TestBrowseLabelOneImageDescriptionUnlocked(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)

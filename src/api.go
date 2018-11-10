@@ -392,6 +392,12 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
         addSublabels = true
     }
 
+    imageCollectionName := c.PostForm("image_collection")
+	if !IsImageCollectionNameValid(imageCollectionName) {
+		c.JSON(400, gin.H{"error": "Couldn't process request - image collection name contains unsopported characters"})
+		return
+	}
+
 
 	labelMapEntry := labelMap[label]
 	if !addSublabels {
@@ -424,9 +430,12 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 	imageInfo.Source = imageSource
 	imageInfo.Name = uuid
 
-	err = db.AddDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries)
-	if err != nil {
+	e := db.AddDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries, imageCollectionName)
+	if e == imagemonkeydb.ImageDonationInternalError {
 		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
+		return
+	} else if e == imagemonkeydb.ImageDonationImageCollectionDoesntExistError {
+		c.JSON(404, gin.H{"error": "Couldn't add photo - image collection doesn't exist"})	
 		return
 	}
 
@@ -758,12 +767,12 @@ func main(){
 				} else {
 					autoUnlock = false
 					dir = *unverifiedDonationsDir
-				}
-				
+				}				
 
 				//we trust images from the labelme database, so we automatically save them
 				//into the donations folder and unlock them per default.
-				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, dir, redisPool, statisticsPusher, geoipDb, autoUnlock)
+				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, dir, redisPool, 
+						statisticsPusher, geoipDb, autoUnlock)
 			})
 
 			clientAuth.POST("/v1/internal/auto-annotate/:imageid",  func(c *gin.Context) {
@@ -1627,7 +1636,8 @@ func main(){
 			}
 
 
-			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
+			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, 
+					statisticsPusher, geoipDb, false)
 		})
 
 		router.POST("/v1/report/:imageid", func(c *gin.Context) {

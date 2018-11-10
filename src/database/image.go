@@ -10,6 +10,14 @@ import (
     "fmt"
     "errors"
     "encoding/json"
+    "github.com/lib/pq"
+)
+
+type ImageDonationErrorType int
+const (
+  ImageDonationSuccess ImageDonationErrorType = 1 << iota
+  ImageDonationImageCollectionDoesntExistError
+  ImageDonationInternalError
 )
 
 func sublabelsToStringlist(sublabels []datastructures.Sublabel) []string {
@@ -184,12 +192,12 @@ func (p *ImageMonkeyDatabase) ImageExists(hash uint64) (bool, error) {
 }
 
 func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastructures.ImageInfo, autoUnlock bool, clientFingerprint string, 
-        labels []datastructures.LabelMeEntry) error{
+        labels []datastructures.LabelMeEntry, imageCollectionName string) ImageDonationErrorType {
 	tx, err := p.db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
-        return err
+        return ImageDonationInternalError
     }
 
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
@@ -201,7 +209,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
 		tx.Rollback()
-		return err
+		return ImageDonationInternalError
 	}
 
     var insertedValidationIds []int64
@@ -216,7 +224,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
 
         insertedValidationIds, err = AddLabelsToImageInTransaction(clientFingerprint, imageInfo.Name, labels, numOfValid, 0, tx)
         if err != nil {
-            return err //tx already rolled back in case of error, so we can just return here
+            return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
         }
     }
 
@@ -224,12 +232,12 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
     if imageInfo.Source.Provider != "donation" {
         imageSourceId, err := _addImageSource(imageId, imageInfo.Source, tx)
         if err != nil {
-            return err //tx already rolled back in case of error, so we can just return here
+            return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
         }
 
         err = _addImageValidationSources(imageSourceId, insertedValidationIds, tx)
         if err != nil {
-            return err //tx already rolled back in case of error, so we can just return here
+            return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
         }
     }
 
@@ -241,11 +249,39 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
             tx.Rollback()
             log.Debug("[Add user image entry] Couldn't add entry: ", err.Error())
             raven.CaptureError(err, nil)
-            return err
+            return ImageDonationInternalError
         }
     }
 
-	return tx.Commit()
+    if imageCollectionName != "" && username != "" {
+        _, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
+                           SELECT (SELECT u.id 
+                                 FROM user_image_collection u 
+                                 JOIN account a ON u.account_id = a.id
+                                 WHERE u.name = $1 AND a.name = $2), $3`,
+                           imageCollectionName, username, imageId)
+        if err != nil {
+            if err, ok := err.(*pq.Error); ok {
+                log.Info(err.Code)
+                if err.Code == "23502" {
+                    return ImageDonationImageCollectionDoesntExistError
+                }
+            }
+            tx.Rollback()
+            log.Error("[Add donated Image To Collection] Couldn't add image to collection: ", err.Error())
+            raven.CaptureError(err, nil)
+            return ImageDonationInternalError
+        }
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Error("[Add donated Image] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return ImageDonationInternalError
+    }
+
+    return ImageDonationSuccess
 }
 
 

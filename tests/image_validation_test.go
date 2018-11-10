@@ -165,7 +165,7 @@ func TestGetImageToValidate(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	testGetImageToValidate(t, "", "", 200)
 }
@@ -174,7 +174,7 @@ func TestGetImageToValidateById(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
@@ -193,7 +193,7 @@ func TestGetImageToValidateByIdAuthenticatedWrongUser(t *testing.T) {
 	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
 	userToken1 := testLogin(t, "user1", "pwd1", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
@@ -210,7 +210,7 @@ func TestGetImageToValidateAuthenticated(t *testing.T) {
 	userToken := testLogin(t, "user", "pwd", 200)
 
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken, "")
 
 	testGetImageToValidate(t, "", userToken, 200)
 }
@@ -223,7 +223,7 @@ func TestGetImageToValidateByIdAuthenticated(t *testing.T) {
 	userToken := testLogin(t, "user", "pwd", 200)
 
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, userToken, "")
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
@@ -236,7 +236,7 @@ func TestGetImageToValidateLocked(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
 
 	testGetImageToValidate(t, "", "", 422)
 }
@@ -248,7 +248,7 @@ func TestGetImageToValidateLockedButOwnDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	testGetImageToValidate(t, "", userToken, 200)
 }
@@ -257,7 +257,7 @@ func TestGetImagesForValidation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 	testGetImagesForValidation(t, "apple", "", 200, 1)
 }
 
@@ -265,7 +265,7 @@ func TestGetImagesForValidationStaticQueryAttributes1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 	testGetImagesForValidation(t, "apple & image.width > 200px", "", 200, 1)
 }
 
@@ -273,7 +273,7 @@ func TestGetImagesForValidationStaticQueryAttributes2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 	testGetImagesForValidation(t, "apple & annotation.coverage = 0%", "", 200, 1)
 }
 
@@ -281,7 +281,7 @@ func TestGetImagesForValidationEmptyResultSet(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 	testGetImagesForValidation(t, "car", "", 200, 0)
 }
 
@@ -289,7 +289,7 @@ func TestGetImagesForValidationLockedEmptyResultSet(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
 	testGetImagesForValidation(t, "apple", "", 200, 0)
 }
 
@@ -300,7 +300,7 @@ func TestGetImagesForValidationLockedAndOwnDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	testGetImagesForValidation(t, "apple", userToken, 200, 1)
 }
@@ -315,7 +315,7 @@ func TestGetImagesForValidationLockedButForeignDonation(t *testing.T) {
 	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
 	userToken1 := testLogin(t, "user1", "pwd1", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	testGetImagesForValidation(t, "apple", userToken1, 200, 0)
 }

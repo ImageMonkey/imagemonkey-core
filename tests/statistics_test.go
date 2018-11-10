@@ -71,7 +71,7 @@ func TestGetAnnotatedStatistics(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -91,7 +91,7 @@ func TestGetAnnotatedStatistics1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -130,7 +130,7 @@ func TestGetPerCountryStatistics(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	statistics := testGetStatistics(t)
 
