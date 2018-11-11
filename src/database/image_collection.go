@@ -40,12 +40,16 @@ func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser
 							 	GROUP BY c.user_image_collection_id
 							 ) q ON q.user_image_collection_id = u.id
 							 LEFT JOIN (
-							 	SELECT u.id as user_image_collection_id, MIN(i.key) as image_key, 
-							 	i.width as image_width, i.height as image_height, i.unlocked as image_unlocked
-							 	FROM image i
-							 	JOIN image_collection_image im ON im.image_id = i.id
-							 	JOIN user_image_collection u ON u.id = im.user_image_collection_id
-							 	GROUP BY u.id, i.width, i.height, i.unlocked
+							 	SELECT q1.user_image_collection_id, i.key as image_key, i.width as image_width, 
+							 	i.height as image_height, i.unlocked as image_unlocked
+								FROM (
+										SELECT u.id as user_image_collection_id, MIN(i.id) as image_id
+							 			FROM image i
+							 			JOIN image_collection_image im ON im.image_id = i.id
+							 			JOIN user_image_collection u ON u.id = im.user_image_collection_id
+							 			GROUP BY u.id
+								) q1
+								JOIN image i ON q1.image_id = i.id
 							 ) q1 ON q1.user_image_collection_id = u.id 
 							 WHERE a.name = $1`, apiUser.Name)
     if err != nil {

@@ -340,19 +340,25 @@ func (p *ImageMonkeyDatabase) ReportImage(imageId string, reason string) error{
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool) ([]datastructures.LockedImage, error){
+func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool, limit int) ([]datastructures.LockedImage, error){
     var images []datastructures.LockedImage
+    var queryValues []interface{}
 
     orderRandomly := ""
     if shuffle {
         orderRandomly = "ORDER BY RANDOM()"
     }
 
+    limitBy := ""
+    if limit != -1 {
+        limitBy = fmt.Sprintf("LIMIT $%d", len(queryValues) + 1)
+        queryValues = append(queryValues, limit)
+    }
+
     q1 := "WHERE q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
-    params := false
     if imageProvider != "" {
-        params = true
-        q1 = "WHERE (p.name = $1) AND q.image_id NOT IN (SELECT image_id FROM image_quarantine)"
+        q1 = fmt.Sprintf("WHERE (p.name = $%d) AND q.image_id NOT IN (SELECT image_id FROM image_quarantine)", len(queryValues) + 1)
+        queryValues = append(queryValues, imageProvider)
     }
 
     q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, string_agg(q.label_name::text, ',') as labels, 
@@ -378,15 +384,12 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                     JOIN image_provider p ON p.id = q.image_provider_id
                     %s
                     GROUP BY image_key, image_width, image_height, p.name
-                    %s`, q1, orderRandomly)
+                    %s
+                    %s`, q1, orderRandomly, limitBy)
 
     var err error
     var rows *sql.Rows
-    if params {
-        rows, err = p.db.Query(q, imageProvider)
-    } else {
-        rows, err = p.db.Query(q)
-    }
+    rows, err = p.db.Query(q, queryValues...)
 
     if err != nil {
         log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
