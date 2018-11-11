@@ -137,14 +137,12 @@
       },
       error: function(jqXHR, textStatus, errorThrown) {
         $("#imageCollectionsLoadingIndicator").hide();
-        $("#noImageCollections").text("Couldn't get collections - please try again later");
+        $('#warningMessageBoxContent').text("Couldn't get collections - please try again later");
+        $('#warningMessageBox').show(200).delay(1500).hide(200);
       },
       success: function(data) {
         $("#imageCollectionsLoadingIndicator").hide();
-        if(data.length === 0) {
-          $("#noImageCollections").text("no collections");
-        }
-        else {
+        if(data.length > 0) {
           addImageCollections(data);
         }
       }
@@ -542,7 +540,6 @@
           <i class="plus icon"></i>
           Image Collection
         </button>
-        <div id="noImageCollections"></div>
         <div class="ui sixteen wide center aligned grid" style="margin-top: 3em;">
           <div class="sixteen wide column">
             <table class="ui striped table">
@@ -572,6 +569,12 @@
         <br>
       </div>
       {{ end }}
+
+      <div hidden class="ui warning message" hidden id="warningMessageBox">
+        <i class="close icon"></i>
+        <div class="header" id="warningMessageBoxContent">
+        </div>
+      </div>
 
     </div>
 
