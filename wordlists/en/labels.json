@@ -1041,6 +1041,41 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "661797ef-31f9-4969-9c22-0b5704603969"
+		},
+		"snake": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8e650c03-85a0-445d-9706-7a69a94b43c9"
+		},
+		"frog": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "fdd05a68-ff42-47f8-8905-00611b3a17bf"
+		},
+		"soil": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d3ca96c8-13e3-44a3-b14e-72032e881139"
+		},
+		"bee": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "26233e92-cc48-4e80-bc47-5f8c84b4ab47"
+		},
+		"beetle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2a19e98a-3b0b-4a7d-85c7-31a49dfe3cf5"
+		},
+		"bottle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cbe76e44-759e-4edd-a5a3-87ef98e398a3"
+		},
+		"rabbit": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a86d4227-50c3-4ded-ace6-02d7321af718"
 		}
 	}
 }
