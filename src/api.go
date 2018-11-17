@@ -28,6 +28,7 @@ import (
     imagemonkeydb "./database"
     commons "./commons"
     parser "./parser"
+    "image"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -632,19 +633,82 @@ func main(){
 				return
 			}
 
-			imgBytes, format, err := commons.ResizeImage((*donationsDir + imageId), width, height)
-			if err != nil {
-				log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
-				c.String(500, "Couldn't process request, please try again later")
-				return
+			var imgBytes []byte
+			var format string
+			imageRegions := []image.Rectangle{}
 
+			highlightAnnotations := commons.GetParamFromUrlParams(c, "highlight", "")
+			highlightAnnotations, err = url.QueryUnescape(highlightAnnotations)
+			if err != nil {
+				c.String(422, "Couldn't process request, please provide a valid 'highlight' parameter")
+				return
 			}
+
+			if highlightAnnotations != "" {
+				imageRegions, err = imageMonkeyDatabase.GetBoundingBoxesForImageLabel(imageId, highlightAnnotations)
+				if err != nil {
+					c.String(500, "Couldn't process request, please try again later")
+					return
+				}
+			}/* else {
+				imageRegions, err = commons.GetImageRegionsFromUrlParams(c)
+				if len(imageRegions) == 0 {
+					imgBytes, format, err = commons.ResizeImage((*donationsDir + imageId), width, height)
+					if err != nil {
+						log.Error("[Serving Resized Donation] Couldn't serve donation: ", err.Error())
+						c.String(500, "Couldn't process request, please try again later")
+						return
+					}
+				} else {
+					
+
+					var errorType commons.ExtractRoIFromImageErrorType
+					imgBytes, format, errorType, err = commons.ExtractRoIFromImage((*donationsDir + imageId), imageRegion)
+					if errorType == commons.ExtractRoIFromImageInternalError {
+						log.Error("[Serving RoI of Donation] Couldn't serve donation: ", err.Error())
+						c.String(500, "Couldn't process request, please try again later")
+						return
+					} else if errorType == commons.ExtractRoIFromImageInvalidRegionError {
+						c.String(422, "Couldn't process request - invalid region")
+					}
+				}
+			}*/
+
+			if len(imageRegions) > 0 {
+				imgBytes, err = commons.HighlightAnnotationsInImage((*donationsDir + imageId), imageRegions, int(width), int(height))
+				format = "jpg"
+				if err != nil {
+					log.Error("[Serving RoI of Donation] Couldn't serve donation: ", err.Error())
+					c.String(500, "Couldn't process request, please try again later")
+				}
+			} else {
+				//imageRegions, err = commons.GetImageRegionsFromUrlParams(c)
+				//if len(imageRegions) == 0 {
+					imgBytes, format, err = commons.ResizeImage((*donationsDir + imageId), width, height)
+					if err != nil {
+						log.Error("[Serving Resized Donation] Couldn't serve donation: ", err.Error())
+						c.String(500, "Couldn't process request, please try again later")
+						return
+					}
+				//}
+			}
+
+
+			if len(imageRegions) == 0 {
+				//tell the CDN to cache images for 2 months and the browser to cache it for 1 week.
+				//we do that only for images that are unmodified.
+				c.Writer.Header().Set("Cache-Control", "public,s-maxage=5260000,max-age=604800") 
+			} else {
+				//do not cache images that we have modified
+				c.Writer.Header().Set("Cache-Control", "no-cache")
+			}
+
 
 			c.Writer.Header().Set("Content-Type", ("image/" + format))
 	        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
 	        _, err = c.Writer.Write(imgBytes) 
 	        if err != nil {
-	            log.Debug("[Serving Donation] Couldn't serve donation: ", err.Error())
+	            log.Error("[Serving Donation] Couldn't serve donation: ", err.Error())
 	            c.String(500, "Couldn't process request, please try again later")
 	            return
 	        }
@@ -1508,6 +1572,24 @@ func main(){
 		})
 
 		router.GET("/v1/label/accessors", func(c *gin.Context) {
+			detailed := commons.GetParamFromUrlParams(c, "detailed", "")
+
+			if detailed == "true" {
+				labelType := commons.GetParamFromUrlParams(c, "label_type", "")
+				if labelType != "" && labelType != "normal" && labelType != "refinement" && labelType != "refinement_category" {
+					c.JSON(422, gin.H{"error": "Couldn't process request - invalid 'label_type'"})
+					return
+				}
+
+				labelAccessors, err := imageMonkeyDatabase.GetLabelAccessorDetails(labelType)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+				c.JSON(http.StatusOK, labelAccessors)
+				return
+			}
+
 			labelAccessors, err := imageMonkeyDatabase.GetLabelAccessors()
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})

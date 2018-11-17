@@ -89,6 +89,13 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * apply sql functions from `env/functions` directory
 * apply sql stored procedures from `env/stored_procs` directory
 
+### Install Bimg (Windows only) ###
+* install MSYS2
+* open MSYS2 terminal and install zlib and pkgconfig via pacman
+* download vipslib v8.6.5 from https://github.com/libvips/libvips/releases
+* set PKG_CONFIG_PATH environment variable to the folder where vips.pc resides. e.q: `PKG_CONFIG_PATH=/c/Users/Bernhard/Downloads/vips-dev-w64-all-8.6.5/vips-dev-8.6/lib/pkgconfig`
+* build bimg with: `/c/Go/bin/go get -u gopkg.in/h2non/bimg.v1`
+
 ### Webserver & SSL ###
 
 * install nginx with `apt-get install nginx`

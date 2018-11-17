@@ -26,6 +26,7 @@
   var imageGridCanvases = {};
   var numberOfQueryResults = 0;
   var numberOfCurrentlyShownResults = 0;
+  var labelAccessorsLookupTable = {}
 
   var clearImageGrid = function() {
     imageGridCanvases = {};
@@ -233,6 +234,7 @@
     if(n === 0)
       return;
 
+
     var imageUrl;
     var annotationsScaleFactor;
     var item;
@@ -258,6 +260,13 @@
 
       }
       else {
+        if($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
+          var parentLabel = labelAccessorsLookupTable[imageGridData[i].label.accessor]; 
+          if(parentLabel !== "") {
+            url += "&highlight=" + encodeURIComponent(parentLabel);
+          }
+        }
+
         var imageId = ("galleryItem" + i.toString());
         item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
@@ -290,7 +299,8 @@
     var availableLabels = [];
     var labelAccessors = {{ .labelAccessors }};
     for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i]);
+      availableLabels.push(labelAccessors[i].accessor);
+      labelAccessorsLookupTable[labelAccessors[i].accessor] = labelAccessors[i].parent_accessor;
     }
 
     var staticQueryAttributes = {{ .queryAttributes }};
@@ -353,13 +363,27 @@
       </div>
 
       <div class="inline fields">
+        <label>Options</label>
         <div class="field">
-          <div class="ui checkbox" id="annotationsOnlyCheckbox">
-            <input type="checkbox">
-            <label>Annotations only</label>
+          <div class="ui radio checkbox">
+            <input type="radio" name="searchOptions" checked="checked">
+            <label>No Options</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui radio checkbox" id="annotationsOnlyCheckbox" data-tooltip="Rework existing annotations">
+            <input type="radio" name="searchOptions">
+            <label>Rework</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui radio checkbox" id="highlightParentAnnotationsCheckbox" data-tooltip="Highlight the annotation's parent">
+            <input type="radio" name="searchOptions">
+            <label>Highlight</label>
           </div>
         </div>
       </div>
+
 
       <div class="ui primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>
       <div class="ui right aligned disabled button" id="annotatedStatisticsButton">

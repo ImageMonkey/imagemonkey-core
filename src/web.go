@@ -405,7 +405,7 @@ func main() {
 				"annotationMode": mode,
 				"onlyOnce": onlyOnce,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
+				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})

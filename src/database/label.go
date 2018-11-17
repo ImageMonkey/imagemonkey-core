@@ -4,6 +4,9 @@ import (
     "github.com/getsentry/raven-go"
     log "github.com/Sirupsen/logrus"
     "database/sql"
+    "../datastructures"
+    "encoding/json"
+    "fmt"
 )
 
 func _getTotalLabelSuggestions(tx *sql.Tx) (int64, error) {
@@ -148,4 +151,50 @@ func (p *ImageMonkeyDatabase) GetLabelAccessors() ([]string, error) {
     }
 
     return labels, nil
+}
+
+func (p *ImageMonkeyDatabase) GetLabelAccessorDetails(labelType string) ([]datastructures.LabelAccessorDetail, error) {
+    var labelAccessorDetails []datastructures.LabelAccessorDetail
+    var queryValues []interface{}
+
+    q1 := ""
+    if labelType != "" {
+        q1 = "WHERE l.label_type = $1"
+        queryValues = append(queryValues, labelType)
+    }
+
+    query := fmt.Sprintf(`SELECT COALESCE(json_agg(json_build_object('accessor', acc.accessor, 'parent_accessor', pacc.accessor)) 
+                                            FILTER (WHERE l.id is not null), '[]'::json)
+                             FROM label_accessor acc 
+                             JOIN label l ON l.id = acc.label_id
+                             LEFT JOIN label pl ON pl.id = l.parent_id
+                             LEFT JOIN label_accessor pacc ON pl.id = pacc.label_id
+                             %s`, q1)
+
+    rows, err := p.db.Query(query, queryValues...)
+    if err != nil {
+        log.Error("[Get detailed label accessors] Couldn't get accessors: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labelAccessorDetails, err
+    }
+    defer rows.Close()
+
+    if rows.Next() {
+        var bytes []byte
+        err = rows.Scan(&bytes)
+        if err != nil {
+           log.Error("[Get detailed label accessors] Couldn't scan row: ", err.Error())
+           raven.CaptureError(err, nil)
+           return labelAccessorDetails, err 
+        }
+
+        err = json.Unmarshal(bytes, &labelAccessorDetails)
+        if err != nil {
+            log.Error("[Get detailed label accessors] Couldn't unmarshal result: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labelAccessorDetails, err
+        }
+    }
+
+    return labelAccessorDetails, nil
 }

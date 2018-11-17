@@ -76,8 +76,8 @@
 					"accessors": [".type"],
 					"answers": [
 						{
-							"name": "dog",
-							"uuid": "bac46d8e-0655-46d5-a393-36c69a18ee2c"
+							"name": "adult",
+							"uuid": "06fd1e49-b580-4ca6-aaff-34ca39062995"
 						},
 						{ 
 							"name": "puppy",

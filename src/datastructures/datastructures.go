@@ -429,6 +429,10 @@ type AnnotationTask struct {
         Height int32 `json:"height"`
     } `json:"image"`
 
+    Label struct {
+        Accessor string `json:"accessor"`
+    } `json:"label"`
+
     Id string `json:"uuid"`
 }
 
@@ -662,4 +666,16 @@ type ImageCollection struct {
         Unlocked bool `json:"unlocked"`
         Url string `json:"url"`
     } `json:"sample_image"`
+}
+
+/*type ImageRegion struct {
+    Top int `json:"top"`
+    Left int `json:"left"`
+    Width int `json:"width"`
+    Height int `json:"height"`
+}*/
+
+type LabelAccessorDetail struct {
+    Accessor string `json:"accessor"`
+    Parent string `json:"parent_accessor"`
 }

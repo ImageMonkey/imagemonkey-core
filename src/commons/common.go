@@ -26,6 +26,11 @@ import (
     "image/gif"
     "image/jpeg"
     "image/png"
+    _"gopkg.in/h2non/bimg.v1"
+    "strconv"
+    "gocv.io/x/gocv"
+    "image/color"
+    "math"
 )
 
 
@@ -379,6 +384,16 @@ func GetParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string
     return param
 }
 
+func GetParamsFromUrlParams(c *gin.Context, name string) []string {
+    params := c.Request.URL.Query()
+
+    if temp, ok := params[name]; ok {
+        return temp
+    }
+
+    return []string{}
+}
+
 func GetImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) string {
     imageUrl := apiBaseUrl
     if unlocked {
@@ -449,4 +464,146 @@ func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
     imgFormat = format
 
     return buf.Bytes(), imgFormat, nil
+}
+
+/*type ExtractRoIFromImageErrorType int
+
+const (
+  ExtractRoIFromImageSuccess ExtractRoIFromImageErrorType = 1 << iota
+  ExtractRoIFromImageInvalidRegionError
+  ExtractRoIFromImageInternalError
+)
+
+func ExtractRoIFromImage(path string, imageRegion datastructures.ImageRegion) ([]byte, string, ExtractRoIFromImageErrorType, error) {
+    imgType := "unknown"
+    buffer, err := bimg.Read(path)
+    if err != nil {
+      log.Error("[Extract From Image] Couldn't read image: ", err.Error())
+      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
+    }
+
+    img := bimg.NewImage(buffer)
+    imgSize, err := img.Size()
+    if err != nil {
+        return []byte{}, imgType, ExtractRoIFromImageInternalError, err
+    }
+
+    if imageRegion.Top < 0 || imageRegion.Left < 0 || imageRegion.Width < 0 || imageRegion.Height < 0 {
+        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
+    }
+
+    if imageRegion.Top > imgSize.Height || imageRegion.Height > imgSize.Height || 
+        imageRegion.Left > imgSize.Width || imageRegion.Width > imgSize.Width {
+        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
+    }
+
+    buf, err := img.Extract(imageRegion.Top, imageRegion.Left, imageRegion.Width, imageRegion.Height)
+    if err != nil {
+        log.Error("[Extract From Image] Couldn't read image: ", err.Error())
+      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
+    }
+
+    imgType = bimg.DetermineImageTypeName(buffer)
+
+    return buf, imgType, ExtractRoIFromImageSuccess, nil
+}*/
+
+func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
+    regionsOfInterest := GetParamsFromUrlParams(c, "roi")
+    imageRects := []image.Rectangle{}
+    
+    for _,regionOfInterest := range regionsOfInterest {
+        regionOfInterestParams := strings.Split(regionOfInterest, ",")
+
+        var err error
+        x0 := 0
+        y0 := 0
+        x1 := 0
+        y1 := 0
+
+        if len(regionOfInterestParams) == 4 {
+            x0, err = strconv.Atoi(regionOfInterestParams[0])
+            if err != nil {
+                return imageRects, err
+            }
+        } 
+        if len(regionOfInterestParams) >= 2 {
+            y0, err = strconv.Atoi(regionOfInterestParams[1])
+            if err != nil {
+                return imageRects, err
+            }
+        }
+        if len(regionOfInterestParams) >= 3 {
+            x1, err = strconv.Atoi(regionOfInterestParams[2])
+            if err != nil {
+                return imageRects, err
+            }
+        }
+        if len(regionOfInterestParams) >= 4 {
+            y1, err = strconv.Atoi(regionOfInterestParams[3])
+            if err != nil {
+                return imageRects, err
+            }
+        }
+
+        imageRects = append(imageRects, image.Rect(x0, y0, x1, y1))
+    }
+
+    return imageRects, nil
+}
+
+func HighlightAnnotationsInImage(path string, regions []image.Rectangle, scaleToWidth int, scaleToHeight int) ([]byte, error) {
+    img := gocv.IMRead(path, gocv.IMReadColor)
+    defer img.Close()
+    if img.Empty() {
+        return []byte{}, errors.New("")
+    }
+
+    mask := gocv.NewMatWithSize(img.Rows(), img.Cols(), gocv.MatTypeCV8UC3)
+    defer mask.Close()
+
+    for _, region := range regions {
+        gocv.Rectangle(&mask, region, color.RGBA{255, 255, 255, 0}, -1)
+    }
+
+    dstImage := gocv.NewMatWithSize(img.Rows(), img.Cols(), img.Type())
+    defer dstImage.Close()
+
+    img.CopyToWithMask(&dstImage, mask)
+
+    imgSize := img.Size()
+    height := imgSize[0]
+    width := imgSize[1]
+
+    scaleFactor := 1.0
+    if scaleToWidth != 0 && scaleToHeight != 0 {
+        width = scaleToWidth
+        height = scaleToHeight
+    } else {
+        if scaleToWidth != 0 {
+            width = scaleToWidth
+            scaleFactor = float64(scaleToWidth) / float64(imgSize[1])
+            height = int(math.Round(float64(scaleFactor) * float64(height)))
+        } else {
+            height = scaleToHeight
+            scaleFactor = float64(scaleToHeight) / float64(imgSize[0])
+            width = int(math.Round(float64(scaleFactor) * float64(width)))
+        }
+    }
+
+    if width != imgSize[1] && height != imgSize[0] {
+        gocv.Resize(dstImage, &dstImage, image.Point{X: width, Y:height}, 0, 0, 1)
+    }
+
+
+    i, err := dstImage.ToImage()
+
+    buf := new(bytes.Buffer) 
+    err = jpeg.Encode(buf, i, nil)
+    if err != nil {
+        log.Error("[Extract ROI from Image] Couldn't encode image: ", err.Error())
+        return []byte{}, err
+    }
+
+    return buf.Bytes(), nil
 }

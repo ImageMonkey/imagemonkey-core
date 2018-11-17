@@ -11,6 +11,7 @@ import (
     "fmt"
     "database/sql"
     "github.com/lib/pq"
+    "image"
 )
 
 func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, annotationId string, 
@@ -1047,7 +1048,8 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                            )`, len(parseResult.QueryValues) + 1)
     }
 
-    q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid, qqq.image_unlocked
+    q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid, qqq.image_unlocked, 
+                      acc.accessor
                       FROM
                       (
                         SELECT qq.image_key, qq.image_width, qq.image_height, 
@@ -1072,6 +1074,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                         )qq
                       ) qqq
                       JOIN image_validation v ON v.uuid::text = qqq.validation_uuid
+                      JOIN label_accessor acc ON acc.label_id = v.label_id
                       WHERE NOT EXISTS (
                         SELECT 1 FROM image_annotation a 
                         WHERE a.label_id = v.label_id AND a.image_id = v.image_id
@@ -1099,7 +1102,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
     for rows.Next() {
         var annotationTask datastructures.AnnotationTask
         err = rows.Scan(&annotationTask.Image.Id, &annotationTask.Image.Width, &annotationTask.Image.Height, 
-                            &annotationTask.Id, &annotationTask.Image.Unlocked)
+                            &annotationTask.Id, &annotationTask.Image.Unlocked, &annotationTask.Label.Accessor)
         if err != nil {
             log.Debug("[Annotation Tasks] Couldn't get available annotation tasks: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1323,4 +1326,95 @@ func (p *ImageMonkeyDatabase) GetImagesForAutoAnnotation(labels []string) ([]dat
         autoAnnotationImages = append(autoAnnotationImages, autoAnnotationImage)
     }
     return autoAnnotationImages, nil
+}
+
+func (p *ImageMonkeyDatabase) GetBoundingBoxesForImageLabel(imageId string, label string) ([]image.Rectangle, error) {
+    boundingBoxes := []image.Rectangle{}
+
+    query := `WITH all_annotations AS (
+                SELECT an.image_id as image_id, d.id as annotation_data_id, d.annotation as annotation, t.name as annotation_type
+                FROM image_annotation an 
+                JOIN annotation_data d ON d.image_annotation_id = an.id
+                JOIN annotation_type t ON t.id = d.annotation_type_id
+                JOIN image i ON i.id = an.image_id
+                JOIN label_accessor acc ON acc.label_id = an.label_id
+                WHERE i.key = $1 AND acc.accessor = $2
+            ),
+            ellipse_annotations AS (
+                SELECT a.image_id, a.annotation_data_id as id, 
+                ST_Envelope(Ellipse( (a.annotation->'left')::text::float, 
+                         (a.annotation->'top')::text::float, 
+                         2* (a.annotation->'rx')::text::float, 
+                         2* (a.annotation->'ry')::text::float, 
+                         CASE 
+                            WHEN a.annotation->'angle' is null THEN 0 
+                            ELSE (a.annotation->'angle')::text::float
+                         END
+                       )) as geom
+                FROM all_annotations a
+                WHERE annotation_type = 'ellipse'
+            ),
+            polygon_annotations AS (
+              -- ST_MakePolygon might return a polygon with intersecting points. In order to fix that, one needs to call ST_MakeValid on the resulting polygon.
+              --Unfortunately, this is _really_ slow (especially, if a lot of polygons are affected). In order to circumvent that, we create a ConvexHull around the
+              --polygon. This works way faster and should also be precise enough for our purpose.
+                SELECT q.image_id, q.annotation_data_id as id, ST_Envelope(ST_ConvexHull(ST_MakePolygon(ST_GeomFromText('LINESTRING(' || 
+                                                                              string_agg((((q.annotation->'x')::text) || ' ' || ((q.annotation->'y')::text)), ',') 
+                                                                              || ',' || (array_agg((q.annotation->'x')::text))[1] || ' ' || (array_agg((q.annotation->'y')::text))[1] 
+                                                                              || ')')))) as geom
+                FROM
+                (
+                    SELECT a.image_id, a.annotation_data_id, jsonb_array_elements(a.annotation->'points') as  annotation
+                    FROM all_annotations a 
+                    WHERE a.annotation_type = 'polygon' AND jsonb_array_length(a.annotation->'points') > 2
+                ) q
+                GROUP BY q.image_id, q.annotation_data_id
+            ),
+            rectangle_annotations AS (
+                SELECT a.image_id, a.annotation_data_id as id, ST_Envelope(ST_MakePolygon(ST_MakeLine(
+                   ARRAY[
+                         ST_MakePoint((a.annotation->'left')::text::integer, (a.annotation->'top')::text::integer), 
+                         ST_MakePoint((a.annotation->'left')::text::float + (a.annotation->'width')::text::float, (a.annotation->'top')::text::float),
+                         ST_MakePoint((a.annotation->'left')::text::float + (a.annotation->'width')::text::float, 
+                                                                (a.annotation->'top')::text::float + (a.annotation->'height')::text::float),
+                         ST_MakePoint((a.annotation->'left')::text::float, (a.annotation->'top')::text::float + (a.annotation->'height')::text::float),
+                         ST_MakePoint((a.annotation->'left')::text::float, (a.annotation->'top')::text::float)
+                        ]))) as geom
+                FROM all_annotations a 
+                WHERE a.annotation_type = 'rect'
+                --GROUP BY a.annotation_data_id, a.annotation
+            ),
+            all_annotation_areas AS (
+                SELECT ST_AsGeoJSON(geom)::jsonb AS geom FROM polygon_annotations
+                UNION 
+                SELECT ST_AsGeoJSON(geom)::jsonb AS geom FROM rectangle_annotations
+                UNION
+                SELECT ST_AsGeoJSON(geom)::jsonb AS geom FROM ellipse_annotations
+            )
+            SELECT ((geom->'coordinates'->>0)::jsonb->>0)::jsonb->0 as x0,
+                   ((geom->'coordinates'->>0)::jsonb->>0)::jsonb->1 as y0,
+                   ((geom->'coordinates'->>0)::jsonb->>2)::jsonb->0 as x1,
+                   ((geom->'coordinates'->>0)::jsonb->>2)::jsonb->1 as y1
+            FROM all_annotation_areas`
+    rows, err := p.db.Query(query, imageId, label)
+    if err != nil {
+        log.Error("[Get Bounding Boxes] Couldn't get bounding boxes for image label: ", err.Error())
+        raven.CaptureError(err, nil)
+        return boundingBoxes, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var x0, y0, x1, y1 int
+        err = rows.Scan(&x0, &y0, &x1, &y1)
+        if err != nil {
+            log.Error("[Get Bounding Boxes] Couldn't scan bounding boxes for image label: ", err.Error())
+            raven.CaptureError(err, nil)
+            return boundingBoxes, err
+        }
+        boundingBoxes = append(boundingBoxes, image.Rect(x0, y0, x1, y1))
+    }
+
+    return boundingBoxes, nil
 }
