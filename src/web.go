@@ -22,6 +22,7 @@ import (
 	"./commons"
 	imagemonkeydb "./database"
 	languages "./languages"
+	img "./image"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -244,7 +245,7 @@ func main() {
 			    }
 			}
 
-			imgBytes, format, err := commons.ResizeImage(("../img/" + imageName), width, height)
+			imgBytes, format, err := img.ResizeImage(("../img/" + imageName), width, height)
 			if err != nil {
 				log.Error("[Serving Image] Couldn't serve img: ", err.Error())
 				c.String(500, "Couldn't process request - please try again later")

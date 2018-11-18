@@ -1,4 +1,4 @@
-package commons
+package img
 
 import (
     log "github.com/Sirupsen/logrus"
@@ -44,7 +44,7 @@ func ResizeImage(path string, scaleToWidth int, scaleToHeight int) ([]byte, stri
             width = scaleToWidth
             scaleFactor = float64(scaleToWidth) / float64(imgSize.Width)
             height = int(math.Round(float64(scaleFactor) * float64(height)))
-        } else {
+        } else if scaleToHeight != 0 {
             height = scaleToHeight
             scaleFactor = float64(scaleToHeight) / float64(imgSize.Height)
             width = int(math.Round(float64(scaleFactor) * float64(width)))
@@ -144,7 +144,7 @@ func HighlightAnnotationsInImage(path string, regions []image.Rectangle, scaleTo
             width = scaleToWidth
             scaleFactor = float64(scaleToWidth) / float64(imgSize[1])
             height = int(math.Round(float64(scaleFactor) * float64(height)))
-        } else {
+        } else if scaleToHeight != 0 {
             height = scaleToHeight
             scaleFactor = float64(scaleToHeight) / float64(imgSize[0])
             width = int(math.Round(float64(scaleFactor) * float64(width)))

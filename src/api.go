@@ -29,6 +29,7 @@ import (
     commons "./commons"
     parser "./parser"
     "image"
+    img "./image"
 	//"gopkg.in/h2non/bimg.v1"
 )
 
@@ -653,7 +654,7 @@ func main(){
 			}/* else {
 				imageRegions, err = commons.GetImageRegionsFromUrlParams(c)
 				if len(imageRegions) == 0 {
-					imgBytes, format, err = commons.ResizeImage((*donationsDir + imageId), width, height)
+					imgBytes, format, err = img.ResizeImage((*donationsDir + imageId), width, height)
 					if err != nil {
 						log.Error("[Serving Resized Donation] Couldn't serve donation: ", err.Error())
 						c.String(500, "Couldn't process request, please try again later")
@@ -675,7 +676,7 @@ func main(){
 			}*/
 
 			if len(imageRegions) > 0 {
-				imgBytes, err = commons.HighlightAnnotationsInImage((*donationsDir + imageId), imageRegions, int(width), int(height))
+				imgBytes, err = img.HighlightAnnotationsInImage((*donationsDir + imageId), imageRegions, int(width), int(height))
 				format = "jpg"
 				if err != nil {
 					log.Error("[Serving RoI of Donation] Couldn't serve donation: ", err.Error())
@@ -684,7 +685,7 @@ func main(){
 			} else {
 				//imageRegions, err = commons.GetImageRegionsFromUrlParams(c)
 				//if len(imageRegions) == 0 {
-					imgBytes, format, err = commons.ResizeImage((*donationsDir + imageId), width, height)
+					imgBytes, format, err = img.ResizeImage((*donationsDir + imageId), width, height)
 					if err != nil {
 						log.Error("[Serving Resized Donation] Couldn't serve donation: ", err.Error())
 						c.String(500, "Couldn't process request, please try again later")
@@ -767,7 +768,7 @@ func main(){
 				}
 			}
 
-			imgBytes, format, err := commons.ResizeImage((*unverifiedDonationsDir + imageId), width, height)
+			imgBytes, format, err := img.ResizeImage((*unverifiedDonationsDir + imageId), width, height)
 			if err != nil {
 				log.Debug("[Serving unverified Donation] Couldn't serve donation: ", err.Error())
 				c.String(500, "Couldn't process request, please try again later")
@@ -2758,7 +2759,7 @@ func main(){
 				fname = "default.png"
 			}
 
-			imgBytes, format, err := commons.ResizeImage((*userProfilePicturesDir + fname), width, height)
+			imgBytes, format, err := img.ResizeImage((*userProfilePicturesDir + fname), width, height)
 			if err != nil {
 				log.Debug("[Serving Avatar] Couldn't serve avatar: ", err.Error())
 				c.String(500, "Couldn't process request - please try again later")
