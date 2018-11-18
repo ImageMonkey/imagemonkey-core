@@ -238,6 +238,7 @@
     var imageUrl;
     var annotationsScaleFactor;
     var item;
+    var currentDateTime = new Date().getTime();
     for(var i = from; i < (from + n); i++){
       var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
                                   + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
@@ -263,7 +264,8 @@
         if($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
           var parentLabel = labelAccessorsLookupTable[imageGridData[i].label.accessor]; 
           if(parentLabel !== "") {
-            url += "&highlight=" + encodeURIComponent(parentLabel);
+            //add the current timestamp to prevent that the browser caches images
+            url += "&highlight=" + encodeURIComponent(parentLabel) + "&ts=" + currentDateTime;
           }
         }
 

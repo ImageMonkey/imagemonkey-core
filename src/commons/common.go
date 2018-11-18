@@ -21,16 +21,7 @@ import (
     "errors"
     "github.com/gin-gonic/gin"
     "../datastructures"
-    "os"
-    "github.com/nfnt/resize"
-    "image/gif"
-    "image/jpeg"
-    "image/png"
-    _"gopkg.in/h2non/bimg.v1"
     "strconv"
-    "gocv.io/x/gocv"
-    "image/color"
-    "math"
 )
 
 
@@ -421,51 +412,6 @@ func GetPublicBackups(path string) ([]datastructures.PublicBackup, error){
     return publicBackups, nil
 }
 
-func ResizeImage(path string, width uint, height uint) ([]byte, string, error){
-    buf := new(bytes.Buffer) 
-    imgFormat := ""
-
-    file, err := os.Open(path)
-    if err != nil {
-        log.Debug("[Resize Image Handler] Couldn't open image: ", err.Error())
-        return buf.Bytes(), imgFormat, err
-    }
-
-    // decode jpeg into image.Image
-    img, format, err := image.Decode(file)
-    if err != nil {
-        log.Debug("[Resize Image Handler] Couldn't decode image: ", err.Error())
-        return buf.Bytes(), imgFormat, err
-    }
-    file.Close()
-
-    resizedImg := resize.Resize(width, height, img, resize.NearestNeighbor)
-
-
-    if format == "png" {
-        err = png.Encode(buf, resizedImg)
-        if err != nil {
-            log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
-            return buf.Bytes(), imgFormat, err
-        }
-    } else if format == "gif" {
-        err = gif.Encode(buf, resizedImg, nil)
-        if err != nil {
-            log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
-            return buf.Bytes(), imgFormat, err
-        }
-    } else {
-        err = jpeg.Encode(buf, resizedImg, nil)
-        if err != nil {
-            log.Debug("[Resize Image Handler] Couldn't encode image: ", err.Error())
-            return buf.Bytes(), imgFormat, err
-        }
-    }
-    imgFormat = format
-
-    return buf.Bytes(), imgFormat, nil
-}
-
 /*type ExtractRoIFromImageErrorType int
 
 const (
@@ -550,60 +496,4 @@ func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
     }
 
     return imageRects, nil
-}
-
-func HighlightAnnotationsInImage(path string, regions []image.Rectangle, scaleToWidth int, scaleToHeight int) ([]byte, error) {
-    img := gocv.IMRead(path, gocv.IMReadColor)
-    defer img.Close()
-    if img.Empty() {
-        return []byte{}, errors.New("")
-    }
-
-    mask := gocv.NewMatWithSize(img.Rows(), img.Cols(), gocv.MatTypeCV8UC3)
-    defer mask.Close()
-
-    for _, region := range regions {
-        gocv.Rectangle(&mask, region, color.RGBA{255, 255, 255, 0}, -1)
-    }
-
-    dstImage := gocv.NewMatWithSize(img.Rows(), img.Cols(), img.Type())
-    defer dstImage.Close()
-
-    img.CopyToWithMask(&dstImage, mask)
-
-    imgSize := img.Size()
-    height := imgSize[0]
-    width := imgSize[1]
-
-    scaleFactor := 1.0
-    if scaleToWidth != 0 && scaleToHeight != 0 {
-        width = scaleToWidth
-        height = scaleToHeight
-    } else {
-        if scaleToWidth != 0 {
-            width = scaleToWidth
-            scaleFactor = float64(scaleToWidth) / float64(imgSize[1])
-            height = int(math.Round(float64(scaleFactor) * float64(height)))
-        } else {
-            height = scaleToHeight
-            scaleFactor = float64(scaleToHeight) / float64(imgSize[0])
-            width = int(math.Round(float64(scaleFactor) * float64(width)))
-        }
-    }
-
-    if width != imgSize[1] && height != imgSize[0] {
-        gocv.Resize(dstImage, &dstImage, image.Point{X: width, Y:height}, 0, 0, 1)
-    }
-
-
-    i, err := dstImage.ToImage()
-
-    buf := new(bytes.Buffer) 
-    err = jpeg.Encode(buf, i, nil)
-    if err != nil {
-        log.Error("[Extract ROI from Image] Couldn't encode image: ", err.Error())
-        return []byte{}, err
-    }
-
-    return buf.Bytes(), nil
 }

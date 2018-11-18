@@ -226,21 +226,21 @@ func main() {
     			return
 			}
 
-			var width uint
+			var width int
 			width = 0
 			if temp, ok := params["width"]; ok {
 				n, err := strconv.ParseUint(temp[0], 10, 32)
 			    if err == nil {
-			        width = uint(n)
+			        width = int(n)
 			    }
 			}
 
-			var height uint
+			var height int
 			height = 0
 			if temp, ok := params["height"]; ok {
 				n, err := strconv.ParseUint(temp[0], 10, 32)
 			    if err == nil {
-	            	height = uint(n)
+	            	height = int(n)
 			    }
 			}
 
