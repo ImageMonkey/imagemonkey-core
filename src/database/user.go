@@ -13,9 +13,11 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
     var removeLabelPermission bool
     var unlockImageDescriptionPermission bool
     var unlockImage bool
+    var canMonitorSystem bool
     removeLabelPermission = false
     unlockImageDescriptionPermission = false
     unlockImage = false
+    canMonitorSystem = false
 
 
     userInfo.Name = ""
@@ -27,7 +29,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
     rows, err := p.db.Query(`SELECT a.name, COALESCE(a.profile_picture, ''), a.created, a.is_moderator,
                               COALESCE(p.can_remove_label, false) as remove_label_permission,
                               COALESCE(p.can_unlock_image_description, false) as unlock_image_description,
-                              COALESCE(p.can_unlock_image, false) as unlock_image
+                              COALESCE(p.can_unlock_image, false) as unlock_image,
+                              COALESCE(p.can_monitor_system, false) as can_monitor_system
                               FROM account a 
                               LEFT JOIN account_permission p ON p.account_id = a.id 
                               WHERE a.name = $1`, username)
@@ -42,7 +45,7 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
     if rows.Next() {
         err = rows.Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created, 
                         &userInfo.IsModerator, &removeLabelPermission, 
-                        &unlockImageDescriptionPermission, &unlockImage)
+                        &unlockImageDescriptionPermission, &unlockImage, &canMonitorSystem)
 
         if err != nil {
             log.Debug("[User Info] Couldn't scan user info: ", err.Error())
@@ -53,7 +56,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
         if userInfo.IsModerator {
             permissions := &datastructures.UserPermissions {CanRemoveLabel: removeLabelPermission, 
                                                             CanUnlockImageDescription: unlockImageDescriptionPermission,
-                                                            CanUnlockImage: unlockImage}
+                                                            CanUnlockImage: unlockImage,
+                                                            CanMonitorSystem: canMonitorSystem}
             userInfo.Permissions = permissions
         }
     }

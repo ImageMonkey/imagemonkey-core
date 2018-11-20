@@ -149,6 +149,7 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
     				sessionInformation.UserPermissions = &datastructures.UserPermissions{CanRemoveLabel: false,
     													   				   			 CanUnlockImageDescription: false,
     													   				   			 CanUnlockImage: false,
+    													   				   			 CanMonitorSystem: false,
     													  				 			}
     			} else {
     				sessionInformation.IsModerator = userInfo.IsModerator

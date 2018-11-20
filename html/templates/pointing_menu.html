@@ -65,10 +65,19 @@
       Moderation
       </div>
       {{ end }}
+
       {{ if .sessionInformation.UserPermissions }}
       {{ if eq .sessionInformation.UserPermissions.CanUnlockImage true }}
       <div class="item" onclick="window.location='/image_unlock';"><i class="check circle outline icon"></i>
       Unlock Image
+      </div>
+      {{ end }}
+      {{ end }}
+
+      {{ if .sessionInformation.UserPermissions }}
+      {{ if eq .sessionInformation.UserPermissions.CanMonitorSystem true }}
+      <div class="item" onclick="window.location='/monitoring';"><i class="heartbeat icon"></i>
+      Monitoring
       </div>
       {{ end }}
       {{ end }}

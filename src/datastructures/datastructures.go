@@ -384,6 +384,7 @@ type UserPermissions struct {
     CanRemoveLabel bool `json:"can_remove_label"`
     CanUnlockImageDescription bool `json:"can_unlock_image_description"`
     CanUnlockImage bool `json:"can_unlock_image"`
+    CanMonitorSystem bool `json:"can_monitor_system"`
 }
 
 type UserInfo struct {
