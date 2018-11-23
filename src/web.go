@@ -50,11 +50,15 @@ func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, e
     return templ, err
 }
 
-func GetImages(path string) (map[string]string, error) {
+func GetImages(p string) (map[string]string, error) {
 	files := make(map[string]string, 0)
-	err := filepath.Walk(path, func(path string, f os.FileInfo, err error) error {
-		if !f.IsDir() {
-			files[filepath.Base(path)] = path
+	err := filepath.Walk(p, func(path string, f os.FileInfo, err error) error {
+		if !f.IsDir() || (f.IsDir() && (path != p)) {
+			rel, err := filepath.Rel(p, path)
+			if err != nil {
+				return err
+			}
+			files[filepath.ToSlash(rel)] = path
 		}
 		return err
 	})
@@ -249,8 +253,8 @@ func main() {
 		})	
 	} else {
 		//router.Static("./img", "../img") //serve images
-		router.GET("/img/:name", func(c *gin.Context) { //serve images
-			imageName := c.Param("name")
+		router.GET("/img/*name", func(c *gin.Context) { //serve images
+			imageName := strings.Trim(c.Param("name"), "/")
 			params := c.Request.URL.Query()
 
 			if _, ok := imgs[imageName]; !ok {
