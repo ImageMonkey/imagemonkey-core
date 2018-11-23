@@ -1146,9 +1146,13 @@
         {{ end }}
       {{ end }}
 
-      new Fingerprint2().get(function(result, components){
-        browserFingerprint = result;
-      });
+      try {
+        //can fail in case someone uses uBlock origin or Co.
+        new Fingerprint2().get(function(result, components){
+          browserFingerprint = result;
+        });
+      } catch(e) {
+      }
 
       
 });

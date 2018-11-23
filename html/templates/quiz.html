@@ -329,9 +329,13 @@
       var canvas = new fabric.Canvas('canvas');
       populate(canvas, {{ .randomAnnotatedImage }})
 
-      new Fingerprint2().get(function(result, components){
-        browserFingerprint = result;
-      });
+      try {
+        //can fail in case someone uses uBlock origin or Co.
+        new Fingerprint2().get(function(result, components){
+          browserFingerprint = result;
+        });
+      } catch(e) {
+      }
 
       $('#doneButton').click(function(e) {
         var labelIds = getSelectedLabelIds();
