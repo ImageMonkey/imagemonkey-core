@@ -677,6 +677,24 @@ func (p *ImageMonkeyDatabase) IsImageInQuarantine(imageId string) (bool, error) 
 	return false, errors.New("missing result set")
 }
 
+func (p *ImageMonkeyDatabase) DoLabelAccessorsBelongToMoreThanOneLabelId() (bool, error) {
+	rows, err := p.db.Query(`SELECT label_id 
+								FROM label_accessor
+								GROUP BY label_id
+								HAVING COUNT(label_id) > 1`)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()

@@ -136,7 +136,7 @@
           autoAnnotations = data["auto_annotations"];
       }
 
-      setLabel(data.label, data.sublabel);
+      setLabel(data.label.label, data.label.sublabel, data.label.accessor);
       changeNavHeader("default");
     }
     else {
@@ -188,7 +188,7 @@
     existingAnnotations = data["annotations"];
     showHideAutoAnnotationsLoadButton();
 
-    setLabel(data.validation.label, data.validation.sublabel);
+    setLabel(data.validation.label, data.validation.sublabel, null);
 
     if(canvas !== undefined && canvas !== null) {
       canvas.fabric().clear();
@@ -330,6 +330,19 @@
       if(!imageUnlocked){
         url += "?token=" + getCookie("imagemonkey");
       }
+
+      {{ if eq .annotationMode "browse" }}
+      if($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
+        var labelToAnnotate = $("#label").attr("accessor");
+        if(labelToAnnotate in labelAccessorsLookupTable) {
+          if(!imageUnlocked) {
+            url += "&highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
+          } else {
+            url += "?highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
+          }
+        }
+      }
+      {{ end }}
     }
 
     return url;
@@ -573,9 +586,13 @@
     }
   }
 
-  function setLabel(label, sublabel){
-    $("#label").attr("label", label)
-    $("#label").attr("sublabel", sublabel)
+  function setLabel(label, sublabel, accessor){
+    $("#label").attr("label", label);
+    $("#label").attr("sublabel", sublabel);
+
+    if(accessor !== null)
+      $("#label").attr("accessor", accessor);
+
     if(sublabel === ""){
       $("#label").text(("Annotate all: " + label));
       $("#bottomLabel").text(("Annotate all: " + label));
@@ -1146,7 +1163,7 @@
     <div hidden class="ui inverted vertical masthead center aligned segment" id="navHeader">
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer"> <!--style="margin-top:-2em;">-->
-      <h2 class="ui inverted header" id="label" label="" sublabel="" style="margin-bottom: 0.2em;"></h2>
+      <h2 class="ui inverted header" id="label" label="" sublabel="" accessor="" style="margin-bottom: 0.2em;"></h2>
       
       <button class="ui {{ if eq .annotationMode "default" }}white{{ else }}inverted basic{{ end }} button" 
         onclick="window.location='/annotate?mode=default';" data-tooltip="Default Mode">Default</button>

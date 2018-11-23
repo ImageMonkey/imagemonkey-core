@@ -201,13 +201,14 @@ func (p *ImageMonkeyDatabase) _getImageForAnnotationFromValidationId(username st
         
     }
 
-    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, i.width, i.height, v.uuid, 
+    q := fmt.Sprintf(`SELECT i.key, l.name, COALESCE(pl.name, '') as parent_label, acc.accessor, i.width, i.height, v.uuid, 
                            json_agg(q1.annotation || ('{"type":"' || q1.name || '"}')::jsonb)::jsonb as auto_annotations,
                            i.unlocked
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
                             JOIN label l ON v.label_id = l.id
+                            JOIN label_accessor acc ON acc.label_id = v.label_id
                             LEFT JOIN label pl ON l.parent_id = pl.id
 
                             LEFT JOIN 
@@ -219,7 +220,7 @@ func (p *ImageMonkeyDatabase) _getImageForAnnotationFromValidationId(username st
                                 WHERE a.auto_generated = true
                             ) q1 ON l.id = q1.label_id AND i.id = q1.image_id 
                             WHERE (i.unlocked = true %s) AND p.name = 'donation' AND v.uuid::text = $1
-                            GROUP BY i.key, l.name, pl.name, width, height, v.uuid, i.unlocked`, includeOwnImageDonations)
+                            GROUP BY i.key, l.name, pl.name, acc.accessor, width, height, v.uuid, i.unlocked`, includeOwnImageDonations)
 
     //we do not check, whether there already exists a annotation for the given validation id. 
     //there is anyway only one annotation per validation allowed, so if someone tries to push another annotation, the corresponding POST request 
@@ -247,8 +248,9 @@ func (p *ImageMonkeyDatabase) _getImageForAnnotationFromValidationId(username st
     if rows.Next() {
         unannotatedImage.Provider = "donation"
 
-        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, 
-                            &unannotatedImage.Validation.Id, &autoAnnotationBytes, &unannotatedImage.Unlocked)
+        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Label.Accessor, 
+                            &unannotatedImage.Width, &unannotatedImage.Height, &unannotatedImage.Validation.Id, 
+                            &autoAnnotationBytes, &unannotatedImage.Unlocked)
         if err != nil {
             log.Debug("[Get specific Image for Annotation] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -267,11 +269,11 @@ func (p *ImageMonkeyDatabase) _getImageForAnnotationFromValidationId(username st
         }
 
         if label2 == "" {
-            unannotatedImage.Label = label1
-            unannotatedImage.Sublabel = ""
+            unannotatedImage.Label.Label = label1
+            unannotatedImage.Label.Sublabel = ""
         } else {
-            unannotatedImage.Label = label2
-            unannotatedImage.Sublabel = label1
+            unannotatedImage.Label.Label = label2
+            unannotatedImage.Label.Sublabel = label1
         }
     }
 
@@ -332,16 +334,17 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
     }
 
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.image_width, q.image_height, q.validation_uuid, 
+    q := fmt.Sprintf(`SELECT q.image_key, q.label, q.parent_label, q.accessor, q.image_width, q.image_height, q.validation_uuid, 
                         CASE WHEN json_agg(q1.annotation)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q1.annotation || ('{"type":"' || q1.annotation_type || '"}')::jsonb)::jsonb END as auto_annotations,
                         q.image_unlocked
                         FROM
                         (SELECT l.id as label_id, i.id as image_id, i.key as image_key, l.name as label, COALESCE(pl.name, '') as parent_label, 
-                            width as image_width, height as image_height, v.uuid as validation_uuid, i.unlocked as image_unlocked
+                            acc.accessor as accessor, width as image_width, height as image_height, v.uuid as validation_uuid, i.unlocked as image_unlocked
                             FROM image i 
                             JOIN image_provider p ON i.image_provider_id = p.id 
                             JOIN image_validation v ON v.image_id = i.id
                             JOIN label l ON v.label_id = l.id
+                            JOIN label_accessor acc ON acc.accessor = v.label_id
                             LEFT JOIN label pl ON l.parent_id = pl.id
                             WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
                             CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
@@ -381,7 +384,7 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
                             JOIN annotation_type t on d.annotation_type_id = t.id
                             WHERE a.auto_generated = true 
                         ) q1 ON q.label_id = q1.label_id AND q.image_id = q1.image_id
-                        GROUP BY q.image_key, q.label, q.parent_label, 
+                        GROUP BY q.image_key, q.label, q.parent_label, q.accessor
                         q.image_width, q.image_height, q.validation_uuid, q.image_unlocked`, 
                         includeOwnImageDonations, q1, q2, q3, includeOwnImageDonations, q1, q2, q3)
 
@@ -416,8 +419,9 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
     if rows.Next() {
         unannotatedImage.Provider = "donation"
 
-        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Width, &unannotatedImage.Height, 
-            &unannotatedImage.Validation.Id, &autoAnnotationBytes, &unannotatedImage.Unlocked)
+        err = rows.Scan(&unannotatedImage.Id, &label1, &label2, &unannotatedImage.Label.Accessor, 
+            &unannotatedImage.Width, &unannotatedImage.Height, &unannotatedImage.Validation.Id, 
+            &autoAnnotationBytes, &unannotatedImage.Unlocked)
         if err != nil {
             log.Debug("[Get Random Un-annotated Image] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -436,11 +440,11 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
         }
 
         if label2 == "" {
-            unannotatedImage.Label = label1
-            unannotatedImage.Sublabel = ""
+            unannotatedImage.Label.Label = label1
+            unannotatedImage.Label.Sublabel = ""
         } else {
-            unannotatedImage.Label = label2
-            unannotatedImage.Sublabel = label1
+            unannotatedImage.Label.Label = label2
+            unannotatedImage.Label.Sublabel = label1
         }
     }
 

@@ -293,3 +293,12 @@ func TestBrowseLabelOneImageDescriptionUnlocked(t *testing.T) {
 	ok(t, err)
 	equals(t, imageDescription.Text, "apple on the floor")
 }
+
+func TestOnlyOneLabelAccessorPerLabelId(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	moreThanOneLabelId, err := db.DoLabelAccessorsBelongToMoreThanOneLabelId()
+	ok(t, err)
+	equals(t, moreThanOneLabelId, false)
+}

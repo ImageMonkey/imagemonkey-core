@@ -120,14 +120,17 @@ type UnannotatedImage struct {
     Id string `json:"uuid"`
     Unlocked bool `json:"unlocked"`
     Url string `json:"url"`
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
     Provider string `json:"provider"`
     Width int32 `json:"width"`
     Height int32 `json:"height"`
     Validation struct {
         Id string `json:"uuid"`
     } `json:"validation"`
+    Label struct {
+        Label string `json:"label"`
+        Sublabel string `json:"sublabel"`
+        Accessor string `json:"accessor"`
+    } `json:"label"`
     AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
 }
 
