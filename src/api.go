@@ -133,9 +133,9 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 }
 
 //CORS Middleware 
-func CorsMiddleware() gin.HandlerFunc {
+func CorsMiddleware(allowOrigin string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	    c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Request-Id, Cache-Control, X-Requested-With, X-Total-Count, X-Browser-Fingerprint, X-App-Identifier, Authorization, X-Api-Token, X-Moderation, X-Client-Id, X-Client-Secret")
 	    c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, HEAD")
 
@@ -499,6 +499,7 @@ func main(){
 	labelGraphDefinitionsPath := flag.String("label_graph_definitions", "../wordlists/en/graphdefinitions", "Path to the label graph definitions")
 	listenPort := flag.Int("listen_port", 8081, "Specify the listen port")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081/", "API Base URL")
+	corsAllowOrigin := flag.String("cors_allow_origin", "*", "CORS Access-Control-Allow-Origin")
 
 	sentryEnvironment := "api"
 
@@ -592,7 +593,7 @@ func main(){
     		c.JSON(302, gin.H{"error": "Sorry for the inconvenience but we're performing some maintenance at the moment. We'll be back shortly."})
 		})	
 	} else {
-		router.Use(CorsMiddleware())
+		router.Use(CorsMiddleware(*corsAllowOrigin))
 		router.Use(RequestId())
 
 		//serve images in "donations" directory with the possibility to scale images
@@ -2923,6 +2924,12 @@ func main(){
 			}
 			c.JSON(200, gin.H{"activity": activity, "period": "last-month"})
 		})
+	}
+
+	if *corsAllowOrigin == "*" {
+		corsWarning := "CORS Access-Control-Allow-Origin is set to '*' - which is a potential security risk."
+		corsWarning += "DO NOT RUN THE SERVICE IN PRODUCTION WITH THIS CONFIGURATION!"
+		log.Info(corsWarning)
 	}
 
 	router.Run(":" + strconv.FormatInt(int64(*listenPort), 10))
