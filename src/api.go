@@ -806,11 +806,14 @@ func main(){
 					orderRandomly = true
 				}
 
+				limitBy := -1
 				limit := commons.GetParamFromUrlParams(c, "limit", "")
-				limitBy, err := strconv.Atoi(limit)
-				if err != nil {
-					c.JSON(422, gin.H{"error": "Invalid request - please provide a valid limit"})
-					return
+				if limit != "" {
+					limitBy, err = strconv.Atoi(limit)
+					if err != nil {
+						c.JSON(422, gin.H{"error": "Invalid request - please provide a valid limit"})
+						return
+					}
 				}
 
 				images, err := imageMonkeyDatabase.GetAllUnverifiedImages(imageProvider, orderRandomly, limitBy)
