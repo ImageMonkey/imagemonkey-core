@@ -19,6 +19,8 @@ sed -i.bak 's@-api_base_url=xxxxxx@-api_base_url='"$API_BASE_URL"'@g' /etc/super
 #replace api_base_url with API_BASE_URL from env variable (use @ as delimiter)
 sed -i.bak 's@-api_base_url=xxxxxx@-api_base_url='"${API_BASE_URL}/"'@g' /etc/supervisor/conf.d/imagemonkey-api.conf
 
+echo "Starting netdata..."
+/usr/sbin/netdata
 
 echo "Starting supervisord..."
 #start supervisord
