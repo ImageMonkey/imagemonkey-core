@@ -108,7 +108,6 @@ func ResizeImage(path string, scaleToWidth int, scaleToHeight int) ([]byte, stri
     return buf.Bytes(), imgFormat, nil
 }*/
 
-
 func HighlightAnnotationsInImage(path string, regions []image.Rectangle, scaleToWidth int, scaleToHeight int) ([]byte, error) {
     img := gocv.IMRead(path, gocv.IMReadColor)
     defer img.Close()
@@ -116,19 +115,20 @@ func HighlightAnnotationsInImage(path string, regions []image.Rectangle, scaleTo
         return []byte{}, errors.New("")
     }
 
-    mask := gocv.NewMatWithSize(img.Rows(), img.Cols(), gocv.MatTypeCV8UC3)
-    defer mask.Close()
-
-    //gocv.Rectangle(&mask, image.Rect(0, 0, img.Size()[1], img.Size()[0]), color.RGBA{255, 0, 0, 0}, -1)
-
-    for _, region := range regions {
-        gocv.Rectangle(&mask, region, color.RGBA{255, 255, 255, 0}, -1)
-    }
-
     dstImage := gocv.NewMatWithSize(img.Rows(), img.Cols(), img.Type())
+    gocv.CvtColor(img, &dstImage, gocv.ColorBGRToGray)
+    gocv.CvtColor(dstImage, &dstImage, gocv.ColorGrayToBGR)
     defer dstImage.Close()
 
-    img.CopyToWithMask(&dstImage, mask)
+    for _, region := range regions {
+        imgRegion := img.Region(region)
+        dstRegion := dstImage.Region(region)
+
+        imgRegion.CopyTo(&dstRegion)
+        gocv.Rectangle(&dstImage, region, color.RGBA{255, 255, 255, 0}, 2)
+        imgRegion.Close()
+        dstRegion.Close()
+    }
 
 
     imgSize := img.Size()
