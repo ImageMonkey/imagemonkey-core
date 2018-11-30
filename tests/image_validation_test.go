@@ -145,7 +145,7 @@ func TestRandomImageValidation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testRandomImageValidation(t, 100)
 }
 
@@ -154,7 +154,7 @@ func TestRandomModeratedImageValidation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testSignUp(t, "moderator", "moderator", "moderator@imagemonkey.io")
 	moderatorToken := testLogin(t, "moderator", "moderator", 200)
 	db.GiveUserModeratorRights("moderator") //give user moderator rights
@@ -324,7 +324,7 @@ func TestBatchValidation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)

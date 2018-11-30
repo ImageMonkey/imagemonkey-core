@@ -79,7 +79,7 @@ func TestRandomImageAnnotationRefinement(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testRandomAnnotate(t, 5, `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
 	testRandomAnnotationRefinement(t, 4)
 }

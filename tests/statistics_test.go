@@ -96,7 +96,7 @@ func TestGetAnnotatedStatistics1(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange")
+	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")

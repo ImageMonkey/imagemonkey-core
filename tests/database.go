@@ -456,6 +456,45 @@ func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabel(label string) (int32, e
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelSuggestions(label string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image_label_suggestion ils
+						   JOIN label_suggestion l ON l.id = ils.label_suggestion_id
+						   WHERE l.name = $1
+						 `, label).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumberOfTrendingLabelSuggestions() (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM trending_label_suggestion`).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64, error) {
+	productiveLabelIds := []int64{}
+
+	rows, err := p.db.Query(`SELECT t.productive_label_id FROM trending_label_suggestion t 
+							 WHERE t.productive_label_id is not null`)
+	if err != nil {
+		return productiveLabelIds, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var productiveLabelId int64
+		err = rows.Scan(&productiveLabelId)
+		if err != nil {
+			return productiveLabelIds, err
+		}
+
+		productiveLabelIds = append(productiveLabelIds, productiveLabelId)
+	}
+
+	return productiveLabelIds, nil
+}
+
 func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
 	var label string
 	err := p.db.QueryRow(`SELECT l.name
@@ -506,6 +545,23 @@ func (p *ImageMonkeyDatabase) GetLabelUuidFromName(label string) (string, error)
 							FROM label l 
 							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&uuid)
 	return uuid, err
+}
+
+func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
+	var labelId int64 
+	err := p.db.QueryRow(`SELECT l.id 
+							FROM label l 
+							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&labelId)
+	return labelId, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumOfSentOfTrendingLabel(tendingLabel string) (int, error) {
+	var tendingLabelId int 
+	err := p.db.QueryRow(`SELECT t.num_of_last_sent 
+						  FROM trending_label_suggestion t
+						  JOIN label_suggestion l ON t.label_suggestion_id = l.id
+						  WHERE l.name = $1`, tendingLabel).Scan(&tendingLabelId)
+	return tendingLabelId, err
 }
 
 func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) error {

@@ -232,21 +232,35 @@ func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
 
 
 
-func testMultipleDonate(t *testing.T) int {
+func testMultipleDonate(t *testing.T, label string) int {
 	dirname := "./images/apples/"
 	files, err := ioutil.ReadDir(dirname)
     ok(t, err)
 
     num := 0
     for _, f := range files {
-        testDonate(t, dirname + f.Name(), "apple", true, "", "")
+        testDonate(t, dirname + f.Name(), label, true, "", "")
         num += 1
     }
 
     return num
 }
 
-func testLabelImage(t *testing.T, imageId string, label string) {
+/*func testMultipleDonateWithToken(t *testing.T, label string, token string) int {
+	dirname := "./images/apples/"
+	files, err := ioutil.ReadDir(dirname)
+    ok(t, err)
+
+    num := 0
+    for _, f := range files {
+        testDonate(t, dirname + f.Name(), label, true, token, "")
+        num += 1
+    }
+
+    return num
+}*/
+
+func testLabelImage(t *testing.T, imageId string, label string, token string) {
 	type LabelMeEntry struct {
 		Label string `json:"label"`
 	}
@@ -259,15 +273,53 @@ func testLabelImage(t *testing.T, imageId string, label string) {
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
 	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
-	resp, err := resty.R().
+	req := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(labelMeEntries).
-			Post(url)
+			SetBody(labelMeEntries)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+			
+	resp, err := req.Post(url)
 
 	ok(t, err)
 	equals(t, resp.StatusCode(), 200)
 
 	newNum, err := db.GetNumberOfImagesWithLabel(label)
+	ok(t, err)
+
+	equals(t, oldNum+1, newNum)
+}
+
+
+func testSuggestLabelForImage(t *testing.T, imageId string, label string, token string) {
+	type LabelMeEntry struct {
+		Label string `json:"label"`
+	}
+
+	oldNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
+	ok(t, err)
+
+	var labelMeEntries []LabelMeEntry
+	labelMeEntry := LabelMeEntry{Label: label}
+	labelMeEntries = append(labelMeEntries, labelMeEntry)
+
+	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
+	req := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetBody(labelMeEntries)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+			
+	resp, err := req.Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
+
+	newNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
 	ok(t, err)
 
 	equals(t, oldNum+1, newNum)
@@ -313,7 +365,7 @@ func testRandomLabel(t *testing.T, num int) {
 		label, err := db.GetRandomLabelName()
 		ok(t, err)
 
-		testLabelImage(t, image, label)
+		testLabelImage(t, image, label, "")
 	}
 }
 
@@ -398,14 +450,14 @@ func TestMultipleDonate(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 }
 
 func TestRandomAnnotate(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testRandomAnnotate(t, 2, `[{"top":100,"left":200,"type":"rect","angle":0,"width":40,"height":60,"stroke":{"color":"red","width":1}}]`)
 }
 
@@ -444,7 +496,7 @@ func TestRandomAnnotationRework(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testRandomAnnotate(t, 2, `[{"top":100,"left":200,"type":"rect","angle":0,"width":40,"height":60,"stroke":{"color":"red","width":1}}]`)
 	testRandomAnnotationRework(t, 2, `[{"top":200,"left":300,"type":"rect","angle":10,"width":50,"height":30,"stroke":{"color":"blue","width":3}}]`)
 }
@@ -454,7 +506,7 @@ func TestRandomLabel(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testRandomLabel(t, 7)
 }
 
@@ -996,7 +1048,7 @@ func TestGetUnlockedImageDonation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)

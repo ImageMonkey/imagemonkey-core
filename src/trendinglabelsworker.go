@@ -11,6 +11,9 @@ import (
 	"context"
 	"golang.org/x/oauth2"
 	"fmt"
+	"github.com/lib/pq"
+	datastructures "./datastructures"
+	imagemonkeydb "./database"
 )
 
 var db *sql.DB
@@ -26,10 +29,110 @@ type TrendingLabel struct {
     } `json:"github_issue"`
 }
 
-func getNewTrendingLabels() ([]TrendingLabel, error) {
+func handleRecurringLabelSuggestions() error {
+	type ResultEntry struct {
+		ImageId string
+		Annotatable bool
+		LabelMeEntry datastructures.LabelMeEntry
+	}
+
+	tx, err := db.Begin()
+    if err != nil {
+    	log.Error("[Mark label suggestion as productive] Couldn't begin trensaction: ", err.Error())
+        return err
+    }
+
+	rows, err := tx.Query(`SELECT s.id, i.key, ils.annotatable, l.name, COALESCE(pl.name, '')
+							FROM label_suggestion s
+							JOIN trending_label_suggestion t ON t.label_suggestion_id = s.id
+							JOIN image_label_suggestion ils ON ils.label_suggestion_id = s.id
+							JOIN image i ON i.id = ils.image_id
+							JOIN label l ON l.id = t.productive_label_id
+							LEFT JOIN label pl ON l.parent_id = pl.id
+							WHERE t.github_issue_id is not null AND t.productive_label_id is not null`)
+	if err != nil {
+		tx.Rollback()
+		log.Error("[Mark label suggestions as productive] Couldn't get entries: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+	defer rows.Close()
+
+	labelSuggestionIds := []int64{}
+	results := []ResultEntry{}
+	for rows.Next() {
+		var labelSuggestionId int64
+		var label1 string
+		var label2 string
+		var resultEntry ResultEntry
+		err = rows.Scan(&labelSuggestionId, &resultEntry.ImageId, &resultEntry.Annotatable, &label1, &label2)
+		if err != nil {
+			tx.Rollback()
+			log.Error("[Mark label suggestions as productive] Couldn't scan row: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+
+		if label2 == "" {
+            resultEntry.LabelMeEntry.Label = label1
+        } else {
+            resultEntry.LabelMeEntry.Label = label2
+            resultEntry.LabelMeEntry.Sublabels = append(resultEntry.LabelMeEntry.Sublabels, 
+            											datastructures.Sublabel{Name: label1})
+        }
+        results = append(results, resultEntry)
+		labelSuggestionIds = append(labelSuggestionIds, labelSuggestionId)
+		results = append(results, resultEntry)
+	}
+	rows.Close()
+
+	if len(labelSuggestionIds) > 0 {
+		for _, elem := range results {
+			labels := []datastructures.LabelMeEntry{}
+			labels = append(labels, elem.LabelMeEntry)
+	    	if elem.Annotatable {
+				_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 0, tx)  
+				if err != nil {
+					//transaction already rolled back in AddLabelsToImageInTransaction()
+					log.Error("[Mark label suggestions as productive] Couldn't add labels: ", err.Error())
+					raven.CaptureError(err, nil)
+					return err
+				} 	
+			} else {
+				//if label is not annotatable, set num_of_not_annotatable to 10
+				_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 10, tx)
+				if err != nil {
+					//transaction already rolled back in AddLabelsToImageInTransaction()
+					log.Error("[Mark label suggestions as productive] Couldn't add labels: ", err.Error())
+					raven.CaptureError(err, nil)
+					return err
+				}
+			}
+		}
+
+
+		//remove label suggestions
+		_, err := tx.Exec(`DELETE FROM image_label_suggestion s
+						   WHERE s.label_suggestion_id = ANY($1)`, pq.Array(labelSuggestionIds))
+		if err != nil {
+			tx.Rollback()
+			log.Error("[Mark label suggestions as productive] Couldn't delete label suggestions: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Error("[Mark label suggestions as productive] Couldn't commit transaction: ", err.Error())
+		return err
+	}
+	return nil
+}
+
+func getNewTrendingLabels(trendingLabelTreshold int) ([]TrendingLabel, error) {
 	var trendingLabels []TrendingLabel
 
-	trendingLabelTreshold := 20
 	rows, err := db.Query(`SELECT s.id, s.name, COUNT(t.id), COALESCE(github_issue_id, -1) FROM label_suggestion s 
 							JOIN image_label_suggestion i ON i.label_suggestion_id = s.id
 							LEFT JOIN trending_label_suggestion t ON t.label_suggestion_id = s.id
@@ -118,7 +221,10 @@ func updateSentTrendingLabelCount(trendingLabel TrendingLabel) error {
 func main() {
 
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
+	singleshot := flag.Bool("singleshot", false, "Terminate after work is done")
 	repository := flag.String("repository", "imagemonkey-trending-labels-test", "Github repository")
+	trendingLabelsTreshold := flag.Int("treshold", 20, "Trending labels treshold")
+	useGithub := flag.Bool("use_github", true, "Create Issue in Issues tracker")
 	flag.Parse()
 
 	if *useSentry {
@@ -143,42 +249,45 @@ func main() {
 	}
 	defer db.Close()
 
-	/*var trendingLabel TrendingLabel
-	trendingLabel.Name = "bla"
-	err = createGithubTicket(trendingLabel, repository)
-	if err != nil {
-		log.Info(err.Error())
-	}*/
-
 	for {
-		trendingLabels, err := getNewTrendingLabels()
+		trendingLabels, err := getNewTrendingLabels(*trendingLabelsTreshold)
 		if err != nil {
 			log.Error("[Main] Couldn't get trending labels: ", err.Error())
 			raven.CaptureError(err, nil)
 		} else {
 			for _, trendingLabel := range trendingLabels {
 				log.Info("[Main] Detected a new trending label: ", trendingLabel.Name)
-
+				var githubErr error
 				if !trendingLabel.GithubIssue.Exists {
-					//there is a new trending label...create a github ticket for that
-					log.Info("[Main] Creating Github ticket for trending label: ", trendingLabel.Name)
-					tl, err := createGithubTicket(trendingLabel, *repository)
-					if err != nil {
-						log.Error("[Main] Couldn't create github issue for trending label: ", err.Error())
-						raven.CaptureError(err, nil)
-					} else {
-						err := updateSentTrendingLabelCount(tl)
+					githubErr = nil
+					if *useGithub {
+						//there is a new trending label...create a github ticket for that
+						log.Info("[Main] Creating Github ticket for trending label: ", trendingLabel.Name)
+						_, githubErr = createGithubTicket(trendingLabel, *repository)
+						if githubErr != nil {
+							log.Error("[Main] Couldn't create github issue for trending label: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+					}
+
+					if githubErr == nil {
+						err := updateSentTrendingLabelCount(trendingLabel)
 						if err != nil {
 							log.Error("[Main] Couldn't mark trending label as sent: ", err.Error())
 							raven.CaptureError(err, nil)
 						}
 					}
 				} else { //ticket exists, just add a comment
-					err = addCommentToGithubTicket(trendingLabel, *repository)
-					if err != nil {
-						log.Error("[Main] Couldn't update trending label count for trending label: ", err.Error())
-						raven.CaptureError(err, nil)
-					} else {
+					githubErr = nil
+					if *useGithub {
+						githubErr = addCommentToGithubTicket(trendingLabel, *repository)
+						if githubErr != nil {
+							log.Error("[Main] Couldn't update trending label count for trending label: ", err.Error())
+							raven.CaptureError(err, nil)
+						} 
+					}
+
+					if githubErr == nil {
 						err := updateSentTrendingLabelCount(trendingLabel)
 						if err != nil {
 							log.Error("[Main] Couldn't mark trending label as sent: ", err.Error())
@@ -188,6 +297,18 @@ func main() {
 				}
 			}
 		}
-		time.Sleep((time.Second * 60)) //sleep for 60 seconds
+
+		//in case someone adds a trending label that was already made productive, we can 
+		//transition the label suggestion automatically to productive. 
+		err = handleRecurringLabelSuggestions()
+		if err != nil {
+			log.Error("[Main] Couldn't mark trending labels as productive: ", err.Error())
+		}
+
+		if *singleshot {
+			return
+		}
+
+		time.Sleep((time.Second * 120)) //sleep for 120 seconds
     }
 }

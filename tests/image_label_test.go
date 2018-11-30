@@ -51,7 +51,7 @@ func TestBrowseLabel1(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "egg")
+	testLabelImage(t, imageId, "egg", "")
 
 	testBrowseLabel(t, "apple&egg", "", 1, 200)
 	testBrowseLabel(t, "apple|egg", "", 1, 200)

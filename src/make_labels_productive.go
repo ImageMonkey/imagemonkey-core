@@ -31,15 +31,23 @@ func trendingLabelExists(label string, tx *sql.Tx) (bool, error) {
 	return false, nil
 }
 
-func labelExists(label string, tx *sql.Tx) (bool, error) {
-	var numOfRows int32
-	err := tx.QueryRow(`SELECT COUNT(*) FROM label l 
-			  			WHERE l.name = $1 AND l.parent_id is null`, label).Scan(&numOfRows)
-	if numOfRows > 0 {
-		return true, err
+func getLabelId(label string, tx *sql.Tx) (int64, error) {
+	var labelId int64 = -1
+	rows, err := tx.Query(`SELECT l.id 
+						   FROM label l 
+			  			   WHERE l.name = $1 AND l.parent_id is null`, label)
+	if err != nil {
+		return -1, err
 	}
+	defer rows.Close()
 
-	return false, err
+	if rows.Next() {
+		err = rows.Scan(&labelId)
+		if err != nil {
+			return -1, err
+		}
+	}
+	return labelId, nil
 }
 
 func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
@@ -118,7 +126,8 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 }
 
 
-func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabel string, tx *sql.Tx) error {
+func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabel string, 
+									labelId int64, trendingLabel string, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
@@ -173,6 +182,14 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
 		}
 	}
 
+	_, err = tx.Exec(`UPDATE trending_label_suggestion t
+						SET productive_label_id = $2
+						FROM label_suggestion l
+						WHERE t.label_suggestion_id = l.id AND l.name = $1`, trendingLabel, labelId)
+	if err != nil {
+		return err
+	}
+
     return nil
 }
 
@@ -202,7 +219,7 @@ func main() {
 
 	flag.Parse()
 
-	if *githubRepository == "" {
+	if *autoCloseIssue && *githubRepository == "" {
 		log.Fatal("Please set a valid repository!")
 	}
 
@@ -255,13 +272,13 @@ func main() {
 	if *renameTo != "" {
 		labelToCheck = *renameTo
 	}
-	exists, err = labelExists(labelToCheck, tx)
+	labelId, err := getLabelId(labelToCheck, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't determine whether label exists: ", err.Error())
 		return
 	}
-	if !exists {
+	if labelId == -1 {
 		tx.Rollback()
 		log.Error("[Main] label doesn't exist in database - please add it via the populate_labels script.")
 		return
@@ -275,7 +292,7 @@ func main() {
 		return
 	}
 
-	err = makeTrendingLabelProductive(labelMeEntry, *renameTo, tx)
+	err = makeTrendingLabelProductive(labelMeEntry, *renameTo, labelId, *trendingLabel, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't make trending label ", *trendingLabel, " productive: ", err.Error())

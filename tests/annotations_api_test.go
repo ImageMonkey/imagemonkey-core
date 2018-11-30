@@ -113,7 +113,7 @@ func TestGetExistingAnnotations(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	testGetExistingAnnotations(t, "apple", "", 200, 0)
 }
@@ -122,7 +122,7 @@ func TestGetExistingAnnotations1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
@@ -310,17 +310,17 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
 
 	//give first image the labels cat and dog
-	testLabelImage(t, imageIds[0], "dog")
-	testLabelImage(t, imageIds[0], "cat")
+	testLabelImage(t, imageIds[0], "dog", "")
+	testLabelImage(t, imageIds[0], "cat", "")
 
 	//add label 'cat' to second image
-	testLabelImage(t, imageIds[1], "cat")
+	testLabelImage(t, imageIds[1], "cat", "")
 
 	testBrowseAnnotation(t, "cat&dog", 2, "")
 	testBrowseAnnotation(t, "cat|dog", 3, "")
@@ -403,7 +403,7 @@ func TestBrowseAnnotationQuery1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	num := testMultipleDonate(t)
+	num := testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
@@ -434,7 +434,7 @@ func TestBrowseAnnotationQueryAnnotationCoverage(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange")
+	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
@@ -453,7 +453,7 @@ func TestBrowseAnnotationQueryImageDimensions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange")
+	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
