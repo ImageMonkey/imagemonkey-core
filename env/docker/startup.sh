@@ -47,6 +47,7 @@ if [ "$run_tests" = true ] ; then
 	echo "Running Tests"
 	go get -u gopkg.in/resty.v1
 	cd /root/imagemonkey-core/tests/
+	echo -e "host\t all\t all\t 127.0.0.1/32\t trust" > /etc/postgresql/9.6/main/pg_hba.conf
 	go test
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
