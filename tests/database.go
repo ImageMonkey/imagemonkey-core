@@ -25,7 +25,7 @@ func loadSchema() error {
 	schemaPath := "../env/postgres/schema.sql"
 
 	//load schema
-	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -43,7 +43,7 @@ func loadDefaults() error {
 	defaultsPath := "../env/postgres/defaults.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -62,7 +62,7 @@ func installTriggers() error {
 	triggersPath := "../env/postgres/triggers.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -96,7 +96,7 @@ func installUuidExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -114,7 +114,7 @@ func installPostgisExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -132,7 +132,7 @@ func installTemporalTablesExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
