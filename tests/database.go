@@ -456,6 +456,15 @@ func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabel(label string) (int32, e
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelUuid(labelUuid string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image_validation v 
+						   JOIN label l ON v.label_id = l.id
+						   WHERE l.uuid::text = $1`, labelUuid).Scan(&num)
+	return num, err
+}
+
 func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelSuggestions(label string) (int32, error) {
 	var num int32
 	err := p.db.QueryRow(`SELECT count(*) 
@@ -552,6 +561,14 @@ func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
 	err := p.db.QueryRow(`SELECT l.id 
 							FROM label l 
 							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&labelId)
+	return labelId, err
+}
+
+func (p *ImageMonkeyDatabase) GetLabelIdFromUuid(labelUuid string) (int64, error) {
+	var labelId int64 
+	err := p.db.QueryRow(`SELECT l.id 
+							FROM label l 
+							WHERE l.uuid::text = $1`, labelUuid).Scan(&labelId)
 	return labelId, err
 }
 

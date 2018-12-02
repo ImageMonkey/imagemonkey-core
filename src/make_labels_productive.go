@@ -3,6 +3,7 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"flag"
+	"github.com/satori/go.uuid"
 	"database/sql"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -31,11 +32,23 @@ func trendingLabelExists(label string, tx *sql.Tx) (bool, error) {
 	return false, nil
 }
 
-func getLabelId(label string, tx *sql.Tx) (int64, error) {
+func getLabelId(labelIdentifier string, tx *sql.Tx) (int64, error) {
 	var labelId int64 = -1
-	rows, err := tx.Query(`SELECT l.id 
+	var err error
+	var rows *sql.Rows
+
+	_, err = uuid.FromString(labelIdentifier)
+	if err == nil { //is UUID
+		rows, err = tx.Query(`SELECT l.id 
 						   FROM label l 
-			  			   WHERE l.name = $1 AND l.parent_id is null`, label)
+			  			   WHERE l.uuid::text = $1`, labelIdentifier)
+	} else {
+		rows, err = tx.Query(`SELECT l.id 
+						   FROM label l 
+			  			   WHERE l.name = $1 AND l.parent_id is null`, labelIdentifier)
+	}
+
+	
 	if err != nil {
 		return -1, err
 	}
@@ -49,6 +62,38 @@ func getLabelId(label string, tx *sql.Tx) (int64, error) {
 	}
 	return labelId, nil
 }
+
+func getLabelMeEntryFromUuid(tx *sql.Tx, uuid string) (datastructures.LabelMeEntry, error) {
+	var labelMeEntry datastructures.LabelMeEntry
+
+	rows, err := tx.Query(`SELECT l.name, COALESCE(pl.name, '')
+			   				FROM label l
+			   				LEFT JOIN label pl ON pl.id = l.parent_id
+			   				WHERE l.uuid::text = $1`, uuid)
+	if err != nil {
+		return labelMeEntry, err
+	}
+	defer rows.Close()
+
+	var label1 string
+	var label2 string
+	if rows.Next() {
+		err = rows.Scan(&label1, &label2)
+		if err != nil {
+			return labelMeEntry, err
+		}
+
+		if label2 == "" {
+            labelMeEntry.Label = label1
+        } else {
+            labelMeEntry.Label = label2
+            labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, 
+            								datastructures.Sublabel{Name: label1})
+        } 
+	}
+
+	return labelMeEntry, nil
+} 
 
 func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 	_, err := tx.Exec(`DELETE FROM image_label_suggestion s
@@ -126,8 +171,8 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 }
 
 
-func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabel string, 
-									labelId int64, trendingLabel string, tx *sql.Tx) error {
+func makeTrendingLabelProductive(trendingLabel string, label datastructures.LabelMeEntry,
+									labelId int64, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
@@ -137,7 +182,7 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
 			  			   FROM label_suggestion l
 			  			   JOIN image_label_suggestion isg on isg.label_suggestion_id =l.id
 			  			   JOIN image i on i.id = isg.image_id
-			  			   WHERE l.name = $1`, label.Label)
+			  			   WHERE l.name = $1`, trendingLabel)
     if err != nil {
     	return err
     }
@@ -162,10 +207,7 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
     rows.Close()
 
     var labels []datastructures.LabelMeEntry
-    if renameToLabel != "" {
-    	label.Label = renameToLabel
-    }
-	labels = append(labels, label)
+    labels = append(labels, label)
 
     for _, elem := range results {
     	if elem.Annotatable {
@@ -193,13 +235,22 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
     return nil
 }
 
-func makeLabelMeEntry(name string, annotatable bool, sublabels []datastructures.Sublabel) datastructures.LabelMeEntry {
+func makeLabelMeEntry(tx *sql.Tx, name string) (datastructures.LabelMeEntry, error) {
+    _, err := uuid.FromString(name)
+    if err == nil { //is UUID
+    	entry, err := getLabelMeEntryFromUuid(tx, name)
+    	if err != nil {
+    		return datastructures.LabelMeEntry{}, err //UUID is not in database
+    	}
+    	return entry, nil
+    }
+    
+	//not a UUID	
 	var label datastructures.LabelMeEntry
 	label.Label = name 
-    label.Annotatable = annotatable
-    label.Sublabels = sublabels
+	label.Sublabels = []datastructures.Sublabel{}
 
-    return label
+    return label, nil
 }
 
 func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, label datastructures.LabelMeEntry) bool {
@@ -272,6 +323,8 @@ func main() {
 	if *renameTo != "" {
 		labelToCheck = *renameTo
 	}
+
+
 	labelId, err := getLabelId(labelToCheck, tx)
 	if err != nil {
 		tx.Rollback()
@@ -285,14 +338,20 @@ func main() {
 	}
 
 
-	labelMeEntry := makeLabelMeEntry(*trendingLabel, true, []datastructures.Sublabel{})
+	labelMeEntry, err := makeLabelMeEntry(tx, labelToCheck)
+	if err != nil {
+		tx.Rollback()
+		log.Error("[Main] Couldn't create label entry - is UUID valid?")
+		return
+	}
+
 	if !isLabelInLabelsMap(labelMap, labelMeEntry) && *renameTo == "" {
 		tx.Rollback()
 		log.Error("[Main] Label doesn't exist in labels map - please add it first!")
 		return
 	}
 
-	err = makeTrendingLabelProductive(labelMeEntry, *renameTo, labelId, *trendingLabel, tx)
+	err = makeTrendingLabelProductive(*trendingLabel, labelMeEntry, labelId, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't make trending label ", *trendingLabel, " productive: ", err.Error())

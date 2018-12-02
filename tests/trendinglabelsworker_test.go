@@ -29,7 +29,7 @@ func runTrendingLabelsWorker(t *testing.T) {
 	}
 }
 
-func runMakeTrendingLabelsProductiveScript(t *testing.T, trendingLabel string, renameTo string) {
+func runMakeTrendingLabelsProductiveScript(t *testing.T, trendingLabel string, renameTo string, shouldReturnSuccessful bool) {
 	// Start a process
 	cmd := exec.Command("go", "run", "make_labels_productive.go", "api_secrets.go", "shared_secrets.go", 
 						"-dryrun=false", "-trendinglabel", trendingLabel, "-renameto", renameTo, "-autoclose=false")
@@ -48,7 +48,11 @@ func runMakeTrendingLabelsProductiveScript(t *testing.T, trendingLabel string, r
 	    ok(t, err) //failed to kill process
 	    t.Errorf("process killed as timeout reached")
 	case err := <-done:
-	    ok(t, err)
+		if shouldReturnSuccessful {
+	    	ok(t, err)
+	    } else {
+	    	notOk(t, err)
+	    }
 	}
 }
 
@@ -76,7 +80,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityLabelsAlreadyExists(t *testing.T)
 	numBefore, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(numBefore), int(13))
-	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple")
+	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple", true)
 	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(numAfter), int(0))
@@ -121,7 +125,7 @@ func TestBasicTrendingLabelsWorkerFunctionality(t *testing.T) {
 	equals(t, int(numOfTrendingLabelSuggestionsBefore), int(1))
 
 
-	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple")
+	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple", true)
 	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(numAfter), int(0))
@@ -170,7 +174,7 @@ func TestBasicTrendingLabelsWorkerFunctionality2(t *testing.T) {
 	equals(t, int(numBefore2), int(0))
 
 
-	runMakeTrendingLabelsProductiveScript(t, "wooden floor", "floor")
+	runMakeTrendingLabelsProductiveScript(t, "wooden floor", "floor", true)
 	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(numAfter), int(0))
@@ -228,7 +232,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestion(t *testi
 	ok(t, err)
 	equals(t, int(numOfTrendingLabelSuggestionsBefore), int(1))
 
-	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple")
+	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple", true)
 	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(numAfter), int(0))
@@ -310,7 +314,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityNumOfSent(t *testing.T) {
 	equals(t, int(numOfTrendingLabelSentAfter), int(12))
 
 
-	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple")
+	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple", true)
 	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(numAfter), int(0))
@@ -332,4 +336,219 @@ func TestBasicTrendingLabelsWorkerFunctionalityNumOfSent(t *testing.T) {
 	numOfTrendingLabelSentAfterRunAgain, err := db.GetNumOfSentOfTrendingLabel("red apple")
 	ok(t, err)
 	equals(t, int(numOfTrendingLabelSentAfterRunAgain), int(12))
+}
+
+
+
+func TestBasicTrendingLabelsWorkerFunctionalityUuidNumOfSent(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+		testSuggestLabelForImage(t, imageId, "mouth of dog", token)
+	}
+	runTrendingLabelsWorker(t)
+
+	numWithLabelsBefore, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numWithLabelsBefore), int(0))
+
+	numBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(numBefore), int(12))
+
+	productiveLabelIdsBefore, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(0), int(len(productiveLabelIdsBefore)))
+
+	numOfTrendingLabelSuggestionsBefore, err := db.GetNumberOfTrendingLabelSuggestions()
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSuggestionsBefore), int(1))
+
+	numOfTrendingLabelSentBefore, err := db.GetNumOfSentOfTrendingLabel("mouth of dog")
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSentBefore), int(0))
+
+	runTrendingLabelsWorker(t)
+
+	numOfTrendingLabelSentAfter, err := db.GetNumOfSentOfTrendingLabel("mouth of dog")
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSentAfter), int(12))
+
+
+	runMakeTrendingLabelsProductiveScript(t, "mouth of dog", "d4304606-7d1f-4803-b7b4-7d37dcc30714", true)
+	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(numAfter), int(0))
+
+	numWithLabelsAfter, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numWithLabelsAfter), int(12))
+
+	productiveLabelIdsAfter, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(1), int(len(productiveLabelIdsAfter)))
+
+	expectedLabelId, err := db.GetLabelIdFromUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
+
+	runTrendingLabelsWorker(t)
+
+	numOfTrendingLabelSentAfterRunAgain, err := db.GetNumOfSentOfTrendingLabel("mouth of dog")
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSentAfterRunAgain), int(12))
+}
+
+
+func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionUuid(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+		testSuggestLabelForImage(t, imageId, "mouth of dog", token)
+	}
+	runTrendingLabelsWorker(t)
+
+	numWithLabelsBefore, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numWithLabelsBefore), int(0))
+
+	numBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(numBefore), int(12))
+
+	productiveLabelIdsBefore, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(0), int(len(productiveLabelIdsBefore)))
+
+	numOfTrendingLabelSuggestionsBefore, err := db.GetNumberOfTrendingLabelSuggestions()
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSuggestionsBefore), int(1))
+
+	runMakeTrendingLabelsProductiveScript(t, "mouth of dog", "d4304606-7d1f-4803-b7b4-7d37dcc30714", true)
+	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(numAfter), int(0))
+
+	numWithLabelsAfter, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numWithLabelsAfter), int(12))
+
+	productiveLabelIdsAfter, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(1), int(len(productiveLabelIdsAfter)))
+
+	expectedLabelId, err := db.GetLabelIdFromUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
+
+
+	testSuggestLabelForImage(t, imageIds[0], "mouth of dog", token)
+	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
+
+	runTrendingLabelsWorker(t)
+
+	recurringLabelSuggestionNumAfter, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumAfter), int(0))
+
+	numLabelsAfterRecurringLabelSuggestion, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numLabelsAfterRecurringLabelSuggestion), int(13))
+}
+
+
+func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionUuidHandleDuplicatesGracefully(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+		testSuggestLabelForImage(t, imageId, "mouth of dog", token)
+	}
+	runTrendingLabelsWorker(t)
+
+	numWithLabelsBefore, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numWithLabelsBefore), int(0))
+
+	numBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(numBefore), int(12))
+
+	productiveLabelIdsBefore, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(0), int(len(productiveLabelIdsBefore)))
+
+	numOfTrendingLabelSuggestionsBefore, err := db.GetNumberOfTrendingLabelSuggestions()
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSuggestionsBefore), int(1))
+
+	runMakeTrendingLabelsProductiveScript(t, "mouth of dog", "d4304606-7d1f-4803-b7b4-7d37dcc30714", true)
+	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(numAfter), int(0))
+
+	numWithLabelsAfter, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numWithLabelsAfter), int(12))
+
+	productiveLabelIdsAfter, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(1), int(len(productiveLabelIdsAfter)))
+
+	expectedLabelId, err := db.GetLabelIdFromUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
+
+
+	testSuggestLabelForImage(t, imageIds[1], "mouth of dog", token)
+	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
+
+	runTrendingLabelsWorker(t)
+
+	recurringLabelSuggestionNumAfter, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumAfter), int(0))
+
+	numLabelsAfterRecurringLabelSuggestion, err := db.GetNumberOfImagesWithLabelUuid("d4304606-7d1f-4803-b7b4-7d37dcc30714")
+	ok(t, err)
+	equals(t, int(numLabelsAfterRecurringLabelSuggestion), int(12))
 }

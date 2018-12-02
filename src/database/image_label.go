@@ -389,28 +389,34 @@ func AddLabelsToImageInTransaction(clientFingerprint string, imageId string, lab
         if len(item.Sublabels) > 0 {
             rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
                                   SELECT $1, $2, $3, $4, l.id, uuid_generate_v4(), $7 FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
+                                  ON CONFLICT DO NOTHING
                                   RETURNING id`,
                                   imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(sublabelsToStringlist(item.Sublabels)), numOfNotAnnotatable)
             if err != nil {
-                tx.Rollback()
-                log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
-                raven.CaptureError(err, nil)
-                return insertedIds, err
-            }
-
-            for rows.Next() {
-                var insertedSublabelId int64
-                err = rows.Scan(&insertedSublabelId)
-                if err != nil {
-                    rows.Close()
-                    tx.Rollback()
-                    log.Debug("[Adding image labels] Couldn't scan sublabels: ", err.Error())
-                    raven.CaptureError(err, nil)
-                    return insertedIds, err
+                if err != sql.ErrNoRows { //handle no rows gracefully (can happen if label already exists)
+                    pqErr := err.(*pq.Error)
+                    if pqErr.Code.Name() != "unique_violation" {
+                        tx.Rollback()
+                        log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
+                        raven.CaptureError(err, nil)
+                        return insertedIds, err
+                    }
                 }
-                insertedIds = append(insertedIds, insertedSublabelId)
+            } else {
+                for rows.Next() {
+                    var insertedSublabelId int64
+                    err = rows.Scan(&insertedSublabelId)
+                    if err != nil {
+                        rows.Close()
+                        tx.Rollback()
+                        log.Debug("[Adding image labels] Couldn't scan sublabels: ", err.Error())
+                        raven.CaptureError(err, nil)
+                        return insertedIds, err
+                    }
+                    insertedIds = append(insertedIds, insertedSublabelId)
+                }
+                rows.Close()
             }
-            rows.Close()
         }
 
         //add base label
@@ -421,6 +427,7 @@ func AddLabelsToImageInTransaction(clientFingerprint string, imageId string, lab
                               (
                                 SELECT label_id from image_validation v where image_id = $1
                               ) AND l.name = $5 AND l.parent_id IS NULL
+                              ON CONFLICT DO NOTHING
                               RETURNING id`,
                               imageId, numOfValid, 0, clientFingerprint, item.Label, numOfNotAnnotatable).Scan(&insertedLabelId)
         if err != nil {

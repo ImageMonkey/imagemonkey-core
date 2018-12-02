@@ -82,7 +82,6 @@ func handleRecurringLabelSuggestions() error {
         }
         results = append(results, resultEntry)
 		labelSuggestionIds = append(labelSuggestionIds, labelSuggestionId)
-		results = append(results, resultEntry)
 	}
 	rows.Close()
 
