@@ -26,19 +26,35 @@ echo "Starting supervisord..."
 #start supervisord
 service supervisor start && supervisorctl reread && supervisorctl update && supervisorctl restart all
 
+
 echo ""
 echo ""
 echo ""
 echo "#############################################################"
 echo "################ ImageMonkey is ready #######################"
 echo "#############################################################"
-
 echo ""
 echo ""
-echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
-echo "This docker image is for development only - do NOT use it in production!"
 
-wait
+run_tests=false
+if [ "$1" ]; then
+	if [ "$1" == "--run-tests" ]; then
+		run_tests=true
+	fi
+fi
 
-#shutting down
-echo "Exited"
+if [ "$run_tests" = true ] ; then
+	echo "Running Tests"
+	cd /root/imagemonkey-core/tests/
+	go test
+else
+	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
+	echo "This docker image is for development only - do NOT use it in production!"
+
+	wait
+
+	#shutting down
+	echo "Exited"
+fi
+
+
