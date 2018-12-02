@@ -45,6 +45,7 @@ fi
 
 if [ "$run_tests" = true ] ; then
 	echo "Running Tests"
+	go get -u gopkg.in/resty.v1
 	cd /root/imagemonkey-core/tests/
 	go test
 else
