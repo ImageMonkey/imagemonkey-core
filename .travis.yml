@@ -1,8 +1,7 @@
-language: cpp
+language: generic
 services:
   - docker
 before_install:
-  cd $TRAVIS_BUILD_DIR/env/docker/
-  docker build -t imagemonkey-core .
+  cd $TRAVIS_BUILD_DIR/env/docker/ && docker build -t imagemonkey-core .
 script:
   docker run imagemonkey-core --run-tests
