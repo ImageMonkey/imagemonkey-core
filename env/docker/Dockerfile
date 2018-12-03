@@ -77,10 +77,13 @@ RUN cp /root/imagemonkey-core/env/docker/conf/supervisor/* /etc/supervisor/conf.
  && cp /root/imagemonkey-core/env/docker/src/* /root/imagemonkey-core/src/
 
 RUN cp -r /root/imagemonkey-core/src /tmp/imagemonkey-core-src \
- && mv /tmp/imagemonkey-core-src/api_secrets.template /tmp/imagemonkey-core-src/api_secrets.go \
- && mv /tmp/imagemonkey-core-src/web_secrets.template /tmp/imagemonkey-core-src/web_secrets.go \
+ && cp /tmp/imagemonkey-core-src/api_secrets.template /tmp/imagemonkey-core-src/api_secrets.go \
+ && cp /tmp/imagemonkey-core-src/web_secrets.template /tmp/imagemonkey-core-src/web_secrets.go \
+ && cp /tmp/imagemonkey-core-src/api_secrets.template /root/imagemonkey-core/src/api_secrets.go \
+ && cp /tmp/imagemonkey-core-src/web_secrets.template /root/imagemonkey-core/src/web_secrets.go \
  && chown -R imagemonkey:imagemonkey /tmp/imagemonkey-core-src \
- && chmod -R u+rwx /tmp/imagemonkey-core-src
+ && chmod -R u+rwx /tmp/imagemonkey-core-src \
+ && cp /root/imagemonkey-core/tests/secrets.go.template /root/imagemonkey-core/tests/secrets.go
 
 #add sudo (we need that that to install opencv via the gocv script)
 RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
@@ -159,4 +162,4 @@ EXPOSE 8080
 EXPOSE 8081
 
 
-CMD ["/root/imagemonkey-core/env/docker/startup.sh"]
+ENTRYPOINT ["/root/imagemonkey-core/env/docker/startup.sh"]

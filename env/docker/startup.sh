@@ -58,7 +58,7 @@ if [ "$run_tests" = true ] ; then
 	cd /root/imagemonkey-core/tests/
 	supervisorctl stop imagemonkey-auto-unlocker:imagemonkey-auto-unlocker0
 	supervisorctl stop imagemonkey-data-processor:imagemonkey-data-processor0
-	go test -v -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
+	go test -v -timeout=100m -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
 	echo "This docker image is for development only - do NOT use it in production!"
