@@ -52,6 +52,8 @@ echo ""
 if [ "$run_tests" = true ] ; then
 	echo "Running Tests"
 	go get -u gopkg.in/resty.v1
+	mkdir -p /root/imagemonkey-core/unverified_donations
+	mkdir -p /root/imagemonkey-core/donations
 	cd /root/imagemonkey-core/tests/
 	go test
 else
