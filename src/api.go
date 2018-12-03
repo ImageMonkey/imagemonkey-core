@@ -2030,7 +2030,7 @@ func main(){
 
 			pushAnnotationCoverageUpdateRequestToRedis(redisPool, imageId, "image")
 
-			c.Writer.Header().Set("Location", (*apiBaseUrl + "/v1/annotation?annotation_id=" + annotationId))
+			c.Writer.Header().Set("Location", (*apiBaseUrl + "v1/annotation?annotation_id=" + annotationId))
 			c.JSON(201, nil)
 		})
 

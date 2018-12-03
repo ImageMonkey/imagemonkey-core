@@ -56,7 +56,9 @@ if [ "$run_tests" = true ] ; then
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
 	cd /root/imagemonkey-core/tests/
-	go test -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
+	supervisorctl stop imagemonkey-auto-unlocker:imagemonkey-auto-unlocker0
+	supervisorctl stop imagemonkey-data-processor:imagemonkey-data-processor0
+	go test -v -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
 	echo "This docker image is for development only - do NOT use it in production!"

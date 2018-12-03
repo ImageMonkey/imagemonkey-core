@@ -12,7 +12,7 @@ import (
 
 func runDataProcessor(t *testing.T) {
 	// Start a process:
-	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "shared_secrets.go", "-singleshot", "true")
+	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "-singleshot", "true")
 	cmd.Dir = "../src"
 	err := cmd.Start()
 	ok(t, err)
