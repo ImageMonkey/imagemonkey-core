@@ -10,8 +10,8 @@ import (
 	"../src/datastructures"
 )
 
-const UNVERIFIED_DONATIONS_DIR string = "../unverified_donations/"
-const DONATIONS_DIR string = "../donations/"
+//const UNVERIFIED_DONATIONS_DIR string = "../unverified_donations/"
+//const DONATIONS_DIR string = "../donations/"
 
 type LoginResult struct {
 	Token string `json:"token"`

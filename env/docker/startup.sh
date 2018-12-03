@@ -13,6 +13,7 @@ fi
 
 if [ "$run_tests" = true ] ; then
 	echo -e "host\t all\t all\t 127.0.0.1/32\t trust" > /etc/postgresql/9.6/main/pg_hba.conf
+	echo -e "local\t all\t postgres\t ident" >> /etc/postgresql/9.6/main/pg_hba.conf
 fi
 
 
@@ -55,7 +56,7 @@ if [ "$run_tests" = true ] ; then
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
 	cd /root/imagemonkey-core/tests/
-	go test
+	go test -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
 	echo "This docker image is for development only - do NOT use it in production!"
