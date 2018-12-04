@@ -337,7 +337,7 @@ func TestUnlockImageDescriptionFromModeratorButInvalidDescriptionId(t *testing.T
 
 	equals(t, len(descriptions), 1)
 
-	testUnlockImageDescription(t, imageId, "", moderatorToken, 404)
+	testUnlockImageDescription(t, imageId, "an-invalid-description-id", moderatorToken, 404)
 }
 
 func TestGetUnprocessedImageDescriptionsNoPermissions(t *testing.T) {

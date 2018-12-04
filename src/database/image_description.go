@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"encoding/json"
 	"github.com/lib/pq"
+	"github.com/satori/go.uuid"
 	languages "../languages"
 )
 
@@ -119,6 +120,11 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 }
 
 func (p *ImageMonkeyDatabase) UnlockImageDescription(apiUser datastructures.APIUser, imageId string, descriptionId string) (UnlockImageDescriptionErrorType) {
+	_, err := uuid.FromString(descriptionId) 
+	if err != nil {
+		return UnlockImageDescriptionInvalidId
+	}
+
 	rows, err := p.db.Query(`UPDATE image_description AS d
 							SET state = 'unlocked', processed_by = (SELECT id FROM account WHERE name = $3)
 							FROM image AS i
@@ -142,6 +148,11 @@ func (p *ImageMonkeyDatabase) UnlockImageDescription(apiUser datastructures.APIU
 
 
 func (p *ImageMonkeyDatabase) LockImageDescription(apiUser datastructures.APIUser, imageId string, descriptionId string) (LockImageDescriptionErrorType) {
+	_, err := uuid.FromString(descriptionId) 
+	if err != nil {
+		return LockImageDescriptionInvalidId
+	}
+
 	rows, err := p.db.Query(`UPDATE image_description AS d
 							SET state = 'locked', processed_by = (SELECT id FROM account WHERE name = $3)
 							FROM image AS i
