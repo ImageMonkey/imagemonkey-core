@@ -115,6 +115,9 @@ func TestGetAnnotatedStatistics1(t *testing.T) {
 }
 
 func TestGetPerCountryStatisticsEmpty(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+	
 	statistics := testGetStatistics(t)
 
 	equals(t, len(statistics.DonationsPerCountry), 0)
