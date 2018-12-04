@@ -83,7 +83,9 @@ RUN cp -r /root/imagemonkey-core/src /tmp/imagemonkey-core-src \
  && cp /tmp/imagemonkey-core-src/web_secrets.template /root/imagemonkey-core/src/web_secrets.go \
  && chown -R imagemonkey:imagemonkey /tmp/imagemonkey-core-src \
  && chmod -R u+rwx /tmp/imagemonkey-core-src \
- && cp /root/imagemonkey-core/tests/secrets.go.template /root/imagemonkey-core/tests/secrets.go
+ && cp /root/imagemonkey-core/tests/secrets.go.template /root/imagemonkey-core/tests/secrets.go \
+ && cp /tmp/imagemonkey-core-src/shared_secrets.go.template /root/imagemonkey-core/src/shared_secrets.go \
+ && cp /tmp/imagemonkey-core-src/api_secrets.template /root/imagemonkey-core/src/api_secrets.go
 
 #add sudo (we need that that to install opencv via the gocv script)
 RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
