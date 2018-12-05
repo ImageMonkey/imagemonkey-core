@@ -508,7 +508,7 @@ func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
 	var label string
 	err := p.db.QueryRow(`SELECT l.name
 						   FROM label l
-						   WHERE l.parent_id is null
+						   WHERE l.parent_id is null AND l.label_type = 'normal'
 						   ORDER BY random() LIMIT 1`).Scan(&label)
 	return label, err
 }
