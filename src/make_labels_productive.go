@@ -3,11 +3,15 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"flag"
+	"github.com/satori/go.uuid"
 	"database/sql"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 	"context"
-	"./datastructures"
+	datastructures "./datastructures"
+	commons "./commons"
+	imagemonkeydb "./database"
+
 )
 
 var db *sql.DB
@@ -28,16 +32,68 @@ func trendingLabelExists(label string, tx *sql.Tx) (bool, error) {
 	return false, nil
 }
 
-func labelExists(label string, tx *sql.Tx) (bool, error) {
-	var numOfRows int32
-	err := tx.QueryRow(`SELECT COUNT(*) FROM label l 
-			  			WHERE l.name = $1 AND l.parent_id is null`, label).Scan(&numOfRows)
-	if numOfRows > 0 {
-		return true, err
+func getLabelId(labelIdentifier string, tx *sql.Tx) (int64, error) {
+	var labelId int64 = -1
+	var err error
+	var rows *sql.Rows
+
+	_, err = uuid.FromString(labelIdentifier)
+	if err == nil { //is UUID
+		rows, err = tx.Query(`SELECT l.id 
+						   FROM label l 
+			  			   WHERE l.uuid::text = $1`, labelIdentifier)
+	} else {
+		rows, err = tx.Query(`SELECT l.id 
+						   FROM label l 
+			  			   WHERE l.name = $1 AND l.parent_id is null`, labelIdentifier)
 	}
 
-	return false, err
+	
+	if err != nil {
+		return -1, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		err = rows.Scan(&labelId)
+		if err != nil {
+			return -1, err
+		}
+	}
+	return labelId, nil
 }
+
+func getLabelMeEntryFromUuid(tx *sql.Tx, uuid string) (datastructures.LabelMeEntry, error) {
+	var labelMeEntry datastructures.LabelMeEntry
+
+	rows, err := tx.Query(`SELECT l.name, COALESCE(pl.name, '')
+			   				FROM label l
+			   				LEFT JOIN label pl ON pl.id = l.parent_id
+			   				WHERE l.uuid::text = $1`, uuid)
+	if err != nil {
+		return labelMeEntry, err
+	}
+	defer rows.Close()
+
+	var label1 string
+	var label2 string
+	if rows.Next() {
+		err = rows.Scan(&label1, &label2)
+		if err != nil {
+			return labelMeEntry, err
+		}
+
+		if label2 == "" {
+            labelMeEntry.Label = label1
+        } else {
+            labelMeEntry.Label = label2
+            labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, 
+            								datastructures.Sublabel{Name: label1})
+        } 
+	}
+
+	return labelMeEntry, nil
+} 
 
 func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 	_, err := tx.Exec(`DELETE FROM image_label_suggestion s
@@ -115,7 +171,8 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 }
 
 
-func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabel string, tx *sql.Tx) error {
+func makeTrendingLabelProductive(trendingLabel string, label datastructures.LabelMeEntry,
+									labelId int64, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
@@ -125,7 +182,7 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
 			  			   FROM label_suggestion l
 			  			   JOIN image_label_suggestion isg on isg.label_suggestion_id =l.id
 			  			   JOIN image i on i.id = isg.image_id
-			  			   WHERE l.name = $1`, label.Label)
+			  			   WHERE l.name = $1`, trendingLabel)
     if err != nil {
     	return err
     }
@@ -150,40 +207,54 @@ func makeTrendingLabelProductive(label datastructures.LabelMeEntry, renameToLabe
     rows.Close()
 
     var labels []datastructures.LabelMeEntry
-    if renameToLabel != "" {
-    	label.Label = renameToLabel
-    }
-	labels = append(labels, label)
+    labels = append(labels, label)
 
     for _, elem := range results {
     	if elem.Annotatable {
-			_, err = _addLabelsToImage("", elem.ImageId, labels, 0, 0, tx)  
+			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 0, tx)  
 			if err != nil {
 				return err
 			} 	
 		} else {
 			//if label is not annotatable, set num_of_not_annotatable to 10
-			_, err = _addLabelsToImage("", elem.ImageId, labels, 0, 10, tx)
+			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 10, tx)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
+	_, err = tx.Exec(`UPDATE trending_label_suggestion t
+						SET productive_label_id = $2
+						FROM label_suggestion l
+						WHERE t.label_suggestion_id = l.id AND l.name = $1`, trendingLabel, labelId)
+	if err != nil {
+		return err
+	}
+
     return nil
 }
 
-func makeLabelMeEntry(name string, annotatable bool, sublabels []datastructures.Sublabel) datastructures.LabelMeEntry {
+func makeLabelMeEntry(tx *sql.Tx, name string) (datastructures.LabelMeEntry, error) {
+    _, err := uuid.FromString(name)
+    if err == nil { //is UUID
+    	entry, err := getLabelMeEntryFromUuid(tx, name)
+    	if err != nil {
+    		return datastructures.LabelMeEntry{}, err //UUID is not in database
+    	}
+    	return entry, nil
+    }
+    
+	//not a UUID	
 	var label datastructures.LabelMeEntry
 	label.Label = name 
-    label.Annotatable = annotatable
-    label.Sublabels = sublabels
+	label.Sublabels = []datastructures.Sublabel{}
 
-    return label
+    return label, nil
 }
 
 func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, label datastructures.LabelMeEntry) bool {
-	return isLabelValid(labelMap, label.Label, label.Sublabels)
+	return commons.IsLabelValid(labelMap, label.Label, label.Sublabels)
 }
 
 
@@ -199,12 +270,12 @@ func main() {
 
 	flag.Parse()
 
-	if *githubRepository == "" {
+	if *autoCloseIssue && *githubRepository == "" {
 		log.Fatal("Please set a valid repository!")
 	}
 
 
-	labelMap, _, err := getLabelMap(*wordlistPath)
+	labelMap, _, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		log.Error("[Main] Couldn't read label map...terminating!")
 		return
@@ -252,27 +323,35 @@ func main() {
 	if *renameTo != "" {
 		labelToCheck = *renameTo
 	}
-	exists, err = labelExists(labelToCheck, tx)
+
+
+	labelId, err := getLabelId(labelToCheck, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't determine whether label exists: ", err.Error())
 		return
 	}
-	if !exists {
+	if labelId == -1 {
 		tx.Rollback()
 		log.Error("[Main] label doesn't exist in database - please add it via the populate_labels script.")
 		return
 	}
 
 
-	labelMeEntry := makeLabelMeEntry(*trendingLabel, true, []datastructures.Sublabel{})
+	labelMeEntry, err := makeLabelMeEntry(tx, labelToCheck)
+	if err != nil {
+		tx.Rollback()
+		log.Error("[Main] Couldn't create label entry - is UUID valid?")
+		return
+	}
+
 	if !isLabelInLabelsMap(labelMap, labelMeEntry) && *renameTo == "" {
 		tx.Rollback()
 		log.Error("[Main] Label doesn't exist in labels map - please add it first!")
 		return
 	}
 
-	err = makeTrendingLabelProductive(labelMeEntry, *renameTo, tx)
+	err = makeTrendingLabelProductive(*trendingLabel, labelMeEntry, labelId, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't make trending label ", *trendingLabel, " productive: ", err.Error())

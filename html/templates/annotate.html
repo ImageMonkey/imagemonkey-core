@@ -33,10 +33,17 @@
   <script src="js/lodash.core.min.js"></script>
 
   <style>
-  /*.justified {
-    position: relative;
-    width: 1060px;
-  }*/
+
+  #bottomLabel {
+    position: fixed;
+    bottom: 2px;
+    right: 10px; 
+  }
+
+  #blacklistButton[data-tooltip] {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
 
   .canvas-container{margin: 0 auto;}
 
@@ -69,6 +76,11 @@
   var colorPicker = null;
   var existingAnnotations = null;
   var browserFingerprint = null;
+  var deleteObjectsPopupShown = false;
+
+  {{ if eq .annotationMode "browse" }}
+  var browseModeLastSelectedAnnotatorMenuItem = null;
+  {{ end }}
 
   function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
     var ret = "";
@@ -124,7 +136,8 @@
           autoAnnotations = data["auto_annotations"];
       }
 
-      setLabel(data.label, data.sublabel);
+      setLabel(data.label.label, data.label.sublabel, data.label.accessor);
+      changeNavHeader("default");
     }
     else {
       annotationInfo.imageId = "";
@@ -146,10 +159,17 @@
     populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
     changeControl(annotator);
     numOfPendingRequests = 0;
-    showHideControls(true);
+
+    if(data === null)
+      changeNavHeader("noimage");
 
     {{ if eq .annotationMode "browse" }}
-    annotationSettings.loadPreferedAnnotationTool(annotator);
+    if(browseModeLastSelectedAnnotatorMenuItem === null)
+      annotationSettings.loadPreferedAnnotationTool(annotator);
+    else {
+      changeMenuItem(browseModeLastSelectedAnnotatorMenuItem);
+      annotator.setShape(browseModeLastSelectedAnnotatorMenuItem);
+    }
     {{ end }}
 
     populateRevisionsDropdown(0, 0);
@@ -168,7 +188,7 @@
     existingAnnotations = data["annotations"];
     showHideAutoAnnotationsLoadButton();
 
-    setLabel(data.validation.label, data.validation.sublabel);
+    setLabel(data.validation.label, data.validation.sublabel, null);
 
     if(canvas !== undefined && canvas !== null) {
       canvas.fabric().clear();
@@ -187,6 +207,23 @@
 
     populateRevisionsDropdown(data["num_revisions"], data["revision"]);
     showHideRevisionsDropdown();
+  }
+
+  function changeNavHeader(mode) {
+    if(mode === "default") {
+      $("#labelContainer").css("margin-top", "-2em");
+      $("#navHeader").css("min-height", "290px");
+      $("#navHeader").show();
+    } else if(mode === "noimage") {
+      $("#labelContainer").css("margin-top", "0");
+      $("#navHeader").css("min-height", "200px");
+      $("#annotationControlsGrid").hide();
+      $("#navHeader").show();
+    } else {
+      $("#labelContainer").css("margin-top", "0");
+      $("#navHeader").css("min-height", "200px");
+      $("#navHeader").show();
+    }
   }
 
 
@@ -293,6 +330,19 @@
       if(!imageUnlocked){
         url += "?token=" + getCookie("imagemonkey");
       }
+
+      {{ if eq .annotationMode "browse" }}
+      if($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
+        var labelToAnnotate = $("#label").attr("accessor");
+        if(labelToAnnotate in labelAccessorsLookupTable) {
+          if(!imageUnlocked) {
+            url += "&highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
+          } else {
+            url += "?highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
+          }
+        }
+      }
+      {{ end }}
     }
 
     return url;
@@ -326,6 +376,10 @@
       id = "smartAnnotationBgMenuItem";
     else if(type === "SelectMove")
       id = "selectMoveMenutItem";
+
+    {{ if eq .annotationMode "browse" }}
+    browseModeLastSelectedAnnotatorMenuItem = type;
+    {{ end }}
 
     $("#annotatorMenu").children().each(function (){
       if($(this).attr("id") === id)
@@ -365,7 +419,8 @@
       $("#annotatorMenu").show();
       $("#smartAnnotation").show();
       $("#showSmartAnnotationHelpDlg").show();
-      $("#annotationControls").show();
+      $("#annotationControlsGrid").show();
+      $("#annotationControlsMainArea").show();
       $("#annotationButtons").show();
       $("#loadingSpinner").hide();
 
@@ -373,6 +428,9 @@
         $("#imageLockedLabel").hide();
       else
         $("#imageLockedLabel").show();
+
+      $("#annotationColumnContent").show();
+      $("#annotationColumnSpacer").show();
     }
     else{
       $("#doneButton").hide();
@@ -381,10 +439,13 @@
       $("#annotatorMenu").hide();
       $("#smartAnnotation").hide();
       $("#showSmartAnnotationHelpDlg").hide();
-      $("#annotationControls").hide();
+      $("#annotationControlsGrid").hide();
+      $("#annotationControlsMainArea").hide();
       $("#annotationButtons").hide();
       $("#loadingSpinner").show();
       $("#imageLockedLabel").hide();
+      $("#annotationColumnContent").hide();
+      $("#annotationColumnSpacer").hide();
     }
   }
 
@@ -514,23 +575,31 @@
     if(annotationInfo.imageId === ""){
       $("#labelContainer").hide();
       $("#doneButton").hide();
+      $("#bottomLabel").hide();
       annotator.block();
     }
     else{
       $("#labelContainer").show();
       $("#doneButton").show();
+      $("#bottomLabel").show();
       annotator.unblock();
     }
   }
 
-  function setLabel(label, sublabel){
-    $("#label").attr("label", label)
-    $("#label").attr("sublabel", sublabel)
+  function setLabel(label, sublabel, accessor){
+    $("#label").attr("label", label);
+    $("#label").attr("sublabel", sublabel);
+
+    if(accessor !== null)
+      $("#label").attr("accessor", accessor);
+
     if(sublabel === ""){
       $("#label").text(("Annotate all: " + label));
+      $("#bottomLabel").text(("Annotate all: " + label));
     } 
     else {
       $("#label").text(("Annotate all: " + sublabel + "/" + label));
+      $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
     }
   }
 
@@ -571,6 +640,11 @@
                                                 //export them in order to make sure that we don't accidentially detect 
                                                 //a rounding errors as changes.
     }
+
+    showHideControls(true);
+    $("#annotationArea").css({"border-width":"1px",
+                              "border-style": "solid",
+                              "border-color": "#000000"});
   }
 
   function isLoadingIndicatorVisible(){
@@ -594,8 +668,10 @@
 
     var spacer = '';
     var w = "sixteen";
-    if(isSmartAnnotationEnabled())
+    if(isSmartAnnotationEnabled()) {
       w = "eight";
+
+    }
     else {
       var workspaceSize = annotationSettings.loadWorkspaceSize();
       if(workspaceSize === "small"){
@@ -610,12 +686,14 @@
         w = "sixteen";
     }
 
+ 
     var data =  spacer +
                 '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
                  '<div id="annotationAreaContainer">' +
                     '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
                 '</div>';
+
     $("#annotationColumn").show();
     $("#annotationColumn").append(data);
 
@@ -709,6 +787,7 @@
         getUnannotatedImage();
         {{ else }}
         $("#loadingSpinner").hide();
+        changeNavHeader("browse");
         showBrowseAnnotationImageGrid();
         {{ end }}
 
@@ -773,24 +852,28 @@
         }
       });
 
-      {{ if eq .annotationMode "browse" }}
+      
       showHideSmartAnnotationControls(false);
-      {{ end }}
+      
 
       colorPicker = new Huebee($('#colorPicker')[0], {});
       colorPicker.on('change', function(color, hue, sat, lum) {
         annotator.setStrokeColorOfSelected(color);
       });
 
+      $("#skipAnnotationDropdown").dropdown();
+
       Mousetrap.bind("r", function() { 
         $("#rectMenuItem").trigger("click");
       });
 
       $("#rectMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("Rectangle");
-        changeMenuItem("Rectangle");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Rectangle");
+          changeMenuItem("Rectangle");
+        }
       });
 
       Mousetrap.bind("c", function() { 
@@ -798,11 +881,12 @@
       });
 
       $("#circleMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("Circle");
-        changeMenuItem("Circle");
-
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Circle");
+          changeMenuItem("Circle");
+        }
       });
 
       Mousetrap.bind("p", function() { 
@@ -810,27 +894,43 @@
       });
 
       $("#polygonMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("Polygon");
-        changeMenuItem("Polygon");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Polygon");
+          changeMenuItem("Polygon");
+        }
       });
 
       $("#selectMoveMenutItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.setShape("");
-        annotator.enableSelectMoveMode();
-        changeMenuItem("SelectMove");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.setShape("");
+          annotator.enableSelectMoveMode();
+          changeMenuItem("SelectMove");
+        }
       });
 
       
 
        $("#freeDrawingMenuItem").click(function(e) {
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("FreeDrawing");
-        annotator.setBrushColor("red");
-        changeMenuItem("FreeDrawing");
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("FreeDrawing");
+          annotator.setBrushColor("red");
+          changeMenuItem("FreeDrawing");
+        }
+      });
+
+      Mousetrap.bind("y", function() {
+        if(deleteObjectsPopupShown)
+          $("#deletedObjectsYesButton").trigger("click");
+      });
+
+      Mousetrap.bind("n", function() {
+        if(deleteObjectsPopupShown)
+          $("#deleteObjectsPopup").modal("hide");
       });
 
       Mousetrap.bind("del", function() { 
@@ -838,16 +938,26 @@
       });
 
       $("#trashMenuItem").click(function(e) {
-        if(isTrashMenuButtonEnabled())
-          $('#deleteObjectsPopup').modal('show');
+        if(isTrashMenuButtonEnabled()) {
+          $('#deleteObjectsPopup').modal({
+            onShow: function() {
+              deleteObjectsPopupShown = true;
+            },
+            onHidden: function() {
+              deleteObjectsPopupShown = false;
+            }
+          }).modal('show');
+        }
       });
 
       $("#redoMenuItem").click(function(e) {
-        annotator.redo();
+        if(annotator !== undefined)
+          annotator.redo();
       });
 
       $("#undoMenuItem").click(function(e) {
-        annotator.undo();
+        if(annotator !== undefined)
+          annotator.undo();
       });
 
       Mousetrap.bind('+', function() { 
@@ -904,21 +1014,25 @@
       });
 
       $("#smartAnnotationFgMenuItem").click(function(e) {
-        changeMenuItem("ForegroundSelection");
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
-        annotator.setBrushWidth(10);
-        annotator.setShape("FreeDrawing");
+        if(annotator !== undefined) {
+          changeMenuItem("ForegroundSelection");
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
+          annotator.setBrushWidth(10);
+          annotator.setShape("FreeDrawing");
+        }
       });
 
       $("#smartAnnotationBgMenuItem").click(function(e) {
-        changeMenuItem("BackgroundSelection");
-        annotator.disablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
-        annotator.setBrushWidth(10);
-        annotator.setShape("FreeDrawing");
+        if(annotator !== undefined) {
+          changeMenuItem("BackgroundSelection");
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
+          annotator.setBrushWidth(10);
+          annotator.setShape("FreeDrawing");
+        }
       });
 
       $("#loadAutoAnnotationsMenuItem").click(function(e) {
@@ -952,6 +1066,11 @@
       });
 
       $('#blacklistButton').click(function(e) {
+        {{ if (eq .sessionInformation.LoggedIn false) }}
+        //in case we aren't logged in, do nothing
+        return;
+
+        {{else}}
         {{ if (eq .sessionInformation.LoggedIn true) }}
         var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
           if(blacklistAnnotationUsageDlgAlreadyShown === null) {
@@ -962,6 +1081,8 @@
           }
         {{ else }}
           $("#blacklistAnnotationUsageDlg").modal("show");
+        {{ end }}
+
         {{ end }}
         
       });
@@ -1002,7 +1123,6 @@
         }
 
         e.preventDefault();
-
         
         if(existingAnnotations !== null)
           updateAnnotations(res);
@@ -1010,6 +1130,7 @@
           addAnnotations(res);
       });
 
+      changeNavHeader({{ .annotationMode }});
 
       {{ if eq .annotationMode "default" }}
         {{ if eq .validationId "" }}
@@ -1025,10 +1146,15 @@
         {{ end }}
       {{ end }}
 
-      new Fingerprint2().get(function(result, components){
-        browserFingerprint = result;
-      });
+      try {
+        //can fail in case someone uses uBlock origin or Co.
+        new Fingerprint2().get(function(result, components){
+          browserFingerprint = result;
+        });
+      } catch(e) {
+      }
 
+      
 });
 </script>
 </head>
@@ -1038,22 +1164,42 @@
 
   <!-- Page Contents -->
   <div class="pusher">
-    <div class="ui inverted vertical masthead center aligned segment">
+    <div hidden class="ui inverted vertical masthead center aligned segment" id="navHeader">
      {{ template "pointing_menu.html" .}}  
-     <div class="ui text container" id="labelContainer">
-      <h2 class="ui inverted header" id="label" label="" sublabel=""></h2>
-      <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
+     <div class="ui text container" id="labelContainer"> <!--style="margin-top:-2em;">-->
+      <h2 class="ui inverted header" id="label" label="" sublabel="" accessor="" style="margin-bottom: 0.2em;"></h2>
+      
+      <button class="ui {{ if eq .annotationMode "default" }}white{{ else }}inverted basic{{ end }} button" 
+        onclick="window.location='/annotate?mode=default';" data-tooltip="Default Mode">Default</button>
+      <button class="ui {{ if eq .annotationMode "default" }}inverted basic{{ else }}white{{ end }} button" 
+        onclick="window.location='/annotate?mode=browse';" data-tooltip="Browse Mode">Browse</button>
+      
+      <div style="display: none;margin-right: 10px;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
+     </div>
+     <div class="ui inverted sixteen wide centered center aligned grid" id="annotationControlsGrid" 
+      style="display: none; margin-top: 1em;">
+      <div class="row">
+       <div hidden class="ui inverted toggle checkbox" id="smartAnnotation">
+          <input type="checkbox">
+          <label><font color="white">Smart Annotation</font></label>
+       </div>
+       <a href="#" id="showSmartAnnotationHelpDlg"> [?]</a>
+      </div>
+
+      <div class="row" style="margin-top: -1em;">
+       {{ template "annotation_menu.html" .}}
+      </div>
+      {{ template "annotation_revisions.html" .}}
+     </div>
     </div>
-  </div>
 
 
-  <div class="ui stackable grid" id="mainGrid">
+    <div class="ui stackable grid" id="mainGrid" style="margin-top: 1em;">
       {{ if eq .annotationMode "browse" }}
       {{ template "annotation_browse_select_mode.html" .}}
       {{ end }}
 
 
-      <div class="row"></div>
       <div class="row" id="loadingSpinner" style="display: none;">
         <div class="sk-wave overlay">
           <div class="sk-rect sk-rect1"></div>
@@ -1073,20 +1219,13 @@
         </div>
       </div>
 
-      <div class="row" style="display: none;" id="annotationControls">
-        <div class="sixteen wide center aligned column">
-          {{ template "annotation_revisions.html" .}}
-          <br>
-          <div class="row">
-            <div hidden class="ui toggle checkbox" id="smartAnnotation">
-              <input type="checkbox">
-              <label>Smart Annotation</label>
-            </div>
-            <a href="#" id="showSmartAnnotationHelpDlg">[?]</a>
-            <p></p>
-          </div>
+      <div class="row" id="annotationColumn" style="display: none;">
+      </div>
 
-          {{ template "annotation_menu.html" .}}
+      {{ template "annotation_buttons.html" .}}
+
+      <div class="row" style="display: none;" id="annotationControlsMainArea">
+        <div class="sixteen wide center aligned column">
 
           {{ template "smart_annotation_help_dlg.html" .}}
 
@@ -1102,27 +1241,9 @@
 
         </div>
       </div>
-
-      <div class="row" id="annotationColumn" style="display: none;">
-      </div>
-
-      <div class="row" style="display: none;" id="annotationButtons">
-        <div class="sixteen wide center aligned column">
-
-          {{ if eq .showSkipAnnotationButtons true }}
-          <button hidden class="yellow ui button center aligned" id="notAnnotableButton">UN-ANNOTABLE</button>
-          {{ end }}
-
-          <button hidden class="positive ui button center aligned" id="doneButton">DONE</button>
-
-          {{ if eq .showSkipAnnotationButtons true }}
-          {{ if (eq .sessionInformation.LoggedIn true) }}
-          <button hidden class="negative ui button center aligned" id="blacklistButton">BLACKLIST</button>
-          {{ else }}
-          <button hidden class="disabled negative ui button with tooltip center aligned" data-tooltip="You need to be logged in to blacklist annotations." data-position="bottom center" id="blacklistButton">BLACKLIST</button>
-          {{ end }}
-          {{ end }}
-
+      
+      <div class="row">
+        <div class="ten wide center aligned centered column">
           <div hidden class="ui warning message" id="warningMsg">
             <i class="close icon"></i>
             <div class="header" id="warningMsgText">
@@ -1132,8 +1253,9 @@
       </div>
       <div class="row"></div>
 
+    </div>
+    <div class="ui big blue label computer only" id="bottomLabel" style="display: none;"></div>
   </div>
-</div>
   {{ template "footer.html" .}}
 
 </body>

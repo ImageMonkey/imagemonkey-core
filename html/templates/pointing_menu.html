@@ -5,10 +5,22 @@
     </a>
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
-  <a class="{{if (eq .activeMenuNr 3)}}active {{end}}item" href="/label">Add Labels</a>
+  <div class="ui dropdown item" id="labelPointingMenuDropdown">
+    Label<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/label';">Object</div>
+      <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
+    </div>
+  </div>
   <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationPointingMenuItem" href="/annotate">Annotate</a>
-  <a class="{{if (eq .activeMenuNr 5)}}active {{end}}item" href="/verify">Validate Label</a>
-  <a class="{{if (eq .activeMenuNr 6)}}active {{end}}item" href="/verify_annotation">Validate Annotations</a>
+
+  <div class="ui dropdown item" id="validatePointingMenuDropdown">
+    Validate<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/verify';">Object</div>
+      <div class="center aligned item" onclick="window.location='/verify_annotation';">Annotation</div>
+    </div>
+  </div>
   
   <div class="ui dropdown item" id="refinementPointingMenuDropdown">
       Refinement<i class="dropdown icon"></i>
@@ -45,8 +57,31 @@
   {{ else }}
   <div class="ui dropdown item" id="mainMenuDropdown">
     <i class="user icon"></i> {{ .sessionInformation.Username }} <i class="dropdown icon"></i>
+    <div class="floating ui red circular label" id="numOfMainModeratorNotifications" style="display: none;"></div>
     <div class="menu">
       <div class="item" id="mainMenuProfileButton"><i class="user icon"></i>Profile</div>
+      {{if eq .sessionInformation.IsModerator true }}
+      <div class="item" onclick="window.location='/moderation';"><i class="bullhorn icon" id="moderatorButtonIcon"></i>
+      Moderation
+      </div>
+      {{ end }}
+
+      {{ if .sessionInformation.UserPermissions }}
+      {{ if eq .sessionInformation.UserPermissions.CanUnlockImage true }}
+      <div class="item" onclick="window.location='/image_unlock';"><i class="check circle outline icon"></i>
+      Unlock Image
+      </div>
+      {{ end }}
+      {{ end }}
+
+      {{ if .sessionInformation.UserPermissions }}
+      {{ if eq .sessionInformation.UserPermissions.CanMonitorSystem true }}
+      <div class="item" onclick="window.location='/monitoring';"><i class="heartbeat icon"></i>
+      Monitoring
+      </div>
+      {{ end }}
+      {{ end }}
+
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
     </div>
   </div>
@@ -56,11 +91,41 @@
 
 
 <script type="text/javascript">
+  {{ if eq .sessionInformation.IsModerator true }}
+  function getNumOfUnprocessedImageDescriptions() {
+    var url = '{{ .apiBaseUrl }}/v1/donations/unprocessed-descriptions';
+    $.ajax({
+      url: url,
+      type: 'HEAD',
+      headers: {'X-Total-Count': ''},
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data, textStatus, xhr) {
+        var numOfNotifications = xhr.getResponseHeader('X-Total-Count');
+        if(numOfNotifications === "0") {
+          $("#numOfMainModeratorNotifications").hide();
+          $("#moderatorButtonIcon").removeClass("red");
+        }
+        else {
+          $("#numOfMainModeratorNotifications").text(numOfNotifications);
+          $("#numOfMainModeratorNotifications").show();
+          $("#moderatorButtonIcon").addClass("red");
+        }
+      }
+    });
+  }
+
+  {{ end }}
+
+
   $(document).ready(function(){
     $('#mainMenuDropdown').dropdown();
     $('#developersPointingMenuDropdown').dropdown();
     $('#datasetPointingMenuDropdown').dropdown();
     $('#refinementPointingMenuDropdown').dropdown();
+    $('#labelPointingMenuDropdown').dropdown();
+    $('#validatePointingMenuDropdown').dropdown();
 
     function parseJwt(token){
       var base64Url = token.split('.')[1];
@@ -95,6 +160,10 @@
     var settings = new Settings();
     if(settings.getAnnotationMode() === "browse")
       $("#annotationPointingMenuItem").attr("href", "/annotate?mode=browse");
+
+    {{ if eq .sessionInformation.IsModerator true }}
+    getNumOfUnprocessedImageDescriptions();
+    {{ end }}
   });
 
 </script>

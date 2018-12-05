@@ -24,7 +24,7 @@
   <script src="js/justified-layout.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
   <script src="js/mousetrap-record.min.js"></script>
-  <script src="js/settings.js"></script>
+  <script src="js/settings.js?v=3"></script>
   <script src="js/contextjs/context.js"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
   <script src="js/infinitescroll.js?v=2"></script>
@@ -36,6 +36,16 @@
 
   <style type="text/css">
     .canvas-container{margin: 0 auto;}
+
+    #mainGrid {
+      margin-top: -8em;
+    }
+
+    @media only screen and (max-width: 700px) {
+      #mainGrid {
+        margin-top: 0em;
+      }
+    }
   </style>
 
   <script type="text/javascript">
@@ -43,16 +53,23 @@
   var colorMap = {}
   var oldLabelMap = {}
   var newlyAddedLabels = {}
+  var oldImageDescriptions = {}
+  var newlyAddedImageDescriptions = {}
   var labelMap = {{ .labels }};
   var canvas = null;
   var cachedAnnotations = null;
   var annotationsShown = false;
   var annotationFetchingInProgress = false;
+  var introductionTour = null;
 
   buildColorMap();
 
+  function getImageContainerMaxWidth() {
+    return document.getElementById("imageContainer").clientWidth - 100; //margin
+  }
+
   function getCanvasScaleFactor(origImageWidth) {
-    var maxWidth = document.getElementById("imageContainer").clientWidth - 100; //margin
+    var maxWidth = getImageContainerMaxWidth();
     var scaleFactor = maxWidth/origImageWidth;
     if(scaleFactor > 1.0)
       scaleFactor = 1.0;
@@ -166,13 +183,28 @@
     });
   }
 
+  function addExistingImageDescriptions(descriptions) {
+    oldImageDescriptions = {}
+    for(var i = 0; i < descriptions.length; i++) {
+      var isUnlocked = false;
+      if(descriptions[i].state === "unlocked")
+        isUnlocked = true;
+      addExistingImageDescription(descriptions[i].text, isUnlocked, descriptions[i].language);
+    }
+
+    showHideNoImageDescriptionsDefined();
+  }
+
   function getNextImage(imageId){
     showHideMainArea(true);
     clearSelectedLabel(); //clear current label
     removeAllLabels();
+    removeAllImageDescriptions();
     $('#mostPopularLabelsContainer').hide();
     oldLabelMap = {}
     newlyAddedLabels = {}
+    oldImageDescriptions = {}
+    newlyAddedImageDescriptions = {}
 
     showHideControls(false, false);
 
@@ -196,12 +228,7 @@
         canvas.setWidth(data.image.width*scaleFactor);
         canvas.setHeight(data.image.height*scaleFactor);
 
-        canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
-          showHideMainArea(true);
-          showHideControls(true, data.image.unlocked);
-          //drawAnnotations(canvas.fabric(), [data.annotation.data], canvas.fabric().backgroundImage.scaleX);
-        });
-
+        {{ if eq .type "object" }}
 
         addOldLabels(data["all_labels"]);
 
@@ -231,6 +258,25 @@
           }
         ]);
         {{ end }}
+        {{ end }}
+
+        {{ if eq .type "image" }}
+        if(data.image.descriptions !== undefined)
+          addExistingImageDescriptions(data.image.descriptions);
+        {{ end }}
+
+
+        canvas.setCanvasBackgroundImageUrl(getUrlFromImageUrl(data.image.url, data.image.unlocked), function() {
+          showHideMainArea(true);
+          showHideControls(true, data.image.unlocked);
+          
+          var settings = new Settings();
+          if(!settings.isLabelViewFirstTimeOpened()) {
+            settings.setLabelViewFirstTimeOpened(true);
+            introductionTour.start();
+          }
+          
+        });
 
       }
     });
@@ -242,6 +288,15 @@
     }
     else{
       $("#noLabelsDefined").hide();
+    }
+  }
+
+  function showHideNoImageDescriptionsDefined(){
+    if((Object.keys(oldImageDescriptions).length === 0) && (Object.keys(newlyAddedImageDescriptions).length === 0)){
+      $("#noImageDescriptionsDefined").show();
+    }
+    else{
+      $("#noImageDescriptionsDefined").hide();
     }
   }
 
@@ -262,6 +317,7 @@
       $("#imgInfo").show();
       $("#labelInfo").show();
       $("#mostPopularLabelsContainer").fadeIn("slow");
+      $("#imageDescriptionsContainer").show();
       $("#gotoModeContainer").show();
     } 
     else {
@@ -269,6 +325,7 @@
       $("#imgInfo").hide();
       $("#mostPopularLabelsContainer").hide();
       $("#labelInfo").hide();
+      $("#imageDescriptionsContainer").hide();
       $("#gotoModeContainer").hide();
     }
   }
@@ -276,11 +333,19 @@
   function showHideControls(show, imageUnlocked){
     if(show){
       $('#image').show();
+      $("#doneButton").removeClass('disabled');
       $('#doneButton').show();
       $('#labels').show();
       $('#loadingIndicator').hide();
       $('#labelForm').show();
+
+      {{ if eq .type "object" }}
       $('#objectsWithoutLabelText').show();
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      $('#imageWithoutImageDescriptionText').show();
+      {{ end }}
 
       if(imageUnlocked)
         $("#imageLockedLabel").hide();
@@ -293,7 +358,15 @@
       $('#labels').hide();
       $('#loadingIndicator').show();
       $('#labelForm').hide();
+
+      {{ if eq .type "object" }}
       $('#objectsWithoutLabelText').hide();
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      $('#imageWithoutImageDescriptionText').hide();
+      {{ end }}
+
       $("#imageLockedLabel").hide();
     }
   }
@@ -342,6 +415,13 @@
     });
   }
 
+  function removeImageDescription(e) {
+    var imageDescriptionItem = $(e).parent().text();
+    $(e).parent().remove();
+    delete newlyAddedImageDescriptions[imageDescriptionItem];
+    showHideNoImageDescriptionsDefined();
+  }
+
   var removeLabel = function(e){
     var sublabel = $(e).parent().attr('sublabel');
     var label = $(e).parent().attr('label');
@@ -378,6 +458,13 @@
   var removeAllLabels = function(){
     $('#labels').children().each(function (){
       delete newlyAddedLabels[$(this).text()];
+      $(this).remove();
+    })
+  }
+
+  var removeAllImageDescriptions = function(){
+    $('#imageDescriptions').children().each(function (){
+      delete newlyAddedImageDescriptions[$(this).text()];
       $(this).remove();
     })
   }
@@ -495,6 +582,54 @@
     showHideNoLabelsDefined();
   }
 
+  function addImageDescription(imageDescription, lang) {
+    var added = false;
+    var escapedImageDescription = escapeHtml(imageDescription);
+
+    var color = getColorForImageDescriptionLanguage(lang);
+
+    if(!(escapedImageDescription in newlyAddedImageDescriptions) && !(escapedImageDescription in oldImageDescriptions)) {
+      $('#imageDescriptions').prepend($(('<div class="ui huge basic ' + color + ' label">' +  
+                                            escapedImageDescription + 
+                                            '<i class="delete icon" onclick="removeImageDescription(this)"></i></div>')));
+      newlyAddedImageDescriptions[escapedImageDescription] = lang;
+      added = true;
+    }
+    else {
+      $('#warningMessageBoxContent').text("Image description already exists");
+      $('#warningMessageBox').show(200).delay(1500).hide(200);
+    }
+    showHideNoImageDescriptionsDefined();
+
+    return added;
+  }
+
+  function getColorForImageDescriptionLanguage(lang) {
+    if((lang === "en") || (lang === "English"))
+      return "red";
+    else if((lang === "ger") || (lang === "German"))
+      return "blue";
+    return "grey";
+  }
+
+  function addExistingImageDescription(imageDescription, isUnlocked, lang) {
+    var escapedImageDescription = escapeHtml(imageDescription);
+
+    var basicLabelStr = "";
+    var tooltipStr = "";
+    if(!isUnlocked) {
+      basicLabelStr = 'basic '
+      tooltipStr = 'data-tooltip="Waiting for moderator approval"'
+    }
+
+    var color = getColorForImageDescriptionLanguage(lang);
+
+    $('#imageDescriptions').prepend($(('<div class="ui huge ' + basicLabelStr + color + ' label" ' + tooltipStr + '>' +  
+                                          escapedImageDescription + 
+                                          '</div>')));
+    oldImageDescriptions[escapedImageDescription] = true;
+  }
+
   function addPopularLabel(label){
     $('#mostPopularLabels').prepend($(('<div class="ui big label button" onclick="createLabelFromMostPopularLabel(this)">' + label + '</div>')));
   }
@@ -505,6 +640,97 @@
 
   function clearSelectedLabel(){
     $('#labelDropdown').dropdown('restore placeholder text');
+  }
+
+  function addImageDescriptionsToImage() {
+    var imageDescriptions = [];
+    var strImageDescriptionsLst = "";
+    for (var key in newlyAddedImageDescriptions){
+      if (newlyAddedImageDescriptions.hasOwnProperty(key)) {
+        imageDescriptions.push({"description": key, "language": newlyAddedImageDescriptions[key]});
+        strImageDescriptionsLst += key + "; ";
+      }
+    }
+
+    if(strImageDescriptionsLst.length > 2)
+      strImageDescriptionsLst = strImageDescriptionsLst.substring(0, strImageDescriptionsLst.length - 2); //remove last ';' + space
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/description";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'POST',
+      data: JSON.stringify(imageDescriptions),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      complete: function(data){
+      },
+      success: function(data){
+        {{ if eq .mode "default" }}
+        getNextImage("");
+        {{ else }}
+        showHideMainArea(false);
+        updateImageDescriptionsForImage($("#image").attr("imageId"), strImageDescriptionsLst);
+        showBrowseLabelImageGrid();
+        {{ end }}
+      }
+    });
+  }
+
+  function addLabelsToImage() {
+    var labelsLst = [];
+    var strLabelsLst = "";
+
+    //dict to list
+    for (var key in newlyAddedLabels){
+      if (newlyAddedLabels.hasOwnProperty(key)) {
+        var sublabels = newlyAddedLabels[key];
+        var s = [];
+        strLabelsLst += (escapeHtml(key) + ", ");
+        for(var i = 0; i < sublabels.length; i++) {
+          s.push({"name": sublabels[i]});
+          strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
+        }
+        labelsLst.push({label: key, annotatable: true, sublabels: s});
+      }
+    }
+
+    if(strLabelsLst.length > 2)
+      strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
+
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/labelme";
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers['X-Browser-Fingerprint'] = browserFingerprint;
+
+    
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'POST',
+      data: JSON.stringify(labelsLst),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      complete: function(data){
+      },
+      success: function(data){
+        {{ if eq .mode "default" }}
+        getNextImage("");
+        {{ else }}
+        showHideMainArea(false);
+        updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
+        showBrowseLabelImageGrid();
+        {{ end }}      
+      }
+    });
   }
 
   $(document).ready(function(){
@@ -535,7 +761,25 @@
       }
     }
 
+    {{ if eq .type "image" }}
+    var defaultImageDescriptionLanguage = new Settings().getDefaultImageDescriptionLanguage();
+    $("#languageSelection").dropdown('set value', defaultImageDescriptionLanguage);
+    {{ end }}
+
     getMostPopularLabels();
+
+    $('#addImageDescriptionButton').click(function(e) {
+      var imageDescriptionInput = $("#addImageDescriptionInput").val();
+      var lang = $("#languageSelection").dropdown('get value');
+      if(imageDescriptionInput !== "") {
+        if(addImageDescription(imageDescriptionInput, lang))
+          $("#addImageDescriptionInput").val(''); //clear input
+      }
+      else {
+        $('#warningMessageBoxContent').text("Please enter a image description");
+        $('#warningMessageBox').show(200).delay(1500).hide(200);
+      }
+    });
 
     $('#addLabelButton').click(function(e){
       var selectedLabel = getSelectedLabel();
@@ -549,170 +793,154 @@
       onAddLabelSuggestion();
     });
 
-  $('#doneButton').click(function(e) {
-    var labelsLst = [];
-    var strLabelsLst = "";
+    $('#helpMeButton').click(function(e) {
+      introductionTour.start();
+    });
 
-        //dict to list
-        for (var key in newlyAddedLabels){
-          if (newlyAddedLabels.hasOwnProperty(key)) {
-            var sublabels = newlyAddedLabels[key];
-            var s = [];
-            strLabelsLst += (escapeHtml(key) + ", ");
-            for(var i = 0; i < sublabels.length; i++) {
-              s.push({"name": sublabels[i]});
-              strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
-            }
-            labelsLst.push({label: key, annotatable: true, sublabels: s});
-          }
-        }
+    $('#doneButton').click(function(e) {
+      $("#doneButton").addClass("disabled");
 
-        if(strLabelsLst.length > 2)
-          strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
-
-        var url = '{{ .apiBaseUrl }}/v1/donation/' + $("#image").attr("imageId") + "/labelme";
-        var headers = {}
-        if(browserFingerprint !== null)
-          headers['X-Browser-Fingerprint'] = browserFingerprint;
-
-        if(newlyAddedLabels.length === 0){ //if no label was added, just load next image
+      e.preventDefault();
+      
+      {{ if eq .type "object" }}
+        if(Object.keys(newlyAddedLabels).length === 0) {
           getNextImage("");
         }
         else {
-          e.preventDefault();
-          $.ajax({
-            url: url,
-            dataType: 'json',
-            type: 'POST',
-            data: JSON.stringify(labelsLst),
-            headers: headers,
-            beforeSend: function(xhr) {
-              xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-            },
-            complete: function(data){
-            },
-            success: function(data){
-              {{ if eq .mode "default" }}
-              getNextImage("");
-              {{ else }}
-              showHideMainArea(false);
-              updateLabelsForImage($("#image").attr("imageId"), strLabelsLst);
-              showBrowseLabelImageGrid();
-              {{ end }}
-              
-            }
-          });
-        }
-        
-      });
-
-  $('.ui.dropdown')
-  .dropdown()
-  ;
-
-
-  function split(val) {
-    return val.split( / \s*/ );
-  }
-  
-  function extractLast(term) {
-    return split(term).pop();
-  }
-
-  function onAddLabelSuggestion() {
-    var labels = $("#labelSuggestion").val();
-    if(labels !== ""){
-      var splittedLabels = labels.split(new Settings().getLabelSeparator()).map(item => item.trim()); //split by delimiter and 
-                                                                                                      //remove surrouding spaces around each label
-      var label = "";
-      for(var i = 0; i < splittedLabels.length; i++) { 
-        label = splittedLabels[i];
-        if(label === "")
-          continue;
-
-        if(!(label in availableLabelsLookupTable)) {
-          availableLabelsLookupTable[label] = true;
-          availableLabels.push(label);
+          addLabelsToImage(); 
         }
 
-        addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
-        $("#labelSuggestion").val(''); //clear input after add
-      }
-    }
-  }
+      {{ end }}
 
-  $("#labelSuggestion")
-    // don't navigate away from the field on tab when selecting an item
-    .on("keydown", function(event) {
-      if (event.keyCode === $.ui.keyCode.TAB &&
-        $(this).autocomplete("instance").menu.active) {
-        event.preventDefault();
-    }
-  })
-  .autocomplete({
-    minLength: 2,
-    source: function(request, response) {
-      // delegate back to autocomplete, but extract the last term
-      response($.ui.autocomplete.filter(
-      availableLabels, extractLast(request.term)));
-    },
-    focus: function() {
-      // prevent value inserted on focus
-      return false;
-    },
-    select: function(event, ui) {
-      var terms = split(this.value);
-      // remove the current input
-      terms.pop();
-      // add the selected item
-      terms.push(ui.item.value);
-      // add placeholder to get the comma-and-space at the end
-      terms.push("");
-      this.value = terms.join("");
-      return false;
-    }
-  });
 
-  new Fingerprint2().get(function(result, components){
-    browserFingerprint = result;
-  });
-
-  var settings = new Settings();
-  Mousetrap.bind(settings.getAddLabelHotkey(), function(e, combo) { 
-    $('#labelSuggestion').autocomplete('close'); //close autocomplete dropdown
-    onAddLabelSuggestion();
-  });
-
-  Mousetrap.bind("alt+a", function(e, combo) { 
-    if(!annotationsShown) {
-      if(!cachedAnnotations && !annotationFetchingInProgress) {
-        getAnnotations($("#image").attr("imageId"));
-        annotationsShown = !annotationsShown;
-      }
-      else {
-        if(cachedAnnotations.length === 0) { //image has no annotations
-          $('#warningMessageBoxContent').text("No annotations available for that image");
-          $('#warningMessageBox').show(200).delay(1500).hide(200);
+      {{ if eq .type "image" }}
+        if(Object.keys(newlyAddedImageDescriptions).length === 0) {
+          getNextImage("");
         }
         else {
-          canvas.clearObjects();
-          drawAnnotations(canvas.fabric(), cachedAnnotations, canvas.fabric().backgroundImage.scaleX);
-          annotationsShown = !annotationsShown;
+          addImageDescriptionsToImage(); 
+        }
+      {{ end }}
+    });
+
+    $('.ui.dropdown')
+    .dropdown()
+    ;
+
+
+    function split(val) {
+      return val.split( / \s*/ );
+    }
+    
+    function extractLast(term) {
+      return split(term).pop();
+    }
+
+    function onAddLabelSuggestion() {
+      var labels = $("#labelSuggestion").val();
+      if(labels !== ""){
+        var splittedLabels = labels.split(new Settings().getLabelSeparator()).map(item => item.trim()); //split by delimiter and 
+                                                                                                        //remove surrouding spaces around each label
+        var label = "";
+        for(var i = 0; i < splittedLabels.length; i++) { 
+          label = splittedLabels[i];
+          if(label === "")
+            continue;
+
+          if(!(label in availableLabelsLookupTable)) {
+            availableLabelsLookupTable[label] = true;
+            availableLabels.push(label);
+          }
+
+          addLabel(label); //label will be HTML-escaped within the addLabel() function, so no need to do that here
+          $("#labelSuggestion").val(''); //clear input after add
         }
       }
-    } 
-    else {
-      canvas.clearObjects();
-      annotationsShown = !annotationsShown;
     }
+
+    $("#labelSuggestion")
+      // don't navigate away from the field on tab when selecting an item
+      .on("keydown", function(event) {
+        if (event.keyCode === $.ui.keyCode.TAB &&
+          $(this).autocomplete("instance").menu.active) {
+          event.preventDefault();
+      }
+    })
+    .autocomplete({
+      minLength: 2,
+      source: function(request, response) {
+        // delegate back to autocomplete, but extract the last term
+        response($.ui.autocomplete.filter(
+        availableLabels, extractLast(request.term)));
+      },
+      focus: function() {
+        // prevent value inserted on focus
+        return false;
+      },
+      select: function(event, ui) {
+        var terms = split(this.value);
+        // remove the current input
+        terms.pop();
+        // add the selected item
+        terms.push(ui.item.value);
+        // add placeholder to get the comma-and-space at the end
+        terms.push("");
+        this.value = terms.join("");
+        return false;
+      }
+    });
+
+    try {
+      //can fail in case someone uses uBlock origin or Co.
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
+      });
+    } catch(e) {
+    }
+
+    var settings = new Settings();
+    Mousetrap.bind(settings.getAddLabelHotkey(), function(e, combo) { 
+      {{ if eq .type "object" }}
+      $('#labelSuggestion').autocomplete('close'); //close autocomplete dropdown
+      onAddLabelSuggestion();
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      $("#addImageDescriptionButton").trigger("click");
+      {{ end }}
+
+    });
+
+    Mousetrap.bind("alt+a", function(e, combo) { 
+      if(!annotationsShown) {
+        if(!cachedAnnotations && !annotationFetchingInProgress) {
+          getAnnotations($("#image").attr("imageId"));
+          annotationsShown = !annotationsShown;
+        }
+        else {
+          if(cachedAnnotations.length === 0) { //image has no annotations
+            $('#warningMessageBoxContent').text("No annotations available for that image");
+            $('#warningMessageBox').show(200).delay(1500).hide(200);
+          }
+          else {
+            canvas.clearObjects();
+            drawAnnotations(canvas.fabric(), cachedAnnotations, canvas.fabric().backgroundImage.scaleX);
+            annotationsShown = !annotationsShown;
+          }
+        }
+      } 
+      else {
+        canvas.clearObjects();
+        annotationsShown = !annotationsShown;
+      }
+    });
+
+    {{ if eq .mode "default" }}
+    getNextImage({{ .imageId }});
+    {{ end }}
+    
+    introductionTour = new Introduction({{ .sessionInformation.LoggedIn }});
   });
-
-  {{ if eq .mode "default" }}
-  getNextImage({{ .imageId }});
-  {{ end }}
-  
-
-});
 </script>
 </head>
 <body>
@@ -724,12 +952,21 @@
     <div class="ui inverted vertical masthead center aligned segment">
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
-       <h2 class="ui inverted header">Label all objects</h2>
+       <h2 class="ui inverted header">{{ .subtitle }}</h2>
+
+      <br>
+      <div id="modeButtons">
+        <button class="ui {{ if eq .mode "default" }}white{{ else }}inverted basic{{ end }} button" 
+            onclick="window.location='/label?mode=default&type={{ .type }}';" data-tooltip="Default Mode">Default</button>
+        <button class="ui {{ if eq .mode "default" }}inverted basic{{ else }}white{{ end }} button" 
+            onclick="window.location='/label?mode=browse&type={{ .type }}';" data-tooltip="Browse Mode">Browse</button>
+      </div>
+
        <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
 
-   <div class="ui stackable grid vertical stripe mobile reversed" style="margin-top:-8em;">
+   <div id="mainGrid" class="ui stackable grid vertical stripe mobile reversed">
     {{ if eq .mode "browse" }}
     {{ template "label_browse_select_mode.html" .}}
     {{ end }}
@@ -741,12 +978,27 @@
     </div>
 
     <div class="three wide center aligned column" style="display: none;" id="labelInfo">
+      {{ if eq .type "object" }}
       <p><h2 id="labelsHeader">Labels:</h2></p>
       <p hidden id="noLabelsDefined">There are currently no labels defined for that image. Add labels and help to improve our dataset.</p>
 
       <div class="ui labels" id="labels">
       </div>
+      {{ end }}
 
+      {{ if eq .type "image" }}
+      <h1></h1>
+      <h1></h1>
+      <div id="imageDescriptionsContainer" hidden>
+        <h2 style="margin-bottom:0px;">Image Descriptions:</h2>
+        <br>
+        <p hidden id="noImageDescriptionsDefined">There are currently no image descriptions defined. Add a description and help to improve our dataset.</p>
+        <div class="ui labels" id="imageDescriptions">
+        </div>
+      </div>
+      {{ end }}
+
+      {{ if eq .type "object" }}
       <h1></h1>
       <h1></h1>
       <div id="mostPopularLabelsContainer" hidden>
@@ -755,6 +1007,7 @@
         <div class="ui labels" id="mostPopularLabels">
         </div>
       </div>
+      {{ end }}
 
     </div>
     <div class="eight wide center aligned column" style="display: none;" id="mainContainer">
@@ -762,11 +1015,20 @@
         <canvas imageId="" id="image"></canvas>
       </div>
 
+      {{ if eq .type "object" }}
+      <br>
       <p id="objectsWithoutLabelText">Do you see any objects without a label?</p>
+      {{ end }}
+
+      {{ if eq .type "image" }}
+      <br>
+      <p id="imageWithoutImageDescriptionText">Do you see an image without description?</p>
+      {{ end }}
+
       <div class="ui centered grid">
         <div class="row">
+          {{ if eq .type "object" }}
           <div class="ui form">
-
             {{ if (eq .sessionInformation.LoggedIn false) }}
             <div class="field">
               <div class="ui search">
@@ -796,8 +1058,33 @@
               </div>
             </div>
             {{ end }}
-
           </div>
+          {{ end }}
+
+          {{ if eq .type "image" }}
+          <div class="ui form">
+            <div class="field">
+              <div class="ui center aligned action input" id="labelForm">
+                <div class="ui dropdown labeled search icon button" id="languageSelection">
+                  <i class="world icon"></i>
+                  <span class="text">Select Language</span>
+                  <div class="menu">
+                    {{ range $key, $value := .languages }}
+                    <div class="item" data-value="{{ $key }}">{{ $value.Abbreviation }}</div>
+                    {{ end }}
+                    
+                    <!--<div class="item" data-value="ger">GER</div>-->
+                  </div>
+                </div>
+                <!--<div class="ui icon button" id="addImageDescriptionButton" data-tooltip="Lanuage (english)"><i class="globe icon"></i>ENG</div>-->
+                <div class="ui input">
+                  <input placeholder="Enter image description..." type="text" id="addImageDescriptionInput" class="mousetrap">
+                </div>
+                <button class="ui button" id="addImageDescriptionButton">Add</button>
+              </div>
+            </div>
+          </div>
+          {{ end }}
 
 
           <div class="row" id="loadingIndicator" style="display: none;">
@@ -826,8 +1113,8 @@
 
       <div class="row">
         <div class="ui centered grid">
-          <div class="four wide center aligned column">
-            <button class="ui fluid positive button" id="doneButton">Done</button>
+          <div class="five wide computer five wide tablet twelve wide mobile column">
+            <div class="ui positive fluid button" id="doneButton">Done</div>
           </div>
         </div>
       </div>
@@ -838,9 +1125,8 @@
         </div>
       </div>
 
-      {{ template "label_help_dlg.html" .}}
       {{ template "report_dlg.html" .}}
-      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" }}
+      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" "languages" .languages "type" .type }}
 
       {{ if eq .isModerator true }}
       {{ template "moderator_label_remove_dlg.html" dict "apiBaseUrl" .apiBaseUrl}}
@@ -856,7 +1142,13 @@
 
 </div>
 {{ template "footer.html" .}}
+  
 
+  <link href="css/shepherdjs/shepherd-theme-dark.css" rel="stylesheet">
+  <script src="js/popperjs/popper.min.js"></script>
+  <script src="js/shepherdjs/shepherd.js"></script>
+  
 </body>
+<script src="js/intros/label_intro.js"></script>
 
 </html>

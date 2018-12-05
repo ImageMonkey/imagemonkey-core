@@ -25,7 +25,7 @@ func loadSchema() error {
 	schemaPath := "../env/postgres/schema.sql"
 
 	//load schema
-	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -43,7 +43,7 @@ func loadDefaults() error {
 	defaultsPath := "../env/postgres/defaults.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -62,7 +62,7 @@ func installTriggers() error {
 	triggersPath := "../env/postgres/triggers.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -77,7 +77,7 @@ func installTriggers() error {
 
 func populateLabels() error {
 	var out, stderr bytes.Buffer
-	cmd := exec.Command("go", "run", "populate_labels.go", "common.go", "api_secrets.go", "--dryrun=false")
+	cmd := exec.Command("go", "run", "populate_labels.go", "api_secrets.go", "--dryrun=false")
 	cmd.Dir = "../src/"
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
@@ -96,7 +96,7 @@ func installUuidExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -114,7 +114,7 @@ func installPostgisExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -132,7 +132,7 @@ func installTemporalTablesExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -232,7 +232,7 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {
@@ -250,8 +250,8 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 		return err
 	}
 
-	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label) 
-							SELECT a.id, true FROM account a WHERE a.name = $1`, name)
+	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description) 
+							SELECT a.id, true, true FROM account a WHERE a.name = $1`, name)
 	if err != nil {
 		return err
 	}
@@ -456,6 +456,54 @@ func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabel(label string) (int32, e
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelUuid(labelUuid string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image_validation v 
+						   JOIN label l ON v.label_id = l.id
+						   WHERE l.uuid::text = $1`, labelUuid).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelSuggestions(label string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image_label_suggestion ils
+						   JOIN label_suggestion l ON l.id = ils.label_suggestion_id
+						   WHERE l.name = $1
+						 `, label).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumberOfTrendingLabelSuggestions() (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM trending_label_suggestion`).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64, error) {
+	productiveLabelIds := []int64{}
+
+	rows, err := p.db.Query(`SELECT t.productive_label_id FROM trending_label_suggestion t 
+							 WHERE t.productive_label_id is not null`)
+	if err != nil {
+		return productiveLabelIds, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var productiveLabelId int64
+		err = rows.Scan(&productiveLabelId)
+		if err != nil {
+			return productiveLabelIds, err
+		}
+
+		productiveLabelIds = append(productiveLabelIds, productiveLabelId)
+	}
+
+	return productiveLabelIds, nil
+}
+
 func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
 	var label string
 	err := p.db.QueryRow(`SELECT l.name
@@ -506,6 +554,31 @@ func (p *ImageMonkeyDatabase) GetLabelUuidFromName(label string) (string, error)
 							FROM label l 
 							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&uuid)
 	return uuid, err
+}
+
+func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
+	var labelId int64 
+	err := p.db.QueryRow(`SELECT l.id 
+							FROM label l 
+							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&labelId)
+	return labelId, err
+}
+
+func (p *ImageMonkeyDatabase) GetLabelIdFromUuid(labelUuid string) (int64, error) {
+	var labelId int64 
+	err := p.db.QueryRow(`SELECT l.id 
+							FROM label l 
+							WHERE l.uuid::text = $1`, labelUuid).Scan(&labelId)
+	return labelId, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumOfSentOfTrendingLabel(tendingLabel string) (int, error) {
+	var tendingLabelId int 
+	err := p.db.QueryRow(`SELECT t.num_of_last_sent 
+						  FROM trending_label_suggestion t
+						  JOIN label_suggestion l ON t.label_suggestion_id = l.id
+						  WHERE l.name = $1`, tendingLabel).Scan(&tendingLabelId)
+	return tendingLabelId, err
 }
 
 func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) error {
@@ -567,6 +640,134 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId strin
 	}
 	return 0, errors.New("missing result set")
 }
+
+func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]ImageDescriptionSummary, error) {
+	var descriptionSummaries []ImageDescriptionSummary
+
+	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state, l.name
+							 FROM image_description dsc
+							 JOIN language l ON l.id = dsc.language_id
+							 JOIN image i ON i.id = dsc.image_id
+							 WHERE i.key = $1
+							 ORDER BY dsc.id asc`, imageId)
+	if err != nil {
+		return descriptionSummaries, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var dsc ImageDescriptionSummary
+		var state string
+		err = rows.Scan(&dsc.Description, &dsc.NumOfValid, &dsc.Uuid, &state, &dsc.Language)
+		if err != nil {
+			return descriptionSummaries, err
+		}
+
+		if state == "unknown" {
+			dsc.State = ImageDescriptionStateUnknown
+		} else if state == "locked" {
+			dsc.State = ImageDescriptionStateLocked
+		} else if state == "unlocked" {
+			dsc.State = ImageDescriptionStateUnlocked
+		}
+
+		descriptionSummaries = append(descriptionSummaries, dsc)
+	}
+
+	return descriptionSummaries, nil
+}
+
+
+func (p *ImageMonkeyDatabase) GetModeratorWhoProcessedImageDescription(imageId string, imageDescription string) (string, error) {
+	rows, err := p.db.Query(`SELECT a.name
+							 FROM image_description dsc
+							 JOIN image i ON i.id = dsc.image_id
+							 JOIN account a ON a.id = dsc.processed_by
+							 WHERE i.key = $1 AND dsc.description = $2`, imageId, imageDescription)
+	if err != nil {
+		return "", err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var moderator string
+		err = rows.Scan(&moderator)
+		if err != nil {
+			return "", err
+		}
+
+		return moderator, nil
+	}
+	return "", errors.New("missing result set")
+}
+
+func (p *ImageMonkeyDatabase) IsImageUnlocked(imageId string) (bool, error) {
+	rows, err := p.db.Query(`SELECT unlocked FROM image i WHERE i.key = $1`, imageId)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var unlocked bool
+		err = rows.Scan(&unlocked)
+		if err != nil {
+			return false, err
+		}
+
+		return unlocked, nil
+	}
+	return false, errors.New("missing result set")
+}
+
+func (p *ImageMonkeyDatabase) IsImageInQuarantine(imageId string) (bool, error) {
+	rows, err := p.db.Query(`SELECT CASE 
+									 WHEN COUNT(*) <> 0 THEN true 
+									 ELSE false
+									END as in_quarantine
+							 FROM image_quarantine q 
+							 WHERE q.image_id IN (
+							 	SELECT i.id FROM image i WHERE i.key = $1
+							 )`, imageId)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var inQuarantine bool
+		err = rows.Scan(&inQuarantine)
+		if err != nil {
+			return false, err
+		}
+
+		return inQuarantine, nil
+	}
+	return false, errors.New("missing result set")
+}
+
+func (p *ImageMonkeyDatabase) DoLabelAccessorsBelongToMoreThanOneLabelId() (bool, error) {
+	rows, err := p.db.Query(`SELECT label_id 
+								FROM label_accessor
+								GROUP BY label_id
+								HAVING COUNT(label_id) > 1`)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()

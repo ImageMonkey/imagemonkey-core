@@ -1,4 +1,4 @@
-package main
+package commons
 
 import (
 	"math/rand"
@@ -20,7 +20,8 @@ import (
     "net/url"
     "errors"
     "github.com/gin-gonic/gin"
-    "./datastructures"
+    "../datastructures"
+    "strconv"
 )
 
 
@@ -36,16 +37,16 @@ func check(e error) {
     }
 }
 
-func random(min, max int) int {
+func Random(min, max int) int {
     rand.Seed(time.Now().Unix())
     return rand.Intn(max - min) + min
 }
 
-func pick(args ...interface{}) []interface{} {
+func Pick(args ...interface{}) []interface{} {
     return args
 }
 
-func hashImage(file io.Reader) (uint64, error){
+func HashImage(file io.Reader) (uint64, error){
     img, _, err := image.Decode(file)
     if err != nil {
         return 0, err
@@ -54,7 +55,7 @@ func hashImage(file io.Reader) (uint64, error){
     return imghash.Average(img), nil
 }
 
-func getImageInfo(file io.Reader) (datastructures.ImageInfo, error){
+func GetImageInfo(file io.Reader) (datastructures.ImageInfo, error){
     var imageInfo datastructures.ImageInfo
     imageInfo.Hash = 0
     imageInfo.Width = 0
@@ -137,7 +138,7 @@ func isPrivateSubnet(ipAddress net.IP) bool {
 }
 
 
-func getIPAddress(r *http.Request) string {
+func GetIPAddress(r *http.Request) string {
     for _, h := range []string{"X-Forwarded-For", "X-Real-IP"} {
         addresses := strings.Split(r.Header.Get(h), ",")
         // march from right to left until we get a public address
@@ -157,7 +158,7 @@ func getIPAddress(r *http.Request) string {
     return ""
 }
 
-func getLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
+func GetLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
     var words []string
     var labelMap datastructures.LabelMap
 
@@ -181,7 +182,7 @@ func getLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string
     return labelMap.LabelMapEntries, words, nil
 }
 
-func getLabelRefinementsMap(path string) (map[string]datastructures.LabelMapRefinementEntry, error) {
+func GetLabelRefinementsMap(path string) (map[string]datastructures.LabelMapRefinementEntry, error) {
     var labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry
 
     data, err := ioutil.ReadFile(path)
@@ -283,7 +284,7 @@ func (p *StatisticsPusher) PushAppAction(appIdentifier string, actionType string
 }
 
 
-func isAlphaNumeric(s string) bool {
+func IsAlphaNumeric(s string) bool {
     for _, c := range s {
         if (!(c > 47 && c < 58) && // numeric (0-9)
             !(c > 64 && c < 91) && // upper alpha (A-Z)
@@ -294,7 +295,7 @@ func isAlphaNumeric(s string) bool {
     return true
 }
 
-func isLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label string, sublabels []datastructures.Sublabel) bool {
+func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label string, sublabels []datastructures.Sublabel) bool {
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
@@ -313,7 +314,7 @@ func isLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label strin
     return false
 }
 
-func getLabelIdFromUrlParams(params url.Values) (string, error) {
+func GetLabelIdFromUrlParams(params url.Values) (string, error) {
     var labelId string
     labelId = ""
     if temp, ok := params["label_id"]; ok {
@@ -323,7 +324,7 @@ func getLabelIdFromUrlParams(params url.Values) (string, error) {
     return labelId, nil
 }
 
-func getValidationIdFromUrlParams(params url.Values) string {
+func GetValidationIdFromUrlParams(params url.Values) string {
     var validationId string
     validationId = ""
     if temp, ok := params["validation_id"]; ok {
@@ -333,7 +334,7 @@ func getValidationIdFromUrlParams(params url.Values) string {
     return validationId
 }
 
-func getExploreUrlParams(c *gin.Context) (string, bool, error) {
+func GetExploreUrlParams(c *gin.Context) (string, bool, error) {
     var query string
     var err error
 
@@ -363,7 +364,7 @@ func getExploreUrlParams(c *gin.Context) (string, bool, error) {
     return query, annotationsOnly, nil 
 }
 
-func getParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string) string {
+func GetParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string) string {
     params := c.Request.URL.Query()
 
     param := defaultIfNotFound
@@ -374,7 +375,17 @@ func getParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string
     return param
 }
 
-func getImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) string {
+func GetParamsFromUrlParams(c *gin.Context, name string) []string {
+    params := c.Request.URL.Query()
+
+    if temp, ok := params[name]; ok {
+        return temp
+    }
+
+    return []string{}
+}
+
+func GetImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) string {
     imageUrl := apiBaseUrl
     if unlocked {
         imageUrl += "v1/donation/" + imageId
@@ -383,4 +394,106 @@ func getImageUrlFromImageId(apiBaseUrl string, imageId string, unlocked bool) st
     }
 
     return imageUrl
+}
+
+func GetPublicBackups(path string) ([]datastructures.PublicBackup, error){
+    var publicBackups []datastructures.PublicBackup
+
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return publicBackups, err
+    }
+
+    err = json.Unmarshal(data, &publicBackups)
+    if err != nil {
+        return publicBackups, err
+    }
+
+    return publicBackups, nil
+}
+
+/*type ExtractRoIFromImageErrorType int
+
+const (
+  ExtractRoIFromImageSuccess ExtractRoIFromImageErrorType = 1 << iota
+  ExtractRoIFromImageInvalidRegionError
+  ExtractRoIFromImageInternalError
+)
+
+func ExtractRoIFromImage(path string, imageRegion datastructures.ImageRegion) ([]byte, string, ExtractRoIFromImageErrorType, error) {
+    imgType := "unknown"
+    buffer, err := bimg.Read(path)
+    if err != nil {
+      log.Error("[Extract From Image] Couldn't read image: ", err.Error())
+      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
+    }
+
+    img := bimg.NewImage(buffer)
+    imgSize, err := img.Size()
+    if err != nil {
+        return []byte{}, imgType, ExtractRoIFromImageInternalError, err
+    }
+
+    if imageRegion.Top < 0 || imageRegion.Left < 0 || imageRegion.Width < 0 || imageRegion.Height < 0 {
+        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
+    }
+
+    if imageRegion.Top > imgSize.Height || imageRegion.Height > imgSize.Height || 
+        imageRegion.Left > imgSize.Width || imageRegion.Width > imgSize.Width {
+        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
+    }
+
+    buf, err := img.Extract(imageRegion.Top, imageRegion.Left, imageRegion.Width, imageRegion.Height)
+    if err != nil {
+        log.Error("[Extract From Image] Couldn't read image: ", err.Error())
+      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
+    }
+
+    imgType = bimg.DetermineImageTypeName(buffer)
+
+    return buf, imgType, ExtractRoIFromImageSuccess, nil
+}*/
+
+func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
+    regionsOfInterest := GetParamsFromUrlParams(c, "roi")
+    imageRects := []image.Rectangle{}
+    
+    for _,regionOfInterest := range regionsOfInterest {
+        regionOfInterestParams := strings.Split(regionOfInterest, ",")
+
+        var err error
+        x0 := 0
+        y0 := 0
+        x1 := 0
+        y1 := 0
+
+        if len(regionOfInterestParams) == 4 {
+            x0, err = strconv.Atoi(regionOfInterestParams[0])
+            if err != nil {
+                return imageRects, err
+            }
+        } 
+        if len(regionOfInterestParams) >= 2 {
+            y0, err = strconv.Atoi(regionOfInterestParams[1])
+            if err != nil {
+                return imageRects, err
+            }
+        }
+        if len(regionOfInterestParams) >= 3 {
+            x1, err = strconv.Atoi(regionOfInterestParams[2])
+            if err != nil {
+                return imageRects, err
+            }
+        }
+        if len(regionOfInterestParams) >= 4 {
+            y1, err = strconv.Atoi(regionOfInterestParams[3])
+            if err != nil {
+                return imageRects, err
+            }
+        }
+
+        imageRects = append(imageRects, image.Rect(x0, y0, x1, y1))
+    }
+
+    return imageRects, nil
 }

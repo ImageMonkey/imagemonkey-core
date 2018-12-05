@@ -3,6 +3,20 @@ sleep infinity & PID=$!
 trap "kill $PID" INT TERM
 trap "kill 0" EXIT
 
+
+run_tests=false
+if [ "$1" ]; then
+	if [ "$1" == "--run-tests" ]; then
+		run_tests=true
+	fi
+fi
+
+if [ "$run_tests" = true ] ; then
+	echo -e "host\t all\t all\t 127.0.0.1/32\t trust" > /etc/postgresql/9.6/main/pg_hba.conf
+	echo -e "local\t all\t postgres\t ident" >> /etc/postgresql/9.6/main/pg_hba.conf
+fi
+
+
 echo "Starting PostgreSQL..."
 #start postgres
 /root/imagemonkey-core/env/docker/start_postgres.sh 
@@ -12,15 +26,20 @@ echo "Starting redis-server..."
 service redis-server start
 
 
-#copy original imagemonkey-web.conf file 
-cp /tmp/imagemonkey-web.conf.bak /etc/supervisor/conf.d/imagemonkey-web.conf
-#and replace api_base_url with API_BASE_URL from env variable (use @ as delimiter)
+#replace api_base_url with API_BASE_URL from env variable (use @ as delimiter)
 sed -i.bak 's@-api_base_url=xxxxxx@-api_base_url='"$API_BASE_URL"'@g' /etc/supervisor/conf.d/imagemonkey-web.conf
 
+
+#replace api_base_url with API_BASE_URL from env variable (use @ as delimiter)
+sed -i.bak 's@-api_base_url=xxxxxx@-api_base_url='"${API_BASE_URL}/"'@g' /etc/supervisor/conf.d/imagemonkey-api.conf
+
+echo "Starting netdata..."
+/usr/sbin/netdata
 
 echo "Starting supervisord..."
 #start supervisord
 service supervisor start && supervisorctl reread && supervisorctl update && supervisorctl restart all
+
 
 echo ""
 echo ""
@@ -28,13 +47,26 @@ echo ""
 echo "#############################################################"
 echo "################ ImageMonkey is ready #######################"
 echo "#############################################################"
-
 echo ""
 echo ""
-echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
-echo "This docker image is for development only - do NOT use it in production!"
 
-wait
+if [ "$run_tests" = true ] ; then
+	echo "Running Tests"
+	go get -u gopkg.in/resty.v1
+	mkdir -p /root/imagemonkey-core/unverified_donations
+	mkdir -p /root/imagemonkey-core/donations
+	cd /root/imagemonkey-core/tests/
+	supervisorctl stop all
+	supervisorctl start imagemonkey-api:imagemonkey-api0
+	go test -v -timeout=100m -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
+else
+	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
+	echo "This docker image is for development only - do NOT use it in production!"
 
-#shutting down
-echo "Exited"
+	wait
+
+	#shutting down
+	echo "Exited"
+fi
+
+

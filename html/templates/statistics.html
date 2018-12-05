@@ -43,6 +43,41 @@
       font-size: 25px;
     }
 
+    .num-of-total-donation { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
+    .num-of-total-validation { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
+    .num-of-total-annotation-refinement { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
+    .num-of-total-label { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
+    .num-of-total-label-suggestions { 
+      width: 100%;
+      text-align:center;
+      color: white;
+      font-size: 25px;
+    }
+
   </style>
   <script>
 
@@ -104,6 +139,32 @@
         annotationsPerCountry.push({{ .Count }});
         annotationsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
         annotationsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var annotationRefinementsPerCountry = []
+    var annotationRefinementsPerCountryCCode = []
+    var annotationRefinementsPerCountryColorPalette = []
+
+    {{ range .statistics.AnnotationRefinementsPerCountry }}
+      {{ if (ne .Count 0) }}
+        annotationRefinementsPerCountry.push({{ .Count }});
+        annotationRefinementsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        annotationRefinementsPerCountryColorPalette.push(getRandomColor());
+      {{ end }}
+    {{ end }}
+
+
+    var imageDescriptionsPerCountry = []
+    var imageDescriptionsPerCountryCCode = []
+    var imageDescriptionsPerCountryColorPalette = []
+
+    {{ range .statistics.ImageDescriptionsPerCountry }}
+      {{ if (ne .Count 0) }}
+        imageDescriptionsPerCountry.push({{ .Count }});
+        imageDescriptionsPerCountryCCode.push(getCountryName({{ .CountryCode }}));
+        imageDescriptionsPerCountryColorPalette.push(getRandomColor());
       {{ end }}
     {{ end }}
 
@@ -281,6 +342,44 @@
         }
     };
 
+    var annotationRefinementsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  annotationRefinementsPerCountry,
+                backgroundColor: annotationRefinementsPerCountryColorPalette,
+                label: 'Annotation Refinements per Country'
+            }],
+            labels: annotationRefinementsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Annotation Refinements per Country'
+            }
+        }
+    };
+
+    var imageDescriptionsPerCountryChartConfig = {
+        type: 'pie',
+        data: {
+            datasets: [{
+                data:  imageDescriptionsPerCountry,
+                backgroundColor: imageDescriptionsPerCountryColorPalette,
+                label: 'Image Descriptions per Country'
+            }],
+            labels: imageDescriptionsPerCountryCCode
+        },
+        options: {
+            responsive: true,
+            title: {
+              display: true,
+              text: 'Image Descriptions per Country'
+            }
+        }
+    };
+
 
 
 
@@ -296,6 +395,12 @@
 
         var annotationsPerCountryChartCtx = document.getElementById("annotations-per-country-chart").getContext("2d");
         window.annotationsPerCountry = new Chart(annotationsPerCountryChartCtx, annotationsPerCountryChartConfig);
+
+        var annotationRefinementsPerCountryChartCtx = document.getElementById("annotation-refinements-per-country-chart").getContext("2d");
+        window.annotationRefinementsPerCountry = new Chart(annotationRefinementsPerCountryChartCtx, annotationRefinementsPerCountryChartConfig);
+
+        var imageDescriptionsPerCountryChartCtx = document.getElementById("image-descriptions-per-country-chart").getContext("2d");
+        window.imageDescriptionsPerCountry = new Chart(imageDescriptionsPerCountryChartCtx, imageDescriptionsPerCountryChartConfig);
 
         var validationsPerAppChartCtx = document.getElementById("validations-per-app-chart").getContext("2d");
         window.validationsPerApp = new Chart(validationsPerAppChartCtx, validationsPerAppChartConfig);
@@ -331,93 +436,192 @@
 </div>-->
 
 <div class="ui stackable grid vertical stripe">
-  <div class="one wide column"></div>
 
-  <div class="three wide column">
-    <div class="ui pink inverted segment">
-      <h3 class="ui center aligned header">Unlabeled Donations</h3>
-      <div class="ui blue inverted relaxed divided list">
-        <div class="item">
-          <div class="row">
-            <div class="content">
-              <span class="num-of-unlabeled-donation"><p>{{ .statistics.NumOfUnlabeledDonations }}</p></span>
+  <div class="row">
+    <div class="one wide center aligned column"></div>
+
+    <div class="five wide center aligned column">
+      <div class="ui green inverted segment">
+        <h3 class="ui center aligned header">#Donations</h3>
+        <div class="ui inverted relaxed divided list">
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="num-of-total-donation"><p>{{ .statistics.NumOfDonations }}</p></span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-
-    <div class="ui blue inverted segment">
-      <h3 class="ui center aligned header">Donations</h3>
-      <div class="ui blue inverted relaxed divided list">
-        {{ range .statistics.Validations }}
-        <div class="item">
-          <div class="row">
-            <div class="content">
-              <span class="label"><p>{{ .Label }}</p></span>
-              <span class="num-of-donation"><p>{{ .Count }}</p></span>
+    <div class="five wide center aligned column">
+       <div class="ui purple inverted segment">
+        <h3 class="ui center aligned header">#Validations</h3>
+        <div class="ui inverted relaxed divided list">
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="num-of-total-validation"><p>{{ .statistics.NumOfValidations }}</p></span>
+              </div>
             </div>
           </div>
         </div>
-        {{ end }}
       </div>
     </div>
 
+    <div class="four wide center aligned column">
+      <div class="ui pink inverted segment">
+        <h3 class="ui center aligned header">#Unlabeled Donations</h3>
+        <div class="ui inverted relaxed divided list">
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="num-of-unlabeled-donation"><p>{{ .statistics.NumOfUnlabeledDonations }}</p></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="one wide center aligned column"></div>
   </div>
 
-  <div class="three wide column">
-    <div class="ui orange inverted segment">
-      <h3 class="ui center aligned header">Error Rate</h3>
-      <div class="ui orange inverted relaxed divided list">
-        {{ range .statistics.Validations }}
-          {{if (ne .Count 0)}}
+  <div class="row">
+    <div class="one wide center aligned column"></div>
+
+    <div class="five wide center aligned column">
+      <div class="ui teal inverted segment">
+        <h3 class="ui center aligned header">#Refinements</h3>
+        <div class="ui inverted relaxed divided list">
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="num-of-total-annotation-refinement"><p>{{ .statistics.NumOfAnnotationRefinements }}</p></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="five wide center aligned column">
+      <div class="ui violet inverted segment">
+        <h3 class="ui center aligned header">#Labels</h3>
+        <div class="ui inverted relaxed divided list">
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="num-of-total-label"><p>{{ .statistics.NumOfLabels }}</p></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="four wide center aligned column">
+      <div class="ui red inverted segment">
+        <h3 class="ui center aligned header">#Label Suggestions</h3>
+        <div class="ui inverted relaxed divided list">
+          <div class="item">
+            <div class="row">
+              <div class="content">
+                <span class="num-of-total-label-suggestions"><p>{{ .statistics.NumOfLabelSuggestions }}</p></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="one wide center aligned column"></div>
+  </div>
+
+  <div class="row">
+  </div>
+
+
+  <div class="row">
+    <div class="one wide center aligned column"></div>
+    <div class="five wide center aligned column">
+      <div class="ui blue inverted segment">
+        <h3 class="ui center aligned header">Donations</h3>
+        <div class="ui blue inverted relaxed divided list">
+          {{ range .statistics.Validations }}
           <div class="item">
             <div class="row">
               <div class="content">
                 <span class="label"><p>{{ .Label }}</p></span>
-                <span class="num-of-donation"><p>{{ round .ErrorRate 3 }}</p></span>
+                <span class="num-of-donation"><p>{{ .Count }}</p></span>
               </div>
             </div>
           </div>
           {{ end }}
-        {{ end }}
+        </div>
+      </div>
+    </div>
+    <div class="five wide center aligned column">
+      <div class="ui orange inverted segment">
+        <h3 class="ui center aligned header">Error Rate</h3>
+        <div class="ui orange inverted relaxed divided list">
+          {{ range .statistics.Validations }}
+            {{if (ne .Count 0)}}
+            <div class="item">
+              <div class="row">
+                <div class="content">
+                  <span class="label"><p>{{ .Label }}</p></span>
+                  <span class="num-of-donation"><p>{{ round .ErrorRate 3 }}</p></span>
+                </div>
+              </div>
+            </div>
+            {{ end }}
+          {{ end }}
+        </div>
+      </div>
+    </div>
+
+
+    <div class="five wide center aligned column">
+      <div class="row">
+        <canvas id="validations-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="donations-per-country-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="validations-per-country-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="annotations-per-country-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="annotation-refinements-per-country-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="image-descriptions-per-country-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="validations-per-app-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="donations-per-app-chart"/>
+      </div>
+      <br><br><br>
+      <div class="row">
+        <canvas id="annotations-per-app-chart"/>
       </div>
     </div>
   </div>
 
-
-  <div class="five wide column">
-    <div class="row">
-      <canvas id="validations-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="donations-per-country-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="validations-per-country-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="annotations-per-country-chart"/>
-    </div>
-  </div>
-
-  <div class="four wide column">
-    <div class="row">
-      <canvas id="validations-per-app-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="donations-per-app-chart"/>
-    </div>
-    <br><br><br>
-    <div class="row">
-      <canvas id="annotations-per-app-chart"/>
-    </div>
-  </div>
 
 </div>
 

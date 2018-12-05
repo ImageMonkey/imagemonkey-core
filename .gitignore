@@ -4,9 +4,7 @@ src/api_secrets.go
 src/statworker_secrets.go
 donations/*
 unverified_donations/*
-src/web.exe
-src/api.exe
-src/trendinglabelsworker.exe
+src/*.exe
 avatars/*
 src/shared_secrets.go
 quarantine/*

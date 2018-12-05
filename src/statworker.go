@@ -4,13 +4,13 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"flag"
-	"database/sql"
 	"github.com/garyburd/redigo/redis"
 	"time"
 	"encoding/json"
+	"github.com/getsentry/raven-go"
+	"./datastructures"
+	imagemonkeydb "./database"
 )
-
-var db *sql.DB
 
 func main(){
 	fmt.Printf("Starting Statistics Worker...\n")
@@ -19,20 +19,24 @@ func main(){
 
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 10, "Max connections to Redis")
+	singleshot := flag.Bool("singleshot", false, "Terminate after work is done")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 
 	flag.Parse()
 
 	var err error
 
-	//open database and make sure that we can ping it
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
+	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
-		log.Fatal("[Main] Couldn't open database: ", err.Error())
+		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
+	defer imageMonkeyDatabase.Close()
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("[Main] Couldn't ping database: ", err.Error())
+	if *useSentry {
+		log.Debug("Setting Sentry DSN")
+		raven.SetDSN(SENTRY_DSN)
+		raven.SetEnvironment("statworker")
 	}
 
 	//create redis pool
@@ -55,15 +59,15 @@ func main(){
 		data, err := redis.Bytes(redisConn.Do("LPOP", "contributions-per-country"))
     	if err == nil {
     		retryImmediately = true
-	    	var contributionsPerCountryRequest ContributionsPerCountryRequest
+	    	var contributionsPerCountryRequest datastructures.ContributionsPerCountryRequest
 	    	err = json.Unmarshal(data, &contributionsPerCountryRequest)
 	    	if err != nil{
 	    		retryImmediately = false
 	    		log.Debug("[Main] Couldn't unmarshal contributions_per_country request: ", err.Error())
 	    		
 	    	} else {
-		    	err = updateContributionsPerCountry(contributionsPerCountryRequest.Type, 
-		    									 	contributionsPerCountryRequest.CountryCode)
+		    	err = imageMonkeyDatabase.UpdateContributionsPerCountry(contributionsPerCountryRequest.Type, 
+		    									 						contributionsPerCountryRequest.CountryCode)
 		    	if err != nil {
 		    		retryImmediately = false
 		    	}
@@ -73,15 +77,15 @@ func main(){
 		data, err = redis.Bytes(redisConn.Do("LPOP", "contributions-per-app"))
 		if err == nil {
 			retryImmediately = true
-	    	var contributionsPerAppRequest ContributionsPerAppRequest
+	    	var contributionsPerAppRequest datastructures.ContributionsPerAppRequest
 	    	err = json.Unmarshal(data, &contributionsPerAppRequest)
 	    	if err != nil{
 	    		retryImmediately = false
 	    		log.Debug("[Main] Couldn't unmarshal contributions_per_app request: ", err.Error())
 	    		
 	    	} else {
-		    	err = updateContributionsPerApp(contributionsPerAppRequest.Type, 
-		    									 	contributionsPerAppRequest.AppIdentifier)
+		    	err = imageMonkeyDatabase.UpdateContributionsPerApp(contributionsPerAppRequest.Type, 
+		    									 					contributionsPerAppRequest.AppIdentifier)
 		    	if err != nil {
 		    		retryImmediately = false
 		    	}
@@ -91,6 +95,9 @@ func main(){
 		redisConn.Close()
 
 		if !retryImmediately {
+			if *singleshot {
+				return
+			}
 			time.Sleep((time.Second * 2)) //sleep for two seconds
 		}
 

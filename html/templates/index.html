@@ -37,9 +37,13 @@
   $(document).ready(function(){
     var annotationStatistics = {{ .annotationStatistics }};
     var validationStatistics = {{ .validationStatistics }};
+    var annotationRefinementStatistics = {{ .annotationRefinementStatistics }};
+    var imageDescriptionStatistics = {{ .imageDescriptionStatistics }};
 
     var numOfAnnotations = [];
     var numOfValidations = [];
+    var numOfImageDescriptions = [];
+    var numOfAnnotationRefinements = [];
     var dates = [];
     var detailedActivityData = null;
     var currentDetailedActivityIdx = -1;
@@ -50,10 +54,14 @@
     $('#showActivityDetailsButton').html('<i class="down arrow icon"></i> Show Details');
 
 
-    if(annotationStatistics.length === validationStatistics.length) {
+    if((annotationStatistics.length === validationStatistics.length) 
+      && (annotationStatistics.length === annotationRefinementStatistics.length)
+      && (annotationStatistics.length === imageDescriptionStatistics.length)) {
       for(var i = 0; i < annotationStatistics.length; i++) {
         numOfAnnotations.push(annotationStatistics[i]["value"]);
         numOfValidations.push(validationStatistics[i]["value"]);
+        numOfAnnotationRefinements.push(annotationRefinementStatistics[i]["value"]);
+        numOfImageDescriptions.push(imageDescriptionStatistics[i]["value"]);
         dates.push(annotationStatistics[i]["date"]);
       }
     }
@@ -128,26 +136,48 @@
       });
     }
 
+    var isMobile = false;
+    var maintainAspectRatio = true;
+    if (/Mobi/.test(navigator.userAgent)) {
+      isMobile = true;
+      maintainAspectRatio = false;
+    }
+
 
     var statisticsChartConfig = {
         type: "bar",
         data: {
             datasets: [
               {
-                data:  numOfAnnotations,
+                data: numOfAnnotations,
                 backgroundColor: "#0584cd",
-                label: "Annotations"
+                label: "Annotations",
+                stack: 2 //stack annotations
               },
               {
-                data:  numOfValidations,
+                data: numOfAnnotationRefinements,
+                backgroundColor: "green",
+                label: "Refinements",
+                stack: 2 //...and refinements
+              },
+              {
+                data: numOfValidations,
                 backgroundColor: "red",
-                label: "Validations"
+                label: "Validations",
+                stack: 0
+              },
+              {
+                data: numOfImageDescriptions,
+                backgroundColor: "orange",
+                label: "Descriptions",
+                stack: 1
               }
             ],
             labels: dates
         },
         options: {
             responsive: true,
+            maintainAspectRatio: maintainAspectRatio,
             title: {
               display: true,
               text: "Activity (last 30 days)",
@@ -156,14 +186,16 @@
             },
             scales: {
               xAxes: [{ 
-                  ticks: {
-                    fontColor: "white", // this here
-                  },
+                stacked: true,
+                ticks: {
+                  fontColor: "white",
+                },
               }],
               yAxes: [{
-                  ticks: {
-                    fontColor: "white", // this here
-                  },
+                stacked: true,
+                ticks: {
+                  fontColor: "white",
+                },
               }],
             },
             legend: {
@@ -177,6 +209,9 @@
 
     var statisticsChartCtx = document.getElementById("statisticsChart").getContext("2d");
     window.statisticsChart = new Chart(statisticsChartCtx, statisticsChartConfig);
+
+    if (isMobile)
+      $("#statisticsChartContainer").height("300px");
 
     $("#showActivityDetailsButton").click(function(e) {
       $('#detailedActivity').transition('fly down');   
@@ -217,7 +252,7 @@
 
       {{ template "pointing_menu.html" .}}  
 
-      <div class="ui text container">
+      <!--<div class="ui text container">-->
         <h1></h1>
         <h1></h1>
         <img class="ui centered medium image" src="img/logo.png">
@@ -229,13 +264,13 @@
         <h1 style="font-size:50px;">#{{ .numOfDonations }}</h1>
         <p style="font-size:25px; margin-top:-15px;">Donations</p>
 
-        <h1 class="ui inverted header"></h1>
+        <!--<h3 class="ui inverted header"></h3>-->
 
-        <div class="ui sixteen wide center aligned grid">
-          <div class="sixteen wide centered column">
+        <div class="ui sixteen wide center aligned grid" style="margin-top: 0.5em;">
+          <div class="ten wide centered column" id="statisticsChartContainer">
             <canvas id="statisticsChart"/>
           </div>
-          <div class="sixteen wide centered column">
+          <div class="ten wide centered column">
             <div class="ui fluid labeled icon button" id="showActivityDetailsButton"></div>
             <br><br>
 
@@ -267,18 +302,34 @@
 
         
 
-      </div>
+      <!--</div>-->
 
     </div>
     <div class="ui stackable center aligned grid vertical stripe">
         <div class="row">
           <div class="two wide column"></div>
           <div class="six wide left aligned column">
-            <h3 class="ui header">Easy as pie</h3>
+            <h3 class="ui header">
+              <i class="thumbs up icon"></i>
+              <div class="content">
+              Easy as pie
+              </div>
+            </h3>
             <p>Donating a photo should be as easy as clicking a single button. Everybody should be able do it. Everywhere.</p>
-            <h3 class="ui header">Publicly available</h3>
-            <p>Image datasets should be publicly available. Everybody should have access to it.</p>
-            <h3 class="ui header">Install your own</h3>
+            <h3 class="ui header">
+              <i class="archive icon"></i>
+              <div class="content">
+              Public Backup
+              </div>
+            </h3>
+            <p>All data will be backed up to the Internet Archive on a regular basis. <a href="/public_backup">Learn More</a></p>
+
+            <h3 class="ui header">
+              <i class="plug icon"></i>
+              <div class="content">
+              Install your own
+              </div>
+            </h3>
             <p>Want to host your own image collecting service? Fork us on <a href="https://github.com/bbernhard/imagemonkey-core">Github</a></p>
           </div>
           <div class="six wide right floated column">

@@ -77,6 +77,30 @@ type Image struct {
     AllLabels []LabelMeEntry `json:"all_labels"`
 }
 
+type LockedImage struct {
+    Id string `json:"uuid"`
+    Labels string `json:"labels"`
+    Provider string `json:"provider"`
+    Width int32 `json:"width,omitempty"`
+    Height int32 `json:"height,omitempty"`
+}
+
+type ImageToLabel struct {
+    Id string `json:"uuid"`
+    Label string `json:"label"`
+    Sublabel string `json:"sublabel"`
+    Provider string `json:"provider"`
+    Probability float32 `json:"probability"`
+    NumOfValid int32 `json:"num_yes"`
+    NumOfInvalid int32 `json:"num_no"`
+    Unlocked bool `json:"unlocked,omitempty"`
+    Width int32 `json:"width,omitempty"`
+    Height int32 `json:"height,omitempty"`
+    Annotations []json.RawMessage `json:"annotations"`
+    AllLabels []LabelMeEntry `json:"all_labels"`
+    ImageDescriptions []json.RawMessage `json:"img_descriptions"`
+}
+
 type ValidationImage struct {
     Id string `json:"uuid"`
     Provider string `json:"provider"`
@@ -96,14 +120,17 @@ type UnannotatedImage struct {
     Id string `json:"uuid"`
     Unlocked bool `json:"unlocked"`
     Url string `json:"url"`
-    Label string `json:"label"`
-    Sublabel string `json:"sublabel"`
     Provider string `json:"provider"`
     Width int32 `json:"width"`
     Height int32 `json:"height"`
     Validation struct {
         Id string `json:"uuid"`
     } `json:"validation"`
+    Label struct {
+        Label string `json:"label"`
+        Sublabel string `json:"sublabel"`
+        Accessor string `json:"accessor"`
+    } `json:"label"`
     AutoAnnotations []json.RawMessage `json:"auto_annotations,omitempty"`
 }
 
@@ -115,6 +142,7 @@ type ImageLabel struct {
         Provider string `json:"provider"`
         Width int32 `json:"width"`
         Height int32 `json:"height"`
+        Descriptions []json.RawMessage `json:"descriptions"`
     } `json:"image"`
 
     Labels[] struct {
@@ -176,6 +204,11 @@ type ValidationStat struct {
     TotalValidations int `json:"total_validations"`
 }
 
+type ImageDescriptionsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
 type DonationsPerCountryStat struct {
     CountryCode string `json:"country_code"`
     Count int64 `json:"num"`
@@ -187,6 +220,11 @@ type ValidationsPerCountryStat struct {
 }
 
 type AnnotationsPerCountryStat struct {
+    CountryCode string `json:"country_code"`
+    Count int64 `json:"num"`
+}
+
+type AnnotationRefinementsPerCountryStat struct {
     CountryCode string `json:"country_code"`
     Count int64 `json:"num"`
 }
@@ -206,15 +244,45 @@ type AnnotationsPerAppStat struct {
     Count int64 `json:"num"`
 }
 
+type AnnotatedStat struct {
+    Label struct {
+        Id string `json:"uuid"`
+        Name string `json:"name"`
+    } `json:"label"`
+    Num struct {
+        Completed int64 `json:"completed"`
+        Total int64 `json:"total"`
+    } `json:"num"`
+}
+
+type ValidatedStat struct {
+    Label struct {
+        Id string `json:"uuid"`
+        Name string `json:"name"`
+    } `json:"label"`
+    Num struct {
+        Completed int64 `json:"completed"`
+        Total int64 `json:"total"`
+    } `json:"num"`
+}
+
 type Statistics struct {
     Validations []ValidationStat `json:"validations"`
     DonationsPerCountry []DonationsPerCountryStat `json:"donations_per_country"`
     ValidationsPerCountry []ValidationsPerCountryStat `json:"validations_per_country"`
     AnnotationsPerCountry []AnnotationsPerCountryStat `json:"annotations_per_country"`
+    AnnotationRefinementsPerCountry []AnnotationRefinementsPerCountryStat `json:"annotation_refinements_per_country"`
+    ImageDescriptionsPerCountry []ImageDescriptionsPerCountryStat `json:"image_descriptions_per_country"`
     DonationsPerApp []DonationsPerAppStat `json:"donations_per_app"`
     ValidationsPerApp []ValidationsPerAppStat `json:"validations_per_app"`
     AnnotationsPerApp []AnnotationsPerAppStat `json:"annotations_per_app"`
     NumOfUnlabeledDonations int64 `json:"num_of_unlabeled_donations"`
+    NumOfDonations int64 `json:"num_of_donations"`
+    NumOfValidations int64 `json:"num_of_validations"`
+    NumOfAnnotations int64 `json:"num_of_annotations"`
+    NumOfAnnotationRefinements int64 `json:"num_of_annotation_refinements"`
+    NumOfLabels int64 `json:"num_of_labels"`
+    NumOfLabelSuggestions int64 `json:"num_of_label_suggestions"`
 }
 
 type UnannotatedValidation struct {
@@ -317,6 +385,9 @@ type UserStatistics struct {
 
 type UserPermissions struct {
     CanRemoveLabel bool `json:"can_remove_label"`
+    CanUnlockImageDescription bool `json:"can_unlock_image_description"`
+    CanUnlockImage bool `json:"can_unlock_image"`
+    CanMonitorSystem bool `json:"can_monitor_system"`
 }
 
 type UserInfo struct {
@@ -361,6 +432,10 @@ type AnnotationTask struct {
         Width int32 `json:"width"`
         Height int32 `json:"height"`
     } `json:"image"`
+
+    Label struct {
+        Accessor string `json:"accessor"`
+    } `json:"label"`
 
     Id string `json:"uuid"`
 }
@@ -517,4 +592,94 @@ type LabelMapRefinementEntry struct {
 type UpdateAnnotationCoverageRequest struct {
     Uuid string `json:"uuid"`
     Type string `json:"type"`
+}
+
+type ImageDescription struct {
+    Description string `json:"description"`
+    Language string `json:"language"`
+}
+
+
+type ImageDesc struct {
+    Text string `json:"text"`
+    Uuid string `json:"uuid"`
+    Language string `json:"language"`
+}
+
+type DescriptionsPerImage struct {
+    Image struct {
+        Id string `json:"uuid"`
+        Descriptions []ImageDesc `json:"descriptions"`
+    } `json:"image"`
+}
+
+type Validation struct {
+    Id string `json:"uuid"`
+    NumOfYes string `json:"num_of_yes"`
+    NumOfNo string `json:"num_of_no"`
+    Image struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+    } `json:"image"`
+
+    Label struct {
+        Name string `json:"name"`
+    } `json:"label"`
+}
+
+type LockedImageAction struct {
+    ImageId string `json:"uuid"`
+    Action string `json:"action"`
+}
+
+type PublicBackup struct {
+    Name string `json:"name"`
+    Created string `json:"created"`
+    Size struct {
+        Value float32 `json:"value"`
+        Unit string `json:"unit"`
+    } `json:"size"`
+    Download struct {
+        Http string `json:"http"`
+        Torrent string `json:"torrent"`
+    } `json:"download"`
+}
+
+type ValidationCount struct {
+    Label string `json:"label"`
+    Count int `json:"count"`
+}
+
+type AnnotationCount struct {
+    Label string `json:"label"`
+    Count int `json:"count"`
+}
+
+type ImageCollection struct {
+    Name string `json:"name"`
+    Description string `json:"description"`
+    Count string `json:"count"`
+
+    SampleImage struct {
+        Id string `json:"uuid"`
+        Width int32 `json:"width"`
+        Height int32 `json:"height"`
+        Unlocked bool `json:"unlocked"`
+        Url string `json:"url"`
+    } `json:"sample_image"`
+}
+
+/*type ImageRegion struct {
+    Top int `json:"top"`
+    Left int `json:"left"`
+    Width int `json:"width"`
+    Height int `json:"height"`
+}*/
+
+type LabelAccessorDetail struct {
+    Accessor string `json:"accessor"`
+    Parent string `json:"parent_accessor"`
 }

@@ -29,7 +29,7 @@ func TestGetUnannotatedValidations(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 	
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -41,13 +41,13 @@ func TestMultipleGetUnannotatedValidations(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 	
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "dog")
-	testLabelImage(t, imageId, "cat")
+	testLabelImage(t, imageId, "dog", "")
+	testLabelImage(t, imageId, "cat", "")
 
 	testGetUnannotatedValidations(t, imageId, "", 200, 3)
 }
@@ -56,13 +56,13 @@ func TestMultipleGetUnannotatedValidations2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 	
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "dog")
-	testLabelImage(t, imageId, "cat")
+	testLabelImage(t, imageId, "dog", "")
+	testLabelImage(t, imageId, "cat", "")
 
 	testAnnotate(t, imageId, "dog", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
@@ -75,7 +75,7 @@ func TestGetUnannotatedValidationsButLocked(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 	
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -90,7 +90,7 @@ func TestGetUnannotatedValidationsLockedButOwnDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 	
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -105,7 +105,7 @@ func TestGetUnannotatedValidationsLockedOwnDonationButQuarantine(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 	
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)

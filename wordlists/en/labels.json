@@ -76,8 +76,8 @@
 					"accessors": [".type"],
 					"answers": [
 						{
-							"name": "dog",
-							"uuid": "bac46d8e-0655-46d5-a393-36c69a18ee2c"
+							"name": "adult",
+							"uuid": "06fd1e49-b580-4ca6-aaff-34ca39062995"
 						},
 						{ 
 							"name": "puppy",
@@ -961,6 +961,121 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "651b2ef9-3c5c-4f73-900a-4f344de4b644"
+		},
+		"statue": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f641d6e9-a887-4d8c-ae9d-4d9e27fdc279"
+		},
+		"spectacles": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1a139fb1-9c1a-4f2d-8b3a-5dab56bd8e43"
+		},
+		"floor": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cab8e973-3c19-426b-8239-ccc5a899368b"
+		},
+		"basket": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "030f8011-453a-42d6-985f-ce7cdd17a6db"
+		},
+		"napkin": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f5dda70a-8316-4833-83be-f94b62c0e381"
+		},
+		"plant": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c98e3948-040b-43d8-bd3a-97536de10a9e"
+		},
+		"pen": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cabd5ba9-fd89-4310-be88-957a82cc481f"
+		},
+		"camera": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "51b99c35-8c36-4862-83f2-5b361df36aef"
+		},
+		"snow": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f958ea3d-5b45-4109-a606-9b6342712f00"
+		},
+		"flower": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7528260c-bc75-48d5-9f9a-30c8c3dcdf8f"
+		},
+		"umbrella": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "09d6f999-0e55-4bd7-a9bf-b658389d7a3d"
+		},
+		"bed": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "40735064-ecac-47c3-8020-3adafcad7a99"
+		},
+		"spider": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f7a12c25-bc80-4f58-883b-5c237f26d893"
+		},
+		"chain": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "5a427d30-b685-46e1-bbdb-2f19f47f56cd"
+		},
+		"jellyfish": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "16cc13ae-f7e8-4347-b362-9c70a61f74d8"
+		},
+		"strawberry": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "661797ef-31f9-4969-9c22-0b5704603969"
+		},
+		"snake": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8e650c03-85a0-445d-9706-7a69a94b43c9"
+		},
+		"frog": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "fdd05a68-ff42-47f8-8905-00611b3a17bf"
+		},
+		"soil": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d3ca96c8-13e3-44a3-b14e-72032e881139"
+		},
+		"bee": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "26233e92-cc48-4e80-bc47-5f8c84b4ab47"
+		},
+		"beetle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2a19e98a-3b0b-4a7d-85c7-31a49dfe3cf5"
+		},
+		"bottle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cbe76e44-759e-4edd-a5a3-87ef98e398a3"
+		},
+		"rabbit": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a86d4227-50c3-4ded-ace6-02d7321af718"
 		}
 	}
 }

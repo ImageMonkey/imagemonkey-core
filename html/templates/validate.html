@@ -13,6 +13,8 @@
   
   <link rel="stylesheet" href="css/semantic.min.css"/>
   <script src="js/jquery.min.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="css/jquery-ui.css">
   <script src="js/semantic.min.js"></script> 
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/common_sub.css"/>
@@ -20,66 +22,34 @@
   <script src="js/dropzone.js"></script>
   <link rel="stylesheet" href="css/dropzone.css">
 
-  <link rel="stylesheet" href="css/justifiedGallery.css">
-  <script src="js/justifiedGallery.min.js"></script>
-  <script src="js/jquery-ui.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
   <script src="js/fingerprint2.min.js"></script>
   <script src="js/chart.bundle.min.js"></script>
   <script src="js/poll.js"></script>
-
+  <script src="js/justified-layout.min.js"></script>
+  <script src="js/infinitescroll.js?v=2"></script>
+  <link rel="stylesheet" href="css/balloon/balloon.min.css">
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
 
   <style>
-  #imageGrid .ui-selecting { border: 2px dashed #ff0000; }
-  #imageGrid .ui-selected { border: 2px solid #ff0000; }
+  #validateDoneButton{
+    /*display: none;*/ /* Hidden by default */
+    position: fixed; /* Fixed/sticky position */
+    bottom: 20px; /* Place the button at the bottom of the page */
+    /*right: 30px;*/ /* Place the button 30px from the right */
+    z-index: 99; /* Make sure it does not overlap */
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
   </style>
 
   <script type="text/javascript">
-  //global image validation map that holds if a image is marked as valid or not
-  var imageValidationMapping = {};
-  var labelId = null;
-  var imageId = null;
 
-  function populateImageGrid(data){
-    imageValidationMapping = {};
-    $('#imageGrid').justifiedGallery('destroy');
-    $('#imageGrid').html(''); //clear all images inside imageGrid (unfortunately the 'destroy' doesn't do that automatically)
-    $('#multiValidateDoneButton').hide();
-    $('#multivalidationLabel').hide();
-    $('#multiValidationInfoText').hide();
-
-    var donations = data["donations"];
-    for(var i = 0; i < donations.length; i++){
-      var imageEndpoint = "{{ .apiBaseUrl }}/v1/donation/" + donations[i].uuid;
-      $('#imageGrid').append('<div class="img-container">' +
-        '<img src="' + imageEndpoint + '" validationId="' + donations[i].uuid + '" />' + 
-        '</div>');
-
-      //we just loaded some images, so no image is marked as valid yet
-      imageValidationMapping[donations[i].uuid] = false;
-    }
-
-    $("#multivalidationLabel").text(data.label);
-
-    $("#imageGrid").justifiedGallery({
-      margins: 5,
-      rowHeight: 150,
-      lastRow: 'center'
-    });
-  }
-
-  function isMultiValidationMode(){
-    if($("#multiValidationContainer").is(":visible"))
-      return true;
-    return false;
-  }
-
-  function getRandomImages(){
+  function getNextImage() {
     showHideControls(false, false);
+    $("#image").attr("src", ""); //clear image
 
-    var multiValidationMode = isMultiValidationMode();
-    var url = ("{{ .apiBaseUrl }}/v1/validation?limit=" + (multiValidationMode ? 8 : 1) + "&grouped=" + (multiValidationMode ? "true" : "false") 
-                + ((labelId === null) ? "" : ("&label_id=" + labelId)) + ((imageId === null) ? "" : ("&image_id=" + imageId)));
+    var url = "{{ .apiBaseUrl }}/v1/validation";
 
     $.ajax({
       url: url,
@@ -89,95 +59,35 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
-        if(multiValidationMode){
-          populateImageGrid(data);
-        }
-        else{
-          $("#image").attr("imageId", data.image.uuid);
-          $("#image").attr("validationId", data.uuid);
-          setLabel(data.label, data.sublabel);
-          setPollData(data["num_yes"], data["num_no"]);
+        $("#image").attr("imageId", data.image.uuid);
+        $("#image").attr("validationId", data.uuid);
+        setLabel(data.label, data.sublabel);
+        setPollData(data["num_yes"], data["num_no"]);
 
-          var downloadingImage = new Image();
-          downloadingImage.onload = function(){
+        var downloadingImage = new Image();
+        downloadingImage.onload = function(){
           $("#image").attr("src", this.src);
-            showHideControls(true, data.image.unlocked);
-            $("#fullscreenDlgContentImage").attr("src", this.src);
-          }
+          showHideControls(true, data.image.unlocked);
+          $("#fullscreenDlgContentImage").attr("src", this.src);
+        }
 
-          var token = getCookie("imagemonkey");
-          if(token === "")
+        var token = getCookie("imagemonkey");
+        if(token === "")
+          downloadingImage.src = data.image.url;
+        else{
+          if(data.image.unlocked)
             downloadingImage.src = data.image.url;
-          else{
-            if(data.image.unlocked)
-              downloadingImage.src = data.image.url;
-            else //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
-              downloadingImage.src = data.image.url + "?token=" + token;
-          }
-
+          else //only provide token, if resource is still locked (important as we are using a Content Delivery Network and the /donation endpoint is cached)
+            downloadingImage.src = data.image.url + "?token=" + token;
         }
       }
     });
   }
 
-  function multiValidate(data, browserFingerprint){
-    var headers = {}
-    if(browserFingerprint !== null)
-      headers['X-Browser-Fingerprint'] = browserFingerprint;
-
-    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
-
-    $.ajax({
-      url: '{{ .apiBaseUrl }}/v1/validation/validate',
-      dataType: 'json',
-      type: 'PATCH',
-      headers: headers,
-      data: JSON.stringify(data),
-      success: function(data){
-        getRandomImages();
-      }
-    });
-  }
-
-  function getMultiValidationRequestData(){
-    data = {}
-    validations = []
-    containsOnlyInvalid = true;
-    for (var key in imageValidationMapping) {
-      if (imageValidationMapping.hasOwnProperty(key)) {
-        validations.push({"uuid": key, "valid": ((imageValidationMapping[key]) ? "yes" : "no")})
-        if(imageValidationMapping[key])  containsOnlyInvalid = false;
-      }
-    }
-
-    data["validations"] = validations;
-    return {
-      data : data,
-      containsOnlyInvalid: containsOnlyInvalid
-    }
-
-  }
-
-  function toggleValidationMode(){
-    if(isMultiValidationMode()){
-      $("#singleValidationContainer").show();
-      $("#multiValidationContainer").hide();
-    }
-    else {
-      //we can't display poll in multi validation mode
-      //as num_yes/num_no might be different for each image 
-      $("#showMePollButton").hide();
-      $("#poll-chart").hide();
-
-      $("#singleValidationContainer").hide();
-      $("#multiValidationContainer").show();
-    }
-  }
-
-  function setLabel(label, sublabel){
+  function setLabel(label, sublabel) {
     $("#label").attr("label", label)
     $("#label").attr("sublabel", sublabel)
-    if(sublabel === ""){
+    if(sublabel === "") {
       $("#label").text(label)
     } 
     else {
@@ -185,63 +95,41 @@
     }
   }
 
-  function showHideControls(show, imageUnlocked){
-    if(!isMultiValidationMode()){ //multi validation mode has it's own loading indicator (directly embedded in justified gallery) 
-      if(show){
-        $('#validationContainerSegment').css('visibility','visible');
-        $('#loadingIndicator').addClass('active');
-        $('#loadingIndicator').hide();
+  function showHideControls(show, imageUnlocked) {
+    if(show){
+      $('#validationContainerSegment').show();
+      $('#loadingIndicator').hide();
 
-        if(isPollDataEmpty()){ //only show poll button if there is actual data available
-          $('#showMePollButton').hide();
-        }
-        else
-          $('#showMePollButton').show();
-        
-        $('#image').css('visibility','visible');
-
-        if(imageUnlocked)
-          $("#imageLockedLabel").hide();
-        else
-          $("#imageLockedLabel").show();
-      }
-      else {
-        $('#poll-chart').hide();
-        $('#validationContainerSegment').css('visibility','hidden');
-        $('#loadingIndicator').removeClass('active');
-        $('#loadingIndicator').show();
+      if(isPollDataEmpty()){ //only show poll button if there is actual data available
         $('#showMePollButton').hide();
-        $('#image').css('visibility','hidden');
-        $("#imageLockedLabel").hide();
       }
+      else
+        $('#showMePollButton').show();
+        
+      $('#image').show();
+
+      if(imageUnlocked)
+        $('#imageLockedLabel').hide();
+      else
+        $('#imageLockedLabel').show();
+
+      $('#mainArea').show();
+      $("#gotoModeContainer").show();
+    }
+    else {
+      $('#poll-chart').hide();
+      $('#validationContainerSegment').hide();
+      $('#showMePollButton').hide();
+      $('#image').hide();
+      $('#imageLockedLabel').hide();
+      $('#loadingIndicator').show();
+      $('#mainArea').hide();
+      $("#gotoModeContainer").hide();
     }
   }
 
   $(document).ready(function(){
     var browserFingerprint = null;
-
-    labelId = {{ .labelId }};
-    if(labelId === "")
-      labelId = null;
-
-    imageId = {{ .imageId }};
-    if(imageId === "")
-      imageId = null;
-
-    $("#multiValidationContainer").hide();
-
-    setLabel({{ .randomImage.Label }}, {{ .randomImage.Sublabel }});
-
-    setPollData({{ .randomImage.Validation.NumOfValid }}, {{ .randomImage.Validation.NumOfInvalid }});
-    showHideControls(false, false);
-
-    //switch between multi-validation mode and single-validation mode with 'm'
-    Mousetrap.bind('m', function() { 
-      toggleValidationMode();
-
-      getRandomImages();
-    });
-
 
     $('#imageClick').click( function(e) {
       e.preventDefault();
@@ -254,32 +142,7 @@
       $("#showImageFullscreenDlg").modal("hide");
       return false;
     });
-      
 
-    //image grid is loaded, we can now show the "done" button
-    $('#imageGrid').on('jg.complete', function() {
-      $('#multiValidateDoneButton').show();
-      $('#multivalidationLabel').show();
-      $('#multiValidationInfoText').show();
-    });
-
-
-    $("#imageGrid").selectable({
-      filter: ':not(div[class*="img-container"])'
-    });
-
-    $("#imageGrid").selectable({
-      selected: function(event, ui) {
-        imageValidationMapping[$(ui.selected).attr('validationId')] = true;
-      },
-      unselected: function(event, ui) {
-        imageValidationMapping[$(ui.unselected).attr('validationId')] = false;
-      }
-    });
-
-    $("#imageGrid").on("selectablestart", function (event, ui) {
-      event.originalEvent.ctrlKey = true;
-    });
 
     $("#showMePollButton").click(function(e) {
       createPoll();
@@ -292,18 +155,14 @@
     $("#yesButton").add('#noButton').click(function(e) {
       var action = (e.target.id === "yesButton") ? "yes" : "no";
 
-      //var data = {"label": $("#label").attr("label"), "sublabel": $("#label").attr("sublabel")}
-
       var headers = {}
       if(browserFingerprint !== null)
         headers['X-Browser-Fingerprint'] = browserFingerprint;
 
       headers['X-App-Identifier'] = '{{ .appIdentifier }}';
 
-      if(!isMultiValidationMode()){
-        showHideControls(false, false);
-        showHidePoll(false);
-      }
+      showHideControls(false, false);
+      showHidePoll(false);
 
       e.preventDefault();
       var url = '{{ .apiBaseUrl }}/v1/validation/' + $("#image").attr("validationId") + '/validate/' + action;
@@ -311,7 +170,6 @@
         url: url,
         dataType: 'json',
         type: 'POST',
-        //data: JSON.stringify(data),
         headers: headers,
         beforeSend: function(xhr) {
             xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
@@ -319,15 +177,14 @@
         success: function(data){
           {{ if .onlyOnce }}
           $("#loadingIndicator").hide();
-          $("#multiValidationContainer").hide();
           $("#yesButton").hide();
           $("#noButton").hide();
           $("#image").attr("src", "");
           $("#label").hide();
-          $("#singleValidationContainer").show();
+          $("#validationContainer").show();
           $("#thankYouMessage").fadeIn("slow");
           {{ else }}
-          getRandomImages();
+          getNextImage();
           {{ end }}
 
           {{ if .callback }}
@@ -337,33 +194,17 @@
       });
     });
 
-    $("#confirmNoValidOkButton").click(function(e) {
-      e.preventDefault();
-      multiValidate(getMultiValidationRequestData().data, browserFingerprint);
-    });
+    {{ if eq .mode "default" }}
+    getNextImage();
+    {{ end }}
 
-
-    //when user wants to submit a multi validation, check if we have at least one positively labeled image. If not, show a confirmation
-    //dialog (it's very unlikey that we don't have a single positvely labeled image)
-    $("#multiValidateDoneButton").click(function(e) {
-      e.preventDefault();
-
-      data = getMultiValidationRequestData();
-
-      if(data.containsOnlyInvalid) {
-        $("#confirmNoValidDlgContent").html(("Are you sure that there is no <b>" + $("#label").text() + "</b> in the image?"));
-        $("#confirmNoValidDlg").modal('setting', { detachable:false }).modal('show');
-      }
-      else {
-        multiValidate(data.data, browserFingerprint);
-      }
-    });
-
-    getRandomImages();
-
-    new Fingerprint2().get(function(result, components){
-      browserFingerprint = result;
-    });
+    try {
+      //can fail in case someone uses uBlock origin or Co.
+      new Fingerprint2().get(function(result, components){
+        browserFingerprint = result;
+      });
+    } catch(e) {
+    }
 
   });
 </script>
@@ -379,6 +220,12 @@
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
        <h2 class="ui inverted header">What do you see?</h2>
+        <div id="modeButtons">
+          <button class="ui {{ if eq .mode "default" }}white{{ else }}inverted basic{{ end }} button" 
+            onclick="window.location='/verify?mode=default';" data-tooltip="Default Mode">Default</button>
+          <button class="ui {{ if eq .mode "default" }}inverted basic{{ else }}white{{ end }} button" 
+            onclick="window.location='/verify?mode=browse';" data-tooltip="Browse Mode">Browse</button>
+        </div>
        <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>
@@ -387,82 +234,87 @@
       <script src="/js/cookies.min.js"></script>
    {{ end }}
 
-   <div class="ui stackable grid vertical stripe" style="margin-top:-8em;">
+   <div class="ui stackable grid">
+    {{ if eq .mode "browse" }}
+    {{ template "validate_browse_select_mode.html" .}}
+    {{ end }}
 
-    {{ template "goto_mode.html" dict "validation" 0 "annotation" 1 "labeling" 1 "currentScreen" "labeling" "visible" true}}
+    {{ if .showSettings }}
+    {{ template "goto_mode.html" dict "validation" 0 "annotation" 1 "labeling" 1 "currentScreen" "validation" "visible" false}}
+    {{ end }}
 
-    <div class="four wide column">
-    </div>
-    <div class="eight wide center aligned column" id="singleValidationContainer">
-      <a href="#" id="imageClick">
-        <img class="ui large image centered" src="" imageId = "" validationId="" id="image">
-      </a>
-      <div class="ui center aligned basic segment" id="validationContainerSegment">
-        <h1 class="ui header" id="label" label="" sublabel=""></h1>
-        <button class="negative ui button center aligned" id="noButton">NO</button>
-        <button class="positive ui button center aligned" id="yesButton">YES</button>
-      </div>
-
-      <div hidden id="thankYouMessage">
-        <i class="massive check circle outline icon"></i>
-        <h1 class="ui header">Thank you!</h1>
-      </div>
-
-      <div hidden class="ui large loader" id="loadingIndicator"></div>
-
-      {{ template "validate_help_dlg.html" .}}
-      {{ template "report_dlg.html" .}}
-      {{ template "goto_labels_dlg.html" dict "validation" 0 "annotation" 1  "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" }}
-    </div>
-
-    <div class="eight wide center aligned column" id="multiValidationContainer">
-      <div id="imageGrid" class="selectable justified-gallery">
-      </div>
-
-      <div class="ui center aligned basic segment">
-        <p id="multiValidationInfoText">Select all images where you see: </p>
-        <h1 class="ui header" id="multivalidationLabel"></h1>
-        <p></p>
-        <button class="positive ui button center aligned" id="multiValidateDoneButton">DONE</button>
+    <div class="row" id="loadingIndicator" style="display: none;">
+      <div class="sk-wave overlay">
+        <div class="sk-rect sk-rect1"></div>
+        <div class="sk-rect sk-rect2"></div>
+        <div class="sk-rect sk-rect3"></div>
+        <div class="sk-rect sk-rect4"></div>
+        <div class="sk-rect sk-rect5"></div>
       </div>
     </div>
 
-      <div class="ui modal" id="confirmNoValidDlg">
-        <div class="ui header">
-          Confirmation
+    <div class="row" id="mainArea" style="display: none;">
+      <div class="four wide column">
+      </div>
+      <div class="eight wide center aligned column" id="validationContainer">
+        <a href="#" id="imageClick">
+          <img class="ui large image centered" src="" imageId = "" validationId="" id="image">
+        </a>
+        <div class="ui center aligned basic segment" id="validationContainerSegment">
+          <h1 class="ui header" id="label" label="" sublabel=""></h1>
+          <button class="negative ui button center aligned" id="noButton">NO</button>
+          <button class="positive ui button center aligned" id="yesButton">YES</button>
         </div>
-        <div class="content" id="confirmNoValidDlgContent">
+
+        <div hidden id="thankYouMessage">
+          <i class="massive check circle outline icon"></i>
+          <h1 class="ui header">Thank you!</h1>
         </div>
-        <div class="actions">
-          <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
-            <i class="remove icon"></i>
-            Cancel
-          </div>
-          <div class="ui green ok inverted button" id="confirmNoValidOkButton">
-            <i class="checkmark icon"></i>
-            Yes
-          </div>
-        </div>
+
+        {{ template "validate_help_dlg.html" .}}
+        {{ template "report_dlg.html" .}}
+        {{ if .showSettings }}
+        {{ template "goto_labels_dlg.html" dict "validation" 0 "annotation" 1  "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" "type" ""}}
+        {{ end }}
       </div>
 
-      <div class="ui basic scrolling fullscreen modal" id="showImageFullscreenDlg">
-        <div class="ui right floated inverted basic button" id="closeImageFullscreenDlgButton">
-          <i class="icon close"></i>
-          Close
+      <div class="four wide center aligned column">
+        {{ template "img_info.html" .}}
+        <h3></h3>
+        <button class="ui button center aligned" id="showMePollButton" hidden>
+          <i class="pie chart icon"></i>
+          What other people are thinking
+        </button>
+        <canvas id="poll-chart" hidden/>
+      </div>
+    </div>
+
+    <div class="ui modal" id="confirmNoValidDlg">
+      <div class="ui header">
+        Confirmation
+      </div>
+      <div class="content" id="confirmNoValidDlgContent">
+      </div>
+      <div class="actions">
+        <div class="ui red cancel inverted button" id="confirmNoValidCancelButton">
+          <i class="remove icon"></i>
+          Cancel
         </div>
-        <div class="image content" id="showImageFullscreenDlgContent">
-          <img class="ui centered image" id="fullscreenDlgContentImage" src="">
+        <div class="ui green ok inverted button" id="confirmNoValidOkButton">
+          <i class="checkmark icon"></i>
+          Yes
         </div>
       </div>
+    </div>
 
-    <div class="four wide center aligned column">
-      {{ template "img_info.html" .}}
-      <h3></h3>
-      <button class="ui button center aligned" id="showMePollButton" hidden>
-        <i class="pie chart icon"></i>
-        What other people are thinking
-      </button>
-      <canvas id="poll-chart" hidden/>
+    <div class="ui basic scrolling fullscreen modal" id="showImageFullscreenDlg">
+      <div class="ui right floated inverted basic button" id="closeImageFullscreenDlgButton">
+        <i class="icon close"></i>
+        Close
+      </div>
+      <div class="image content" id="showImageFullscreenDlgContent">
+        <img class="ui centered image" id="fullscreenDlgContentImage" src="">
+      </div>
     </div>
 
   </div>

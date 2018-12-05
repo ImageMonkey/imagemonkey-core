@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {{ template "favicon.html" .}}
+  
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css"/>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/semantic.min.js"></script> 
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/common_sub.css"/> 
+  <script src="/js/common.js"></script> 
+  <script src="js/tablesort/tablesort.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+      $('#publicBackupsTable').tablesort();
+    })
+
+  </script>
+
+</head>
+
+
+<body>
+
+  {{ template "menu.html" .}}
+
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}  
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Public Backup
+      </h2>
+    </div>
+  </div>
+  <div class="ui stackable grid center aligned vertical stripe">
+    <div class="row">
+      <div class="three wide column"></div>
+      <div class="ten wide left aligned column">
+        <p>At ImageMonkey, we will be back up everything to the Internet Archive on a regular basis. The uploaded archive contains the database dump together will all the unlocked images (all images are per default in a locked state after uploading and will be manually unlocked by a moderator). <br><br>
+        In order to preserve users privacy, the database dump will be stripped off any personal information.<br>The database dump <b>won't</b> contain:</p>
+
+        <div class="ui bulleted list">
+          <div class="item" style="font-size:1.33em;"> Usernames</div>
+          <div class="item" style="font-size:1.33em;">Email Addresses</div>
+          <div class="item" style="font-size:1.33em;">Hashed Passwords</div>
+          <div class="item" style="font-size:1.33em;">API Tokens</div>
+          <div class="item" style="font-size:1.33em;">Access Tokens</div>
+        </div>
+      </div>
+      <div class="three wide column"></div>
+    </div>
+    <div class="row">
+      <div class="ten wide center aligned column">
+        <table class="ui sortable striped table" id="publicBackupsTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Created</th>
+              <th>Size</th>
+              <th>Download</th>
+            </tr>
+          </thead>
+          <tbody id="apiTokensTableContent">
+            {{ range $index, $publicBackup := .publicBackups }}
+            <tr>
+              <td>{{ $publicBackup.Name }}</td>
+              <td>{{ $publicBackup.Created }}</td>
+              <td>{{ $publicBackup.Size.Value }}{{ $publicBackup.Size.Unit }}</td>
+              <td><a class="ui button" href="{{ $publicBackup.Download.Http }}"><i class="download icon"></i></a></td>
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{{ template "footer.html" .}}
+
+</body>
+
+</html>

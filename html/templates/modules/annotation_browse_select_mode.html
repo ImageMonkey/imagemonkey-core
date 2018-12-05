@@ -26,6 +26,7 @@
   var imageGridCanvases = {};
   var numberOfQueryResults = 0;
   var numberOfCurrentlyShownResults = 0;
+  var labelAccessorsLookupTable = {}
 
   var clearImageGrid = function() {
     imageGridCanvases = {};
@@ -38,6 +39,54 @@
     })
   }
 
+  function onAnnotatedStatisticsLabelClicked(elem) {
+    var labelName = elem.getAttribute("data-label-name");
+    $("#annotationQuery").val(labelName);
+    $("#browseAnnotationsGoButton").trigger("click");
+    $("#annotatedStatisticsPopup").modal("hide");
+  }
+
+  function handleAnnotatedStatisticsRes(data) {
+    var elem = '';
+    var val; 
+    var labelUrl = '';
+    for(var i = 0; i < data.length; i++) {
+      if(data[i].num.total === 0)
+        val = 0;
+      else
+        val = Math.round(((data[i].num.completed / data[i].num.total) * 100));
+
+      labelUrl = ('<a href="javascript:void(0);" data-label-name="' + data[i].label.name + '" onclick="onAnnotatedStatisticsLabelClicked(this);">' + 
+                  data[i].label.name + ' (' + data[i].num.completed + '/' +  data[i].num.total +  ')' + '</a>');
+
+      elem = $(('<div class="ui progress" data-value="' + val + '" data-total="100">' + 
+                '<div class="bar">' +
+                  '<div class="progress"></div>' +
+                '</div>' +
+               '<div class="label">' + labelUrl + '</div>'+
+               '</div>'));
+      elem.progress();
+
+      $("#annotatedStatisticsPopupContent").append(elem);
+    }
+
+    $("#annotatedStatisticsButton").removeClass("disabled");
+  }
+
+  function getAnnotatedStatistics() {
+    var url = '{{ .apiBaseUrl }}/v1/statistics/annotated';
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(d) {
+        handleAnnotatedStatisticsRes(d);
+      }
+    });
+  }
+
   function showBrowseAnnotationImageGrid() {
     //if the image grid gets shown again, the image in question was successfully annotated/blacklisted or marked
     //as non-annotatable. We now grey the image out and change the mouse cursor to default again.
@@ -47,9 +96,12 @@
 
     //show image grid and jump to scroll position that we were before
     $("#imageGrid").show();
+    $("#annotationColumn").hide();
     $("#annotationQuerySearchContainer").show();
     infiniteScroll.resume();
     infiniteScroll.restoreScrollPosition();
+
+    $("#bottomLabel").hide();
 
     //change label text (label is defined in annotate.html)
     $("#label").text("Browse");
@@ -182,9 +234,11 @@
     if(n === 0)
       return;
 
+
     var imageUrl;
     var annotationsScaleFactor;
     var item;
+    var currentDateTime = new Date().getTime();
     for(var i = from; i < (from + n); i++){
       var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
                                   + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
@@ -207,6 +261,14 @@
 
       }
       else {
+        if($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
+          var parentLabel = labelAccessorsLookupTable[imageGridData[i].label.accessor]; 
+          if(parentLabel !== "") {
+            //add the current timestamp to prevent that the browser caches images
+            url += "&highlight=" + encodeURIComponent(parentLabel) + "&ts=" + currentDateTime;
+          }
+        }
+
         var imageId = ("galleryItem" + i.toString());
         item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
@@ -239,7 +301,8 @@
     var availableLabels = [];
     var labelAccessors = {{ .labelAccessors }};
     for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i]);
+      availableLabels.push(labelAccessors[i].accessor);
+      labelAccessorsLookupTable[labelAccessors[i].accessor] = labelAccessors[i].parent_accessor;
     }
 
     var staticQueryAttributes = {{ .queryAttributes }};
@@ -248,6 +311,10 @@
         availableLabels.push(staticQueryAttributes[key].name);
       }
     }
+
+    $('#annotatedStatisticsButton').click(function(e){
+      $('#annotatedStatisticsPopup').modal('show');
+    });
 
 
     $("#annotationQuery")
@@ -282,6 +349,8 @@
         return false;
       }
     });
+
+    getAnnotatedStatistics();
   });
 </script>
 
@@ -296,15 +365,33 @@
       </div>
 
       <div class="inline fields">
+        <label>Options</label>
         <div class="field">
-          <div class="ui checkbox" id="annotationsOnlyCheckbox">
-            <input type="checkbox">
-            <label>Annotations only</label>
+          <div class="ui radio checkbox">
+            <input type="radio" name="searchOptions" checked="checked">
+            <label>No Options</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui radio checkbox" id="annotationsOnlyCheckbox" data-tooltip="Rework existing annotations">
+            <input type="radio" name="searchOptions">
+            <label>Rework</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui radio checkbox" id="highlightParentAnnotationsCheckbox" data-tooltip="Highlight the annotation's parent">
+            <input type="radio" name="searchOptions">
+            <label>Highlight</label>
           </div>
         </div>
       </div>
 
-      <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
+
+      <div class="ui primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui right aligned disabled button" id="annotatedStatisticsButton">
+        <i class="chart bar icon"></i>
+        Statistics
+      </div>
     </form>
     <p id="numberOfQueryResults"></p>
 
@@ -333,4 +420,23 @@
     </div>
   </div>
   <div class="one wide column"></div>
+</div>
+
+
+
+<div class="ui modal" id="annotatedStatisticsPopup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Annotation Statistics
+  </div>
+  <div class="scrolling content">
+    <p>This list contains all the annotatable labels and the percentage of completeness.<br>Click on a label to search for it.</p>
+    <div id="annotatedStatisticsPopupContent">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel button">
+      Close
+    </div>
+  </div>
 </div>

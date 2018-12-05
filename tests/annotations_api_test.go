@@ -12,7 +12,7 @@ import (
 
 func runDataProcessor(t *testing.T) {
 	// Start a process:
-	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "shared_secrets.go", "-singleshot", "true")
+	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "-singleshot", "true")
 	cmd.Dir = "../src"
 	err := cmd.Start()
 	ok(t, err)
@@ -113,7 +113,7 @@ func TestGetExistingAnnotations(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	testGetExistingAnnotations(t, "apple", "", 200, 0)
 }
@@ -122,7 +122,7 @@ func TestGetExistingAnnotations1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
@@ -144,7 +144,7 @@ func TestGetExistingAnnotationsLockedAndAnnotatedByForeignUser(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -162,7 +162,7 @@ func TestGetExistingAnnotationsLockedAndAnnotatedByOwnUser(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, userToken, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -177,7 +177,7 @@ func TestGetImageAnnotations(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -192,7 +192,7 @@ func TestGetImageAnnotationsInvalidImageId(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -210,7 +210,7 @@ func TestGetImageAnnotationsImageLockedForeignDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -228,7 +228,7 @@ func TestGetImageAnnotationsImageLockedButOwnDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -247,7 +247,7 @@ func TestGetImageAnnotationsImageLockedOwnDonationButQuarantine(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -265,7 +265,7 @@ func TestBrowseByCoverage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -287,7 +287,7 @@ func TestBrowseByCoverageFullyContained(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -310,17 +310,17 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
 
 	//give first image the labels cat and dog
-	testLabelImage(t, imageIds[0], "dog")
-	testLabelImage(t, imageIds[0], "cat")
+	testLabelImage(t, imageIds[0], "dog", "")
+	testLabelImage(t, imageIds[0], "cat", "")
 
 	//add label 'cat' to second image
-	testLabelImage(t, imageIds[1], "cat")
+	testLabelImage(t, imageIds[1], "cat", "")
 
 	testBrowseAnnotation(t, "cat&dog", 2, "")
 	testBrowseAnnotation(t, "cat|dog", 3, "")
@@ -354,8 +354,8 @@ func TestBrowseAnnotationQueryLockedButOwnDonation(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
-	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token, "")
 
 	testBrowseAnnotation(t, "apple", 2, token)
 }
@@ -370,8 +370,8 @@ func TestBrowseAnnotationQueryLockedButForeignDonation(t *testing.T) {
 	testSignUp(t, "user1", "pwd1", "user1@imagemonkey.io")
 	token1 := testLogin(t, "user1", "pwd1", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token1)
-	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token1, "")
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token, "")
 
 	testBrowseAnnotation(t, "apple", 1, token)
 }
@@ -383,8 +383,8 @@ func TestBrowseAnnotationQueryLockedOwnDonationButQuarantine(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token)
-	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token)
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, token, "")
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, token, "")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
@@ -403,7 +403,7 @@ func TestBrowseAnnotationQuery1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	num := testMultipleDonate(t)
+	num := testMultipleDonate(t, "apple")
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
@@ -429,12 +429,12 @@ func TestBrowseAnnotationQueryAnnotationCoverage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange")
+	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
@@ -448,12 +448,12 @@ func TestBrowseAnnotationQueryImageDimensions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange")
+	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")

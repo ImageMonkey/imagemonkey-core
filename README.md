@@ -89,6 +89,20 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * apply sql functions from `env/functions` directory
 * apply sql stored procedures from `env/stored_procs` directory
 
+### Install Bimg ###
+**Windows:**
+* install MSYS2
+* open MSYS2 terminal and install zlib and pkgconfig via pacman
+* download vipslib v8.6.5 from https://github.com/libvips/libvips/releases
+* set PKG_CONFIG_PATH environment variable to the folder where vips.pc resides. e.q: `PKG_CONFIG_PATH=/c/Users/Bernhard/Downloads/vips-dev-w64-all-8.6.5/vips-dev-8.6/lib/pkgconfig`
+* build bimg with: `/c/Go/bin/go get -u gopkg.in/h2non/bimg.v1`
+
+**Linux:**
+* see https://github.com/h2non/bimg
+
+### Install Gocv ###
+* see https://github.com/hybridgroup/gocv
+
 ### Webserver & SSL ###
 
 * install nginx with `apt-get install nginx`
@@ -99,7 +113,7 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * modify `conf/nginx/nginx.conf` and replace `imagemonkey.io` and `api.imagemonkey.io` with your own domain names, copy it to `/etc/nginx/nginx.conf` and reload nginx with `service nginx reload`
 
 ### Build Application ###
-**Minimal** required Go version: v1.9.2
+**Minimal** required Go version: v1.10.3
 
 * install git with `apt-get install git`
 * install golang with `apt-get install golang`

@@ -79,7 +79,7 @@ func TestRandomImageAnnotationRefinement(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testMultipleDonate(t)
+	testMultipleDonate(t, "apple")
 	testRandomAnnotate(t, 5, `[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`)
 	testRandomAnnotationRefinement(t, 4)
 }
@@ -89,7 +89,7 @@ func TestGetRandomImageQuiz(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -112,7 +112,7 @@ func TestGetRandomImageQuizImageStillLocked(t *testing.T) {
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "pwd", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", false, userToken)
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", false, userToken, "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -132,7 +132,7 @@ func TestBrowseRefinement(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -146,7 +146,7 @@ func TestBrowseRefinementNoResult(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -162,7 +162,7 @@ func TestBrowseRefinementInvalidRequest(t *testing.T) {
 	defer teardownTestCase(t)
 
 	//donate image with some label + annotate
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -177,7 +177,7 @@ func TestBrowseRefinementByAnnotationDataId(t *testing.T) {
 	defer teardownTestCase(t)
 
 	//donate image with some label + annotate
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -201,7 +201,7 @@ func TestBrowseRefinementByInvalidAnnotationDataId(t *testing.T) {
 	defer teardownTestCase(t)
 
 	//donate image with some label + annotate
-	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "dog", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
@@ -217,7 +217,7 @@ func TestBrowseRefinementByCategory(t *testing.T) {
 	defer teardownTestCase(t)
 
 	//donate image with some label + annotate
-	testDonate(t, "./images/apples/apple1.jpeg", "person", true, "")
+	testDonate(t, "./images/apples/apple1.jpeg", "person", true, "", "")
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 

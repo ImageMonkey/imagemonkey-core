@@ -1,0 +1,461 @@
+<style>
+  .justified {
+    position: relative;
+    width: 100%;
+  }
+
+  .centered-img-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+  }
+
+  .object-valid { border: 5px solid #00ff00; }
+  .object-invalid { border: 5px solid #ff0000; }
+
+  .justified-layout-item {
+    position: absolute;
+  }
+
+  .grey-out {
+    opacity: 0.4;
+    filter: alpha(opacity=40);
+  }
+
+</style>
+
+<script>
+  var justifiedLayoutGeometry, imageGridData;
+  var numOfLastFetchedImg = 0;
+  var defaultBatchSize = 50;
+  var currentLabeledImageGridElement = null;
+  var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
+  var numberOfQueryResults = 0;
+  var numberOfCurrentlyShownResults = 0;
+  var pendingValidations = {};
+
+  var clearImageGrid = function() {
+    justifiedLayoutGeometry = null;
+    imageGridData = null;
+    numOfLastFetchedImg = 0;
+    infiniteScroll.deactivate();
+    $('#imageGrid').children().each(function () {
+      $(this).remove();
+    });
+    pendingValidations = {};
+  }
+
+  function onValidatedStatisticsLabelClicked(elem) {
+    var labelName = elem.getAttribute("data-label-name");
+    $("#validationQuery").val(labelName);
+    $("#browseValidationGoButton").trigger("click");
+    $("#validatedStatisticsPopup").modal("hide");
+  }
+
+  function showBrowseLabelImageGrid() {
+    //if the image grid gets shown again, the image in question was successfully labeled
+    //We now grey the image out and change the mouse cursor to default again.
+
+    $("#"+currentLabeledImageGridElement).addClass("grey-out");
+    $("#"+currentLabeledImageGridElement).css('cursor', 'default');
+
+    //show image grid and jump to scroll position that we were before
+    $("#imageGrid").show();
+    $("#validationQuerySearchContainer").show();
+    infiniteScroll.resume();
+    infiniteScroll.restoreScrollPosition();
+  }
+
+  function handleRes(d) {
+    $("#imageGrid").show();
+
+    if(d.length > 0) {
+      imageGridData = d;
+      sizes = [];
+
+      numberOfQueryResults = 0;
+
+      for(var i = 0; i < imageGridData.length; i++){
+        numberOfQueryResults += 1;
+        sizes.push({"width": imageGridData[i]["image"]["width"], "height": imageGridData[i]["image"]["height"]});
+      }
+
+      var justifiedLayout = require('justified-layout');
+      justifiedLayoutGeometry = justifiedLayout(sizes, {
+        "fullWidthBreakoutRowCadence": false,
+        "containerWidth": document.getElementById("imageGrid").clientWidth,
+        "boxSpacing": {
+          "horizontal": 10,
+          "vertical": 100
+        }
+      });
+
+      loadNextImagesInImageGrid();
+      infiniteScroll.activate();
+      $('#browseValidationsErrorMessage').hide();
+    }
+    else{
+      $('#browseValidationsErrorMessage').text("No images found for this label expression - please try another expression!");
+      $('#browseValidationsErrorMessage').show(200);
+    }
+
+    $('#browseValidationsLoadingSpinner').hide();
+  }
+
+  function handleValidatedStatisticsRes(data) {
+    var elem = '';
+    var val; 
+    var labelUrl = '';
+    for(var i = 0; i < data.length; i++) {
+      if(data[i].num.total === 0)
+        val = 0;
+      else
+        val = Math.round(((data[i].num.completed / data[i].num.total) * 100));
+
+      labelUrl = ('<a href="javascript:void(0);" data-label-name="' + data[i].label.name + '" onclick="onValidatedStatisticsLabelClicked(this);">' + 
+                  data[i].label.name + ' (' + data[i].num.completed + '/' +  data[i].num.total +  ')' + '</a>');
+
+      elem = $(('<div class="ui progress" data-value="' + val + '" data-total="100">' + 
+                '<div class="bar">' +
+                  '<div class="progress"></div>' +
+                '</div>' +
+               '<div class="label">' + labelUrl + '</div>'+
+               '</div>'));
+      elem.progress();
+
+      $("#validatedStatisticsPopupContent").append(elem);
+    }
+
+    $("#validatedStatisticsButton").removeClass("disabled");
+  }
+
+  function getValidatedStatistics() {
+    var url = '{{ .apiBaseUrl }}/v1/statistics/validated';
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(d) {
+        if(d !== null)
+          handleValidatedStatisticsRes(d);
+      }
+    });
+  }
+
+  function populateImageGrid() {
+    pendingValidations = {};
+    $('#browseValidationsLoadingSpinner').show();
+
+    $("#imageGrid").hide();
+    clearImageGrid();
+    $("#numberOfQueryResults").text("");
+
+    var query = $("#validationQuery").val();
+    var url = '{{ .apiBaseUrl }}/v1/validations';
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      data: {query: encodeURIComponent(query), shuffle: true},
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(d) {
+        handleRes(d);
+      }, 
+      error: function(xhr, status, error) {
+        var err = JSON.parse(xhr.responseText)["error"];
+        var obj = $('#browseValidationsErrorMessage').text(err);
+        obj.html(obj.html().replace(/\n/g,'<br/>'));
+        $('#browseValidationsErrorMessage').show(200);
+        $('#browseValidationsLoadingSpinner').hide();
+        clearImageGrid();
+      }
+    });
+  }
+
+  function validateBatch() {
+    $("#validateDoneButton").hide();
+    $("#numberOfQueryResults").text("");
+    $("#validationQuery").val("");
+
+    var validations = [];
+    for(var key in pendingValidations) {
+      if(pendingValidations.hasOwnProperty(key)) {
+        validations.push({"uuid": key, "valid": pendingValidations[key]});
+      }
+    }
+
+    clearImageGrid();
+    $("#imageGrid").hide();
+
+    if(validations.length === 0)
+      return;
+    
+    $("#browseValidationsLoadingSpinner").show();
+
+    var url = '{{ .apiBaseUrl }}/v1/validation/validate';
+    $.ajax({
+      url: url,
+      type: 'PATCH',
+      dataType: 'json',
+      data: JSON.stringify({"validations": validations}),
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(d) {
+        $("#browseValidationsLoadingSpinner").hide();
+      }
+    });
+  }
+
+  function showHideValidateDoneButton() {
+    if(Object.keys(pendingValidations).length === 0)
+      $("#validateDoneButton").hide();
+    else
+      $("#validateDoneButton").show();
+  }
+
+  function onImageGridItemClicked(elem) {
+    var validationId = $(elem).attr("data-validationid");
+    if(validationId in pendingValidations)
+      delete pendingValidations[validationId];
+
+    var textItem = $("#"+$(elem).attr("id")+"text");
+
+    if($(elem).hasClass("object-valid")) {
+      $(elem).removeClass("object-valid");
+      $(elem).addClass("object-invalid");
+      pendingValidations[validationId] = "no";
+      textItem.text("INVALID");
+      textItem.css({ 'color': 'red', 'font-size': '5em', 'font-weight': 'bold' });
+    } else if($(elem).hasClass("object-invalid")) {
+      $(elem).removeClass("object-invalid");
+      $(elem).removeClass("object-valid");
+      textItem.text("");
+    } else {
+      $(elem).removeClass("object-invalid");
+      $(elem).addClass("object-valid");
+      pendingValidations[validationId] = "yes";
+      textItem.text("VALID");
+      textItem.css({ 'color': 'green', 'font-size': '5em', 'font-weight': 'bold' });
+    }
+
+    showHideValidateDoneButton();
+  }
+
+  function newImageItem(id, url, validationId, top, left, width, height, tooltip){
+    var d = ('<div class="justified-layout-item"' + ' id="' + (id + "container") 
+            + '" data-balloon-visible data-balloon="' + tooltip + '" data-balloon-length="fit" data-balloon-pos="up"' + ' style="width: ' + width 
+            +'px; height: ' + height + 'px; top: ' 
+            + top  + 'px; left: ' +  left + 'px"><img id="' + id +'" src="' + url 
+            + '" data-validationid="' + validationId + '" onclick="onImageGridItemClicked(this);" style="cursor: pointer;">'
+            + '<div class="noselect centered-img-text" id="' + (id + "text") + '"></div>' + '</div>');
+    return d;
+  }
+
+  function getUrlFromImageUrl(imageUrl, imageUnlocked){
+    var url = imageUrl;
+
+    if(imageUrl !== ""){
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+    }
+
+    return url;
+  }
+
+  //strikethrough text using unicode char
+  function strikethroughText(text) {
+    var t = '';
+    for (var i = 0; i < text.length; i++) {
+      t += text.charAt(i) 
+      if(i !== text.length - 1)
+        t += '\u0336';
+    }
+    return t;
+  }
+
+  function loadNextImagesInImageGrid() {
+    var from = numOfLastFetchedImg;
+    var n = defaultBatchSize;
+    if((numOfLastFetchedImg + defaultBatchSize) > imageGridData.length){
+      n = imageGridData.length - numOfLastFetchedImg;
+    }
+
+    if(n === 0)
+      return;
+
+    var imageUrl;
+    var annotationsScaleFactor;
+    var item;
+    for(var i = from; i < (from + n); i++){
+      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
+                + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width="
+                +    Math.round(justifiedLayoutGeometry.boxes[i].width, 0)
+                +    "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
+
+      var validationId = ("galleryitem" + imageGridData[i]["uuid"]);
+      var tooltipText = (imageGridData[i]["label"]["name"] + " (" + imageGridData[i]["num_of_yes"] 
+                          + " &#128077; " + imageGridData[i]["num_of_no"] + " &#128078;)");
+      item = newImageItem(validationId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
+      $("#imageGrid").append(item); 
+
+      document.getElementById("imageGrid").style.height = (justifiedLayoutGeometry.boxes[(from + n - 1)].top 
+                                                            + justifiedLayoutGeometry.boxes[(from + n - 1)].height)  + "px";
+    }
+
+    numOfLastFetchedImg += n;
+    numberOfCurrentlyShownResults = numOfLastFetchedImg;
+
+    $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
+  }
+
+  function split(val) {
+    return val.split( / \s*/ );
+  }
+  function extractLast(term) {
+    return split(term).pop();
+  }
+
+  $(document).ready(function(){
+    var availableLabels = [];
+    var labelAccessors = {{ .labelAccessors }};
+    for(var i = 0; i < labelAccessors.length; i++) {
+      availableLabels.push(labelAccessors[i]);
+    }
+
+
+    var staticQueryAttributes = {{ .queryAttributes }};
+    for(var key in staticQueryAttributes) {
+      if(staticQueryAttributes.hasOwnProperty(key)) {
+        availableLabels.push(staticQueryAttributes[key].name);
+      }
+    }
+
+    $("#validateDoneButton").click(function(e) {
+      e.preventDefault();
+      validateBatch();
+    });
+
+    $('#validatedStatisticsButton').click(function(e){
+      $('#validatedStatisticsPopup').modal('show');
+    });
+
+
+    $("#validationQuery")
+      // don't navigate away from the field on tab when selecting an item
+      .on("keydown", function(event) {
+        if (event.keyCode === $.ui.keyCode.TAB &&
+          $(this).autocomplete("instance").menu.active) {
+          event.preventDefault();
+      }
+    })
+    .autocomplete({
+      minLength: 3,
+      delay: 700,
+      source: function(request, response) {
+        // delegate back to autocomplete, but extract the last term
+        response($.ui.autocomplete.filter(
+          availableLabels, extractLast(request.term)));
+      },
+      focus: function() {
+        // prevent value inserted on focus
+        return false;
+      },
+      select: function(event, ui) {
+        var terms = split(this.value);
+        // remove the current input
+        terms.pop();
+        // add the selected item
+        terms.push(ui.item.value);
+        // add placeholder to get the comma-and-space at the end
+        terms.push("");
+        this.value = terms.join(" ");
+        return false;
+      }
+    });
+
+    getValidatedStatistics();
+  });
+</script>
+
+
+
+<div class="row"></div>
+<div class="row" id="validationQuerySearchContainer">
+  <div class="four wide column"></div>
+  <div class="eight wide center aligned column">
+    <form class="ui form segment">
+      <div class="field">
+       <p>Search for images you are interested in</p>
+       <input placeholder="Query..." type="text" id="validationQuery">
+      </div>
+
+      <div class="ui primary submit button" id="browseValidationGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui right aligned disabled button" id="validatedStatisticsButton">
+        <i class="chart bar icon"></i>
+        Statistics
+      </div>
+    </form>
+    <p id="numberOfQueryResults"></p>
+    <button class="ui huge positive button" id="validateDoneButton" style="display: none;">Done</button>
+
+    <div class="ui warning message" hidden id="browseValidationsErrorMessage">
+      <i class="close icon"></i>
+      <div class="header"></div>
+    </div>
+  </div>
+  <div class="four wide column"></div>
+</div>
+
+<div class="row" id="browseValidationsLoadingSpinner" style="display: none;">
+  <div class="sk-wave overlay">
+    <div class="sk-rect sk-rect1"></div>
+    <div class="sk-rect sk-rect2"></div>
+    <div class="sk-rect sk-rect3"></div>
+    <div class="sk-rect sk-rect4"></div>
+    <div class="sk-rect sk-rect5"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="one wide column"></div>
+  <div class="fourteen wide centered column">
+    <div hidden class="justified" id="imageGrid">
+    </div>
+  </div>
+  <div class="one wide column"></div>
+</div>
+
+
+<div class="ui modal" id="validatedStatisticsPopup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Validation Statistics
+  </div>
+  <div class="scrolling content">
+    <p>This list contains all the validatable labels and the percentage of completeness.<br>Click on a label to search for it.</p>
+    <div id="validatedStatisticsPopupContent">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel button">
+      Close
+    </div>
+  </div>
+</div>
