@@ -1,3 +1,6 @@
+# ImageMonkey [![Build Status](https://travis-ci.org/bbernhard/imagemonkey-core.svg?branch=develop)](https://travis-ci.org/bbernhard/imagemonkey-core)
+
+---
 
   <img src="https://raw.githubusercontent.com/bbernhard/imagemonkey-core/develop/img/logo.png" align="left" width="180" >
 
