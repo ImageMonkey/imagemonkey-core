@@ -59,9 +59,13 @@ if [ "$run_tests" = true ] ; then
 	wget https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip --directory-prefix=/tmp/
 	cd /tmp \
 		&& unzip /tmp/chromedriver_linux64.zip \
-		&& cp /tmp/chromedriver_linux64/chromedriver /root/imagemonkey-core/tests/ui/ \
-		&& rm -rf /tmp/chromedriver_linux64/ \
-		&& rm /tmp/chromedriver_linux64.zip
+		&& cp /tmp/chromedriver /root/imagemonkey-core/tests/ui/ \
+		&& rm /tmp/chromedriver \
+		&& rm /tmp/chromedriver_linux64.zip \
+		&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
+		&& dpkg -i google-chrome-stable_current_amd64.deb \
+		&& rm /tmp/google-chrome-stable_current_amd64.deb \
+		&& apt-get install -y -f 
 
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
@@ -79,7 +83,7 @@ if [ "$run_tests" = true ] ; then
 	echo "Running UI Tests"
 	supervisorctl start imagemonkey-web:imagemonkey-web0
 	cd /root/imagemonkey-core/tests/ui/
-	python -m unittest
+	python3 -m unittest
 	retVal=$?
 	if [ $retVal -ne 0 ]; then
     	echo "Aborting due to error"

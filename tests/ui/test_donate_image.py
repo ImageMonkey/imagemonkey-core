@@ -16,7 +16,7 @@ class TestDonateImage(unittest.TestCase):
 		helper.clear_database()
 
 	def test_donate_image_should_succeed(self):
-		self._client.donate("C:\\imagemonkey-core\\tests\\images\\apples\\apple2.jpeg", "apple", True)
+		self._client.donate((".." + os.path.sep + "images" + os.path.sep + "apples" + os.path.sep + "apple2.jpeg"), "apple", True)
 
 	def test_donate_image_should_fail(self):
 		try:

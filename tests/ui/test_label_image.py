@@ -18,7 +18,7 @@ class TestLabelImage(unittest.TestCase):
 		self._driver.quit()
 
 	def test_label_image_should_succeed(self):
-		self._client.donate("C:\\imagemonkey-core\\tests\\images\\apples\\apple2.jpeg", "apple", True)
+		self._client.donate((".." + os.path.sep + "images" + os.path.sep + "apples" + os.path.sep + "apple2.jpeg"), "apple", True)
 		self._client.login("moderator", "moderator", True)
 		self._client.unlock_image()
 		self._client.label_image(["floor", "wall"])

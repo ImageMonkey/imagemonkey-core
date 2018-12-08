@@ -5,7 +5,10 @@ class ImageMonkeyChromeWebDriver(webdriver.Chrome):
 		options = webdriver.ChromeOptions()
 		
 		if headless:
-			options.add_argument('headless')
+			options.add_argument('--headless')
+
+		options.add_argument('--disable-dev-shm-usage')
+		options.add_argument('--no-sandbox')
 		super(ImageMonkeyChromeWebDriver, self).__init__(chrome_options=options)
 
 		if delete_all_cookies:
