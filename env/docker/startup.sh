@@ -64,8 +64,8 @@ if [ "$run_tests" = true ] ; then
 		&& rm /tmp/chromedriver_linux64.zip \
 		&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
 		&& dpkg -i google-chrome-stable_current_amd64.deb \
-		&& rm /tmp/google-chrome-stable_current_amd64.deb \
-		&& apt-get install -y -f 
+		&& rm /tmp/google-chrome-stable_current_amd64.deb
+	apt-get install -y -f 
 
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
