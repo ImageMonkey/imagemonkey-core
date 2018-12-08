@@ -259,6 +259,14 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 	return nil
 }
 
+func (p *ImageMonkeyDatabase) GiveUserUnlockImagePermissions(name string) error {
+	_, err := p.db.Exec(`UPDATE account_permission 
+						 SET can_unlock_image = true
+						 FROM account a
+						 WHERE a.id = account_id AND a.name = $1`, name)
+	return err
+}
+
 func (p *ImageMonkeyDatabase) GetNumberOfImages() (int32, error) {
 	var numOfImages int32
 	err := p.db.QueryRow("SELECT count(*) FROM image").Scan(&numOfImages)

@@ -51,14 +51,41 @@ echo ""
 echo ""
 
 if [ "$run_tests" = true ] ; then
-	echo "Running Tests"
+	echo "Running Integration Tests"
+
+	echo "Installing additional requirements"
 	go get -u gopkg.in/resty.v1
+	pip3 install selenium
+	wget https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip --directory-prefix=/tmp/
+	cd /tmp \
+		&& unzip /tmp/chromedriver_linux64.zip \
+		&& cp /tmp/chromedriver_linux64/chromedriver /root/imagemonkey-core/tests/ui/ \
+		&& rm -rf /tmp/chromedriver_linux64/ \
+		&& rm /tmp/chromedriver_linux64.zip
+
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
 	cd /root/imagemonkey-core/tests/
 	supervisorctl stop all
 	supervisorctl start imagemonkey-api:imagemonkey-api0
+	
 	go test -v -timeout=100m -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+    	echo "Aborting due to error"
+    	exit $retVal
+	fi
+
+	echo "Running UI Tests"
+	supervisorctl start imagemonkey-web:imagemonkey-web0
+	cd /root/imagemonkey-core/tests/ui/
+	python -m unittest
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+    	echo "Aborting due to error"
+    	exit $retVal
+	fi
+
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
 	echo "This docker image is for development only - do NOT use it in production!"
