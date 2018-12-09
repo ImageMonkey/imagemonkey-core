@@ -226,6 +226,7 @@
         $('#warningMessageBoxContent').text("No more images to unlock");
         $('#warningMessageBox').show(200).delay(1500).hide(200);
         $('#loadingIndicator').hide();
+        return;
       }
 
       currentEntry = unverifiedImageEntries[currentIdx];
