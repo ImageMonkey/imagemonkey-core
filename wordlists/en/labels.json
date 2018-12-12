@@ -1076,6 +1076,42 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "a86d4227-50c3-4ded-ace6-02d7321af718"
+		},
+		"field": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "19f062dc-1f03-46fe-b672-87931596358b"
+		},
+		"forest": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "476c449a-096c-4ed5-9b19-c4b19cf5b434"
+		},
+		"beach": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1e37be04-df57-47c7-9f3e-fd7cbb01f980"
+		},
+		"carpet": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a475be1e-963c-412e-bf4b-fd57ba069e0c"
+		},
+		"rock": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c7cb83a3-1317-48dd-bd66-c93c2941e30a"
+		},
+		"chimney": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4051de80-f782-47be-a806-878ccdabd2a2"
+		},
+		"fork": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9b087567-b49b-47da-afbb-a6f5e9f0cf0f"
 		}
+
 	}
 }
