@@ -467,10 +467,15 @@ func GetAvailableModels(s string) ([]json.RawMessage, error) {
         }
         defer resp.Body.Close()
 
-        /*err = json.Unmarshal(resp.Body, &models)
+        data, err := ioutil.ReadAll(resp.Body)
         if err != nil {
             return models, err
-        }*/
+        }
+
+        err = json.Unmarshal(data, &models)
+        if err != nil {
+            return models, err
+        }
 
     } else {
         data, err := ioutil.ReadFile(s)

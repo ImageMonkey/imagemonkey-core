@@ -757,7 +757,7 @@ func main() {
 
 			c.HTML(http.StatusOK, "models.html", gin.H{
 				"title": "Models",
-				"activeMenuNr": -1,
+				"activeMenuNr": 16,
 				"sessionInformation": sessionInformation,
 				"models": availableModels,
 			})
