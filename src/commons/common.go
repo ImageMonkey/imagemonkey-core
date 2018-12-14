@@ -412,48 +412,6 @@ func GetPublicBackups(path string) ([]datastructures.PublicBackup, error){
     return publicBackups, nil
 }
 
-/*type ExtractRoIFromImageErrorType int
-
-const (
-  ExtractRoIFromImageSuccess ExtractRoIFromImageErrorType = 1 << iota
-  ExtractRoIFromImageInvalidRegionError
-  ExtractRoIFromImageInternalError
-)
-
-func ExtractRoIFromImage(path string, imageRegion datastructures.ImageRegion) ([]byte, string, ExtractRoIFromImageErrorType, error) {
-    imgType := "unknown"
-    buffer, err := bimg.Read(path)
-    if err != nil {
-      log.Error("[Extract From Image] Couldn't read image: ", err.Error())
-      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
-    }
-
-    img := bimg.NewImage(buffer)
-    imgSize, err := img.Size()
-    if err != nil {
-        return []byte{}, imgType, ExtractRoIFromImageInternalError, err
-    }
-
-    if imageRegion.Top < 0 || imageRegion.Left < 0 || imageRegion.Width < 0 || imageRegion.Height < 0 {
-        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
-    }
-
-    if imageRegion.Top > imgSize.Height || imageRegion.Height > imgSize.Height || 
-        imageRegion.Left > imgSize.Width || imageRegion.Width > imgSize.Width {
-        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
-    }
-
-    buf, err := img.Extract(imageRegion.Top, imageRegion.Left, imageRegion.Width, imageRegion.Height)
-    if err != nil {
-        log.Error("[Extract From Image] Couldn't read image: ", err.Error())
-      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
-    }
-
-    imgType = bimg.DetermineImageTypeName(buffer)
-
-    return buf, imgType, ExtractRoIFromImageSuccess, nil
-}*/
-
 func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
     regionsOfInterest := GetParamsFromUrlParams(c, "roi")
     imageRects := []image.Rectangle{}
