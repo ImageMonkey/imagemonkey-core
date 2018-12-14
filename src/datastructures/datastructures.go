@@ -683,3 +683,24 @@ type LabelAccessorDetail struct {
     Accessor string `json:"accessor"`
     Parent string `json:"parent_accessor"`
 }
+
+type ModelStatisticsEntry struct {
+    Num int `json:"num"`
+}
+
+/*type ModelStatistics struct {
+    Training struct {
+        Validations map[string]ModelStatisticsEntry `json:"validations"`
+        Images map[string]ModelStatisticsEntry `json:"images"`
+        Command string `json:"command"`
+        BasedOn string `json:"based_on"`
+    } `json:"training"`
+    TrainedOn []string `json:"trained_on"`
+    Created string `json:"created"`
+}
+
+type Model struct {
+    NumOfImagesPerLabel string `json:"num_of_images_per_label"`
+    Name string `json:"num_of_images_per_label"`
+    Statistics ModelStatistics `json:"statistics"`
+}*/

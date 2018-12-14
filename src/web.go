@@ -223,6 +223,11 @@ func main() {
 
 	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase)
 
+	availableModels, err := commons.GetAvailableModels("../../imagemonkey-models/models.json")
+	if err != nil {
+		log.Fatal("[Main] Couldn't get available models: ", err.Error())
+	}
+
 	//if file exists, start in maintenance mode
 	maintenanceMode := false
 	if _, err := os.Stat(*maintenanceModeFile); err == nil {
@@ -746,6 +751,18 @@ func main() {
 				"mode": mode,
 			})
 		})
+
+		router.GET("/models", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			c.HTML(http.StatusOK, "models.html", gin.H{
+				"title": "Models",
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+				"models": availableModels,
+			})
+		})
+
 
 		router.GET("/monitoring", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
 

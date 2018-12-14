@@ -497,3 +497,34 @@ func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
 
     return imageRects, nil
 }
+
+func GetAvailableModels(s string) ([]json.RawMessage, error) {
+    var models []json.RawMessage
+
+    _, err := url.ParseRequestURI(s)
+    if err == nil { //it's an URL
+        resp, err := http.Get(s)
+        if err != nil {
+            return models, err
+        }
+        defer resp.Body.Close()
+
+        /*err = json.Unmarshal(resp.Body, &models)
+        if err != nil {
+            return models, err
+        }*/
+
+    } else {
+        data, err := ioutil.ReadFile(s)
+        if err != nil {
+            return models, err
+        }
+
+        err = json.Unmarshal(data, &models)
+        if err != nil {
+            return models, err
+        }
+    }
+
+    return models, nil
+}
