@@ -132,6 +132,8 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     WHERE dsc.state != 'locked' --only show non locked image descriptions
                                     GROUP BY i.id
                                 ) q2 ON q2.image_id = q1.image_id
+                                ORDER BY parent_label ASC -- return base labels first
+                                                          -- otherwise, the below logic won't work correctly
                                 `, q1)
 
         var rows *sql.Rows
@@ -174,6 +176,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
             err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
                             &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked, &image.Width, &image.Height,
                             &imageDescriptions)
+
             if err != nil {
                 tx.Rollback()
                 raven.CaptureError(err, nil)

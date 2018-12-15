@@ -186,7 +186,7 @@ func main() {
 	}
 
 	log.Debug("[Main] Reading labels")
-	labelMap, words, err := commons.GetLabelMap(*wordlistPath)
+	_, words, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
 		log.Fatal(err)
@@ -373,12 +373,12 @@ func main() {
 				"type": operationType,
 				"activeMenuNr": activeMenuNr,
 				"apiBaseUrl": apiBaseUrl,
-				"labels": labelMap,
 				"languages": languages.GetAllSupported(),
 				"labelSuggestions": commons.Pick(imageMonkeyDatabase.GetLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
+				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})

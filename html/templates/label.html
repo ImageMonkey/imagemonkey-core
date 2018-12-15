@@ -55,7 +55,7 @@
   var newlyAddedLabels = {}
   var oldImageDescriptions = {}
   var newlyAddedImageDescriptions = {}
-  var labelMap = {{ .labels }};
+  var labelAccessorsLookupTable = {{ .labelAccessorsLookup }};
   var canvas = null;
   var cachedAnnotations = null;
   var annotationsShown = false;
@@ -85,8 +85,8 @@
   }
 
   function buildColorMap(){
-    for(var key in labelMap){
-      if(labelMap.hasOwnProperty(key)){
+    for(var key in labelAccessorsLookupTable){
+      if(labelAccessorsLookupTable.hasOwnProperty(key)){
         var color = StringToColor.next(key);
         colorMap[key] = color;
       }
@@ -249,6 +249,7 @@
                                 if(validationUuid !== "") {
                                   $("#moderatorRemoveLabelDlg").attr("data-remove-label-id", selector.attr("id"));
                                   $("#moderatorRemoveLabelDlg").attr("data-validation-uuid", validationUuid);
+                                  $("#moderatorRemoveLabelDlgContent").html("Do you really want to remove <b>" + selector.text()  + "</b>?");
                                   $("#moderatorRemoveLabelDlg").modal("show");
                                 } else {
                                   $("#moderatorOnlyRemoveProductiveLabelsInfoDlg").modal("show");
@@ -529,50 +530,57 @@
     $('#labels').prepend(elem);
   }
 
-  function addLabel(label){
-    var added = false;
-    var escapedLabel = escapeHtml(label);
+
+  function addLabel(labelAccessor) {
+    var escapedLabelAccessor = escapeHtml(labelAccessor);
+    var escapedLabel = null;
+    var escapedSublabel = null;
+
+    if(!(labelAccessor in labelAccessorsLookupTable)) {
+      escapedLabel = escapedLabelAccessor;
+      escapedSublabel = null;
+    } else {
+      var labelItem = labelAccessorsLookupTable[escapedLabelAccessor];
+      escapedLabel = escapeHtml(labelItem.label);
+
+      if(labelItem.sublabel !== null)
+        escapedSublabel = escapeHtml(labelItem.sublabel);
+      else
+        escapedSublabel = null;
+    }
+
     var baseLabelExists = labelExists(escapedLabel);
-    var subLabels = []; 
-    var subLabelsDict = {};
-    if(escapedLabel in labelMap){
-      subLabelsDict = labelMap[escapedLabel]["has"];
-    }
-
-    for (key in subLabelsDict) {
-      if (subLabelsDict.hasOwnProperty(key))
-        subLabels.push(key);
-    }
+    var added = false;
+    var color = colorMap[escapedLabel];
 
 
-    var color = colorMap[label];
+    if(escapedSublabel !== null) {
+      if(!sublabelExists(escapedLabel, escapedSublabel)) {
+        $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + escapedSublabel + 
+                                '" label="' + escapedLabel + '"' + '>' + escapedSublabel + '/' + escapedLabel + 
+                                '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+        added = true;
 
-    if((subLabels !== null) && (subLabels.length > 0)){
-      for(var j = 0; j < subLabels.length; j++){
-        if(!sublabelExists(label, subLabels[j])){
-          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j] +'" label="' + escapedLabel + '"' + '>' + subLabels[j] + '/' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
-          added = true;
-
-          if(escapedLabel in newlyAddedLabels){
-            var alreadyAvailableSubLabels = newlyAddedLabels[escapedLabel];
-            alreadyAvailableSubLabels.push(subLabels[j])
-            newlyAddedLabels[escapedLabel] = alreadyAvailableSubLabels;
-          }
-          else{
-            newlyAddedLabels[escapedLabel] = [subLabels[j]];
-          }
+        if(escapedLabel in newlyAddedLabels) {
+          var alreadyAvailableSubLabels = newlyAddedLabels[escapedLabel];
+          alreadyAvailableSubLabels.push(escapedSublabel)
+          newlyAddedLabels[escapedLabel] = alreadyAvailableSubLabels;
         }
-      }    
-    }
-    else{ 
+        else {
+          newlyAddedLabels[escapedLabel] = [escapedSublabel];
+        }
+      }
+    } else {
       if(!baseLabelExists)
         newlyAddedLabels[escapedLabel] = [];
     }
 
-    if(!baseLabelExists){
+    if(!baseLabelExists) {
       added = true;
-      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + 
+                              escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
+
 
     if(!added) {
       $('#warningMessageBoxContent').text("Label already exists");
@@ -740,13 +748,24 @@
     canvas = new CanvasDrawer("image");
     canvas.fabric().selection = false;
 
+    {{ if eq .type "object" }}
+    {{ if (eq .sessionInformation.LoggedIn false) }}
+    var addLabelsToDropdown = true;
+
+    {{ end }}
+    {{ end }}
+
     var availableLabels = [];
     var availableLabelsLookupTable = {} //use map for faster access
-    var productiveLabels = {{ .labels }};
-    for (var key in productiveLabels) {
-      if (productiveLabels.hasOwnProperty(key)) { 
+    for (var key in labelAccessorsLookupTable) {
+      if (labelAccessorsLookupTable.hasOwnProperty(key)) {
         availableLabelsLookupTable[key] = true;
         availableLabels.push(escapeHtml(key));
+
+        if(typeof addLabelsToDropdown !== typeof undefined && addLabelsToDropdown) {
+          $("#labelDropdownMenu").append(('<div class="item" data-value="' + 
+                                            escapeHtml(key) + '"><i class="tag icon"></i>' + escapeHtml(key) + '</div>'));
+        }
       }
     } 
 
@@ -1036,10 +1055,7 @@
                   <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
                   <div class="ui search selection dropdown" id="labelDropdown">
                     <div class="default text">Select Label</div>
-                    <div class="menu">
-                      {{ range $key, $value := .labels }}
-                      <div class="item" data-value="{{ $key }}"><i class="tag icon"></i>{{ $key }}</div>
-                      {{ end }}
+                    <div class="menu" id="labelDropdownMenu">
                     </div>
                   </div>
 

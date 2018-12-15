@@ -198,3 +198,35 @@ func (p *ImageMonkeyDatabase) GetLabelAccessorDetails(labelType string) ([]datas
 
     return labelAccessorDetails, nil
 }
+
+func (p *ImageMonkeyDatabase) GetLabelAccessorsMapping() (json.RawMessage, error) {
+    var res json.RawMessage
+
+    rows, err := p.db.Query(`SELECT json_object_agg(a.accessor, CASE 
+                                    WHEN pl.name is not null THEN 
+                                        (json_build_object('label', pl.name, 'sublabel', l.name)) 
+                                    ELSE 
+                                        (json_build_object('label', l.name, 'sublabel', pl.name)) 
+                                        END)
+                             FROM label_accessor a 
+                             JOIN label l ON l.id = a.label_id
+                             LEFT JOIN label pl ON pl.id = l.parent_id
+                             WHERE l.label_type = 'normal'`)
+    if err != nil {
+        log.Error("[Get Label Accessors Mapping] Couldn't get label accessors mapping: ", err.Error())
+        raven.CaptureError(err, nil)
+        return res, err
+    }
+
+    defer rows.Close()
+
+    if rows.Next() {
+        err = rows.Scan(&res)
+        if err != nil {
+            log.Error("[Get Label Accessors Mapping] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return res, err
+        }
+    }
+    return res, nil
+}
