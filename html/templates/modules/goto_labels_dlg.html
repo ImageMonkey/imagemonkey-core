@@ -108,13 +108,13 @@
     }
   }
 
-  function addValidationEntriesToGotoLabelsDlg(imageId, data) {
+  function addValidationEntriesToGotoLabelsDlg(data) {
     var url = '';
     var div = '';
     var tooltip = '';
     var unlocked = '';
     for(var i = 0; i < data.length; i++) {
-      url = '/verify?label_id=' + data[i]["uuid"] + '&image_id=' + imageId;
+      url = '/verify?validation_id=' + data[i]["validation"]["uuid"];
       unlocked = (data[i]["unlocked"]) ? 'true' : 'false';
       tooltip = (data[i]["unlocked"]) ? '' : ' data-tooltip="Label not yet unlocked"'; 
       
@@ -132,7 +132,7 @@
       var sublabels = data[i]["sublabels"];
       if(sublabels !== undefined && sublabels !== null) {
         for(var j = 0; j < sublabels.length; j++) {
-          url = '/verify?label_id=' + sublabels[j]["uuid"] + '&image_id=' + imageId;
+          url = '/verify?validation_id=' + sublabels[j]["validation"]["uuid"];
           unlocked = (data[i]["unlocked"]) ? 'true' : 'false';
           tooltip = (data[i]["unlocked"]) ? '' : ' data-tooltip="Label not yet unlocked"'; 
 
@@ -156,7 +156,7 @@
       dataType: 'json',
       success: function(data){
         if(data)
-          addValidationEntriesToGotoLabelsDlg(imageId, data)
+          addValidationEntriesToGotoLabelsDlg(data)
       }
     });
   }
@@ -173,26 +173,26 @@
     });
   }
 
-  $(document).ready(function(){
-    $({{ .imageIdentifier }}).on('load', function () {
-      {{ if eq .validation 1 }}
-      clearValidationLabelEntries();
-      getLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
-      {{ end }}
-      
-      {{ if eq .annotation 1 }}
-      clearAnnotationLabelEntries();
-      getUnannotatedLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
-      {{ end }}
-    });
-
+  function populateGotoDlg(imageId) {
     {{ if eq .validation 1 }}
-    getLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+    clearValidationLabelEntries();
+    getLabelsForImage(imageId);
     {{ end }}
-    
+        
     {{ if eq .annotation 1 }}
-    getUnannotatedLabelsForImage($({{ .imageIdentifier }}).attr("imageId"));
+    clearAnnotationLabelEntries();
+    getUnannotatedLabelsForImage(imageId);
     {{ end }}
+  }
+
+  $(document).ready(function(){
+    if({{.imageIdentifier}} !== "") {
+      $({{ .imageIdentifier }}).on('load', function () {
+        populateGotoDlg($({{ .imageIdentifier }}).attr("imageId"));
+      });
+
+      populateGotoDlg($({{ .imageIdentifier }}).attr("imageId"));
+    }
 
   });
 </script>

@@ -497,6 +497,7 @@ func main() {
 				}
 			}
 
+			validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
 			mode := commons.GetParamFromUrlParams(c, "mode", "default")
 
 			c.HTML(http.StatusOK, "validate.html", gin.H{
@@ -510,6 +511,7 @@ func main() {
 				"appIdentifier": appIdentifier,
 				"callback": callback,
 				"mode": mode,
+				"validationId": validationId,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),

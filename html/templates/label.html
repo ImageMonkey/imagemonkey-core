@@ -222,6 +222,7 @@
       },
       success: function(data){
         $("#image").attr("imageId", data.image.uuid);
+        populateGotoDlg(data.image.uuid);
 
         var scaleFactor = getCanvasScaleFactor(data.image.width);
         canvas.clear();
@@ -1142,7 +1143,7 @@
       </div>
 
       {{ template "report_dlg.html" .}}
-      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" "languages" .languages "type" .type }}
+      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "" "currentScreen" "labeling" "languages" .languages "type" .type }}
 
       {{ if eq .isModerator true }}
       {{ template "moderator_label_remove_dlg.html" dict "apiBaseUrl" .apiBaseUrl}}

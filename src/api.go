@@ -947,7 +947,9 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			image, err := imageMonkeyDatabase.GetImageToValidate("", apiUser.Name)
+			validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
+
+			image, err := imageMonkeyDatabase.GetImageToValidate(validationId, apiUser.Name)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

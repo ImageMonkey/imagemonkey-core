@@ -45,11 +45,14 @@
 
   <script type="text/javascript">
 
-  function getNextImage() {
+  function getNextImage(validationId) {
     showHideControls(false, false);
     $("#image").attr("src", ""); //clear image
 
     var url = "{{ .apiBaseUrl }}/v1/validation";
+
+    if(validationId !== "")
+      url += "?validation_id=" + validationId;
 
     $.ajax({
       url: url,
@@ -184,7 +187,7 @@
           $("#validationContainer").show();
           $("#thankYouMessage").fadeIn("slow");
           {{ else }}
-          getNextImage();
+          getNextImage("");
           {{ end }}
 
           {{ if .callback }}
@@ -195,7 +198,7 @@
     });
 
     {{ if eq .mode "default" }}
-    getNextImage();
+    getNextImage({{ .validationId }});
     {{ end }}
 
     try {
