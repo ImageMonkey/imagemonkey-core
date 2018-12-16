@@ -230,17 +230,17 @@ func TestQueryAnnotationCoverage(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 2)
 	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage=10"), true)
 }
 
-/*func TestQueryAnnotationCoverage1(t *testing.T) {
+func TestQueryAnnotationCoverage1(t *testing.T) {
 	queryParser := NewQueryParserV2("annotation.coverage < 50%")
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, len(parseResult.QueryValues), 1)
 	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage<50"), true)
-}*/
+}
 
 func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
 	queryParser := NewQueryParserV2("(~a) & b & annotation.coverage = 10%")
@@ -304,12 +304,12 @@ func TestQueryMultipleAnnotationCoverage(t *testing.T) {
 	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage>10 AND q.annotated_percentage<10"), true)
 }
 
-/*func TestQueryImageWidth(t *testing.T) {
+func TestQueryImageWidth(t *testing.T) {
 	queryParser := NewQueryParserV2("image.width > 50px")
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.Query, "q.image_width>50"), true)
-}*/
+	equals(t, strings.Contains(parseResult.Query, "image_width>50"), true)
+}
 
 
