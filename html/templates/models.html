@@ -31,6 +31,7 @@
     }
 
     function populateModelsTable(data) {
+      $("#loadingIndicator").show();
       var modelName = "";
       var numOfImagesPerLabel = 0;
       var elem = null;
@@ -44,7 +45,7 @@
                     '<td>' + escapeHtml(modelName) + '</td>' +
                     '<td>' + numOfImagesPerLabel + '</td>' +
                     '<td>' + trainedOn.join(', ') + '</td>' +
-                    '<td><a class="ui button" onclick="onStatisticsDetailsButtonClicked(\'' + modelName + '\')");"><i class="download icon"></i></a></td>' +
+                    '<td><a class="ui button" onclick="onStatisticsDetailsButtonClicked(\'' + modelName + '\')");"><i class="info icon"></i></a></td>' +
                     '<td><a class="ui button" href="' + data[i].download.http + '"><i class="download icon"></i></a></td>' +
                   '</tr>'));
         $("#modelsTableContent").append(elem);
@@ -52,6 +53,7 @@
         modelStatisticsDetails[modelName] = data[i].statistics;
       }
       $("#modelsTable").tablesort();
+      $("#loadingIndicator").hide();
     }
     $(document).ready(function() {
       populateModelsTable({{ .models }});

@@ -114,7 +114,9 @@ func main() {
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	listenPort := flag.Int("listen_port", 8080, "Specify the listen port")
 	publicBackupsPath := flag.String("public_backups_path", "../public_backups/public_backups.json", "Path to public backups")
-	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL") 
+	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL")
+	modelsPath :=   flag.String("models_path", "https://raw.githubusercontent.com/bbernhard/imagemonkey-models/master/models.json", 
+								"Path to the pre-trained models")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -223,7 +225,7 @@ func main() {
 
 	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase)
 
-	availableModels, err := commons.GetAvailableModels("../../imagemonkey-models/models.json")
+	availableModels, err := commons.GetAvailableModels(*modelsPath)
 	if err != nil {
 		log.Fatal("[Main] Couldn't get available models: ", err.Error())
 	}
