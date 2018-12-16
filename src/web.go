@@ -89,6 +89,7 @@ func ReverseProxy(target string, sessionCookieHandler *SessionCookieHandler,
 	            req.URL.Scheme = "http"
 	            req.URL.Host = target
 	            req.Host = ""
+	            req.URL.Path = ""
 	        }
 	        proxy := &httputil.ReverseProxy{Director: director}
 	        proxy.ServeHTTP(c.Writer, c.Request)
