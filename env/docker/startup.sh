@@ -51,7 +51,7 @@ echo ""
 echo ""
 
 if [ "$run_tests" = true ] ; then
-	echo "Running Integration Tests"
+	echo "Running test suite"
 
 	echo "Installing additional requirements"
 	go get -u gopkg.in/resty.v1
@@ -69,6 +69,18 @@ if [ "$run_tests" = true ] ; then
 
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
+	
+	echo "Running unittests"
+	cd /root/imagemonkey-core/src/parser/
+	supervisorctl stop all
+	go test
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+    	echo "Aborting due to error"
+    	exit $retVal
+	fi
+
+	echo "Running Integration Tests"
 	cd /root/imagemonkey-core/tests/
 	supervisorctl stop all
 	supervisorctl start imagemonkey-api:imagemonkey-api0
@@ -80,15 +92,15 @@ if [ "$run_tests" = true ] ; then
     	exit $retVal
 	fi
 
-	echo "Running UI Tests"
-	supervisorctl start imagemonkey-web:imagemonkey-web0
-	cd /root/imagemonkey-core/tests/ui/
-	python3 -m unittest
-	retVal=$?
-	if [ $retVal -ne 0 ]; then
-    	echo "Aborting due to error"
-    	exit $retVal
-	fi
+	#echo "Running UI Tests"
+	#supervisorctl start imagemonkey-web:imagemonkey-web0
+	#cd /root/imagemonkey-core/tests/ui/
+	#python3 -m unittest
+	#retVal=$?
+	#if [ $retVal -ne 0 ]; then
+    #	echo "Aborting due to error"
+    #	exit $retVal
+	#fi
 
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
