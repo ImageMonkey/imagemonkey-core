@@ -501,7 +501,7 @@
 
         elem = $(('<div class="ui huge ' + color + ' label existing-label" sublabel="' + subLabels[i]["name"] 
                     +'" label="' + label + '"' + ' data-validation-uuid="' 
-                    + data["validation"]["uuid"] + '"' + ' id="' + id + '"' + ' >' + displayedLabel + '</div>'));
+                    + subLabels[i]["validation"]["uuid"] + '"' + ' id="' + id + '"' + ' >' + displayedLabel + '</div>'));
 
         if(strikethrough)
           elem.css("text-decoration", "line-through");
