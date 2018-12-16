@@ -769,7 +769,7 @@ func main() {
 		})
 
 
-		router.GET("/monitoring", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
+		router.GET("/monitoring/", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
 
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{
