@@ -791,7 +791,7 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerApp(contributionType string,
 }
 
 
-func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIUser) ([]datastructures.AnnotatedStat, error) {
+func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIUser, excludeMetalabels bool) ([]datastructures.AnnotatedStat, error) {
     var annotatedStats []datastructures.AnnotatedStat
     var queryValues []interface{}
 
@@ -815,6 +815,11 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
         queryValues = append(queryValues, apiUser.Name)
     }
 
+    q1 := ""
+    if excludeMetalabels {
+        q1 = "WHERE l.label_type != 'meta'"
+    }
+
 
 
     q := fmt.Sprintf(`WITH num_validations AS (
@@ -836,12 +841,13 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
                      JOIN label_accessor acc ON acc.label_id = v.label_id
                      JOIN label l ON acc.label_id = l.id
                      LEFT JOIN num_annotations a ON a.label_id = acc.label_id
+                     %s
                      ORDER BY 
                         CASE 
                             WHEN v.num = 0 THEN 0
                             ELSE a.num/v.num
                         END DESC`, 
-                     includeOwnImageDonations, includeOwnImageDonations)
+                     includeOwnImageDonations, includeOwnImageDonations, q1)
 
     rows, err := p.db.Query(q, queryValues...)
     if err != nil {

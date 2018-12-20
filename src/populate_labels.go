@@ -239,7 +239,6 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) {
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
-			panic(err)
 		}
 	} else {
 		log.Debug("Skipping label ", sublabel, " (parent: ", label, " ), as it already exists")
@@ -322,44 +321,59 @@ func addLabelRefinementAccessors(tx *sql.Tx, labelUuid string, label string, acc
 	}
 }
 
-func main(){
-	dryRun := flag.Bool("dryrun", true, "dry run")
-	debug := flag.Bool("debug", false, "debug")
+func addMetaLabels(tx *sql.Tx, metaLabels datastructures.MetaLabelMap) {
+	for k, v := range metaLabels.MetaLabelMapEntries {
+		if v.Uuid == "" {
+			tx.Rollback()
+			log.Fatal("metalabels uuid is empty!")
+		}
 
-	flag.Parse()
+		rows, err := tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type) VALUES ($1, null, $2, 'meta')
+				                   ON CONFLICT DO NOTHING RETURNING id`, k, v.Uuid)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
 
-	if *debug {
-		log.SetLevel(log.DebugLevel)
+		defer rows.Close()
+
+		if rows.Next() {
+			log.Info("Inserted meta label type ", k, "(uuid: ", v.Uuid, ")")
+		}
+
+		rows.Close()
+
+		addMetaLabelAccessors(tx, v.Uuid, k, v.Accessors)
 	}
+}
 
-	if *dryRun {
-		log.Info("Populating labels (dry run)...")
-	} else{
-		log.Info("Populating labels...")
+
+func addMetaLabelAccessors(tx *sql.Tx, labelUuid string, label string, accessors []string) {
+	for _, acc := range accessors {
+		accessor := acc
+		if accessor == "." {
+			accessor = label
+		}
+
+		rows, err := tx.Query(`INSERT INTO label_accessor(label_id, accessor)
+								SELECT l.id, $2 FROM label l WHERE uuid = $1
+								ON CONFLICT DO NOTHING RETURNING id`, labelUuid, accessor)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
+
+		defer rows.Close()
+
+		if rows.Next() {
+			log.Info("Added label accessor ", accessor, " for label with uuid ", labelUuid)
+		}
+
+		rows.Close()
 	}
+}
 
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
-
-	tx, err := db.Begin()
-    if err != nil {
-    	log.Fatal("Couldn't start transaction: ", err.Error())
-    }
-
-    labelMap, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
-	if err != nil {
-		log.Fatal("Couldn't get label map: ", err.Error())
-	}
-
-	labelMapRefinements, err := commons.GetLabelRefinementsMap("../wordlists/en/label-refinements.json")
-	if err != nil {
-		log.Fatal("Couldn't get label map refinements: ", err.Error())
-	}
-
-	//add labels
+func addLabels(tx *sql.Tx, labelMap map[string]datastructures.LabelMapEntry) {
 	for k := range labelMap {
 		val := labelMap[k]
 
@@ -377,10 +391,54 @@ func main(){
 		addAccessors(tx, k, val)
 
 	} 
+}
+
+func main(){
+	dryRun := flag.Bool("dryrun", true, "dry run")
+	debug := flag.Bool("debug", false, "debug")
+
+	flag.Parse()
+
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	if *dryRun {
+		log.Info("Populating labels (dry run)...")
+	} else{
+		log.Info("Populating labels...")
+	}
+
+    labelMap, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
+	if err != nil {
+		log.Fatal("Couldn't get label map: ", err.Error())
+	}
+
+	labelMapRefinements, err := commons.GetLabelRefinementsMap("../wordlists/en/label-refinements.json")
+	if err != nil {
+		log.Fatal("Couldn't get label map refinements: ", err.Error())
+	}
+
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	err = metalabels.Load()
+	if err != nil {
+		log.Fatal("Couldn't get meta labels: ", err.Error())
+	}
 
 
-	//add label refinements
+	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx, err := db.Begin()
+    if err != nil {
+    	log.Fatal("Couldn't start transaction: ", err.Error())
+    }
+
+	addLabels(tx, labelMap)
 	addLabelRefinements(tx, labelMapRefinements)
+	addMetaLabels(tx, metalabels.GetMapping())
 
 	if ! *dryRun {
 		err = tx.Commit()

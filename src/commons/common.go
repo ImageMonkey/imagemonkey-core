@@ -295,7 +295,8 @@ func IsAlphaNumeric(s string) bool {
     return true
 }
 
-func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label string, sublabels []datastructures.Sublabel) bool {
+func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, metalabels *MetaLabels, 
+                    label string, sublabels []datastructures.Sublabel) bool {
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
@@ -308,6 +309,10 @@ func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label strin
             }
             return true
         }
+        return true
+    }
+
+    if metalabels.Contains(label) {
         return true
     }
 
@@ -490,4 +495,43 @@ func GetAvailableModels(s string) ([]json.RawMessage, error) {
     }
 
     return models, nil
+}
+
+
+
+type MetaLabels struct {
+    metalabels datastructures.MetaLabelMap
+    path string
+}
+
+func NewMetaLabels(path string) *MetaLabels {
+    return &MetaLabels {
+        path: path,
+    } 
+}
+
+func (p *MetaLabels) Load() error {
+    data, err := ioutil.ReadFile(p.path)
+    if err != nil {
+        return err
+    }
+
+    err = json.Unmarshal(data, &p.metalabels)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (p *MetaLabels) GetMapping() datastructures.MetaLabelMap {
+    return p.metalabels
+}
+
+func (p *MetaLabels) Contains(val string) bool {
+    if _, ok := p.metalabels.MetaLabelMapEntries[val]; ok {
+        return true
+    }
+
+    return false
 }

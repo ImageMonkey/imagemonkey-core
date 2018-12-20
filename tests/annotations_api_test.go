@@ -130,7 +130,7 @@ func TestGetExistingAnnotations1(t *testing.T) {
 	for i := 0; i < len(imageIds); i++ {
 		//annotate image with label apple
 		testAnnotate(t, imageIds[i], "apple", "", 
-						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	}
 
@@ -150,7 +150,7 @@ func TestGetExistingAnnotationsLockedAndAnnotatedByForeignUser(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken)
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken, 201)
 
 	testGetExistingAnnotations(t, "apple", "", 200, 0)
 }
@@ -168,7 +168,7 @@ func TestGetExistingAnnotationsLockedAndAnnotatedByOwnUser(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken)
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken, 201)
 
 	testGetExistingAnnotations(t, "apple", userToken, 200, 1)
 }
@@ -183,7 +183,7 @@ func TestGetImageAnnotations(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testGetAnnotatedImage(t, imageId, "",  200)
 }
@@ -198,7 +198,7 @@ func TestGetImageAnnotationsInvalidImageId(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testGetAnnotatedImage(t, "this-is-an-invalid-image-id", "",  422)
 }
@@ -216,7 +216,7 @@ func TestGetImageAnnotationsImageLockedForeignDonation(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token)
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
 
 	testGetAnnotatedImage(t, imageId, "",  422)
 }
@@ -234,7 +234,7 @@ func TestGetImageAnnotationsImageLockedButOwnDonation(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token)
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
 
 	testGetAnnotatedImage(t, imageId, token,  200)
 }
@@ -253,7 +253,7 @@ func TestGetImageAnnotationsImageLockedOwnDonationButQuarantine(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token)
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
 
 	err = db.PutImageInQuarantine(imageId)
 	ok(t, err)
@@ -271,7 +271,7 @@ func TestBrowseByCoverage(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 
 	runDataProcessor(t)
@@ -295,7 +295,7 @@ func TestBrowseByCoverageFullyContained(t *testing.T) {
 	//in case there is another rect that is fully contained within the bigger rect, the coverage should still be the same
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}},
-					  {"top":67,"left":150,"type":"rect","angle":0,"width":500,"height":500,"stroke":{"color":"red","width":5}}]`, "")
+					  {"top":67,"left":150,"type":"rect","angle":0,"width":500,"height":500,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 
 	runDataProcessor(t)
@@ -328,7 +328,7 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 
 	//annotate image with label dog
 	testAnnotate(t, imageIds[0], "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	//now we expect just one result 
 	testBrowseAnnotation(t, "cat&dog", 1, "")
@@ -336,7 +336,7 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 
 	//annotate image with label cat
 	testAnnotate(t, imageIds[0], "cat", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	//now we should get no result
 	testBrowseAnnotation(t, "cat&dog", 0, "")
@@ -417,7 +417,7 @@ func TestBrowseAnnotationQuery1(t *testing.T) {
 
 	
 	testAnnotate(t, imageIds[0], "apple", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testBrowseAnnotation(t, "~tree", num-1, "")
 	testBrowseAnnotation(t, "apple", num-1, "")	
@@ -437,7 +437,7 @@ func TestBrowseAnnotationQueryAnnotationCoverage(t *testing.T) {
 	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 	runDataProcessor(t)
 
@@ -456,7 +456,7 @@ func TestBrowseAnnotationQueryImageDimensions(t *testing.T) {
 	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 	runDataProcessor(t)
 

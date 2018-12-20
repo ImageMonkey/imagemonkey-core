@@ -211,7 +211,7 @@ func (p *ImageMonkeyDatabase) GetLabelAccessorsMapping() (json.RawMessage, error
                              FROM label_accessor a 
                              JOIN label l ON l.id = a.label_id
                              LEFT JOIN label pl ON pl.id = l.parent_id
-                             WHERE l.label_type = 'normal'`)
+                             WHERE l.label_type = 'normal' OR l.label_type = 'meta'`)
     if err != nil {
         log.Error("[Get Label Accessors Mapping] Couldn't get label accessors mapping: ", err.Error())
         raven.CaptureError(err, nil)

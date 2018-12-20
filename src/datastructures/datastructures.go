@@ -499,12 +499,6 @@ type ContributionsPerAppRequest struct {
     Type string `json:"type"`
 }
 
-
-type MetaLabelMapEntry struct {
-    Description string  `json:"description"`
-    Name string `json:"name"`
-}
-
 type LabelMapQuizExampleEntry struct {
     Filename string `json:"filename"`
     Attribution string `json:"attribution"`
@@ -537,9 +531,18 @@ type LabelMapEntry struct {
     Uuid string `json:"uuid"`
 }
 
+type MetaLabelMapEntry struct {
+    Description string  `json:"description"`
+    Accessors []string `json:"accessors"`
+    Uuid string `json:"uuid"`
+}
+
 type LabelMap struct {
     LabelMapEntries map[string]LabelMapEntry `json:"labels"`
-    MetaLabelMapEntries map[string]MetaLabelMapEntry  `json:"metalabels"`
+}
+
+type MetaLabelMap struct {
+    MetaLabelMapEntries map[string]MetaLabelMapEntry `json:"metalabels"`
 }
 
 type LabelValidationEntry struct {

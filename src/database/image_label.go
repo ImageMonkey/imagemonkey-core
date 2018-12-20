@@ -270,7 +270,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
 
 
 func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
-                        imageId string, labels []datastructures.LabelMeEntry) error {
+                                                metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry) error {
     tx, err := p.db.Begin()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
@@ -280,7 +280,7 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
 
     var knownLabels []datastructures.LabelMeEntry
     for _, item := range labels {
-        if !commons.IsLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
+        if !commons.IsLabelValid(labelMap, metalabels, item.Label, item.Sublabels) { //if its a label that is not known to us
             if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
                 err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
                 if err != nil {

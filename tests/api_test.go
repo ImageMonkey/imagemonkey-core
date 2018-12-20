@@ -71,7 +71,7 @@ func testLogin(t *testing.T, username string, password string, requiredStatusCod
     return resp.Result().(*LoginResult).Token
 }
 
-func testAnnotate(t *testing.T, imageId string, label string, sublabel string, annotations string, token string) {
+func testAnnotate(t *testing.T, imageId string, label string, sublabel string, annotations string, token string, expectedStatusCode int) {
 	type Annotation struct {
 		Annotations []json.RawMessage `json:"annotations"`
 		Label string `json:"label"`
@@ -97,30 +97,32 @@ func testAnnotate(t *testing.T, imageId string, label string, sublabel string, a
 
 	ok(t, err)
 
-	equals(t, resp.StatusCode(), 201)
+	equals(t, resp.StatusCode(), expectedStatusCode)
 
-	//export annotations again
-	url = resp.Header().Get("Location")
-	req = resty.R().
-					SetHeader("Content-Type", "application/json").
-					SetResult(&datastructures.AnnotatedImage{})
-					
-	if token != "" {
-		req.SetAuthToken(token)
+	if expectedStatusCode == 201 {
+		//export annotations again
+		url = resp.Header().Get("Location")
+		req = resty.R().
+						SetHeader("Content-Type", "application/json").
+						SetResult(&datastructures.AnnotatedImage{})
+						
+		if token != "" {
+			req.SetAuthToken(token)
+		}
+
+		resp, err = req.Get(url)
+		ok(t, err)
+
+		equals(t, resp.StatusCode(), 200)
+
+		j, err := json.Marshal(&resp.Result().(*datastructures.AnnotatedImage).Annotations)
+		ok(t, err)
+
+		equal, err := equalJson(string(j), annotations)
+		equals(t, equal, true)
+
+		ok(t, err)
 	}
-
-	resp, err = req.Get(url)
-	ok(t, err)
-
-	equals(t, resp.StatusCode(), 200)
-
-	j, err := json.Marshal(&resp.Result().(*datastructures.AnnotatedImage).Annotations)
-	ok(t, err)
-
-	equal, err := equalJson(string(j), annotations)
-	equals(t, equal, true)
-
-	ok(t, err)
 }
 
 
@@ -130,7 +132,7 @@ func testRandomAnnotate(t *testing.T, num int, annotations string) {
 		ok(t, err)
 
 		testAnnotate(t, annotationRow.Image.Id, annotationRow.Validation.Label, 
-						annotationRow.Validation.Sublabel, annotations, "")
+						annotationRow.Validation.Sublabel, annotations, "", 201)
 	}
 }
 

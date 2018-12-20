@@ -335,8 +335,8 @@ func getUsernameFromContext(c *gin.Context, authTokenHandler *AuthTokenHandler) 
 }
 
 func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username string, imageSource datastructures.ImageSource, 
-			labelMap map[string]datastructures.LabelMapEntry, dir string, redisPool *redis.Pool, statisticsPusher *commons.StatisticsPusher, 
-			geodb *geoip2.Reader, autoUnlock bool) {
+			labelMap map[string]datastructures.LabelMapEntry, metalabels *commons.MetaLabels, dir string, 
+			redisPool *redis.Pool, statisticsPusher *commons.StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
 
 	file, header, err := c.Request.FormFile("image")
@@ -382,7 +382,7 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
     }
 
     if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        if !commons.IsLabelValid(labelMap, label, []datastructures.Sublabel{}) {
+        if !commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
         	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
         	return
         }
@@ -485,6 +485,7 @@ func main(){
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 	imageQuarantineDir := flag.String("image_quarantine_dir", "../quarantine/", "Location of the images that are put in quarantine")
@@ -524,14 +525,14 @@ func main(){
 		log.Fatal(err)
 	}
 
-	//if the mostPopularLabels gets extended with sublabels, 
-	//adapt getRandomGroupedImages() and validateImages() also!
-	//mostPopularLabels := []string{"cat", "dog"}
+	log.Debug("[Main] Reading Metalabel Map")
+	metaLabels := commons.NewMetaLabels(*metalabelsPath)
+	err = metaLabels.Load()
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read metalabel map...terminating!")
+		log.Fatal(err)
+	}
 
-	//currently, there is both the imageMonkeyDb and the db. 
-	//the reason for that is, that the database part initially started out really simple.
-	//as the database part now is pretty big its time to move it to an own library.
-	//until the migration is completed, we will have two database handles here.
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
 	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
@@ -847,7 +848,7 @@ func main(){
 
 				//we trust images from the labelme database, so we automatically save them
 				//into the donations folder and unlock them per default.
-				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, dir, redisPool, 
+				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, metaLabels, dir, redisPool, 
 						statisticsPusher, geoipDb, autoUnlock)
 			})
 
@@ -1139,7 +1140,7 @@ func main(){
 				return
 			} 
 			
-			err := imageMonkeyDatabase.AddLabelsToImage(apiUser, labelMap, imageId, labels)
+			err := imageMonkeyDatabase.AddLabelsToImage(apiUser, labelMap, metaLabels, imageId, labels)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1732,8 +1733,8 @@ func main(){
 			}
 
 
-			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, 
-					statisticsPusher, geoipDb, false)
+			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, metaLabels, 
+					*unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 		})
 
 		router.POST("/v1/report/:imageid", func(c *gin.Context) {
@@ -2004,6 +2005,11 @@ func main(){
 			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if annotations.Sublabel == "" && metaLabels.Contains(annotations.Label) {
+				c.JSON(400, gin.H{"error": "Couldn't add annotations - it's not possible to annotate metalabels"})
+				return
+			}
 
 
 			annotationId, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, false)
@@ -2877,7 +2883,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			annotatedStatistics, err := imageMonkeyDatabase.GetAnnotatedStatistics(apiUser)
+			annotatedStatistics, err := imageMonkeyDatabase.GetAnnotatedStatistics(apiUser, true)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

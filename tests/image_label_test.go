@@ -168,7 +168,7 @@ func TestBrowseLabelAnnotationCoverage2(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 	runDataProcessor(t)
 

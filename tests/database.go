@@ -776,6 +776,15 @@ func (p *ImageMonkeyDatabase) DoLabelAccessorsBelongToMoreThanOneLabelId() (bool
 	return false, nil
 }
 
+func (p *ImageMonkeyDatabase) GetNumOfMetaLabelImageValidations() (int, error) {
+	var num int 
+	err := p.db.QueryRow(`SELECT count(*) FROM 
+							image_validation v 
+							JOIN label l ON l.id = v.label_id
+							WHERE l.label_type = 'meta'`).Scan(&num)
+	return num, err
+}
+
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()

@@ -65,7 +65,7 @@ func TestMultipleGetUnannotatedValidations2(t *testing.T) {
 	testLabelImage(t, imageId, "cat", "")
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testGetUnannotatedValidations(t, imageId, "", 200, 2)
 }

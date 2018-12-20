@@ -121,7 +121,7 @@ func TestGetImageWitHighlights(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	img1, _, _ := testGetImage(t, imageId, 500, 200, "", 200)
 	img2, _, _ := testGetImage(t, imageId, 500, 200, "apple", 200)

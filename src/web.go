@@ -106,6 +106,7 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
@@ -199,6 +200,14 @@ func main() {
 	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
+		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading Metalabel Map")
+	metaLabels := commons.NewMetaLabels(*metalabelsPath)
+	err = metaLabels.Load()
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read metalabel map...terminating!")
 		log.Fatal(err)
 	}
 

@@ -1,26 +1,4 @@
 {
-	"metalabels": {
-		"animal": {
-			"description": "optional"
-		},
-		"vehicle": {
-			"description": "optional"
-		},
-		"food": {
-			"description": "optional"
-		},
-		"electronics": {
-			"description": "optional"
-		},
-		"nature": {
-			"description": "optional"
-		},
-		"sports": {
-			"description": "optional"
-		}
-	},
-
-
 	"labels": {
 		"dog": {
 			"description": "optional",
@@ -666,11 +644,6 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "d25e8353-2b45-434c-b8e7-8fe98ab2925b"
-		},
-		"kitchen": {
-			"description": "optional",
-			"accessors": ["."],
-			"uuid": "6ea6beb7-b1ce-4ee1-bc94-bd35e118ddda"
 		},
 		"lake": {
 			"description": "optional",

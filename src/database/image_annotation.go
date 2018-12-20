@@ -346,7 +346,7 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
                             JOIN label l ON v.label_id = l.id
                             JOIN label_accessor acc ON acc.label_id = v.label_id
                             LEFT JOIN label pl ON l.parent_id = pl.id
-                            WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
+                            WHERE (i.unlocked = true %s) AND p.name = 'donation' AND l.label_type != 'meta' AND
                             CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                             %s
                             AND NOT EXISTS
@@ -363,7 +363,7 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
                                     JOIN image_provider p ON i.image_provider_id = p.id
                                     JOIN image_validation v ON v.image_id = i.id
                                     JOIN label l ON v.label_id = l.id
-                                    WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
+                                    WHERE (i.unlocked = true %s) AND p.name = 'donation' AND l.label_type != 'meta' AND 
                                     CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                                     %s
                                     AND NOT EXISTS

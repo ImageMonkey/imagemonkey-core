@@ -94,7 +94,7 @@ func TestGetRandomImageQuiz(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 	
 	annotationIds, err := db.GetAllAnnotationIds()
 	ok(t, err)
@@ -117,7 +117,7 @@ func TestGetRandomImageQuizImageStillLocked(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken)
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, userToken, 201)
 	
 	annotationIds, err := db.GetAllAnnotationIds()
 	ok(t, err)
@@ -137,7 +137,7 @@ func TestBrowseRefinement(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testBrowseRefinement(t, "dog", "", 200, 1)
 }
@@ -151,7 +151,7 @@ func TestBrowseRefinementNoResult(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testBrowseRefinement(t, "apple", "", 200, 0)
 }
@@ -167,7 +167,7 @@ func TestBrowseRefinementInvalidRequest(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testBrowseRefinement(t, "", "", 422, 0)
 }
@@ -182,7 +182,7 @@ func TestBrowseRefinementByAnnotationDataId(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	annotationDataId, err := db.GetLastAddedAnnotationDataId()
 	ok(t, err)
@@ -206,7 +206,7 @@ func TestBrowseRefinementByInvalidAnnotationDataId(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "dog", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 	testBrowseRefinement(t, "", "invalid-annotation-data-id", 422, 1)
 }
@@ -222,7 +222,7 @@ func TestBrowseRefinementByCategory(t *testing.T) {
 	ok(t, err)
 
 	testAnnotate(t, imageId, "person", "", 
-					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "")
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
 
 	testBrowseRefinement(t, "person & ~gender", "", 200, 1)
