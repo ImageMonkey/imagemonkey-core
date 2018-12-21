@@ -2,6 +2,7 @@ package tests
 
 import (
 	"testing"
+	"../src/commons"
 )
 
 func TestAddMetaLabel(t *testing.T) {
@@ -51,6 +52,25 @@ func TestMetaLabelShouldntBeAnnotatable(t *testing.T) {
 
 	testAnnotate(t, imageId, "kitchen", "", 
 						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 400)
-
 }
+
+func TestMetaLabelsDoNotOverlapLaps(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	labels, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
+
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	err = metalabels.Load()
+	ok(t, err)
+
+	m := metalabels.GetMapping()
+	for key, _ := range m.MetaLabelMapEntries {
+		if _, ok := labels[key]; ok {
+			t.Errorf("Found a duplicate label '%s'", key)
+		}
+	}
+} 
+
+
 
