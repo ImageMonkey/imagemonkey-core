@@ -78,8 +78,6 @@ RUN cp /root/imagemonkey-core/env/docker/conf/supervisor/* /etc/supervisor/conf.
 
 RUN cp -r /root/imagemonkey-core/src /tmp/imagemonkey-core-src \
  && cp /tmp/imagemonkey-core-src/api_secrets.template /tmp/imagemonkey-core-src/api_secrets.go \
- && cp /tmp/imagemonkey-core-src/web_secrets.template /tmp/imagemonkey-core-src/web_secrets.go \
- && cp /tmp/imagemonkey-core-src/api_secrets.template /root/imagemonkey-core/src/api_secrets.go \
  && cp /tmp/imagemonkey-core-src/web_secrets.template /root/imagemonkey-core/src/web_secrets.go \
  && chown -R imagemonkey:imagemonkey /tmp/imagemonkey-core-src \
  && chmod -R u+rwx /tmp/imagemonkey-core-src \

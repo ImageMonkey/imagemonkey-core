@@ -92,15 +92,15 @@ if [ "$run_tests" = true ] ; then
     	exit $retVal
 	fi
 
-	#echo "Running UI Tests"
-	#supervisorctl start imagemonkey-web:imagemonkey-web0
-	#cd /root/imagemonkey-core/tests/ui/
-	#python3 -m unittest
-	#retVal=$?
-	#if [ $retVal -ne 0 ]; then
-    #	echo "Aborting due to error"
-    #	exit $retVal
-	#fi
+	echo "Running UI Tests"
+	supervisorctl start imagemonkey-web:imagemonkey-web0
+	cd /root/imagemonkey-core/tests/ui/
+	python3 -m unittest
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+    	echo "Aborting due to error"
+    	exit $retVal
+	fi
 
 else
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
