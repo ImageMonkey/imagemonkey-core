@@ -56,6 +56,7 @@ if [ "$run_tests" = true ] ; then
 	echo "Installing additional requirements"
 	go get -u gopkg.in/resty.v1
 	pip3 install selenium
+	pip3 install requests
 	wget https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip --directory-prefix=/tmp/
 	cd /tmp \
 		&& unzip /tmp/chromedriver_linux64.zip \
