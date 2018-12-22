@@ -25,6 +25,9 @@ import (
 	imagemonkeydb "./database"
 	languages "./languages"
 	img "./image"
+	"github.com/NYTimes/gziphandler"
+	"github.com/bbernhard/gin-wraphh"
+	"compress/gzip"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -119,6 +122,7 @@ func main() {
 	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL")
 	modelsPath :=   flag.String("models_path", "https://raw.githubusercontent.com/bbernhard/imagemonkey-models/master/models.json", 
 								"Path to the pre-trained models")
+	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -218,10 +222,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//currently, there is both the imageMonkeyDb and the db. 
-	//the reason for that is, that the database part initially started out really simple.
-	//as the database part now is pretty big its time to move it to an own library.
-	//until the migration is completed, we will have two database handles here.
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
 	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
@@ -259,6 +259,17 @@ func main() {
 
 	router := gin.Default()
 	router.SetHTMLTemplate(tmpl)
+
+	if *gzipCompress {
+		gzipHandler, err := gziphandler.GzipHandlerWithOpts(gziphandler.CompressionLevel(gzip.DefaultCompression), 
+															gziphandler.ContentTypes([]string{"text/html", "text/css", "application/javascript", "text/javascript"}))
+		if err != nil {
+			log.Fatal("[Main] Couldn't initialize Gzip Handler", err.Error())
+		}
+		router.Use(wraphh.WrapHH(gzipHandler))
+	}
+
+	
 	router.Static("./js", "../js") //serve javascript files
 	router.Static("./css", "../css") //serve css files
 
