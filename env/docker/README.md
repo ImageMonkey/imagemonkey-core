@@ -58,3 +58,7 @@ The docker port mapping is also helpful if you already have a service running on
 
 # Run Tests
 `docker run imagemonkey-core --run-tests`
+
+# Run stresstest
+
+`docker run --mount type=bind,source=/home/imagemonkey/imagemonkey_04_11_2018.zip,target=/tmp/stresstest/imagemonkey_data.zip,readonly imagemonkey-core --run-stresstest`
