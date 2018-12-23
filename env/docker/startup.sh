@@ -5,9 +5,14 @@ trap "kill 0" EXIT
 
 
 run_tests=false
+run_stresstest=false
 if [ "$1" ]; then
 	if [ "$1" == "--run-tests" ]; then
 		run_tests=true
+	fi
+
+	if [ "$1" == "--run-stresstest" ]; then
+		run_stresstest=true
 	fi
 fi
 
@@ -102,8 +107,30 @@ if [ "$run_tests" = true ] ; then
     	echo "Aborting due to error"
     	exit $retVal
 	fi
+fi
 
-else
+if [ "$run_stresstest" = true ] ; then
+	if [ ! -f /tmp/stresstest/imagemonkey_data.zip ]; then
+		echo "Couldn't run stresstest: /tmp/stresstest/imagemonkey_data.zip doesn't exist!"
+		exit 1
+	fi 
+
+	cd /tmp/
+	unzip /tmp/stresstest/imagemonkey_data.zip
+	cp -r /tmp/stresstest/donations /home/imagemonkey/
+	su - postgres -c "psql -v ON_ERROR_STOP=1 --single-transaction -f /tmp/stresstest/imagemonkey.sql"
+
+	cd /tmp/stresstest
+	wget https://github.com/tsenart/vegeta/releases/download/cli%2Fv12.1.0/vegeta-12.1.0-linux-amd64.tar.gz .
+	tar xvf vegeta-12.1.0-linux-amd64.tar.gz
+	rm -f vegeta-12.1.0-linux-amd64.tar.gz
+	chmod u+rx vegeta
+
+	cat /root/imagemonkey-core/tests/stresstest/requests.txt | ./vegeta attack -duration=5s | ./vegeta report
+fi
+
+
+if [ "$run_stresstest" = false ] && [ "$run_tests" = false ] ; then
 	echo "You can now connect to the webserver via <machine ip>:8080 and to the REST API via <machine ip>:8081."
 	echo "This docker image is for development only - do NOT use it in production!"
 
