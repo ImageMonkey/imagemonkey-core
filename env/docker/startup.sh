@@ -120,6 +120,7 @@ if [ "$run_stresstest" = true ] ; then
 	cp -r /tmp/stresstest/donations /home/imagemonkey/
 
 	su - postgres -c "echo \"select pg_terminate_backend(pid) from pg_stat_activity where datname='imagemonkey';drop database imagemonkey;\" | psql" > /dev/null
+	su - postgres -c "echo \"create database imagemonkey OWNER monkey;\" | psql"
 	su - postgres -c "psql -v ON_ERROR_STOP=1 --single-transaction -d imagemonkey -f /tmp/stresstest/imagemonkey.sql"
 
 	cd /tmp/stresstest
