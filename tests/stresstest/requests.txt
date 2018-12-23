@@ -1,1 +1,11 @@
-GET http://127.0.0.1:8080/
+GET http://127.0.0.1:8081/v1/labelme
+GET http://127.0.0.1:8081/v1/annotate
+GET http://127.0.0.1:8081/v1/annotations?query=apple
+GET http://127.0.0.1:8081/v1/annotations?query=person
+GET http://127.0.0.1:8081/v1/annotations?query=dog
+GET http://127.0.0.1:8081/v1/statistics/annotations
+GET http://127.0.0.1:8081/v1/statistics/validations
+GET http://127.0.0.1:8081/v1/statistics/validations/count
+GET http://127.0.0.1:8081/v1/statistics/annotations/count
+GET http://127.0.0.1:8081/v1/statistics/annotations/refinements
+GET http://127.0.0.1:8081/v1/statistics/annotated

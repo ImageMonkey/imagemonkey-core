@@ -36,8 +36,10 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]da
                            ),
                            num_of_image_descriptions AS (
                             SELECT sys_period FROM image_description_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL 
                             SELECT sys_period FROM image_description h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_image_descriptions s
@@ -83,8 +85,10 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
                            ),
                            num_of_annotations AS (
                             SELECT sys_period FROM image_annotation_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL 
                             SELECT sys_period FROM image_annotation h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_annotations s
@@ -129,8 +133,10 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
                            ),
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL
                             SELECT sys_period FROM image_validation h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
@@ -176,8 +182,10 @@ func (p *ImageMonkeyDatabase) GetAnnotationRefinementStatistics(period string) (
                            ),
                            num_of_annotation_refinements AS (
                             SELECT sys_period FROM image_annotation_refinement_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL 
                             SELECT sys_period FROM image_annotation_refinement h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_annotation_refinements s
