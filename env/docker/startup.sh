@@ -115,10 +115,12 @@ if [ "$run_stresstest" = true ] ; then
 		exit 1
 	fi 
 
-	cd /tmp/
-	unzip /tmp/stresstest/imagemonkey_data.zip
+	cd /tmp/stresstest/
+	unzip -o /tmp/stresstest/imagemonkey_data.zip
 	cp -r /tmp/stresstest/donations /home/imagemonkey/
-	su - postgres -c "psql -v ON_ERROR_STOP=1 --single-transaction -f /tmp/stresstest/imagemonkey.sql"
+
+	su - postgres -c "echo \"select pg_terminate_backend(pid) from pg_stat_activity where datname='imagemonkey';drop database imagemonkey;\" | psql" > /dev/null
+	su - postgres -c "psql -v ON_ERROR_STOP=1 --single-transaction -d imagemonkey -f /tmp/stresstest/imagemonkey.sql"
 
 	cd /tmp/stresstest
 	wget https://github.com/tsenart/vegeta/releases/download/cli%2Fv12.1.0/vegeta-12.1.0-linux-amd64.tar.gz .
