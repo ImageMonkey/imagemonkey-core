@@ -278,29 +278,11 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
         return err
     }
 
-    var knownLabels []datastructures.LabelMeEntry
-    for _, item := range labels {
-        if !commons.IsLabelValid(labelMap, metalabels, item.Label, item.Sublabels) { //if its a label that is not known to us
-            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
-                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
-                if err != nil {
-                    return err //tx already rolled back in case of error, so we can just return here 
-                }
-            } else {
-                tx.Rollback()
-                log.Debug("you need to be authenticated")
-                return errors.New("you need to be authenticated to perform this action") 
-            }
-        } else {
-            knownLabels = append(knownLabels, item)
-        }
-    }
-
-    if len(knownLabels) > 0 {
-        _, err = AddLabelsToImageInTransaction(apiUser.ClientFingerprint, imageId, knownLabels, 0, 0, tx)
-        if err != nil { 
-            return err //tx already rolled back in case of error, so we can just return here 
-        }
+    _, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageId, labels, 0, 0)
+    if err != nil { //tx already rolled back in case of error, so we can just return here 
+        log.Debug("[Adding image labels] Couldn't add labels: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
     }
 
     
@@ -311,6 +293,40 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
         return err 
     }
     return err
+}
+
+
+func _addLabelsAndLabelSuggestionsToImageInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
+                                                        metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry,
+                                                        numOfValid int, numOfNotAnnotatable int) ([]int64, error) {
+    var insertedValidationIds []int64
+    var err error
+    var knownLabels []datastructures.LabelMeEntry
+    for _, item := range labels {
+        if !commons.IsLabelValid(labelMap, metalabels, item.Label, item.Sublabels) { //if its a label that is not known to us
+            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
+                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
+                if err != nil {
+                    return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here 
+                }
+            } else {
+                tx.Rollback()
+                log.Debug("you need to be authenticated")
+                return insertedValidationIds, errors.New("you need to be authenticated to perform this action") 
+            }
+        } else {
+            knownLabels = append(knownLabels, item)
+        }
+    }
+
+    if len(knownLabels) > 0 {
+        insertedValidationIds, err = AddLabelsToImageInTransaction(apiUser.ClientFingerprint, imageId, knownLabels, numOfValid, numOfNotAnnotatable, tx)
+        if err != nil { 
+            return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here 
+        }
+    }
+
+    return insertedValidationIds, nil
 }
 
 func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {

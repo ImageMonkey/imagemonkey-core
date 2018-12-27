@@ -690,3 +690,33 @@ type LabelAccessorDetail struct {
 type ModelStatisticsEntry struct {
     Num int `json:"num"`
 }
+
+type ImageHuntTaskImage struct {
+    Id string `json:"uuid"`
+    Width int32 `json:"width"`
+    Height int32 `json:"height"`
+    Unlocked bool `json:"unlocked"`
+    Url string `json:"url"`
+}
+
+type ImageHuntTask struct {
+    Image *ImageHuntTaskImage `json:"image,omitempty"`
+
+    Label struct {
+        Accessor string `json:"accessor"`
+        Name string `json:"name"`
+    } `json:"label"`
+}
+
+/*type ImageHuntLabelSuggestionEntry struct {
+    Description string  `json:"description"`
+    Label string `json:"label"`
+}
+
+type ImageHuntLabelSuggestionMap struct {
+    ImageHuntLabelSuggestionEntries map[string]ImageHuntLabelSuggestionEntry `json:"suggestions"`
+}*/
+
+type ImageHuntStats struct {
+    Stars int `json:"stars"`
+}

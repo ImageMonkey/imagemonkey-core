@@ -339,6 +339,20 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 			redisPool *redis.Pool, statisticsPusher *commons.StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
 
+
+	if imageSource.Provider == "imagehunt" {
+		if label == "" {
+			c.JSON(400, gin.H{"error": "Please provide a label"})
+			return
+		} else {
+			if !commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
+				c.JSON(400, gin.H{"error": "Please provide a valid label"})
+				return
+			}
+		}
+	}
+
+
 	file, header, err := c.Request.FormFile("image")
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Picture is missing"})
@@ -381,13 +395,6 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
         return
     }
 
-    if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        if !commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
-        	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
-        	return
-        }
-    }
-
     addSublabels := false
     temp := c.PostForm("add_sublabels")
     if temp == "true" {
@@ -400,17 +407,26 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 		return
 	}
 
-
-	labelMapEntry := labelMap[label]
-	if !addSublabels {
-		labelMapEntry.LabelMapEntries = nil
-	}
 	var labelMeEntry datastructures.LabelMeEntry
 	var labelMeEntries []datastructures.LabelMeEntry
 	labelMeEntry.Label = label
-	labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
-	for key, _ := range labelMapEntry.LabelMapEntries {
-		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: key})
+
+	if label != "" {
+		if commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
+			labelMapEntry := labelMap[label]
+			if !addSublabels {
+				labelMapEntry.LabelMapEntries = nil
+			}
+			labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
+			for key, _ := range labelMapEntry.LabelMapEntries {
+				labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: key})
+			}
+		} else { //labels that are not already productive, can only be added if authenticated
+			if username == "" {
+				c.JSON(401, gin.H{"error": "Authentication required"})
+				return
+			}
+		}
 	}
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
@@ -432,7 +448,13 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 	imageInfo.Source = imageSource
 	imageInfo.Name = uuid
 
-	e := db.AddDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries, imageCollectionName)
+	var apiUser datastructures.APIUser
+	apiUser.ClientFingerprint = browserFingerprint
+	apiUser.Name = username
+
+
+	e := db.AddDonatedPhoto(apiUser, imageInfo, autoUnlock, labelMeEntries, 
+							imageCollectionName, labelMap, metalabels)
 	if e == imagemonkeydb.ImageDonationInternalError {
 		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 		return
@@ -2934,6 +2956,64 @@ func main(){
 				return
 			}
 			c.JSON(200, gin.H{"activity": activity, "period": "last-month"})
+		})
+
+		router.GET("/v1/user/:username/games/imagehunt/tasks", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			username := c.Param("username")
+
+			if (apiUser.Name == "") || (apiUser.Name != username) {
+				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+				return
+			}
+
+			imageHuntTasks, err := imageMonkeyDatabase.GetImageHuntTasks(apiUser, *apiBaseUrl)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, imageHuntTasks)
+		})
+
+		router.GET("/v1/user/:username/games/imagehunt/stats", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			username := c.Param("username")
+
+			if (apiUser.Name == "") || (apiUser.Name != username)  {
+				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+				return
+			}
+
+			imageHuntStats, err := imageMonkeyDatabase.GetImageHuntStats(apiUser)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, imageHuntStats)
+		})
+
+		router.POST("/v1/games/imagehunt/donate", func(c *gin.Context) {
+			var imageSource datastructures.ImageSource
+			imageSource.Provider = "imagehunt"
+			imageSource.Trusted = false
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+				return
+			}
+
+			donate(c, imageMonkeyDatabase, apiUser.Name, imageSource, labelMap, metaLabels, 
+					*unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 		})
 	}
 

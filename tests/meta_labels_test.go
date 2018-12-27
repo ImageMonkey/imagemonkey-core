@@ -13,7 +13,7 @@ func TestAddMetaLabel(t *testing.T) {
 	ok(t, err)
 	equals(t, numBefore, 0)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -29,7 +29,7 @@ func TestMetaLabelValidationShouldntBeReturnedInRandomAnnotation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -43,7 +43,7 @@ func TestMetaLabelShouldntBeAnnotatable(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)

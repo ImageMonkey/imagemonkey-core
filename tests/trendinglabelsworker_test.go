@@ -150,8 +150,8 @@ func TestBasicTrendingLabelsWorkerFunctionality2(t *testing.T) {
 	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
 	token := testLogin(t, "testuser", "testpassword", 200)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
-	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, "", "", 200)
 
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)

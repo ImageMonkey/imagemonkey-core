@@ -535,3 +535,41 @@ func (p *MetaLabels) Contains(val string) bool {
 
     return false
 }
+
+
+/*type ImageHuntLabelSuggestions struct {
+    labelSuggestions datastructures.ImageHuntLabelSuggestionMap
+    path string
+}
+
+func NewImageHuntLabelSuggestions(path string) *ImageHuntLabelSuggestions {
+    return &ImageHuntLabelSuggestions {
+        path: path,
+    } 
+}
+
+func (p *ImageHuntLabelSuggestions) Load() error {
+    data, err := ioutil.ReadFile(p.path)
+    if err != nil {
+        return err
+    }
+
+    err = json.Unmarshal(data, &p.labelSuggestions)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (p *ImageHuntLabelSuggestions) GetMapping() datastructures.ImageHuntLabelSuggestionMap {
+    return p.labelSuggestions
+}
+
+func (p *ImageHuntLabelSuggestions) Contains(val string) bool {
+    if _, ok := p.labelSuggestions.ImageHuntLabelSuggestionEntries[val]; ok {
+        return true
+    }
+
+    return false
+}*/

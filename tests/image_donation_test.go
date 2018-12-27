@@ -2,7 +2,6 @@ package tests
 
 import (
 	"testing"
-	//"gopkg.in/resty.v1"
 	"bytes"
 	"image"
 	"net/http"
@@ -44,7 +43,7 @@ func TestGetOriginalImage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -59,7 +58,7 @@ func TestGetScaledImage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -74,7 +73,7 @@ func TestGetExactlyScaledToImage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -89,7 +88,7 @@ func TestGetImageWithNotYetAvailableHighlights(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -115,7 +114,7 @@ func TestGetImageWitHighlights(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -137,4 +136,36 @@ func TestGetImageWitHighlights(t *testing.T) {
 	img2Bytes := buf2.Bytes()
 
 	notEquals(t, img1Bytes, img2Bytes)
+}
+
+func TestDonateAndAddLabelSuggestion(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "user", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "user", 200)
+
+	numBefore, err := db.GetNumberOfImagesWithLabelSuggestions("new-label-that-doesnt-exist-yet")
+	ok(t, err)
+	equals(t, int(numBefore), 0)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "new-label-that-doesnt-exist-yet", true, userToken, "", 200)
+
+	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("new-label-that-doesnt-exist-yet")
+	ok(t, err)
+	equals(t, int(numAfter), 1)
+}
+
+func TestDonateAndAddLabelSuggestionShouldFailDueToUnauthenticatedUser(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "new-label-that-doesnt-exist-yet", true, "", "", 401)
+}
+
+func TestDonateAndAddLabelSuggestionShouldFailDueToWrongUsername(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "new-label-that-doesnt-exist-yet", true, "not-existing-token", "", 401)
 }

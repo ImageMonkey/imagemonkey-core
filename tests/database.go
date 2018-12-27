@@ -490,6 +490,27 @@ func (p *ImageMonkeyDatabase) GetNumberOfTrendingLabelSuggestions() (int32, erro
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfImageHuntTasksForImageWithLabel(imageId string, label string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM imagehunt_task h
+						   JOIN image_validation v ON v.id = h.image_validation_id
+						   JOIN label l ON l.id = v.label_id
+						   JOIN image i ON i.id = v.image_id
+						   WHERE i.key = $1 AND l.name = $2`, imageId, label).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumberOfImageUserEntriesForImageAndUser(imageId string, username string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image i
+						   JOIN user_image u ON u.image_id = i.id
+						   JOIN account a ON a.id = u.account_id
+						   WHERE i.key = $1 AND a.name = $2`, imageId, username).Scan(&num)
+	return num, err
+}
+
 func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64, error) {
 	productiveLabelIds := []int64{}
 

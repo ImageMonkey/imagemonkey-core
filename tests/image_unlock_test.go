@@ -119,7 +119,7 @@ func TestGetAllUnverifiedDonations(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 }
 
@@ -127,7 +127,7 @@ func TestGetAllUnverifiedDonationsNotAuthenticated(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, "", "", 401, 0)
 }
 
@@ -135,7 +135,7 @@ func TestGetAllUnverifiedDonationsNothingToDo(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 0)
 }
 
@@ -143,7 +143,7 @@ func TestUnlockImage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 
 	imageId, err := db.GetLatestDonatedImageId()
@@ -157,7 +157,7 @@ func TestUnlockImageFailsDueToWrongClientAuth(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 
 	imageId, err := db.GetLatestDonatedImageId()
@@ -171,7 +171,7 @@ func TestDeleteDonation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 
 	imageId, err := db.GetLatestDonatedImageId()
@@ -185,7 +185,7 @@ func TestDeleteDonationFailsDueToWrongClientAuth(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 
 	imageId, err := db.GetLatestDonatedImageId()
@@ -199,7 +199,7 @@ func TestQuarantineDonation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 
 	imageId, err := db.GetLatestDonatedImageId()
@@ -213,7 +213,7 @@ func TestQuarantineDonationFailsDueToWrongClientAuth(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 1)
 
 	imageId, err := db.GetLatestDonatedImageId()
@@ -227,9 +227,9 @@ func TestBatchHandleLockedImages(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "")
-	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, "", "")
-	testDonate(t, "./images/apples/apple3.jpeg", "apple", false, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", false, "", "", 200)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", false, "", "", 200)
+	testDonate(t, "./images/apples/apple3.jpeg", "apple", false, "", "", 200)
 	testGetAllUnverifiedDonations(t, X_CLIENT_ID, X_CLIENT_SECRET, 200, 3)
 
 	imageIds, err := db.GetAllImageIds()
