@@ -576,7 +576,8 @@
 			"has": {
 				"head": {
 					"description": "optional",
-					"uuid": "a9b9c7c8-9340-4b91-a573-d1f115b6d137"
+					"uuid": "a9b9c7c8-9340-4b91-a573-d1f115b6d137",
+					"accessors": [".has"]
 				}
 			}
 		},
@@ -1084,6 +1085,27 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "9b087567-b49b-47da-afbb-a6f5e9f0cf0f"
+		},
+		"cactus": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2de14381-5204-431e-996a-261a411c50e8"
+		},
+		"knife": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0db1c5b5-2feb-41fd-bbd0-33ff156f36c0"
+		},
+		"guitar": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "00e8851f-715e-4c03-8597-f2b2545a3ca2"
+		},
+		"butterfly": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9cb91307-ab62-489a-b774-0dea18e7f9ab"
 		}
+
 	}
 }
