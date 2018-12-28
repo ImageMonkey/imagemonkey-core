@@ -2984,13 +2984,18 @@ func main(){
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
 			username := c.Param("username")
+			utcOffset, err := commons.GetIntParamFromUrlParams(c, "utc_offset", 0)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "Please provide a valid utc offset"})
+				return
+			}
 
 			if (apiUser.Name == "") || (apiUser.Name != username)  {
 				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
 				return
 			}
 
-			imageHuntStats, err := imageMonkeyDatabase.GetImageHuntStats(apiUser)
+			imageHuntStats, err := imageMonkeyDatabase.GetImageHuntStats(apiUser, len(labelMap), utcOffset)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

@@ -708,15 +708,13 @@ type ImageHuntTask struct {
     } `json:"label"`
 }
 
-/*type ImageHuntLabelSuggestionEntry struct {
-    Description string  `json:"description"`
-    Label string `json:"label"`
+type ImageHuntAchievement struct {
+    Name string `json:"name"`
+    Description string `json:"description"`
+    Accomplished bool `json:"accomplished"`
 }
-
-type ImageHuntLabelSuggestionMap struct {
-    ImageHuntLabelSuggestionEntries map[string]ImageHuntLabelSuggestionEntry `json:"suggestions"`
-}*/
 
 type ImageHuntStats struct {
     Stars int `json:"stars"`
+    Achievements []ImageHuntAchievement `json:"achievements"`
 }

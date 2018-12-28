@@ -11,6 +11,7 @@ import (
     "errors"
     "encoding/json"
     "github.com/lib/pq"
+    "time"
 )
 
 type ImageDonationErrorType int
@@ -291,8 +292,8 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
             return ImageDonationInternalError 
         }
 
-        _, err := tx.Exec(`INSERT INTO imagehunt_task(image_validation_id)
-                            VALUES($1)`, insertedValidationIds[0])
+        _, err := tx.Exec(`INSERT INTO imagehunt_task(image_validation_id, created)
+                            VALUES($1, $2)`, insertedValidationIds[0], time.Now().Unix())
         if err != nil {
             tx.Rollback()
             log.Error("[Create ImageHunt entry for donated image] Couldn't create entry: ", err.Error())

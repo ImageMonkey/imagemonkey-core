@@ -380,6 +380,18 @@ func GetParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string
     return param
 }
 
+func GetIntParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound int64) (int64, error) {
+    params := c.Request.URL.Query()
+
+    var param int64 = defaultIfNotFound
+    if temp, ok := params[name]; ok {
+        param, err := strconv.ParseInt(temp[0], 10, 64)
+        return param, err
+    }
+
+    return param, nil
+}
+
 func GetParamsFromUrlParams(c *gin.Context, name string) []string {
     params := c.Request.URL.Query()
 
@@ -536,40 +548,216 @@ func (p *MetaLabels) Contains(val string) bool {
     return false
 }
 
+type AchievementsGenerator struct {
+    achievements []datastructures.ImageHuntAchievement
 
-/*type ImageHuntLabelSuggestions struct {
-    labelSuggestions datastructures.ImageHuntLabelSuggestionMap
-    path string
+    numOfWeekendWarriorEntries int
+    lastAddedWeekendWarriorEntry time.Time
+
+    numOfNightOwlEntries int
+    lastAddedNightOwlEntry time.Time
+
+    numOfEarlyBirdEntries int
+    lastAddedEarlyBirdEntry time.Time
+
+    numOfCouchPotatoEntries int
+    lastAddedCouchPotatorEntry time.Time
+
+    numOfWorkerBeeEntries int
+    lastAddedWorkerBeeEntry time.Time
+
+    numOfAntEntries int
+    lastAddedAntEntry time.Time
+
+    numOfGreedySquirrelEntries int
+    lastAddedGreedySquirrelEntry time.Time
+
+    numOfImageMonkeyEntries int
+    lastAddedImageMonkeyEntry time.Time
+
+    numOfAvailableLabels int
 }
 
-func NewImageHuntLabelSuggestions(path string) *ImageHuntLabelSuggestions {
-    return &ImageHuntLabelSuggestions {
-        path: path,
+func NewAchievementsGenerator() *AchievementsGenerator {
+    return &AchievementsGenerator {
+        achievements: []datastructures.ImageHuntAchievement{datastructures.ImageHuntAchievement{Name: "Early Bird",
+                                                                Description: "Add an image before 06:00 AM on three consecutive days at a row"},
+                                                          datastructures.ImageHuntAchievement{Name: "Night Owl",
+                                                                Description: "Add an image after 12:00 PM on three consecutive days at a row"},
+                                                          datastructures.ImageHuntAchievement{Name: "Weekend Warrior",
+                                                                Description: ""},
+                                                          datastructures.ImageHuntAchievement{Name: "Couch Potato",
+                                                                Description: ""},
+                                                          datastructures.ImageHuntAchievement{Name: "Worker Bee",
+                                                                Description: ""},
+                                                          datastructures.ImageHuntAchievement{Name: "Ant",
+                                                                Description: ""},
+                                                          datastructures.ImageHuntAchievement{Name: "Greedy Squirrel",
+                                                                Description: ""},
+                                                          datastructures.ImageHuntAchievement{Name: "Image Monkey",
+                                                                Description: ""},
+                                                         },
+        numOfWeekendWarriorEntries: 0,
+        numOfNightOwlEntries: 0,
+        numOfEarlyBirdEntries: 0,
+        numOfCouchPotatoEntries: 0,
+        numOfWorkerBeeEntries: 0,
+        numOfAntEntries: 0,
+        numOfGreedySquirrelEntries: 0,
+        numOfImageMonkeyEntries: 0,
+        numOfAvailableLabels: 0,
     } 
 }
 
-func (p *ImageHuntLabelSuggestions) Load() error {
-    data, err := ioutil.ReadFile(p.path)
-    if err != nil {
-        return err
-    }
-
-    err = json.Unmarshal(data, &p.labelSuggestions)
-    if err != nil {
-        return err
-    }
-
-    return nil
-}
-
-func (p *ImageHuntLabelSuggestions) GetMapping() datastructures.ImageHuntLabelSuggestionMap {
-    return p.labelSuggestions
-}
-
-func (p *ImageHuntLabelSuggestions) Contains(val string) bool {
-    if _, ok := p.labelSuggestions.ImageHuntLabelSuggestionEntries[val]; ok {
+func (p *AchievementsGenerator) isConsecutiveDay(old time.Time, new time.Time) bool {
+    if old.IsZero() {
         return true
     }
 
+    if new.Equal(old.AddDate(0, 0, 1)) {
+        return true
+    }
     return false
-}*/
+}
+
+func (p *AchievementsGenerator) SetNumOfAvailableLabels(numOfAvailableLabels int) {
+    p.numOfAvailableLabels = numOfAvailableLabels
+}
+
+func (p *AchievementsGenerator) Add(t time.Time) {
+    weekday := t.Weekday()
+
+    //weekend warrior?
+    if (weekday == time.Sunday) || (weekday == time.Saturday) {
+        if p.isConsecutiveDay(p.lastAddedWeekendWarriorEntry, t) {
+            p.numOfWeekendWarriorEntries += 1
+            p.lastAddedWeekendWarriorEntry = t
+        } else {
+            p.numOfWeekendWarriorEntries = 0
+        }
+    }
+
+    //night owl?
+    hour, _, _ := t.Clock()
+    if hour >= 0 && hour <= 3 {
+        if p.isConsecutiveDay(p.lastAddedNightOwlEntry, t) {
+            p.numOfNightOwlEntries += 1
+            p.lastAddedNightOwlEntry = t
+        } else {
+            p.numOfNightOwlEntries = 0
+        }
+    }
+
+
+    //early bird? 
+    hour, _, _ = t.Clock()
+    if hour >= 5 && hour <= 7 {
+        if p.isConsecutiveDay(p.lastAddedEarlyBirdEntry, t) {
+            p.numOfEarlyBirdEntries += 1
+            p.lastAddedEarlyBirdEntry = t
+        } else {
+            p.numOfEarlyBirdEntries = 0
+        }
+    }
+
+    //couch potato? 
+    hour, _, _ = t.Clock()
+    if hour >= 20 && hour <= 21 {
+        if p.isConsecutiveDay(p.lastAddedCouchPotatorEntry, t) {
+            p.numOfCouchPotatoEntries += 1
+            p.lastAddedCouchPotatorEntry = t
+        } else {
+            p.numOfCouchPotatoEntries = 0
+        }
+    }
+
+    //worker bee?
+    if p.isConsecutiveDay(p.lastAddedWorkerBeeEntry, t) {
+        p.numOfWorkerBeeEntries += 1
+        p.lastAddedWorkerBeeEntry = t
+    } else {
+        p.numOfWorkerBeeEntries = 0
+    }
+
+    //ant?
+    if p.isConsecutiveDay(p.lastAddedAntEntry, t) {
+        p.numOfAntEntries += 1
+        p.lastAddedAntEntry = t
+    } else {
+        p.numOfAntEntries = 0
+    }
+
+    //greedy squirrel?
+    if p.isConsecutiveDay(p.lastAddedGreedySquirrelEntry, t) {
+        p.numOfGreedySquirrelEntries += 1
+        p.lastAddedGreedySquirrelEntry = t
+    } else {
+        p.numOfGreedySquirrelEntries = 0
+    }
+
+    //image monkey?
+    if p.isConsecutiveDay(p.lastAddedImageMonkeyEntry, t) {
+        p.numOfImageMonkeyEntries += 1
+        p.lastAddedImageMonkeyEntry = t
+    } else {
+        p.numOfImageMonkeyEntries = 0
+    }
+
+}
+
+func (p *AchievementsGenerator) GetAchievements() ([]datastructures.ImageHuntAchievement, error) {
+    achievements := p.achievements
+    for _, val := range achievements {
+
+        if val.Name == "Weekend Warrior" {
+            val.Accomplished = false
+            if p.numOfWeekendWarriorEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Early Bird" {
+            val.Accomplished = false
+            if p.numOfEarlyBirdEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Night Owl" {
+            val.Accomplished = false
+            if p.numOfNightOwlEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Couch Potato" {
+            val.Accomplished = false
+            if p.numOfCouchPotatoEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Worker Bee" {
+            val.Accomplished = false
+            if p.numOfWorkerBeeEntries >= 7 {
+                val.Accomplished = true
+            }
+        } else if val.Name == "Ant" {
+            val.Accomplished = false
+            if p.numOfAntEntries >= 30 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Greedy Squirrel" {
+            val.Accomplished = false
+            if p.numOfGreedySquirrelEntries >= 60 {
+                val.Accomplished = true
+            }
+        } else if val.Name == "Image Monkey" {
+            val.Accomplished = false
+            if p.numOfImageMonkeyEntries == p.numOfAvailableLabels {
+                val.Accomplished = true
+            }
+        } else {
+            return achievements, errors.New("Invalid entry")
+        }
+    }
+
+    return achievements, nil
+}
