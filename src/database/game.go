@@ -98,7 +98,7 @@ func isValidationValid(numOfValid int, numOfInvalid int) bool {
 	return isValid
 }
 
-func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, 
+func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, apiBaseUrl string,
 												numOfAvailableLabels int, utcOffset int64) (datastructures.ImageHuntStats, error) {
 	var imageHuntStats datastructures.ImageHuntStats
 
@@ -170,7 +170,7 @@ func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser,
 		
 	}
 
-	imageHuntStats.Achievements, err = achievementsGenerator.GetAchievements()
+	imageHuntStats.Achievements, err = achievementsGenerator.GetAchievements(apiBaseUrl)
 	if err != nil {
 		log.Error("[Get ImageHunt Stats] Couldn't get achievements: ", err.Error())
         raven.CaptureError(err, nil)

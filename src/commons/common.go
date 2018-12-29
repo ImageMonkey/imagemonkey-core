@@ -581,21 +581,29 @@ type AchievementsGenerator struct {
 func NewAchievementsGenerator() *AchievementsGenerator {
     return &AchievementsGenerator {
         achievements: []datastructures.ImageHuntAchievement{datastructures.ImageHuntAchievement{Name: "Early Bird",
-                                                                Description: "Add an image before 06:00 AM on three consecutive days at a row"},
+                                                                Description: "Add an image between 05:00 and 08:00 AM on three consecutive days in a row",
+                                                                Badge: "bird.png"},
                                                           datastructures.ImageHuntAchievement{Name: "Night Owl",
-                                                                Description: "Add an image after 12:00 PM on three consecutive days at a row"},
+                                                                Description: "Add an image between 00:00 and 03:00 AM on three consecutive days in a row",
+                                                                Badge: "owl.png"},
                                                           datastructures.ImageHuntAchievement{Name: "Weekend Warrior",
-                                                                Description: ""},
+                                                                Description: "Add an image on three consecutive weekends in a row",
+                                                                Badge: "warrior.png"},
                                                           datastructures.ImageHuntAchievement{Name: "Couch Potato",
-                                                                Description: ""},
+                                                                Description: "Add an image between 08:00 and 09:00 PM on three consecutive days in a row",
+                                                                Badge: "potato.png"},
                                                           datastructures.ImageHuntAchievement{Name: "Worker Bee",
-                                                                Description: ""},
-                                                          datastructures.ImageHuntAchievement{Name: "Ant",
-                                                                Description: ""},
+                                                                Description: "Add an image every day for at least one week",
+                                                                Badge: "bee.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Ant Power",
+                                                                Description: "Add an image every day for at least one month",
+                                                                Badge: "ant.png"},
                                                           datastructures.ImageHuntAchievement{Name: "Greedy Squirrel",
-                                                                Description: ""},
+                                                                Description: "Add an image every day for at least two months",
+                                                                Badge: "squirrel.png"},
                                                           datastructures.ImageHuntAchievement{Name: "Image Monkey",
-                                                                Description: ""},
+                                                                Description: "Add an image for every label",
+                                                                Badge: "monkey.png"},
                                                          },
         numOfWeekendWarriorEntries: 0,
         numOfNightOwlEntries: 0,
@@ -662,7 +670,7 @@ func (p *AchievementsGenerator) Add(t time.Time) {
 
     //couch potato? 
     hour, _, _ = t.Clock()
-    if hour >= 20 && hour <= 21 {
+    if hour >= 20 && hour <= 20 {
         if p.isConsecutiveDay(p.lastAddedCouchPotatorEntry, t) {
             p.numOfCouchPotatoEntries += 1
             p.lastAddedCouchPotatorEntry = t
@@ -705,9 +713,9 @@ func (p *AchievementsGenerator) Add(t time.Time) {
 
 }
 
-func (p *AchievementsGenerator) GetAchievements() ([]datastructures.ImageHuntAchievement, error) {
+func (p *AchievementsGenerator) GetAchievements(apiBaseUrl string) ([]datastructures.ImageHuntAchievement, error) {
     achievements := p.achievements
-    for _, val := range achievements {
+    for key, val := range achievements {
 
         if val.Name == "Weekend Warrior" {
             val.Accomplished = false
@@ -738,7 +746,7 @@ func (p *AchievementsGenerator) GetAchievements() ([]datastructures.ImageHuntAch
             if p.numOfWorkerBeeEntries >= 7 {
                 val.Accomplished = true
             }
-        } else if val.Name == "Ant" {
+        } else if val.Name == "Ant Power" {
             val.Accomplished = false
             if p.numOfAntEntries >= 30 {
                 val.Accomplished = true
@@ -757,6 +765,9 @@ func (p *AchievementsGenerator) GetAchievements() ([]datastructures.ImageHuntAch
         } else {
             return achievements, errors.New("Invalid entry")
         }
+
+        val.Badge = apiBaseUrl + val.Badge
+        achievements[key] = val
     }
 
     return achievements, nil

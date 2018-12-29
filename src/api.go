@@ -523,6 +523,7 @@ func main(){
 	listenPort := flag.Int("listen_port", 8081, "Specify the listen port")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081/", "API Base URL")
 	corsAllowOrigin := flag.String("cors_allow_origin", "*", "CORS Access-Control-Allow-Origin")
+	imageHuntAssetsDir := flag.String("imagehunt_assets_dir", "../img/game-assets/", "ImageHunt Game Assets Directory")
 
 	sentryEnvironment := "api"
 
@@ -2995,7 +2996,7 @@ func main(){
 				return
 			}
 
-			imageHuntStats, err := imageMonkeyDatabase.GetImageHuntStats(apiUser, len(labelMap), utcOffset)
+			imageHuntStats, err := imageMonkeyDatabase.GetImageHuntStats(apiUser, *apiBaseUrl + "v1/games/imagehunt/assets/" ,len(labelMap), utcOffset)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -3020,6 +3021,8 @@ func main(){
 			donate(c, imageMonkeyDatabase, apiUser.Name, imageSource, labelMap, metaLabels, 
 					*unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 		})
+
+		router.Static("/v1/games/imagehunt/assets", *imageHuntAssetsDir)
 	}
 
 	if *corsAllowOrigin == "*" {

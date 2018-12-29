@@ -712,6 +712,7 @@ type ImageHuntAchievement struct {
     Name string `json:"name"`
     Description string `json:"description"`
     Accomplished bool `json:"accomplished"`
+    Badge string `json:"badge"`
 }
 
 type ImageHuntStats struct {
