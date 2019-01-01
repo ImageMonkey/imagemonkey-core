@@ -12,6 +12,7 @@ import (
     "database/sql"
     "github.com/lib/pq"
     "image"
+    "github.com/satori/go.uuid"
 )
 
 func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, annotationId string, 
@@ -1218,12 +1219,20 @@ func (p *ImageMonkeyDatabase) AddOrUpdateRefinements(annotationUuid string, anno
 
     tx, err := p.db.Begin()
     if err != nil {
-        log.Debug("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
+        log.Error("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
 
     for _, item := range annotationRefinementEntries {
+
+        _, err = uuid.FromString(item.LabelId)
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Add or Update annotation refinement] Couldn't add/update refinements - invalid label id")
+            raven.CaptureError(err, nil)
+            return &InvalidLabelIdError{Description: "invalid label id"}
+        }
 
         _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
                             SELECT d.id, (SELECT l.id FROM label l WHERE l.uuid = $2), $3, $4 
@@ -1236,7 +1245,7 @@ func (p *ImageMonkeyDatabase) AddOrUpdateRefinements(annotationUuid string, anno
         
         if err != nil {
             tx.Rollback()
-            log.Debug("[Add or Update annotation refinement] Couldn't update: ", err.Error())
+            log.Error("[Add or Update annotation refinement] Couldn't update: ", err.Error())
             raven.CaptureError(err, nil)
             return err
         }
@@ -1244,7 +1253,7 @@ func (p *ImageMonkeyDatabase) AddOrUpdateRefinements(annotationUuid string, anno
 
     err = tx.Commit()
     if err != nil {
-        log.Debug("[Add or Update annotation refinement] Couldn't commit transaction: ", err.Error())
+        log.Error("[Add or Update annotation refinement] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }

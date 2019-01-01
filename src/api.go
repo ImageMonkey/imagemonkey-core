@@ -2265,8 +2265,14 @@ func main(){
 
 			err := imageMonkeyDatabase.AddOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
 			if err != nil {
-				c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
-				return
+				switch err.(type) {
+					case *imagemonkeydb.InvalidLabelIdError:
+						c.JSON(400, gin.H{"error": "Couldn't add annotation refinement - please provide a valid label id"})
+						return
+					default:
+						c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
+						return
+				}
 			}
 
 			//get client IP address and try to determine country

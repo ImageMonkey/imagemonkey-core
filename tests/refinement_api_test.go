@@ -7,7 +7,7 @@ import (
 	"../src/datastructures"
 )
 
-func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId string, labelUuid string) {
+func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId string, labelUuid string, expectedStatusResponse int) {
 	type AnnotationRefinementEntry struct {
     	LabelUuid string `json:"label_uuid"`
 	}
@@ -22,7 +22,7 @@ func testImageAnnotationRefinement(t *testing.T, annotationId string, annotation
 				Post(url)
 
 	ok(t, err)
-	equals(t, resp.StatusCode(), 201)
+	equals(t, resp.StatusCode(), expectedStatusResponse)
 }
 
 func testRandomAnnotationRefinement(t *testing.T, num int) {
@@ -33,7 +33,7 @@ func testRandomAnnotationRefinement(t *testing.T, num int) {
 		labelUuid, err := db.GetRandomLabelUuid()
 		ok(t, err)
 
-		testImageAnnotationRefinement(t, annotationId, annotationDataId, labelUuid)
+		testImageAnnotationRefinement(t, annotationId, annotationDataId, labelUuid, 201)
 	}
 }
 
@@ -232,8 +232,29 @@ func TestBrowseRefinementByCategory(t *testing.T) {
 
 	labelUuid := "1eaa891f-9e5c-448d-ac90-78d5a4a189e9" //this is the uuid of the label "male" (see label-refinements.json)
 
-	testImageAnnotationRefinement(t, annotationId, annotationDataId, labelUuid)
+	testImageAnnotationRefinement(t, annotationId, annotationDataId, labelUuid, 201)
 
 	testBrowseRefinement(t, "person & ~gender", "", 200, 0)
 	testBrowseRefinement(t, "person & gender='male'", "", 200, 1)
+}
+
+func TestImageAnnotationRefinementShouldFailWhenLabelIdIsInvalid(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	//donate image with some label + annotate
+	testDonate(t, "./images/apples/apple1.jpeg", "person", true, "", "", 200)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "person", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+
+	testBrowseRefinement(t, "person & ~gender", "", 200, 1)
+
+	annotationId, annotationDataId, err := db.GetLastAddedAnnotationData()
+	ok(t, err)
+
+	testImageAnnotationRefinement(t, annotationId, annotationDataId, "not-a-valid-label-uuid", 400)
 }
