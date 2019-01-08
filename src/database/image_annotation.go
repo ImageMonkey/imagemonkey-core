@@ -4,7 +4,8 @@ import (
     "github.com/getsentry/raven-go"
     log "github.com/Sirupsen/logrus"
     "../datastructures"
-    "../parser"
+    parserV2 "../parser/v2"
+    parser "../parser"
     commons "../commons"
     "encoding/json"
     "errors"
@@ -781,7 +782,7 @@ func (p *ImageMonkeyDatabase) GetAnnotationCoverage(imageId string) ([]datastruc
 }
 
 
-func (p *ImageMonkeyDatabase) GetAnnotationsForRefinement(parseResult parser.ParseResult, apiBaseUrl string, 
+func (p *ImageMonkeyDatabase) GetAnnotationsForRefinement(parseResult parserV2.ParseResult, apiBaseUrl string, 
         annotationDataId string) ([]datastructures.AnnotationRefinementTask, error) {
     var annotationRefinementTasks []datastructures.AnnotationRefinementTask
 
@@ -1014,7 +1015,7 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
     return annotatedImages, nil
 }
 
-func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures.APIUser, parseResult parser.ParseResult, 
+func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures.APIUser, parseResult parserV2.ParseResult, 
 		orderRandomly bool, apiBaseUrl string) ([]datastructures.AnnotationTask, error) {
     var annotationTasks []datastructures.AnnotationTask
 

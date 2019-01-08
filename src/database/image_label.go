@@ -9,7 +9,7 @@ import (
     "encoding/json"
     "github.com/lib/pq"
     commons "../commons"
-    parser "../parser"
+    parser "../parser/v2"
     "errors"
 )
 
