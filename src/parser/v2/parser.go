@@ -59,6 +59,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		typeOfQueryKnown: false,
 	}
 	errorListener := NewCustomErrorListener() 
+	errorListener.query = p.query
 	parser := NewImagemonkeyQueryLangParser(stream)
 	parser.RemoveErrorListeners() //remove default error listeners
 	parser.AddErrorListener(errorListener)

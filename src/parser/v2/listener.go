@@ -10,16 +10,35 @@ import (
 type CustomErrorListener struct {
 	*antlr.DefaultErrorListener
 	err error
+	query string
 }
 
 func NewCustomErrorListener() *CustomErrorListener {
 	return &CustomErrorListener {
         err: nil,
+        query: "",
     } 
 }
 
 func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
-	c.err = errors.New("line "+strconv.Itoa(line)+":"+strconv.Itoa(column)+" "+msg)
+	//c.err = errors.New(msg)
+	c. err = errors.New(c.underlineError(recognizer, offendingSymbol, line, column, msg))
+}
+
+func (c *CustomErrorListener) underlineError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string) string {
+	out := c.query + "\n"
+	for i := 0; i < column; i++ {
+		out += " "
+	}
+	start := offendingSymbol.(antlr.Token).GetStart()
+	stop := offendingSymbol.(antlr.Token).GetStop()
+	if start >= 0 && stop >= 0 {
+		for i := start; i <= stop; i++ {
+			out += "^"
+		}
+	}
+	out += "\n" + msg
+	return out
 }
 
 
