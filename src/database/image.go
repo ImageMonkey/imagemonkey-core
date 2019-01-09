@@ -6,7 +6,7 @@ import (
     "../datastructures"
     "database/sql"
     commons "../commons"
-    parser "../parser"
+    parser "../parser/v2"
     "fmt"
     "errors"
     "encoding/json"

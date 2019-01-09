@@ -27,11 +27,9 @@ import (
     datastructures "./datastructures"
     imagemonkeydb "./database"
     commons "./commons"
-    parser "./parser"
-    parserV2 "./parser/v2"
+    parser "./parser/v2"
     "image"
     img "./image"
-	//"gopkg.in/h2non/bimg.v1"
 )
 
 var geoipDb *geoip2.Reader
@@ -1435,7 +1433,7 @@ func main(){
 				return
 		    }
 
-			queryParser := parserV2.NewQueryParser(query)
+			queryParser := parser.NewQueryParser(query)
 			queryParser.AllowStaticQueryAttributes(true)
 	        parseResult, err := queryParser.Parse()
 	        if err != nil {
@@ -1500,7 +1498,8 @@ func main(){
 			}
 
 			queryParser := parser.NewQueryParser(query)
-	        parseResult, err := queryParser.Parse(1)
+			queryParser.SetVersion(1)
+	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
@@ -1790,7 +1789,7 @@ func main(){
 					return
 		        }
 
-		        queryParser := parserV2.NewQueryParser(query)
+		        queryParser := parser.NewQueryParser(query)
 		        queryParser.AllowStaticQueryAttributes(true)
 		        parseResult, err := queryParser.Parse()
 		        if err != nil {
@@ -1835,7 +1834,7 @@ func main(){
 					return
 		        }
 
-		        queryParser := parserV2.NewQueryParser(query)
+		        queryParser := parser.NewQueryParser(query)
 		        queryParser.AllowStaticQueryAttributes(true)
 		        parseResult, err := queryParser.Parse()
 		        if err != nil {
@@ -2123,8 +2122,9 @@ func main(){
 		    }
 
 			queryParser := parser.NewQueryParser(query)
+			queryParser.SetVersion(1)
 			queryParser.AllowStaticQueryAttributes(true)
-	        parseResult, err := queryParser.Parse(1)
+	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
@@ -2197,7 +2197,7 @@ func main(){
 		router.GET("/v1/refine", func(c *gin.Context) {
 			annotationDataId := commons.GetParamFromUrlParams(c, "annotation_data_id", "")
 
-			var parseResult parserV2.ParseResult
+			var parseResult parser.ParseResult
 			query := commons.GetParamFromUrlParams(c, "query", "")
 			if query != "" {
 				query, err = url.QueryUnescape(query)
@@ -2206,7 +2206,7 @@ func main(){
 		            return
 		        }
 
-				queryParser := parserV2.NewQueryParser(query)
+				queryParser := parser.NewQueryParser(query)
 		        parseResult, err = queryParser.Parse()
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})

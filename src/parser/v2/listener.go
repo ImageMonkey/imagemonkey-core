@@ -9,17 +9,17 @@ import (
 
 type CustomErrorListener struct {
 	*antlr.DefaultErrorListener
-	Error error
+	err error
 }
 
 func NewCustomErrorListener() *CustomErrorListener {
 	return &CustomErrorListener {
-        Error: nil,
+        err: nil,
     } 
 }
 
 func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
-	c.Error = errors.New("line "+strconv.Itoa(line)+":"+strconv.Itoa(column)+" "+msg)
+	c.err = errors.New("line "+strconv.Itoa(line)+":"+strconv.Itoa(column)+" "+msg)
 }
 
 
@@ -28,6 +28,10 @@ type imagemonkeyQueryLangListener struct {
 	pos int
 	allowStaticQueryAttributes bool
 	numOfLabels int
+	version int
+	typeOfQueryKnown bool
+	err error
+	isUuidQuery bool
 
 	stack []ParseResult
 
@@ -57,10 +61,10 @@ func (l *imagemonkeyQueryLangListener) pop() ParseResult {
 	}
 
 	// Get the last value from the stack.
-	result := l.stack[len(l.stack)-1]
+	result := l.stack[len(l.stack) - 1]
 
 	// Remove the last element from the stack.
-	l.stack = l.stack[:len(l.stack)-1]
+	l.stack = l.stack[:len(l.stack) - 1]
 
 	return result
 }
@@ -71,7 +75,7 @@ func (l *imagemonkeyQueryLangListener) peek() ParseResult {
 	}
 
 	// Get the last value from the stack.
-	result := l.stack[len(l.stack)-1]
+	result := l.stack[len(l.stack) - 1]
 
 	return result
 }
@@ -172,8 +176,54 @@ func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightE
 	}
 }
 
+func (l *imagemonkeyQueryLangListener) ExitUuidExpression(c *UuidExpressionContext) {
+	var stackEntry ParseResult
+
+	//the first token determines if it's a UUID query or not
+	if !l.typeOfQueryKnown {
+		l.typeOfQueryKnown = true
+		l.isUuidQuery = true
+	}
+
+	val := ""
+	if l.version == 1 {
+		if !l.isUuidQuery {
+			l.err = errors.New("Expecting UUID, got " +strings.TrimSpace(c.GetText()))
+			return
+		}
+		val = "a.accessor = $" + strconv.Itoa(l.pos)
+	} else {
+		l.err = errors.New("UUID not allowed")
+	}
+
+	stackEntry = ParseResult{Query: val}
+	stackEntry.QueryValues = append(stackEntry.QueryValues, strings.TrimSpace(c.GetText())) //remove leading + trailing spaces
+	stackEntry.Subquery = val
+	l.push(stackEntry)
+
+	l.pos += 1
+	l.numOfLabels += 1
+}
+
 func (l *imagemonkeyQueryLangListener) ExitLabelExpression(c *LabelExpressionContext) {
-	val := "q.accessors @> ARRAY[$" + strconv.Itoa(l.pos) + "]::text[]"
+	//the first token determines if it's a UUID query or not
+	if !l.typeOfQueryKnown {
+		l.typeOfQueryKnown = true
+		l.isUuidQuery = false
+	}
+
+	val := ""
+	if l.version == 1 {
+		if l.isUuidQuery {
+			l.err = errors.New("Expecting label, got " + strings.TrimSpace(c.GetText()))
+			return
+		}
+		val = "a.accessor = $" + strconv.Itoa(l.pos)
+	} else {
+		val = "q.accessors @> ARRAY[$" + strconv.Itoa(l.pos) + "]::text[]"
+	}
+
+	
 	subval := "a.accessor = $" + strconv.Itoa(l.pos)
 
 	stackEntry := ParseResult{Query: val}
@@ -186,7 +236,22 @@ func (l *imagemonkeyQueryLangListener) ExitLabelExpression(c *LabelExpressionCon
 }
 
 func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExpressionContext) {
-	val := "q.accessors @> ARRAY[$" + strconv.Itoa(l.pos) + "]::text[]"
+	//the first token determines if it's a UUID query or not
+	if !l.typeOfQueryKnown {
+		l.typeOfQueryKnown = true
+		l.isUuidQuery = false
+	}
+
+	val := ""
+	if l.version == 1 {
+		if l.isUuidQuery {
+			l.err = errors.New("Expecting UUID, got " + c.GetText())
+			return
+		}
+		val = "a.accessor = $" + strconv.Itoa(l.pos)
+	} else {
+		val = "q.accessors @> ARRAY[$" + strconv.Itoa(l.pos) + "]::text[]"
+	}
 
 	assignmentVal := strings.TrimSpace(c.GetText()) //remove leading + trailing spaces
 

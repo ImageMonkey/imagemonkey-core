@@ -12,6 +12,7 @@ type QueryParser struct {
 	query string
 	offset int
 	allowStaticQueryAttributes bool
+	version int
 }
 
 type ParseResult struct {
@@ -27,6 +28,7 @@ func NewQueryParser(query string) *QueryParser {
         query: query,
         offset: 1,
         allowStaticQueryAttributes: true,
+        version: 2,
     } 
 }
 
@@ -36,6 +38,10 @@ func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
 
 func (p *QueryParser) SetOffset(offset int) {
 	p.offset = offset
+}
+
+func (p *QueryParser) SetVersion(version int) {
+	p.version = version
 }
 
 func (p *QueryParser) Parse() (ParseResult, error) {
@@ -48,6 +54,9 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		pos: p.offset,
 		allowStaticQueryAttributes: p.allowStaticQueryAttributes,
 		numOfLabels: 0,
+		version: p.version,
+		isUuidQuery: true,
+		typeOfQueryKnown: false,
 	}
 	errorListener := NewCustomErrorListener() 
 	parser := NewImagemonkeyQueryLangParser(stream)
@@ -55,5 +64,16 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 	parser.AddErrorListener(errorListener)
 	antlr.ParseTreeWalkerDefault.Walk(&listener, parser.Expression())
 
-	return listener.pop(), errorListener.Error
+	parseResult := listener.pop()
+	parseResult.IsUuidQuery = listener.isUuidQuery
+	parseResult.Input = p.query
+
+	var err error = nil
+	if errorListener.err != nil {
+		err = errorListener.err
+	} else if listener.err != nil {
+		err = listener.err
+	}
+
+	return parseResult, err
 }
