@@ -20,6 +20,16 @@
 					"description": "optional",
 					"uuid": "d4304606-7d1f-4803-b7b4-7d37dcc30714",
 					"accessors": [".has"]
+				},
+				"tail": {
+					"description": "optional",
+					"uuid": "3fb21e22-05cc-4700-acf9-806896e2bbb9",
+					"accessors": [".has"]
+				},
+				"paw": {
+					"description": "optional",
+					"uuid": "a7725a15-95f0-4f3c-ab8b-8655662bdd46",
+					"accessors": [".has"]
 				}
 			},
 
@@ -251,6 +261,16 @@
 					"description": "optional",
 					"uuid": "3bf40bb8-f671-46d5-9f6b-efe385010508",
 					"accessors": [".has"]
+				},
+				"tail": {
+					"description": "optional",
+					"uuid": "44fdc5c6-15b9-4a3e-9f4d-c4e3a9d1d55a",
+					"accessors": [".has"]
+				},
+				"paw": {
+					"description": "optional",
+					"uuid": "de5b8963-b32f-4050-a5ce-069ec27f67b2",
+					"accessors": [".has"]
 				}
 			}
 		},
@@ -309,6 +329,18 @@
 			"uuid": "67f02864-cb77-48aa-811c-7633a7d7d564",
 			"accessors": ["."],
 			"isa": ["vehicle"],
+			"has": {
+				"wheel": {
+					"description": "optional",
+					"uuid": "dd74f30a-7908-4120-8a8f-b12082e1b04c",
+					"accessors": [".has"]
+				},
+				"headlight": {
+					"description": "optional",
+					"uuid": "e8eb2b56-921f-4b6e-985a-f10331c22fe7",
+					"accessors": [".has"]
+				}
+			},
 			"quiz": [
 				{
 					"question": "It's a...",
@@ -577,6 +609,21 @@
 				"head": {
 					"description": "optional",
 					"uuid": "a9b9c7c8-9340-4b91-a573-d1f115b6d137",
+					"accessors": [".has"]
+				},
+				"hand": {
+					"description": "optional",
+					"uuid": "9cf2d1ab-69a8-48eb-9adf-fd3977c56722",
+					"accessors": [".has"]
+				},
+				"foot": {
+					"description": "optional",
+					"uuid": "9c62425d-874b-4b50-93fc-3f4de7ef1bd5",
+					"accessors": [".has"]
+				},
+				"face": {
+					"description": "optional",
+					"uuid": "8184620a-b6bb-4a3e-9c69-9a75a18b7734",
 					"accessors": [".has"]
 				}
 			}
