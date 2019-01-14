@@ -2,6 +2,7 @@ package tests
 
 import (
 	"testing"
+	commons "../src/commons"
 )
 
 func TestDatabaseEmpty(t *testing.T) {
@@ -22,3 +23,28 @@ func TestDatabaseEmptyWithUserThatHasUnlockImagePermission(t *testing.T) {
 	err = db.GiveUserUnlockImagePermissions("moderator")
 	ok(t, err)
 }
+
+func TestLabelUuidsShouldBeUnique(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	labels, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
+	ok(t, err)
+
+	uuids := make(map[string]bool)
+	for _, val := range labels {
+		if _, ok := uuids[val.Uuid]; ok {
+			t.Errorf("Found a duplicate UUID '%s'", val.Uuid)
+		} else {
+			uuids[val.Uuid] = true
+		}
+
+		for _, hasVal := range val.LabelMapEntries {
+			if _, ok := uuids[hasVal.Uuid]; ok {
+				t.Errorf("Found a duplicate UUID '%s'", hasVal.Uuid)
+			} else {
+				uuids[val.Uuid] = true
+			}
+		}
+	}
+} 

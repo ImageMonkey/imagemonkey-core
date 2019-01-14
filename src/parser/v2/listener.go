@@ -20,20 +20,13 @@ func NewCustomErrorListener() *CustomErrorListener {
     } 
 }
 
-func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
-	//c.err = errors.New(msg)
-	c. err = errors.New(c.underlineError(recognizer, offendingSymbol, line, column, msg))
-}
-
-func (c *CustomErrorListener) underlineError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string) string {
-	out := c.query + "\n"
+func underlineError(input, msg string, offendingSymbolStart int, offendingSymbolEnd int, column int) string {
+	out := input + "\n"
 	for i := 0; i < column; i++ {
 		out += " "
 	}
-	start := offendingSymbol.(antlr.Token).GetStart()
-	stop := offendingSymbol.(antlr.Token).GetStop()
-	if start >= 0 && stop >= 0 {
-		for i := start; i <= stop; i++ {
+	if offendingSymbolStart >= 0 && offendingSymbolEnd >= 0 {
+		for i := offendingSymbolStart; i <= offendingSymbolEnd; i++ {
 			out += "^"
 		}
 	}
@@ -41,16 +34,23 @@ func (c *CustomErrorListener) underlineError(recognizer antlr.Recognizer, offend
 	return out
 }
 
+func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
+	c. err = errors.New(underlineError(c.query, msg, offendingSymbol.(antlr.Token).GetStart(), offendingSymbol.(antlr.Token).GetStop(), column))
+}
+
 
 type imagemonkeyQueryLangListener struct {
 	*BaseImagemonkeyQueryLangListener
 	pos int
 	allowStaticQueryAttributes bool
+	allowOrderByValidation bool
 	numOfLabels int
 	version int
 	typeOfQueryKnown bool
 	err error
 	isUuidQuery bool
+	query string
+	resultOrder ResultOrder
 
 	stack []ParseResult
 
@@ -129,26 +129,49 @@ func (l *imagemonkeyQueryLangListener) ExitParenthesesExpression(c *ParenthesesE
 	if len(l.stack) > 0 {
 		stackEntry := l.pop()
 		stackEntry.Query = stackEntry.Query + ")"
-
-		//stackEntry.Subquery = stackEntry.Subquery + ")"
+		stackEntry.Subquery = stackEntry.Subquery + ")"
 		l.push(stackEntry)
 	}
 }
 
+func (l *imagemonkeyQueryLangListener) ExitOrderByValidationAscExpression(c *OrderByValidationAscExpressionContext) {
+	if l.allowOrderByValidation {
+		l.resultOrder.Direction = ResultOrderAscDirection
+		l.resultOrder.Type = OrderByNumOfExistingValidations
+	} else {
+		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitOrderByValidationDescExpression(c *OrderByValidationDescExpressionContext) {
+	if l.allowOrderByValidation {
+		l.resultOrder.Direction = ResultOrderDescDirection
+		l.resultOrder.Type = OrderByNumOfExistingValidations
+	} else {
+		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+	}
+}
+
+
 func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *AnnotationCoverageExpressionContext) {
-	if l.allowStaticQueryAttributes {
-		tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
-		if len(tokens) > 0 {
-			annotationCoverageVal := tokens[0].GetText()
-			if _, err := strconv.Atoi(annotationCoverageVal); err == nil {
-				tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
-				if len(tokens) > 0 {
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		annotationCoverageVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(annotationCoverageVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowStaticQueryAttributes {
 					operator := tokens[0].GetText()
 					val := "q.annotated_percentage" + operator + annotationCoverageVal
 
 					stackEntry := ParseResult{Query: val}
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
 		}
@@ -156,19 +179,22 @@ func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *Annot
 }
 
 func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExpressionContext) {
-	if l.allowStaticQueryAttributes {
-		tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
-		if len(tokens) > 0 {
-			imageWidthVal := tokens[0].GetText()
-			if _, err := strconv.Atoi(imageWidthVal); err == nil {
-				tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
-				if len(tokens) > 0 {
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageWidthVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageWidthVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowStaticQueryAttributes {
 					operator := tokens[0].GetText()
 					val := "image_width" + operator + imageWidthVal
 
 					stackEntry := ParseResult{Query: val}
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
 		}
@@ -176,19 +202,23 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 }
 
 func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightExpressionContext) {
-	if l.allowStaticQueryAttributes {
-		tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
-		if len(tokens) > 0 {
-			imageHeightVal := tokens[0].GetText()
-			if _, err := strconv.Atoi(imageHeightVal); err == nil {
-				tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
-				if len(tokens) > 0 {
+	
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageHeightVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageHeightVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowStaticQueryAttributes {
 					operator := tokens[0].GetText()
 					val := "q.image_height" + operator + imageHeightVal
 
 					stackEntry := ParseResult{Query: val}
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
 		}

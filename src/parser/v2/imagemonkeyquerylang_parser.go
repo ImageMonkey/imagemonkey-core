@@ -15,42 +15,49 @@ var _ = reflect.Copy
 var _ = strconv.Itoa
 
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 18, 45, 4,
-	2, 9, 2, 4, 3, 9, 3, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 23, 57, 4,
+	2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 5,
+	2, 15, 10, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 32, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 7, 3, 40, 10, 3, 12, 3, 14, 3, 43, 11, 3, 3, 3, 2, 3, 4, 4, 2,
-	4, 2, 2, 2, 51, 2, 6, 3, 2, 2, 2, 4, 31, 3, 2, 2, 2, 6, 7, 5, 4, 3, 2,
-	7, 8, 7, 2, 2, 3, 8, 3, 3, 2, 2, 2, 9, 10, 8, 3, 1, 2, 10, 11, 7, 16, 2,
-	2, 11, 12, 5, 4, 3, 2, 12, 13, 7, 17, 2, 2, 13, 32, 3, 2, 2, 2, 14, 15,
-	7, 15, 2, 2, 15, 32, 5, 4, 3, 11, 16, 17, 7, 3, 2, 2, 17, 18, 7, 8, 2,
-	2, 18, 19, 7, 12, 2, 2, 19, 32, 7, 6, 2, 2, 20, 21, 7, 5, 2, 2, 21, 22,
-	7, 8, 2, 2, 22, 23, 7, 12, 2, 2, 23, 32, 7, 7, 2, 2, 24, 25, 7, 4, 2, 2,
-	25, 26, 7, 8, 2, 2, 26, 27, 7, 12, 2, 2, 27, 32, 7, 7, 2, 2, 28, 32, 7,
-	9, 2, 2, 29, 32, 7, 10, 2, 2, 30, 32, 7, 11, 2, 2, 31, 9, 3, 2, 2, 2, 31,
-	14, 3, 2, 2, 2, 31, 16, 3, 2, 2, 2, 31, 20, 3, 2, 2, 2, 31, 24, 3, 2, 2,
-	2, 31, 28, 3, 2, 2, 2, 31, 29, 3, 2, 2, 2, 31, 30, 3, 2, 2, 2, 32, 41,
-	3, 2, 2, 2, 33, 34, 12, 10, 2, 2, 34, 35, 7, 13, 2, 2, 35, 40, 5, 4, 3,
-	11, 36, 37, 12, 9, 2, 2, 37, 38, 7, 14, 2, 2, 38, 40, 5, 4, 3, 10, 39,
-	33, 3, 2, 2, 2, 39, 36, 3, 2, 2, 2, 40, 43, 3, 2, 2, 2, 41, 39, 3, 2, 2,
-	2, 41, 42, 3, 2, 2, 2, 42, 5, 3, 2, 2, 2, 43, 41, 3, 2, 2, 2, 5, 31, 39,
-	41,
+	3, 5, 3, 39, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 47, 10, 3,
+	12, 3, 14, 3, 50, 11, 3, 3, 4, 3, 4, 3, 4, 5, 4, 55, 10, 4, 3, 4, 2, 3,
+	4, 5, 2, 4, 6, 2, 2, 2, 65, 2, 8, 3, 2, 2, 2, 4, 38, 3, 2, 2, 2, 6, 54,
+	3, 2, 2, 2, 8, 14, 5, 4, 3, 2, 9, 10, 7, 3, 2, 2, 10, 11, 5, 6, 4, 2, 11,
+	12, 7, 2, 2, 3, 12, 15, 3, 2, 2, 2, 13, 15, 7, 2, 2, 3, 14, 9, 3, 2, 2,
+	2, 14, 13, 3, 2, 2, 2, 15, 3, 3, 2, 2, 2, 16, 17, 8, 3, 1, 2, 17, 18, 7,
+	21, 2, 2, 18, 19, 5, 4, 3, 2, 19, 20, 7, 22, 2, 2, 20, 39, 3, 2, 2, 2,
+	21, 22, 7, 20, 2, 2, 22, 39, 5, 4, 3, 11, 23, 24, 7, 4, 2, 2, 24, 25, 7,
+	9, 2, 2, 25, 26, 7, 17, 2, 2, 26, 39, 7, 7, 2, 2, 27, 28, 7, 6, 2, 2, 28,
+	29, 7, 9, 2, 2, 29, 30, 7, 17, 2, 2, 30, 39, 7, 8, 2, 2, 31, 32, 7, 5,
+	2, 2, 32, 33, 7, 9, 2, 2, 33, 34, 7, 17, 2, 2, 34, 39, 7, 8, 2, 2, 35,
+	39, 7, 10, 2, 2, 36, 39, 7, 15, 2, 2, 37, 39, 7, 16, 2, 2, 38, 16, 3, 2,
+	2, 2, 38, 21, 3, 2, 2, 2, 38, 23, 3, 2, 2, 2, 38, 27, 3, 2, 2, 2, 38, 31,
+	3, 2, 2, 2, 38, 35, 3, 2, 2, 2, 38, 36, 3, 2, 2, 2, 38, 37, 3, 2, 2, 2,
+	39, 48, 3, 2, 2, 2, 40, 41, 12, 10, 2, 2, 41, 42, 7, 18, 2, 2, 42, 47,
+	5, 4, 3, 11, 43, 44, 12, 9, 2, 2, 44, 45, 7, 19, 2, 2, 45, 47, 5, 4, 3,
+	10, 46, 40, 3, 2, 2, 2, 46, 43, 3, 2, 2, 2, 47, 50, 3, 2, 2, 2, 48, 46,
+	3, 2, 2, 2, 48, 49, 3, 2, 2, 2, 49, 5, 3, 2, 2, 2, 50, 48, 3, 2, 2, 2,
+	51, 55, 7, 12, 2, 2, 52, 55, 7, 13, 2, 2, 53, 55, 7, 14, 2, 2, 54, 51,
+	3, 2, 2, 2, 54, 52, 3, 2, 2, 2, 54, 53, 3, 2, 2, 2, 55, 7, 3, 2, 2, 2,
+	7, 14, 38, 46, 48, 54,
 }
 var deserializer = antlr.NewATNDeserializer(nil)
 var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 
 var literalNames = []string{
-	"", "'annotation.coverage'", "'image.width'", "'image.height'", "'%'",
-	"'px'", "", "", "", "", "", "'&'", "'|'", "'~'", "'('", "')'",
+	"", "'!'", "'annotation.coverage'", "'image.width'", "'image.height'",
+	"'%'", "'px'", "", "", "", "", "", "", "", "", "", "'&'", "'|'", "'~'",
+	"'('", "')'",
 }
 var symbolicNames = []string{
-	"", "ANNOTATION_COVERAGE_PREFIX", "IMAGE_WIDTH_PREFIX", "IMAGE_HEIGHT_PREFIX",
-	"PERCENT", "PIXEL", "OPERATOR", "ASSIGNMENT", "LABEL", "UUID", "VAL", "AND",
-	"OR", "NOT", "LPAR", "RPAR", "SKIPPED_TOKENS",
+	"", "SEP", "ANNOTATION_COVERAGE_PREFIX", "IMAGE_WIDTH_PREFIX", "IMAGE_HEIGHT_PREFIX",
+	"PERCENT", "PIXEL", "OPERATOR", "ASSIGNMENT", "ORDER_BY", "ORDER_BY_VALIDATION_DESC",
+	"ORDER_BY_VALIDATION_ASC", "ORDER_BY_VALIDATION", "LABEL", "UUID", "VAL",
+	"AND", "OR", "NOT", "LPAR", "RPAR", "SKIPPED_TOKENS",
 }
 
 var ruleNames = []string{
-	"expression", "exp",
+	"expression", "exp", "order_by",
 }
 var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
 
@@ -81,28 +88,34 @@ func NewImagemonkeyQueryLangParser(input antlr.TokenStream) *ImagemonkeyQueryLan
 // ImagemonkeyQueryLangParser tokens.
 const (
 	ImagemonkeyQueryLangParserEOF                        = antlr.TokenEOF
-	ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX = 1
-	ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX         = 2
-	ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX        = 3
-	ImagemonkeyQueryLangParserPERCENT                    = 4
-	ImagemonkeyQueryLangParserPIXEL                      = 5
-	ImagemonkeyQueryLangParserOPERATOR                   = 6
-	ImagemonkeyQueryLangParserASSIGNMENT                 = 7
-	ImagemonkeyQueryLangParserLABEL                      = 8
-	ImagemonkeyQueryLangParserUUID                       = 9
-	ImagemonkeyQueryLangParserVAL                        = 10
-	ImagemonkeyQueryLangParserAND                        = 11
-	ImagemonkeyQueryLangParserOR                         = 12
-	ImagemonkeyQueryLangParserNOT                        = 13
-	ImagemonkeyQueryLangParserLPAR                       = 14
-	ImagemonkeyQueryLangParserRPAR                       = 15
-	ImagemonkeyQueryLangParserSKIPPED_TOKENS             = 16
+	ImagemonkeyQueryLangParserSEP                        = 1
+	ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX = 2
+	ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX         = 3
+	ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX        = 4
+	ImagemonkeyQueryLangParserPERCENT                    = 5
+	ImagemonkeyQueryLangParserPIXEL                      = 6
+	ImagemonkeyQueryLangParserOPERATOR                   = 7
+	ImagemonkeyQueryLangParserASSIGNMENT                 = 8
+	ImagemonkeyQueryLangParserORDER_BY                   = 9
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC   = 10
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC    = 11
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION        = 12
+	ImagemonkeyQueryLangParserLABEL                      = 13
+	ImagemonkeyQueryLangParserUUID                       = 14
+	ImagemonkeyQueryLangParserVAL                        = 15
+	ImagemonkeyQueryLangParserAND                        = 16
+	ImagemonkeyQueryLangParserOR                         = 17
+	ImagemonkeyQueryLangParserNOT                        = 18
+	ImagemonkeyQueryLangParserLPAR                       = 19
+	ImagemonkeyQueryLangParserRPAR                       = 20
+	ImagemonkeyQueryLangParserSKIPPED_TOKENS             = 21
 )
 
 // ImagemonkeyQueryLangParser rules.
 const (
 	ImagemonkeyQueryLangParserRULE_expression = 0
 	ImagemonkeyQueryLangParserRULE_exp        = 1
+	ImagemonkeyQueryLangParserRULE_order_by   = 2
 )
 
 // IExpressionContext is an interface to support dynamic dispatch.
@@ -153,6 +166,20 @@ func (s *ExpressionContext) Exp() IExpContext {
 	return t.(IExpContext)
 }
 
+func (s *ExpressionContext) SEP() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserSEP, 0)
+}
+
+func (s *ExpressionContext) Order_by() IOrder_byContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IOrder_byContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IOrder_byContext)
+}
+
 func (s *ExpressionContext) EOF() antlr.TerminalNode {
 	return s.GetToken(ImagemonkeyQueryLangParserEOF, 0)
 }
@@ -199,12 +226,35 @@ func (p *ImagemonkeyQueryLangParser) Expression() (localctx IExpressionContext) 
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(4)
+		p.SetState(6)
 		p.exp(0)
 	}
-	{
-		p.SetState(5)
-		p.Match(ImagemonkeyQueryLangParserEOF)
+	p.SetState(12)
+	p.GetErrorHandler().Sync(p)
+
+	switch p.GetTokenStream().LA(1) {
+	case ImagemonkeyQueryLangParserSEP:
+		{
+			p.SetState(7)
+			p.Match(ImagemonkeyQueryLangParserSEP)
+		}
+		{
+			p.SetState(8)
+			p.Order_by()
+		}
+		{
+			p.SetState(9)
+			p.Match(ImagemonkeyQueryLangParserEOF)
+		}
+
+	case ImagemonkeyQueryLangParserEOF:
+		{
+			p.SetState(11)
+			p.Match(ImagemonkeyQueryLangParserEOF)
+		}
+
+	default:
+		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 
 	return localctx
@@ -738,7 +788,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(29)
+	p.SetState(36)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
@@ -748,15 +798,15 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		_prevctx = localctx
 
 		{
-			p.SetState(8)
+			p.SetState(15)
 			p.Match(ImagemonkeyQueryLangParserLPAR)
 		}
 		{
-			p.SetState(9)
+			p.SetState(16)
 			p.exp(0)
 		}
 		{
-			p.SetState(10)
+			p.SetState(17)
 			p.Match(ImagemonkeyQueryLangParserRPAR)
 		}
 
@@ -765,11 +815,11 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(12)
+			p.SetState(19)
 			p.Match(ImagemonkeyQueryLangParserNOT)
 		}
 		{
-			p.SetState(13)
+			p.SetState(20)
 			p.exp(9)
 		}
 
@@ -778,19 +828,19 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(14)
+			p.SetState(21)
 			p.Match(ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX)
 		}
 		{
-			p.SetState(15)
+			p.SetState(22)
 			p.Match(ImagemonkeyQueryLangParserOPERATOR)
 		}
 		{
-			p.SetState(16)
+			p.SetState(23)
 			p.Match(ImagemonkeyQueryLangParserVAL)
 		}
 		{
-			p.SetState(17)
+			p.SetState(24)
 			p.Match(ImagemonkeyQueryLangParserPERCENT)
 		}
 
@@ -799,19 +849,19 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(18)
+			p.SetState(25)
 			p.Match(ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX)
 		}
 		{
-			p.SetState(19)
+			p.SetState(26)
 			p.Match(ImagemonkeyQueryLangParserOPERATOR)
 		}
 		{
-			p.SetState(20)
+			p.SetState(27)
 			p.Match(ImagemonkeyQueryLangParserVAL)
 		}
 		{
-			p.SetState(21)
+			p.SetState(28)
 			p.Match(ImagemonkeyQueryLangParserPIXEL)
 		}
 
@@ -820,19 +870,19 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(22)
+			p.SetState(29)
 			p.Match(ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX)
 		}
 		{
-			p.SetState(23)
+			p.SetState(30)
 			p.Match(ImagemonkeyQueryLangParserOPERATOR)
 		}
 		{
-			p.SetState(24)
+			p.SetState(31)
 			p.Match(ImagemonkeyQueryLangParserVAL)
 		}
 		{
-			p.SetState(25)
+			p.SetState(32)
 			p.Match(ImagemonkeyQueryLangParserPIXEL)
 		}
 
@@ -841,7 +891,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(26)
+			p.SetState(33)
 			p.Match(ImagemonkeyQueryLangParserASSIGNMENT)
 		}
 
@@ -850,7 +900,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(27)
+			p.SetState(34)
 			p.Match(ImagemonkeyQueryLangParserLABEL)
 		}
 
@@ -859,7 +909,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(28)
+			p.SetState(35)
 			p.Match(ImagemonkeyQueryLangParserUUID)
 		}
 
@@ -867,9 +917,9 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(39)
+	p.SetState(46)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 2, p.GetParserRuleContext())
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 3, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
@@ -877,49 +927,226 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 				p.TriggerExitRuleEvent()
 			}
 			_prevctx = localctx
-			p.SetState(37)
+			p.SetState(44)
 			p.GetErrorHandler().Sync(p)
-			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 1, p.GetParserRuleContext()) {
+			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 2, p.GetParserRuleContext()) {
 			case 1:
 				localctx = NewAndExpressionContext(p, NewExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, ImagemonkeyQueryLangParserRULE_exp)
-				p.SetState(31)
+				p.SetState(38)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 8)) {
 					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 8)", ""))
 				}
 				{
-					p.SetState(32)
+					p.SetState(39)
 					p.Match(ImagemonkeyQueryLangParserAND)
 				}
 				{
-					p.SetState(33)
+					p.SetState(40)
 					p.exp(9)
 				}
 
 			case 2:
 				localctx = NewOrExpressionContext(p, NewExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, ImagemonkeyQueryLangParserRULE_exp)
-				p.SetState(34)
+				p.SetState(41)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 7)) {
 					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 7)", ""))
 				}
 				{
-					p.SetState(35)
+					p.SetState(42)
 					p.Match(ImagemonkeyQueryLangParserOR)
 				}
 				{
-					p.SetState(36)
+					p.SetState(43)
 					p.exp(8)
 				}
 
 			}
 
 		}
-		p.SetState(41)
+		p.SetState(48)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 2, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 3, p.GetParserRuleContext())
+	}
+
+	return localctx
+}
+
+// IOrder_byContext is an interface to support dynamic dispatch.
+type IOrder_byContext interface {
+	antlr.ParserRuleContext
+
+	// GetParser returns the parser.
+	GetParser() antlr.Parser
+
+	// IsOrder_byContext differentiates from other interfaces.
+	IsOrder_byContext()
+}
+
+type Order_byContext struct {
+	*antlr.BaseParserRuleContext
+	parser antlr.Parser
+}
+
+func NewEmptyOrder_byContext() *Order_byContext {
+	var p = new(Order_byContext)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
+	p.RuleIndex = ImagemonkeyQueryLangParserRULE_order_by
+	return p
+}
+
+func (*Order_byContext) IsOrder_byContext() {}
+
+func NewOrder_byContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Order_byContext {
+	var p = new(Order_byContext)
+
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
+
+	p.parser = parser
+	p.RuleIndex = ImagemonkeyQueryLangParserRULE_order_by
+
+	return p
+}
+
+func (s *Order_byContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *Order_byContext) CopyFrom(ctx *Order_byContext) {
+	s.BaseParserRuleContext.CopyFrom(ctx.BaseParserRuleContext)
+}
+
+func (s *Order_byContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *Order_byContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+	return antlr.TreesStringTree(s, ruleNames, recog)
+}
+
+type OrderByValidationAscExpressionContext struct {
+	*Order_byContext
+}
+
+func NewOrderByValidationAscExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OrderByValidationAscExpressionContext {
+	var p = new(OrderByValidationAscExpressionContext)
+
+	p.Order_byContext = NewEmptyOrder_byContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*Order_byContext))
+
+	return p
+}
+
+func (s *OrderByValidationAscExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *OrderByValidationAscExpressionContext) ORDER_BY_VALIDATION_ASC() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC, 0)
+}
+
+func (s *OrderByValidationAscExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterOrderByValidationAscExpression(s)
+	}
+}
+
+func (s *OrderByValidationAscExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitOrderByValidationAscExpression(s)
+	}
+}
+
+type OrderByValidationDescExpressionContext struct {
+	*Order_byContext
+}
+
+func NewOrderByValidationDescExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OrderByValidationDescExpressionContext {
+	var p = new(OrderByValidationDescExpressionContext)
+
+	p.Order_byContext = NewEmptyOrder_byContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*Order_byContext))
+
+	return p
+}
+
+func (s *OrderByValidationDescExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *OrderByValidationDescExpressionContext) ORDER_BY_VALIDATION_DESC() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC, 0)
+}
+
+func (s *OrderByValidationDescExpressionContext) ORDER_BY_VALIDATION() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserORDER_BY_VALIDATION, 0)
+}
+
+func (s *OrderByValidationDescExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterOrderByValidationDescExpression(s)
+	}
+}
+
+func (s *OrderByValidationDescExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitOrderByValidationDescExpression(s)
+	}
+}
+
+func (p *ImagemonkeyQueryLangParser) Order_by() (localctx IOrder_byContext) {
+	localctx = NewOrder_byContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 4, ImagemonkeyQueryLangParserRULE_order_by)
+
+	defer func() {
+		p.ExitRule()
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if v, ok := err.(antlr.RecognitionException); ok {
+				localctx.SetException(v)
+				p.GetErrorHandler().ReportError(p, v)
+				p.GetErrorHandler().Recover(p, v)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
+	p.SetState(52)
+	p.GetErrorHandler().Sync(p)
+
+	switch p.GetTokenStream().LA(1) {
+	case ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC:
+		localctx = NewOrderByValidationDescExpressionContext(p, localctx)
+		p.EnterOuterAlt(localctx, 1)
+		{
+			p.SetState(49)
+			p.Match(ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC)
+		}
+
+	case ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC:
+		localctx = NewOrderByValidationAscExpressionContext(p, localctx)
+		p.EnterOuterAlt(localctx, 2)
+		{
+			p.SetState(50)
+			p.Match(ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC)
+		}
+
+	case ImagemonkeyQueryLangParserORDER_BY_VALIDATION:
+		localctx = NewOrderByValidationDescExpressionContext(p, localctx)
+		p.EnterOuterAlt(localctx, 3)
+		{
+			p.SetState(51)
+			p.Match(ImagemonkeyQueryLangParserORDER_BY_VALIDATION)
+		}
+
+	default:
+		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 
 	return localctx

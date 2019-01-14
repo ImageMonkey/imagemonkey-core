@@ -95,3 +95,19 @@ func (s *BaseImagemonkeyQueryLangListener) EnterAnnotationCoverageExpression(ctx
 // ExitAnnotationCoverageExpression is called when production annotationCoverageExpression is exited.
 func (s *BaseImagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(ctx *AnnotationCoverageExpressionContext) {
 }
+
+// EnterOrderByValidationDescExpression is called when production orderByValidationDescExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterOrderByValidationDescExpression(ctx *OrderByValidationDescExpressionContext) {
+}
+
+// ExitOrderByValidationDescExpression is called when production orderByValidationDescExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitOrderByValidationDescExpression(ctx *OrderByValidationDescExpressionContext) {
+}
+
+// EnterOrderByValidationAscExpression is called when production orderByValidationAscExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterOrderByValidationAscExpression(ctx *OrderByValidationAscExpressionContext) {
+}
+
+// ExitOrderByValidationAscExpression is called when production orderByValidationAscExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitOrderByValidationAscExpression(ctx *OrderByValidationAscExpressionContext) {
+}

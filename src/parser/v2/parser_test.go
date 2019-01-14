@@ -319,7 +319,7 @@ func TestQueryAnnotationCoverage(t *testing.T) {
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
 	equals(t, parseResult.QueryValues, []interface{}{"a", "b"})
-	equals(t, parseResult.Subquery, "(NOT a.accessor = $1) OR a.accessor = $2 OR q.annotated_percentage=10")
+	equals(t, parseResult.Subquery, "(NOT a.accessor = $1) OR a.accessor = $2")
 	equals(t, parseResult.Query, "(NOT q.accessors @> ARRAY[$1]::text[]) AND q.accessors @> ARRAY[$2]::text[] AND q.annotated_percentage=10")
 }
 
@@ -451,3 +451,54 @@ func TestComplexQuery4(t *testing.T) {
 	equals(t, parseResult.QueryValues, []interface{}{"apple"})
 	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] AND image_width>15 AND q.image_height>15")
 }
+
+func TestOrderByValidationFunctionality(t *testing.T) {
+	queryParser := NewQueryParser("a & b & c !order by validation desc")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowOrderByValidation(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 3)
+	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
+	equals(t, parseResult.OrderBy.Direction, ResultOrderDescDirection)
+	equals(t, parseResult.OrderBy.Type, OrderByNumOfExistingValidations)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] AND q.accessors @> ARRAY[$2]::text[] AND q.accessors @> ARRAY[$3]::text[]")
+}
+
+func TestOrderByValidationFunctionalityShouldFailDueToInvalidQuery(t *testing.T) {
+	queryParser := NewQueryParser("a & b & c !order by")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowOrderByValidation(true)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestOrderByValidationFunctionalityMissingDirectionShouldDefaultToDesc(t *testing.T) {
+	queryParser := NewQueryParser("a & b & c !order by validation")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowOrderByValidation(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 3)
+	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
+	equals(t, parseResult.OrderBy.Direction, ResultOrderDescDirection)
+	equals(t, parseResult.OrderBy.Type, OrderByNumOfExistingValidations)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] AND q.accessors @> ARRAY[$2]::text[] AND q.accessors @> ARRAY[$3]::text[]")
+}
+
+func TestOrderByValidationFunctionalityShouldFailDueToInvalidQuery1(t *testing.T) {
+	queryParser := NewQueryParser("a & b & c !order by validation !order by validation asc")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowOrderByValidation(true)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestOrderByValidationFunctionalityShouldFailBecauseDeactivated(t *testing.T) {
+	queryParser := NewQueryParser("a & b & c !order by validation")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowOrderByValidation(false)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+

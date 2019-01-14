@@ -13,6 +13,26 @@ type QueryParser struct {
 	offset int
 	allowStaticQueryAttributes bool
 	version int
+	allowOrderByValidation bool
+}
+
+type ResultOrderType int
+const (
+	OrderByNumOfExistingValidations ResultOrderType = 1 << iota
+	OrderByDefault
+)
+
+type ResultOrderDirection int
+const (
+	ResultOrderAscDirection ResultOrderDirection = 1 << iota
+	ResultOrderDescDirection
+	ResultOrderDefaultDirection
+)
+
+
+type ResultOrder struct {
+	Type ResultOrderType
+	Direction ResultOrderDirection
 }
 
 type ParseResult struct {
@@ -21,6 +41,7 @@ type ParseResult struct {
     Subquery string
     IsUuidQuery bool
 	QueryValues []interface{}
+	OrderBy ResultOrder
 }
 
 func NewQueryParser(query string) *QueryParser {
@@ -29,11 +50,16 @@ func NewQueryParser(query string) *QueryParser {
         offset: 1,
         allowStaticQueryAttributes: true,
         version: 2,
+        allowOrderByValidation: false,
     } 
 }
 
 func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
     p.allowStaticQueryAttributes = allow
+}
+
+func (p *QueryParser) AllowOrderByValidation(allow bool) {
+	p.allowOrderByValidation = allow
 }
 
 func (p *QueryParser) SetOffset(offset int) {
@@ -53,10 +79,13 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 	listener := imagemonkeyQueryLangListener{
 		pos: p.offset,
 		allowStaticQueryAttributes: p.allowStaticQueryAttributes,
+		allowOrderByValidation: p.allowOrderByValidation,
 		numOfLabels: 0,
 		version: p.version,
 		isUuidQuery: true,
 		typeOfQueryKnown: false,
+		query: p.query,
+		resultOrder: ResultOrder{Direction: ResultOrderDefaultDirection, Type: OrderByDefault},
 	}
 	errorListener := NewCustomErrorListener() 
 	errorListener.query = p.query
@@ -68,6 +97,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 	parseResult := listener.pop()
 	parseResult.IsUuidQuery = listener.isUuidQuery
 	parseResult.Input = p.query
+	parseResult.OrderBy = listener.resultOrder
 
 	var err error = nil
 	if errorListener.err != nil {

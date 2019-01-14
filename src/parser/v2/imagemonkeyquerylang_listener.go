@@ -40,6 +40,12 @@ type ImagemonkeyQueryLangListener interface {
 	// EnterAnnotationCoverageExpression is called when entering the annotationCoverageExpression production.
 	EnterAnnotationCoverageExpression(c *AnnotationCoverageExpressionContext)
 
+	// EnterOrderByValidationDescExpression is called when entering the orderByValidationDescExpression production.
+	EnterOrderByValidationDescExpression(c *OrderByValidationDescExpressionContext)
+
+	// EnterOrderByValidationAscExpression is called when entering the orderByValidationAscExpression production.
+	EnterOrderByValidationAscExpression(c *OrderByValidationAscExpressionContext)
+
 	// ExitExpression is called when exiting the expression production.
 	ExitExpression(c *ExpressionContext)
 
@@ -72,4 +78,10 @@ type ImagemonkeyQueryLangListener interface {
 
 	// ExitAnnotationCoverageExpression is called when exiting the annotationCoverageExpression production.
 	ExitAnnotationCoverageExpression(c *AnnotationCoverageExpressionContext)
+
+	// ExitOrderByValidationDescExpression is called when exiting the orderByValidationDescExpression production.
+	ExitOrderByValidationDescExpression(c *OrderByValidationDescExpressionContext)
+
+	// ExitOrderByValidationAscExpression is called when exiting the orderByValidationAscExpression production.
+	ExitOrderByValidationAscExpression(c *OrderByValidationAscExpressionContext)
 }
