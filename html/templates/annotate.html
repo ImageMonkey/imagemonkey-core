@@ -31,8 +31,15 @@
   <script src="js/huebee.min.js"></script>
   <link rel="stylesheet" href="css/huebee.min.css"/>
   <script src="js/lodash.core.min.js"></script>
+  <script src="js/contextjs/context.js"></script>
+  <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <style>
+
+  #addAnnotationRefinementsDlg .header,
+  #addAnnotationRefinementsDlg .actions{
+    cursor: move;
+  }
 
   #bottomLabel {
     position: fixed;
@@ -516,7 +523,7 @@
     else{
       canvas = new CanvasDrawer("annotationArea");
       canvas.fabric().selection = false;
-      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
+      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp, onAnnotatorObjectDeselected);
     }
 
     var scaleFactor = getCanvasScaleFactor();
@@ -604,17 +611,24 @@
   }
 
   function onAnnotatorObjectSelected(){
-    if(annotator.objectsSelected() && annotator.isSelectMoveModeEnabled()) {
-        $("#trashMenuItem").removeClass("disabled");
-        $("#propertiesMenuItem").removeClass("disabled");
+    if(annotator.objectsSelected()) {
+        if(annotator.isSelectMoveModeEnabled()) {
+          $("#trashMenuItem").removeClass("disabled");
+          $("#propertiesMenuItem").removeClass("disabled");
 
-        var strokeColor = annotator.getStrokeColorOfSelected();
-        if(strokeColor !== null)
-          colorPicker.setColor(strokeColor);
+          var strokeColor = annotator.getStrokeColorOfSelected();
+          if(strokeColor !== null)
+            colorPicker.setColor(strokeColor);
+        }
+        context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
     } else {
       $("#trashMenuItem").addClass("disabled");
       $("#propertiesMenuItem").addClass("disabled");
     }
+  }
+
+  function onAnnotatorObjectDeselected() {
+    context.destroy('#annotationColumn');
   }
 
   function onAnnotatorMouseUp(){
@@ -866,6 +880,40 @@
       Mousetrap.bind("r", function() { 
         $("#rectMenuItem").trigger("click");
       });
+
+
+      annotationRefinementsContextMenu = {
+        data: [
+          {header: 'Refinements'},
+          {text: 'Add refinements', action: function(e, selector) {
+            e.preventDefault();
+
+            if(annotator.getIdOfSelectedItem() !== "") {
+              $('#addAnnotationRefinementsDlg').modal({
+                onShow: function(){
+                    $(this).draggable({
+                       cancel: ".content"
+                    });
+                },
+                onHidden: function(){
+                    $(this).css({
+                        'top': '50%',
+                        'left': '50%'
+                    })
+                }
+              }).modal('show');
+            }
+          }}
+        ]
+      }
+
+      context.init({preventDoubleContext: false});
+
+      $("#addAnnotationRefinementsDlgDoneButton").click(function(e) {
+        anotator.setRefinements(getSelectedRefinements());
+      });
+      
+
 
       $("#rectMenuItem").click(function(e) {
         if(annotator !== undefined) {
@@ -1218,6 +1266,8 @@
           </div>
         </div>
       </div>
+
+      {{ template "annotation_refinement_dlg.html" .}}
 
       <div class="row" id="annotationColumn" style="display: none;">
       </div>
