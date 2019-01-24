@@ -17,7 +17,6 @@ import (
 	"errors"
 	"html"
 	"net/url"
-	"bytes"
     "strings"
     "encoding/base64"
     "github.com/dgrijalva/jwt-go"
@@ -216,45 +215,6 @@ func pushAnnotationCoverageUpdateRequestToRedis(redisPool *redis.Pool, uuid stri
 
         shapeType := obj["type"]
         if shapeType == "rect" {
-        	var rectangleAnnotation RectangleAnnotation 
-			err = json.Unmarshal(r, &rectangleAnnotation)
-			if err != nil {
-				return err
-			}
-        } else if shapeType == "ellipse" {
-        	var ellipsisAnnotation EllipsisAnnotation 
-			err = json.Unmarshal(r, &ellipsisAnnotation)
-			if err != nil {
-				return err
-			}
-        } else if shapeType == "polygon" {
-        	var polygonAnnotation PolygonAnnotation 
-			err = json.Unmarshal(r, &polygonAnnotation)
-			if err != nil {
-				return err
-			}
-        } else {
-        	return errors.New("Invalid shape type")
-        }
-	}
-
-	if len(annotations) == 0 {
-		return errors.New("annotations missing")
-	}
-
-	return nil
-}*/
-
-func annotationsValid(annotations []json.RawMessage) error{
-	for _, r := range annotations {
-		var obj map[string]interface{}
-        err := json.Unmarshal(r, &obj)
-        if err != nil {
-            return err
-        }
-
-        shapeType := obj["type"]
-        if shapeType == "rect" {
         	var rectangleAnnotation datastructures.RectangleAnnotation 
         	decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
@@ -291,7 +251,7 @@ func annotationsValid(annotations []json.RawMessage) error{
 	}
 
 	return nil
-}
+}*/
 
 
 func getBrowserFingerprint(c *gin.Context) string {
@@ -506,6 +466,7 @@ func main(){
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
@@ -552,6 +513,13 @@ func main(){
 	err = metaLabels.Load()
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read metalabel map...terminating!")
+		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading label refinements")
+	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
 		log.Fatal(err)
 	}
 
@@ -888,7 +856,8 @@ func main(){
 					return
 				}
 
-				err = annotationsValid(annotations.Annotations)
+				annotationsValidator := commons.NewAnnotationsValidator(annotations.Annotations)
+				err = annotationsValidator.Parse()
 				if err != nil {
 					c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 					return
@@ -898,7 +867,7 @@ func main(){
 				apiUser.ClientFingerprint = ""
 				apiUser.Name = ""
 
-				_, err = imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, true)
+				_, err = imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, annotationsValidator.GetRefinements(), true)
 				if(err != nil){
 					c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 					return
@@ -1629,6 +1598,10 @@ func main(){
 			c.JSON(http.StatusOK, labelAccessors)
 		})
 
+		router.GET("/v1/label/refinements", func(c *gin.Context) {
+			c.JSON(http.StatusOK, labelRefinementsMap)
+		})
+
 		router.GET("/v1/label/graph/:labelgraphname", func(c *gin.Context) {
 			labelGraphName := c.Param("labelgraphname")
 
@@ -1913,7 +1886,8 @@ func main(){
 				return
 			}
 
-			err = annotationsValid(annotations.Annotations)
+			annotationsValidator := commons.NewAnnotationsValidator(annotations.Annotations)
+			err = annotationsValidator.Parse()
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 				return
@@ -1923,7 +1897,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err = imageMonkeyDatabase.UpdateAnnotation(apiUser, annotationId, annotations)
+			err = imageMonkeyDatabase.UpdateAnnotation(apiUser, annotationId, annotations, annotationsValidator.GetRefinements())
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't update annotation - please try again later"})
 				return
@@ -2019,7 +1993,8 @@ func main(){
 				return
 			}
 
-			err = annotationsValid(annotations.Annotations)
+			annotationsValidator := commons.NewAnnotationsValidator(annotations.Annotations)
+			err = annotationsValidator.Parse()
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 				return
@@ -2035,7 +2010,7 @@ func main(){
 			}
 
 
-			annotationId, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, false)
+			annotationId, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, annotationsValidator.GetRefinements() , false)
 			if(err != nil){
 				c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 				return

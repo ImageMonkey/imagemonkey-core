@@ -423,6 +423,12 @@ func (p *ImageMonkeyDatabase) GetLastAddedAnnotationDataId() (string, error) {
 	return annotationDataId, err
 }
 
+func (p *ImageMonkeyDatabase) GetLastAddedAnnotationId() (string, error) {
+	var annotationId string
+	err := p.db.QueryRow(`SELECT a.uuid FROM image_annotation a ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId)
+	return annotationId, err
+}
+
 func (p *ImageMonkeyDatabase) GetRandomLabelId() (int64, error) {
 	var labelId int64
 	err := p.db.QueryRow(`SELECT l.id FROM label l ORDER BY random() LIMIT 1`).Scan(&labelId)
@@ -615,6 +621,12 @@ func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) e
 							SET num_of_valid = $2 
 							WHERE uuid = $1`, validationId, num)
 	return err
+}
+
+func (p *ImageMonkeyDatabase) GetNumOfRefinements() (int, error) {
+	var num int 
+	err := p.db.QueryRow(`SELECT count(*) FROM image_annotation_refinement`).Scan(&num)
+	return num, err
 }
 
 func (p *ImageMonkeyDatabase) GetAllAnnotationIds() ([]string, error) {

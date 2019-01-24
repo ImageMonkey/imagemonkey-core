@@ -1,0 +1,73 @@
+<script type="text/javascript">
+  function getPossibleRefinements() {
+    var url = "{{ .apiBaseUrl }}/v1/label/refinements";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      success: function(data) {
+        for(key in data) {
+          if(data.hasOwnProperty(key)) {
+            var labelEntry = data[key];
+            var labelValues = labelEntry.values;
+            var entry = '';
+            for(labelKey in labelValues) {
+              if(labelValues.hasOwnProperty(labelKey)) {
+                entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
+                if(labelEntry.icon !== "") {
+                  entry += '<i class="' + labelEntry.icon + ' icon"></i>';
+                  //labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
+                }
+                entry += (labelKey + '</div>');
+                $("#refinementInputDropdownMenu").append(entry);
+              }
+            }
+          }
+        }
+      },
+      error: function (xhr, options, err) {
+      }
+    });
+  }
+
+  function getSelectedRefinements() {
+    return $("#refinementInputDropdown").dropdown('get value');
+  }
+
+  function populateRefinements(refinementUuids) {
+    $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
+  }
+
+  $(document).ready(function(){ 
+    $("#refinementInputDropdown").dropdown();
+    getPossibleRefinements();
+  });
+
+</script>
+
+<div class="ui small modal" id="addAnnotationRefinementsDlg">
+  <div class="header">
+    Add Refinements
+  </div>
+  <div class="content">
+    <div class="row" id="refinementInput">
+      <div class="eight wide center aligned centered column">
+        <div class="ui fluid multiple search selection dropdown" id="refinementInputDropdown">
+          <input class="search">
+          <div class="default text">Refinements...</div>
+          <div class="menu" id="refinementInputDropdownMenu">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui negative button">
+      Cancel
+    </div>
+    <div class="ui positive right labeled icon button" id="addAnnotationRefinementsDlgDoneButton">
+      Done
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>

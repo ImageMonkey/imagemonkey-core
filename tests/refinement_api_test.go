@@ -258,3 +258,66 @@ func TestImageAnnotationRefinementShouldFailWhenLabelIdIsInvalid(t *testing.T) {
 
 	testImageAnnotationRefinement(t, annotationId, annotationDataId, "not-a-valid-label-uuid", 400)
 }
+
+func TestAnnotateAndRefine(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	//donate image with some label + annotate
+	testDonate(t, "./images/apples/apple1.jpeg", "person", true, "", "", 200)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "person", "", 
+							`[{"refinements": [{"label_uuid": "86485bae-04a1-43ef-a191-5f2a0464595a"}],"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+	annotationIds, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(annotationIds), 1)
+
+	numOfRefinements, err := db.GetNumOfRefinements()
+	ok(t, err)
+	equals(t, numOfRefinements, 1)
+}
+
+func TestAnnotateAndRefineShouldFailDueToWrongSyntax(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	//donate image with some label + annotate
+	testDonate(t, "./images/apples/apple1.jpeg", "person", true, "", "", 200)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "person", "", 
+							`[{"refinements": [{"invalid-key": "86485bae-04a1-43ef-a191-5f2a0464595a"}],"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 422)
+
+	annotationIds, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(annotationIds), 0)
+
+	numOfRefinements, err := db.GetNumOfRefinements()
+	ok(t, err)
+	equals(t, numOfRefinements, 0)
+}
+
+func TestAnnotateAndRefineMultiple(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	//donate image with some label + annotate
+	testDonate(t, "./images/apples/apple1.jpeg", "person", true, "", "", 200)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "person", "", 
+							`[{"refinements": [{"label_uuid": "86485bae-04a1-43ef-a191-5f2a0464595a", "label_uuid": "07d13f17-3757-45c5-ba20-4f53c8a46334"}],"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+	annotationIds, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(annotationIds), 1)
+
+	numOfRefinements, err := db.GetNumOfRefinements()
+	ok(t, err)
+	equals(t, numOfRefinements, 1)
+}

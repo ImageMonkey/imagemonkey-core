@@ -17,7 +17,8 @@ context = (function () {
         left: 'auto',
 		preventDoubleContext: true,
 		compress: false
-	};
+	},
+	selectorToDropdownIdRefs = {};
 
 	function initialize(opts) {
 
@@ -135,12 +136,14 @@ context = (function () {
             if (typeof $menu === 'undefined') {
                 $menu = buildMenu(data.data, id);
                 $('body').append($menu);
+                if( $(selector) ) selectorToDropdownIdRefs[selector] = '#dropdown-' + id;
             }
         } else {
             var d = new Date(),
                 id = d.getTime(),
                 $menu = buildMenu(data, id);
                 $('body').append($menu);
+                if( $(selector) ) selectorToDropdownIdRefs[selector] = '#dropdown-' + id;
         }
 
 		$(selector).on('contextmenu', function (e) {
@@ -198,7 +201,15 @@ context = (function () {
 	}
 
 	function destroyContext(selector) {
-		$(document).off('contextmenu', selector).off('click', '.context-event');
+		if( selectorToDropdownIdRefs[selector] ) {
+			$(document).off('contextmenu', selector).off('click', '.context-event');
+			removeContextMenuFromDOM(selector);
+		}
+	}
+
+	function removeContextMenuFromDOM(selector) {
+		$(selectorToDropdownIdRefs[selector]).remove();
+		delete selectorToDropdownIdRefs[selector];
 	}
 
 	return {

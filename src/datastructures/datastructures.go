@@ -27,6 +27,7 @@ type RectangleAnnotation struct {
     Angle float32 `json:"angle"`
     Type string `json:"type"`
     Stroke AnnotationStroke `json:"stroke"`
+    Refinements []AnnotationRefinementEntry  `json:"refinements"`
 }
 
 type EllipsisAnnotation struct {
@@ -38,6 +39,7 @@ type EllipsisAnnotation struct {
     Angle float32 `json:"angle"`
     Type string `json:"type"`
     Stroke AnnotationStroke `json:"stroke"`
+    Refinements []AnnotationRefinementEntry `json:"refinements"`
 }
 
 
@@ -54,6 +56,7 @@ type PolygonAnnotation struct {
     Angle float32 `json:"angle"`
     Type string `json:"type"`
     Stroke AnnotationStroke `json:"stroke"`
+    Refinements []AnnotationRefinementEntry `json:"refinements"`
 }
 
 type Annotations struct {

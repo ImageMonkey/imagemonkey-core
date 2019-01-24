@@ -65,7 +65,7 @@ func testBrowseAnnotation(t *testing.T, query string, requiredNumOfResults int, 
 }
 
 
-func testGetExistingAnnotations(t *testing.T, query string, token string, requiredStatusCode int, requiredNumOfResults int) {
+func testGetExistingAnnotations(t *testing.T, query string, token string, requiredStatusCode int, requiredNumOfResults int) []datastructures.AnnotatedImage {
 	url := BASE_URL +API_VERSION + "/annotations"
 
 	var annotatedImages []datastructures.AnnotatedImage
@@ -85,6 +85,8 @@ func testGetExistingAnnotations(t *testing.T, query string, token string, requir
 	ok(t, err)
 	equals(t, resp.StatusCode(), requiredStatusCode)
 	equals(t, len(annotatedImages), requiredNumOfResults)
+
+	return annotatedImages
 }
 
 func testGetAnnotatedImage(t *testing.T, imageId string, token string, requiredStatusCode int) {

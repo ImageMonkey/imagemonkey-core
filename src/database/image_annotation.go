@@ -18,7 +18,7 @@ import (
 )
 
 func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, annotationId string, 
-		annotations datastructures.Annotations) error {
+		annotations datastructures.Annotations, annotationsRefinements [][]datastructures.AnnotationRefinementEntry) error {
     byt, err := json.Marshal(annotations.Annotations)
     if err != nil {
         log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
@@ -67,14 +67,52 @@ func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, a
         return err
     }
 
-    //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
-                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, imageAnnotationId, byt)
+    //insertes annotation data; 'type' and 'refinements' are removed removed before inserting data
+    var rows *sql.Rows
+    rows, err = tx.Query(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                            SELECT $1, uuid_generate_v4(), 
+                                    ((q.*)::jsonb - 'type' - 'refinements'), 
+                                    (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) 
+                                    FROM json_array_elements($2) q
+                            RETURNING uuid`, imageAnnotationId, byt)
     if err != nil {
         tx.Rollback()
-        log.Debug("[Update Annotation] Couldn't add new annotation data: ", err.Error())
+        log.Error("[Update Annotation] Couldn't add annotations: ", err.Error())
         raven.CaptureError(err, nil)
         return err
+    }
+    defer rows.Close()
+    annotationDataIds := make(map[int]string)
+    i := 0
+    for rows.Next() {
+        var annotationDataId string
+        err = rows.Scan(&annotationDataId)
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Update Annotation] Couldn't scan annotation data ids: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+        annotationDataIds[i] = annotationDataId
+        i += 1
+    }
+    rows.Close()
+
+    if len(annotationsRefinements) != len(annotationDataIds) {
+        tx.Rollback()
+        err = errors.New("Num of annotation refinements do not match num of annotation data ids!")
+        log.Error("[Update Annotation] Couldn't add annotations : ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    for i, refinements := range annotationsRefinements {
+        if val, ok := annotationDataIds[i]; ok {
+            err = p._addOrUpdateRefinementsInTransaction(tx, annotationId, val, refinements, apiUser.ClientFingerprint)
+            if err != nil { //transaction already rolled back, so we can return here
+                return err
+            }
+        }
     }
 
     err = tx.Commit()
@@ -521,48 +559,60 @@ func (p *ImageMonkeyDatabase) GetAnnotatedImage(apiUser datastructures.APIUser, 
             includeOwnImageDonations = fmt.Sprintf(includeOwnImageDonationsStr, 3)
         }
 
-        q = fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
-                                json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
-                                   FROM (
-                                     SELECT i.key as key, i.id as image_id, q2.label_id as label_id, 
-                                     q2.id as entry_id, q2.annotation_uuid as annotation_uuid, q2.num_of_valid as num_of_valid, 
-                                     q2.num_of_invalid as num_of_invalid, i.width as width, i.height as height, q2.is_revision,
-                                     i.unlocked as image_unlocked
-                                     FROM image i
-                                     JOIN image_provider p ON i.image_provider_id = p.id
-                                     JOIN (
-                                        SELECT DISTINCT a.image_id as image_id, a.label_id as label_id, a.uuid as annotation_uuid,
-                                        a.num_of_valid as num_of_valid, a.num_of_invalid as num_of_invalid,
-                                        CASE WHEN r.revision = $1 THEN r.id ELSE a.id END as id, 
-                                        CASE WHEN r.revision = $1 THEN true ELSE false END as is_revision
-                                        FROM image_annotation a
-                                        LEFT JOIN image_annotation_revision r ON r.image_annotation_id = a.id
-                                        where a.uuid::text = $2 
-                                        AND a.auto_generated = false and (r.revision = $1 or a.revision = $1)
-                                     ) q2 ON q2.image_id = i.id
-                                     WHERE (i.unlocked = true %s) AND p.name = 'donation'
-                                     
-                                     
-                                   ) q1
+        q = fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), 
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                            FROM
+                            (
+                                SELECT q1.key as image_key, l.name as label_name, COALESCE(pl.name, '') as parent_label_name, q1.annotation_uuid as annotation_uuid, 
+                                    q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb
+                                     || jsonb_strip_nulls(jsonb_build_object('refinements', ((json_agg(jsonb_build_object('label_uuid', q.annotation_refinement_uuid)) 
+                                        FILTER (WHERE q.annotation_refinement_uuid IS NOT NULL))))) as annotation, 
+                                     q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, q1.width as image_width, 
+                                     q1.height as image_height, q1.image_unlocked as image_unlocked
+                                       FROM (
+                                         SELECT i.key as key, i.id as image_id, q2.label_id as label_id, 
+                                         q2.id as entry_id, q2.annotation_uuid as annotation_uuid, q2.num_of_valid as num_of_valid, 
+                                         q2.num_of_invalid as num_of_invalid, i.width as width, i.height as height, q2.is_revision,
+                                         i.unlocked as image_unlocked
+                                         FROM image i
+                                         JOIN image_provider p ON i.image_provider_id = p.id
+                                         JOIN (
+                                            SELECT DISTINCT a.image_id as image_id, a.label_id as label_id, a.uuid as annotation_uuid,
+                                            a.num_of_valid as num_of_valid, a.num_of_invalid as num_of_invalid,
+                                            CASE WHEN r.revision = $1 THEN r.id ELSE a.id END as id, 
+                                            CASE WHEN r.revision = $1 THEN true ELSE false END as is_revision
+                                            FROM image_annotation a
+                                            LEFT JOIN image_annotation_revision r ON r.image_annotation_id = a.id
+                                            where a.uuid::text = $2 
+                                            AND a.auto_generated = false and (r.revision = $1 or a.revision = $1)
+                                         ) q2 ON q2.image_id = i.id
+                                         WHERE (i.unlocked = true %s) AND p.name = 'donation'
+                                         
+                                         
+                                       ) q1
 
-                                   JOIN
-                                   (
-                                     SELECT d.annotation as annotation, t.name as annotation_type,
-                                     d.image_annotation_id as image_annotation_id, d.image_annotation_revision_id as image_annotation_revision_id
-                                     FROM annotation_data d 
-                                     JOIN annotation_type t on d.annotation_type_id = t.id
-                                   ) q ON 
-                                     CASE 
-                                        WHEN q1.is_revision THEN q.image_annotation_revision_id = q1.entry_id
-                                        ELSE q.image_annotation_id = q1.entry_id 
-                                     END
+                                       JOIN
+                                       (
+                                         SELECT d.annotation as annotation, l.uuid as annotation_refinement_uuid, t.name as annotation_type,
+                                         d.image_annotation_id as image_annotation_id, d.image_annotation_revision_id as image_annotation_revision_id
+                                         FROM annotation_data d 
+                                         JOIN annotation_type t on d.annotation_type_id = t.id
+                                         LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                                         LEFT JOIN label l ON l.id = r.label_id
+                                       ) q ON 
+                                         CASE 
+                                            WHEN q1.is_revision THEN q.image_annotation_revision_id = q1.entry_id
+                                            ELSE q.image_annotation_id = q1.entry_id 
+                                         END
 
 
-                                   JOIN label l ON q1.label_id = l.id
-                                   LEFT JOIN label pl ON l.parent_id = pl.id
-                                   GROUP BY q1.key, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations)
+                                       JOIN label l ON q1.label_id = l.id
+                                       LEFT JOIN label pl ON l.parent_id = pl.id
+                                       GROUP BY q1.key, q.annotation, q.annotation_type, q1.annotation_uuid, l.name, pl.name, 
+                                       q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
+                            ) q2
+                            GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked`, includeOwnImageDonations)
 
 
     } else {
@@ -591,35 +641,47 @@ func (p *ImageMonkeyDatabase) GetAnnotatedImage(apiUser datastructures.APIUser, 
                               LIMIT 1`, includeOwnImageDonations)
         }
 
-        q = fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
-                                 json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
-                                   FROM (
-                                     SELECT i.key as key, i.id as image_id, a.label_id as label_id, 
-                                     a.id as image_annotation_id, a.uuid as annotation_uuid, a.num_of_valid as num_of_valid, 
-                                     a.num_of_invalid as num_of_invalid, i.width as width, i.height as height, i.unlocked as image_unlocked
-                                     FROM image i
-                                     JOIN image_provider p ON i.image_provider_id = p.id
-                                     JOIN image_annotation a ON a.image_id = i.id
-                                     WHERE (i.unlocked = true %s) AND p.name = 'donation' AND a.auto_generated = $1
-                                     %s
-                                     
-                                     
-                                   ) q1
+        q = fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), q2.num_of_valid,
+                            q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                            FROM
+                            (
+                                SELECT q1.key as image_key, l.name as label_name, COALESCE(pl.name, '') as parent_label_name, q1.annotation_uuid as annotation_uuid, 
+                                     q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb
+                                     || jsonb_strip_nulls(jsonb_build_object('refinements', ((json_agg(jsonb_build_object('label_uuid', q.annotation_refinement_uuid)) 
+                                        FILTER (WHERE q.annotation_refinement_uuid IS NOT NULL))))) as annotation, 
+                                     q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, q1.width as image_width, 
+                                     q1.height as image_height, q1.image_unlocked as image_unlocked
+                                       FROM (
+                                         SELECT i.key as key, i.id as image_id, a.label_id as label_id, 
+                                         a.id as image_annotation_id, a.uuid as annotation_uuid, a.num_of_valid as num_of_valid, 
+                                         a.num_of_invalid as num_of_invalid, i.width as width, i.height as height, i.unlocked as image_unlocked
+                                         FROM image i
+                                         JOIN image_provider p ON i.image_provider_id = p.id
+                                         JOIN image_annotation a ON a.image_id = i.id
+                                         WHERE (i.unlocked = true %s) AND p.name = 'donation' AND a.auto_generated = $1
+                                         %s
+                                         
+                                         
+                                       ) q1
 
-                                   JOIN
-                                   (
-                                     SELECT d.image_annotation_id as image_annotation_id, d.annotation as annotation,
-                                     t.name as annotation_type
-                                     FROM annotation_data d 
-                                     JOIN annotation_type t on d.annotation_type_id = t.id
-                                   ) q ON q.image_annotation_id = q1.image_annotation_id
+                                       JOIN
+                                       (
+                                         SELECT d.image_annotation_id as image_annotation_id, l.uuid as annotation_refinement_uuid, 
+                                         d.annotation as annotation, t.name as annotation_type
+                                         FROM annotation_data d 
+                                         JOIN annotation_type t on d.annotation_type_id = t.id
+                                         LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                                         LEFT JOIN label l ON l.id = r.label_id
+                                       ) q ON q.image_annotation_id = q1.image_annotation_id
 
 
-                                   JOIN label l ON q1.label_id = l.id
-                                   LEFT JOIN label pl ON l.parent_id = pl.id
-                                   GROUP BY q1.key, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations, q1)
+                                       JOIN label l ON q1.label_id = l.id
+                                       LEFT JOIN label pl ON l.parent_id = pl.id
+                                       GROUP BY q1.key, q.annotation, q.annotation_type, q1.annotation_uuid, l.name, pl.name, 
+                                       q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
+                            ) q2
+                            GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, q2.num_of_valid,
+                            q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked`, includeOwnImageDonations, q1)
     }
 
     var err error

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
-	"reflect"
 	"os"
 	"../src/datastructures"
 )
@@ -192,49 +191,6 @@ func testDonate(t *testing.T, path string, label string, unlockImage bool, token
 		}
 	}
 }
-
-func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
-	type Annotation struct {
-		Annotations []json.RawMessage `json:"annotations"`
-	}
-
-	for i := 0; i < num; i++ {
-		annotationId, err := db.GetRandomAnnotationId()
-		ok(t, err)
-
-		oldAnnotationRevision, err := db.GetAnnotationRevision(annotationId)
-		ok(t, err)
-
-		oldAnnotationDataIds, err := db.GetAnnotationDataIds(annotationId)
-		ok(t, err)
-
-		annotationEntry := Annotation{}
-
-		err = json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
-		ok(t, err)
-
-		url := BASE_URL + API_VERSION + "/annotation/" + annotationId
-		resp, err := resty.R().
-					SetHeader("Content-Type", "application/json").
-					SetBody(annotationEntry).
-					Put(url)
-		ok(t, err)
-
-		equals(t, resp.StatusCode(), 201)
-
-		newAnnotationRevision, err := db.GetAnnotationRevision(annotationId)
-		ok(t, err)
-
-		newAnnotationDataIds, err := db.GetOldAnnotationDataIds(annotationId, oldAnnotationRevision)
-		ok(t, err)
-
-		equals(t, newAnnotationRevision, (oldAnnotationRevision + 1))
-
-		equal := reflect.DeepEqual(oldAnnotationDataIds, newAnnotationDataIds)
-		equals(t, equal, true)
-	}
-}
-
 
 
 func testMultipleDonate(t *testing.T, label string) int {
@@ -495,15 +451,6 @@ func TestLoginShouldFailDueToWrongUsername(t *testing.T) {
 
 	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
 	testLogin(t, "wronguser", "testpassword", 401)
-}
-
-func TestRandomAnnotationRework(t *testing.T) {
-	teardownTestCase := setupTestCase(t)
-	defer teardownTestCase(t)
-
-	testMultipleDonate(t, "apple")
-	testRandomAnnotate(t, 2, `[{"top":100,"left":200,"type":"rect","angle":0,"width":40,"height":60,"stroke":{"color":"red","width":1}}]`)
-	testRandomAnnotationRework(t, 2, `[{"top":200,"left":300,"type":"rect","angle":10,"width":50,"height":30,"stroke":{"color":"blue","width":3}}]`)
 }
 
 
