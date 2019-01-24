@@ -1,46 +1,76 @@
 <script type="text/javascript">
-  function getPossibleRefinements() {
-    var url = "{{ .apiBaseUrl }}/v1/label/refinements";
-    $.ajax({
-      url: url,
-      dataType: 'json',
-      type: 'GET',
-      success: function(data) {
-        for(key in data) {
-          if(data.hasOwnProperty(key)) {
-            var labelEntry = data[key];
-            var labelValues = labelEntry.values;
-            var entry = '';
-            for(labelKey in labelValues) {
-              if(labelValues.hasOwnProperty(labelKey)) {
-                entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
-                if(labelEntry.icon !== "") {
-                  entry += '<i class="' + labelEntry.icon + ' icon"></i>';
-                  //labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
-                }
-                entry += (labelKey + '</div>');
-                $("#refinementInputDropdownMenu").append(entry);
-              }
+  var annotationRefinementsDlg = (function() { 
+    var isOpened = false;
+
+    return {
+
+        getSelectedRefinements: function() {
+          return $("#refinementInputDropdown").dropdown('get value');
+        },
+
+        open: function() {
+          $('#addAnnotationRefinementsDlg').modal({
+            onShow: function() {
+              isOpened = true;
+              $(this).draggable({
+                cancel: ".content"
+              });
+            },
+            onHidden: function() {
+              isOpened = false;
+              $(this).css({
+                'top': '50%',
+                'left': '50%'
+              })
             }
-          }
+          }).modal('show');
+        },
+
+        isOpened: function() {
+          console.log("is opened = " +isOpened)
+          return isOpened;
+        },
+
+        populateRefinements: function(refinementUuids) {
+          $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
+        },
+ 
+        getPossibleRefinements: function() {
+          var url = "{{ .apiBaseUrl }}/v1/label/refinements";
+          $.ajax({
+            url: url,
+            dataType: 'json',
+            type: 'GET',
+            success: function(data) {
+              for(key in data) {
+                if(data.hasOwnProperty(key)) {
+                  var labelEntry = data[key];
+                  var labelValues = labelEntry.values;
+                  var entry = '';
+                  for(labelKey in labelValues) {
+                    if(labelValues.hasOwnProperty(labelKey)) {
+                      entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
+                      if(labelEntry.icon !== "") {
+                        entry += '<i class="' + labelEntry.icon + ' icon"></i>';
+                        //labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
+                      }
+                      entry += (labelKey + '</div>');
+                      $("#refinementInputDropdownMenu").append(entry);
+                    }
+                  }
+                }
+              }
+            },
+            error: function (xhr, options, err) {
+            }
+          });
         }
-      },
-      error: function (xhr, options, err) {
-      }
-    });
-  }
-
-  function getSelectedRefinements() {
-    return $("#refinementInputDropdown").dropdown('get value');
-  }
-
-  function populateRefinements(refinementUuids) {
-    $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
-  }
+    };  
+  })();
 
   $(document).ready(function(){ 
     $("#refinementInputDropdown").dropdown();
-    getPossibleRefinements();
+    annotationRefinementsDlg.getPossibleRefinements();
   });
 
 </script>
