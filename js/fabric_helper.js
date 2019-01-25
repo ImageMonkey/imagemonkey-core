@@ -63,6 +63,11 @@ function calcScaleFactor(img, maxImageWidth){
 function drawAnnotations(canvas, annotations, scaleFactor, callback){
   for(var i = 0; i < annotations.length; i++){
     var type = annotations[i]["type"];
+    var hasRefinements = false;
+
+    if("refinements" in annotations[i])
+        hasRefinements = true;
+
     if(type === "rect"){
         var top = (annotations[i]["top"] * scaleFactor);
         var left = (annotations[i]["left"] * scaleFactor);
@@ -107,6 +112,11 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             hasControls: false,
             selectable: false
         });
+
+        //in case annotation has refinements, highlight with a different stroke style
+        if(hasRefinements)
+            rect.set({strokeDashArray: [6, 3]});
+
         canvas.add(rect);
         typeof callback === 'function' && callback(rect);     
     }
@@ -153,6 +163,11 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
             hasControls: false,
             selectable: false
         });
+
+        //in case annotation has refinements, highlight with a different stroke style
+        if(hasRefinements)
+            ellipsis.set({strokeDashArray: [6, 3]});
+
         canvas.add(ellipsis);
         typeof callback === 'function' && callback(ellipsis);
     }
@@ -228,6 +243,11 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 selectable: false
             });
         } 
+
+        //in case annotation has refinements, highlight with a different stroke style
+        if(hasRefinements)
+            polygon.set({strokeDashArray: [6, 3]});
+
         canvas.add(polygon);
         typeof callback === 'function' && callback(polygon);
     }

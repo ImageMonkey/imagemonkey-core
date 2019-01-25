@@ -1032,9 +1032,17 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
         queryValues = append(queryValues, apiUser.Name)
     }
 
-    q := fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
-                             json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                             q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked
+    q := fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), 
+                      q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                      FROM
+                      (
+                        SELECT q1.key as image_key, l.name as label_name, COALESCE(pl.name, '') as parent_label_name, 
+                            q1.annotation_uuid as annotation_uuid, 
+                             q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb
+                                || jsonb_strip_nulls(jsonb_build_object('refinements', ((json_agg(jsonb_build_object('label_uuid', q.annotation_refinement_uuid)) 
+                                FILTER (WHERE q.annotation_refinement_uuid IS NOT NULL))))) as annotation, 
+                             q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, 
+                             q1.image_width as image_width, q1.image_height as image_height, q1.image_unlocked as image_unlocked
                                    FROM (
                                      SELECT key, image_id, q.label_id, entry_id, annotation_uuid, num_of_valid,
                                      num_of_invalid, image_width, image_height, image_unlocked, annotated_percentage
@@ -1057,17 +1065,23 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
 
                                    JOIN
                                    (
-                                     SELECT d.image_annotation_id as annotation_id, d.annotation as annotation, t.name as annotation_type 
+                                     SELECT d.image_annotation_id as annotation_id, d.annotation as annotation, t.name as annotation_type,
+                                     l.uuid as annotation_refinement_uuid
                                      FROM annotation_data d 
                                      JOIN annotation_type t on d.annotation_type_id = t.id
+                                     LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                                     LEFT JOIN label l ON l.id = r.label_id
                                    ) q ON q.annotation_id = q1.entry_id
 
 
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
-                                   GROUP BY q1.key, q.annotation_id, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked`, 
-                                   includeOwnImageDonations, q1)
+                                   GROUP BY q1.key, q.annotation_id, q.annotation, q.annotation_type, q1.annotation_uuid, l.name, pl.name, 
+                                   q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked
+                      ) q2
+                      GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                      `, includeOwnImageDonations, q1)
 
     rows, err := p.db.Query(q, queryValues...)
     if err != nil {
