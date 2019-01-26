@@ -4,10 +4,12 @@ MAINTAINER bbernhard version: 0.3
 
 RUN apt-get update && apt-get install --no-install-recommends -y postgresql-9.6 nginx nginx-extras redis-server git supervisor wget build-essential postgresql-server-dev-9.6 postgresql-contrib-9.6 dos2unix neovim postgresql-9.6-postgis-2.3 postgresql-9.6-postgis-2.3-scripts curl autoconf ca-certificates gcc make automake pkg-config uuid-dev zlib1g-dev lsb-release sudo gir1.2-glib-2.0 python3 python3-pip && rm -rf /var/lib/apt/lists/*
 
-RUN wget https://my-netdata.io/kickstart.sh --directory-prefix=/tmp/ \
+RUN apt-get update \
+	&& wget https://my-netdata.io/kickstart.sh --directory-prefix=/tmp/ \
     && chmod u+rx /tmp/kickstart.sh \
     && /tmp/kickstart.sh --non-interactive \
-    && rm /tmp/kickstart.sh
+    && rm /tmp/kickstart.sh \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /root/imagemonkey-core
 RUN git clone https://github.com/bbernhard/imagemonkey-core.git /root/imagemonkey-core \

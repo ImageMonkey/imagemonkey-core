@@ -18,9 +18,9 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=12"></script>
+  <script src="js/fabric_helper.js?v=14"></script>
   <script src="js/fingerprint2.min.js"></script>
-  <script src="js/annotate.js?v=17"></script>
+  <script src="js/annotate.js?v=19"></script>
   <script src="js/simplify.js"></script>
   <script src="js/justified-layout.min.js"></script>
   <script src="js/infinitescroll.js?v=2"></script>
@@ -31,8 +31,15 @@
   <script src="js/huebee.min.js"></script>
   <link rel="stylesheet" href="css/huebee.min.css"/>
   <script src="js/lodash.core.min.js"></script>
+  <script src="js/contextjs/context.js"></script>
+  <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <style>
+
+  #addAnnotationRefinementsDlg .header,
+  #addAnnotationRefinementsDlg .actions{
+    cursor: move;
+  }
 
   #bottomLabel {
     position: fixed;
@@ -151,9 +158,7 @@
     showHideAutoAnnotationsLoadButton();
 
     if(canvas !== undefined && canvas !== null) {
-      canvas.fabric().clear();
-      canvas.fabric().setZoom(1.0);
-      canvas.fabric().absolutePan(new fabric.Point(0,0));
+      annotator.reset();
     }
     addMainCanvas();
     populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
@@ -191,9 +196,7 @@
     setLabel(data.validation.label, data.validation.sublabel, null);
 
     if(canvas !== undefined && canvas !== null) {
-      canvas.fabric().clear();
-      canvas.fabric().setZoom(1.0);
-      canvas.fabric().absolutePan(new fabric.Point(0,0));
+      annotator.reset();
     }
     addMainCanvas();
     populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked), false);
@@ -294,7 +297,7 @@
         {{ else }}
         $("#loadingSpinner").hide();
         clearDetailedCanvas();
-        canvas.clear();
+        annotator.reset();
         showBrowseAnnotationImageGrid();
         {{ end }}
       }
@@ -316,7 +319,7 @@
         {{ else }}
         $("#loadingSpinner").hide();
         clearDetailedCanvas();
-        canvas.clear();
+        annotator.reset();
         showBrowseAnnotationImageGrid();
         {{ end }}
       }
@@ -512,11 +515,11 @@
 
   function populateCanvas(backgroundImageUrl, initAnnotator, force=true){
     if((canvas !== null) && !force)
-      canvas.fabric().clear();
+      annotator.reset();
     else{
       canvas = new CanvasDrawer("annotationArea");
       canvas.fabric().selection = false;
-      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp);
+      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp, onAnnotatorObjectDeselected);
     }
 
     var scaleFactor = getCanvasScaleFactor();
@@ -604,17 +607,24 @@
   }
 
   function onAnnotatorObjectSelected(){
-    if(annotator.objectsSelected() && annotator.isSelectMoveModeEnabled()) {
-        $("#trashMenuItem").removeClass("disabled");
-        $("#propertiesMenuItem").removeClass("disabled");
+    if(annotator.objectsSelected()) {
+        if(annotator.isSelectMoveModeEnabled()) {
+          $("#trashMenuItem").removeClass("disabled");
+          $("#propertiesMenuItem").removeClass("disabled");
 
-        var strokeColor = annotator.getStrokeColorOfSelected();
-        if(strokeColor !== null)
-          colorPicker.setColor(strokeColor);
+          var strokeColor = annotator.getStrokeColorOfSelected();
+          if(strokeColor !== null)
+            colorPicker.setColor(strokeColor);
+        }
+        context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
     } else {
       $("#trashMenuItem").addClass("disabled");
       $("#propertiesMenuItem").addClass("disabled");
     }
+  }
+
+  function onAnnotatorObjectDeselected() {
+    context.destroy('#annotationColumn');
   }
 
   function onAnnotatorMouseUp(){
@@ -723,7 +733,7 @@
     if(_.isEqual(res, existingAnnotations)) {
       showHideControls(false);
       clearDetailedCanvas();
-      canvas.clear();
+      annotator.reset();
       handleUpdateAnnotationsRes(existingAnnotations);
       return;
     }
@@ -739,7 +749,7 @@
 
     showHideControls(false);
     clearDetailedCanvas();
-    canvas.clear();
+    annotator.reset();
 
     var url = "{{ .apiBaseUrl }}/v1/annotation/" + annotationInfo.annotationId;
     $.ajax({
@@ -771,7 +781,7 @@
 
     showHideControls(false);
     clearDetailedCanvas();
-    canvas.clear();
+    annotator.reset();
 
     var url = "{{ .apiBaseUrl }}/v1/annotate/" + annotationInfo.imageId;
     $.ajax({
@@ -867,6 +877,29 @@
         $("#rectMenuItem").trigger("click");
       });
 
+
+      annotationRefinementsContextMenu = {
+        data: [
+          {header: 'Refinements'},
+          {text: 'Add refinements', action: function(e, selector) {
+            e.preventDefault();
+
+            if(annotator.getIdOfSelectedItem() !== "") {
+              annotationRefinementsDlg.populateRefinements(annotator.getRefinementsOfSelectedItem());
+              annotationRefinementsDlg.open();
+            }
+          }}
+        ]
+      }
+
+      context.init({preventDoubleContext: false});
+
+      $("#addAnnotationRefinementsDlgDoneButton").click(function(e) {
+        annotator.setRefinements(annotationRefinementsDlg.getSelectedRefinements().split(','));
+      });
+      
+
+
       $("#rectMenuItem").click(function(e) {
         if(annotator !== undefined) {
           annotator.disablePanMode();
@@ -889,8 +922,12 @@
         }
       });
 
-      Mousetrap.bind("p", function() { 
+      Mousetrap.bind("p", function() {
         $("#polygonMenuItem").trigger("click");
+      });
+
+      Mousetrap.bind("s", function() { 
+        $("#selectMoveMenutItem").trigger("click");
       });
 
       $("#polygonMenuItem").click(function(e) {
@@ -933,7 +970,7 @@
           $("#deleteObjectsPopup").modal("hide");
       });
 
-      Mousetrap.bind("del", function() { 
+      Mousetrap.bind("del", function() {
         $("#trashMenuItem").trigger("click");
       });
 
@@ -1218,6 +1255,8 @@
           </div>
         </div>
       </div>
+
+      {{ template "annotation_refinement_dlg.html" .}}
 
       <div class="row" id="annotationColumn" style="display: none;">
       </div>
