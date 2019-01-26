@@ -268,6 +268,8 @@ func main() {
 							log.Error("[Main] Couldn't create github issue for trending label: ", err.Error())
 							raven.CaptureError(err, nil)
 						}
+					} else {
+						t = trendingLabel
 					}
 
 					if githubErr == nil {
