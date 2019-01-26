@@ -259,10 +259,11 @@ func main() {
 				var githubErr error
 				if !trendingLabel.GithubIssue.Exists {
 					githubErr = nil
+					var t TrendingLabel
 					if *useGithub {
 						//there is a new trending label...create a github ticket for that
 						log.Info("[Main] Creating Github ticket for trending label: ", trendingLabel.Name)
-						_, githubErr = createGithubTicket(trendingLabel, *repository)
+						t, githubErr = createGithubTicket(trendingLabel, *repository)
 						if githubErr != nil {
 							log.Error("[Main] Couldn't create github issue for trending label: ", err.Error())
 							raven.CaptureError(err, nil)
@@ -270,7 +271,7 @@ func main() {
 					}
 
 					if githubErr == nil {
-						err := updateSentTrendingLabelCount(trendingLabel)
+						err := updateSentTrendingLabelCount(t)
 						if err != nil {
 							log.Error("[Main] Couldn't mark trending label as sent: ", err.Error())
 							raven.CaptureError(err, nil)
