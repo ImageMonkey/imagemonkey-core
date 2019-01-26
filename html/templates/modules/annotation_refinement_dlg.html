@@ -27,11 +27,11 @@
         },
 
         isOpened: function() {
-          console.log("is opened = " +isOpened)
           return isOpened;
         },
 
         populateRefinements: function(refinementUuids) {
+          $("#refinementInputDropdown").dropdown('clear');
           $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
         },
  
