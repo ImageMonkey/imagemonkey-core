@@ -741,7 +741,14 @@
 		"house": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "22bbce9a-9f50-4f38-ba11-6f2963d19809"
+			"uuid": "22bbce9a-9f50-4f38-ba11-6f2963d19809",
+			"has": {
+				"roof": {
+					"description": "optional",
+					"uuid": "b21f0558-956e-4739-9dbe-247e93ac42c0",
+					"accessors": [".has"]
+				}
+			}
 		},
 		"van": {
 			"description": "optional",
@@ -1152,6 +1159,16 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "9cb91307-ab62-489a-b774-0dea18e7f9ab"
+		},
+		"football": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9d0c112d-34eb-4d04-ac5c-0995af42dbc6"
+		},
+		"sand": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "fd5e9951-4e65-471e-9ade-b08d85eedd98"
 		}
 
 	}
