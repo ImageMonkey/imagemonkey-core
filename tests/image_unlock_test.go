@@ -8,9 +8,9 @@ import (
 )
 
 func testGetAllUnverifiedDonations(t *testing.T, clientId string, clientSecret string, 
-									requiredStatusCode int, requiredNumOfResults int) []datastructures.LockedImage {
+									requiredStatusCode int, requiredNumOfResults int) {
 	u := BASE_URL + API_VERSION + "/internal/unverified-donations"
-	var images []datastructures.LockedImage
+	var images datastructures.LockedImages
 
 	req := resty.R().
 		    SetResult(&images)
@@ -27,9 +27,7 @@ func testGetAllUnverifiedDonations(t *testing.T, clientId string, clientSecret s
 	
 	ok(t, err)
 	equals(t, resp.StatusCode(), requiredStatusCode)
-	equals(t, len(images), requiredNumOfResults)
-
-	return images
+	equals(t, len(images.Images), requiredNumOfResults)
 }
 
 
