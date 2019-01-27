@@ -368,8 +368,8 @@ func (p *ImageMonkeyDatabase) ReportImage(imageId string, reason string) error{
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool, limit int) ([]datastructures.LockedImage, error){
-    var images []datastructures.LockedImage
+func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool, limit int) (datastructures.LockedImages, error){
+    var lockedImages datastructures.LockedImages
     var queryValues []interface{}
 
     orderRandomly := ""
@@ -415,14 +415,32 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                     %s
                     %s`, q1, orderRandomly, limitBy)
 
+
+    totalImagesQuery := fmt.Sprintf(`SELECT count(*) 
+                                     FROM 
+                                     ( SELECT i.id as image_id, i.image_provider_id as image_provider_id,
+                                       i.unlocked as unlocked
+                                       FROM image i
+                                     ) q
+                                     JOIN image_provider p ON p.id = q.image_provider_id 
+                                     %s AND q.unlocked = false`, q1)
+
     var err error
     var rows *sql.Rows
-    rows, err = p.db.Query(q, queryValues...)
+    
+    tx, err := p.db.Begin()
+    if err != nil {
+        log.Debug("[Fetch unverified images] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return lockedImages, err
+    }
+
+    rows, err = tx.Query(q, queryValues...)
 
     if err != nil {
         log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
         raven.CaptureError(err, nil)
-        return images, err
+        return lockedImages, err
     }
 
     defer rows.Close()
@@ -433,13 +451,28 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
         if err != nil {
             log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
-            return images, err
+            return lockedImages, err
         }
 
-        images = append(images, image)
+        lockedImages.Images = append(lockedImages.Images, image)
     }
 
-    return images, nil
+
+    err = tx.QueryRow(totalImagesQuery).Scan(&lockedImages.Total)
+    if err != nil {
+        log.Debug("[Fetch unverified images] Couldn't get number of images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return lockedImages, err
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Fetch unverified images] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return lockedImages, err
+    }
+
+    return lockedImages, nil
 }
 
 func (p *ImageMonkeyDatabase) DeleteImage(uuid string) error {

@@ -81,6 +81,7 @@
     var numberOfQueryResults = 0;
     var numberOfCurrentlyShownResults = 0;
     var pendingImages = {};
+    var totalNumOfImages = 0;
 
     var clearImageGrid = function() {
       justifiedLayoutGeometry = null;
@@ -183,7 +184,7 @@
       numOfLastFetchedImg += n;
       numberOfCurrentlyShownResults = numOfLastFetchedImg;
 
-      $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
+      $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown (total: " + totalNumOfImages + ")");
     }
 
     function populateImageGrid(d) {
@@ -351,13 +352,14 @@
         success: function(data) {
           $('#loadingIndicator').hide();
           currentEntry = null;
-          unverifiedImageEntries = data;
+          unverifiedImageEntries = data.images;
+          totalNumOfImages = data.total;
 
           if(unverifiedImageEntries) {
             {{ if eq .mode "default" }}
             getNextEntry();
             {{ else }}
-            populateImageGrid(data);
+            populateImageGrid(data.images);
             {{ end }}
           }
           else {

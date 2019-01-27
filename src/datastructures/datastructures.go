@@ -88,6 +88,11 @@ type LockedImage struct {
     Height int32 `json:"height,omitempty"`
 }
 
+type LockedImages struct {
+    Images []LockedImage `json:"images"`
+    Total int `json:"total"`
+}
+
 type ImageToLabel struct {
     Id string `json:"uuid"`
     Label string `json:"label"`
