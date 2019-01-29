@@ -310,9 +310,11 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 		afterPart := strings.TrimSpace(assignmentVal[equalSignPos + 1 :])
 
 		assignmentVal = beforePart + "=" + afterPart
+		subval := "a.accessor = $" + strconv.Itoa(l.pos)
 
 		stackEntry := ParseResult{Query: val}
 		stackEntry.QueryValues = append(stackEntry.QueryValues, assignmentVal)
+		stackEntry.Subquery = subval
 		l.push(stackEntry)
 
 		l.pos += 1
