@@ -30,6 +30,11 @@
 					"description": "optional",
 					"uuid": "a7725a15-95f0-4f3c-ab8b-8655662bdd46",
 					"accessors": [".has"]
+				},
+				"nose": {
+					"description": "optional",
+					"uuid": "d8fa312b-38d3-4e50-9a6d-980c6c111af9",
+					"accessors": [".has"]
 				}
 			},
 
@@ -270,6 +275,11 @@
 				"paw": {
 					"description": "optional",
 					"uuid": "de5b8963-b32f-4050-a5ce-069ec27f67b2",
+					"accessors": [".has"]
+				},
+				"nose": {
+					"description": "optional",
+					"uuid": "09c167cd-186b-4b93-a972-ddf1f9763c8f",
 					"accessors": [".has"]
 				}
 			}
@@ -676,7 +686,14 @@
 		"bird": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7"
+			"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7",
+			"has": {
+				"head": {
+					"description": "optional",
+					"accessors": [".has"],
+					"uuid": "bc7f4dc3-0037-4517-893e-91e31725432d"
+				}
+			}
 		},
 		"street light": {
 			"description": "optional",
@@ -1169,6 +1186,31 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "fd5e9951-4e65-471e-9ade-b08d85eedd98"
+		},
+		"temple": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7ccdfd4d-e13a-4518-8d10-e3743fe97d80"
+		},
+		"ant": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0245c27a-b45a-4ab0-bc1c-3397651b994e"
+		},
+		"elephant": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "76b1eb48-70b3-43d4-8890-5a967649a00d"
+		},
+		"fish": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ab9bf24e-acc0-4857-85f8-907447c97127"
+		},
+		"carrot": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9eb38bb1-7468-4933-a277-aa89d18f5d4f"
 		}
 
 	}
