@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"../src/datastructures"
 	"encoding/json"
+	"sort"
 )
 
 func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResults int, 
@@ -31,6 +32,25 @@ func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResu
 
 	return labeledImages
 } 
+
+func testGetLabelsForImage(t *testing.T, imageId string, token string, requiredStatusCode int) []datastructures.LabelMeEntry {
+	u := BASE_URL + API_VERSION + "/donation/" + imageId + "/labels"
+
+	var labels []datastructures.LabelMeEntry
+
+	req := resty.R().
+		    SetResult(&labels)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Get(u)
+	ok(t, err)
+	equals(t, resp.StatusCode(), requiredStatusCode)
+
+	return labels
+}
 
 
 func TestBrowseLabel(t *testing.T) {
@@ -301,4 +321,90 @@ func TestOnlyOneLabelAccessorPerLabelId(t *testing.T) {
 	moreThanOneLabelId, err := db.DoLabelAccessorsBelongToMoreThanOneLabelId()
 	ok(t, err)
 	equals(t, moreThanOneLabelId, false)
+}
+
+func TestGetLabelsForImage(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	labels := testGetLabelsForImage(t, imageId, "", 200)
+	equals(t, len(labels), 1)
+	equals(t, labels[0].Label, "apple")
+	equals(t, labels[0].Unlocked, true)
+	equals(t, labels[0].Annotatable, true)
+	equals(t, labels[0].Validation.NumOfValid, 0)
+	equals(t, labels[0].Validation.NumOfInvalid, 0)
+}
+func TestGetLabelsForImageMultipleLabels(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "table", "")
+
+	labels := testGetLabelsForImage(t, imageId, "", 200)
+	equals(t, len(labels), 2)
+
+	sort.SliceStable(labels, func(i, j int) bool { return labels[i].Label < labels[j].Label })
+
+
+	equals(t, labels[0].Label, "apple")
+	equals(t, labels[0].Unlocked, true)
+	equals(t, labels[0].Annotatable, true)
+	equals(t, labels[0].Validation.NumOfValid, int32(0))
+	equals(t, labels[0].Validation.NumOfInvalid, int32(0))
+
+	equals(t, labels[1].Label, "table")
+	equals(t, labels[1].Unlocked, true)
+	equals(t, labels[1].Annotatable, true)
+	equals(t, labels[1].Validation.NumOfValid, int32(0))
+	equals(t, labels[1].Validation.NumOfInvalid, int32(0))
+}
+
+func TestGetLabelsForImageMultipleLabelsIncludingNonProductiveOnes(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	userToken := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "table", "")
+	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken)
+
+	labels := testGetLabelsForImage(t, imageId, "", 200)
+
+	sort.SliceStable(labels, func(i, j int) bool { return labels[i].Label < labels[j].Label })
+
+	equals(t, len(labels), 3)
+	equals(t, labels[0].Label, "apple")
+	equals(t, labels[0].Unlocked, true)
+	equals(t, labels[0].Annotatable, true)
+	equals(t, labels[0].Validation.NumOfValid, int32(0))
+	equals(t, labels[0].Validation.NumOfInvalid, int32(0))
+
+	equals(t, labels[1].Label, "not-existing")
+	equals(t, labels[1].Unlocked, false)
+	equals(t, labels[1].Annotatable, true)
+	equals(t, labels[1].Validation.NumOfValid, int32(0))
+	equals(t, labels[1].Validation.NumOfInvalid, int32(0))
+
+	equals(t, labels[2].Label, "table")
+	equals(t, labels[2].Unlocked, true)
+	equals(t, labels[2].Annotatable, true)
+	equals(t, labels[2].Validation.NumOfValid, int32(0))
+	equals(t, labels[2].Validation.NumOfInvalid, int32(0))
 }

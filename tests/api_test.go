@@ -254,9 +254,10 @@ func testLabelImage(t *testing.T, imageId string, label string, token string) {
 }
 
 
-func testSuggestLabelForImage(t *testing.T, imageId string, label string, token string) {
+func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string) {
 	type LabelMeEntry struct {
 		Label string `json:"label"`
+		Annotatable bool `json:"annotatable"`
 	}
 
 	oldNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
@@ -264,6 +265,7 @@ func testSuggestLabelForImage(t *testing.T, imageId string, label string, token 
 
 	var labelMeEntries []LabelMeEntry
 	labelMeEntry := LabelMeEntry{Label: label}
+	labelMeEntry.Annotatable = annotatable
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
 	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
