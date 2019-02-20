@@ -1,0 +1,1183 @@
+  var canvas, annotator;
+  var detailedCanvas = null;
+  var numOfPendingRequests = 0;
+  var autoAnnotations = null;
+  var labelId = null;
+  var annotationInfo = new AnnotationInfo();
+  var annotationSettings = new AnnotationSettings();
+  var colorPicker = null;
+  var existingAnnotations = null;
+  var browserFingerprint = null;
+  var deleteObjectsPopupShown = false;
+
+  {{ if eq .annotationMode "browse" }}
+  var browseModeLastSelectedAnnotatorMenuItem = null;
+  {{ end }}
+
+  function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
+    var ret = "";
+    $("#annotatorMenu").children().each(function (){
+      if($(this).hasClass("active")){
+        if(ignoreAutoLoadButton) {
+          if($(this).attr("id") !== "loadAutoAnnotationsMenuItem") {
+            ret = $(this).attr("id");
+            return;
+          }
+        } else {
+          ret = $(this).attr("id");
+          return;
+        }
+      }
+    });
+
+    return ret;
+  }
+
+  function zoomIn() {
+    canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+  }
+
+  function zoomOut() {
+    canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+  }
+
+  function AnnotationInfo () {
+    this.imageId = "";
+    this.validationId = "";
+    this.origImageWidth = 0;
+    this.origImageHeight = 0;
+    this.annotationId = "";
+    this.imageUrl = "";
+    this.imageUnlocked = false;
+  }
+
+  function handleUnannotatedImageResponse(data) {
+    existingAnnotations = null;
+    autoAnnotations = null;
+
+    if(data !== null) {
+      annotationInfo.imageId = data.uuid;
+      annotationInfo.origImageWidth = data.width;
+      annotationInfo.origImageHeight = data.height;
+      annotationInfo.validationId = data.validation.uuid;
+      annotationInfo.imageUrl = data.url;
+      annotationInfo.imageUnlocked = data.unlocked;
+
+      if("auto_annotations" in data) {
+        if(data["auto_annotations"].length !== 0)
+          autoAnnotations = data["auto_annotations"];
+      }
+
+      setLabel(data.label.label, data.label.sublabel, data.label.accessor);
+      changeNavHeader("default");
+    }
+    else {
+      annotationInfo.imageId = "";
+      annotationInfo.origImageWidth = 720; //width of the oops-no-annotation-left image
+      annotationInfo.origImageHeight = 720; //height of the oops-no-annotation-left image
+      annotationInfo.validationId = "";
+      annotationInfo.imageUrl = "";
+      annotationInfo.imageUnlocked = false;
+    }
+
+    showHideAutoAnnotationsLoadButton();
+
+    if(canvas !== undefined && canvas !== null) {
+      annotator.reset();
+    }
+    addMainCanvas();
+    populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
+    changeControl(annotator);
+    numOfPendingRequests = 0;
+
+    if(data === null)
+      changeNavHeader("noimage");
+
+    {{ if eq .annotationMode "browse" }}
+    if(browseModeLastSelectedAnnotatorMenuItem === null)
+      annotationSettings.loadPreferedAnnotationTool(annotator);
+    else {
+      changeMenuItem(browseModeLastSelectedAnnotatorMenuItem);
+      annotator.setShape(browseModeLastSelectedAnnotatorMenuItem);
+    }
+    {{ end }}
+
+
+    {{ if eq .annotationMode "unified" }}
+      console.log("getting")
+      getAnnotationsForImage(annotationInfo.imageId);
+    {{ end }}
+
+    populateRevisionsDropdown(0, 0);
+    showHideRevisionsDropdown();
+  }
+
+  function handleAnnotatedImageResponse(data) {
+    annotationInfo.imageId = data.image.uuid;
+    annotationInfo.origImageWidth = data.image.width;
+    annotationInfo.origImageHeight = data.image.height;
+    annotationInfo.annotationId = data.uuid;
+    annotationInfo.imageUrl = data.image.url;
+    annotationInfo.imageUnlocked = data.image.unlocked;
+
+    autoAnnotations = null;
+    existingAnnotations = data["annotations"];
+    showHideAutoAnnotationsLoadButton();
+
+    setLabel(data.validation.label, data.validation.sublabel, null);
+
+    if(canvas !== undefined && canvas !== null) {
+      annotator.reset();
+    }
+    addMainCanvas();
+    populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked), false);
+    changeControl(annotator);
+    numOfPendingRequests = 0;
+    showHideControls(true);
+
+    {{ if eq .annotationMode "browse" }}
+    annotationSettings.loadPreferedAnnotationTool(annotator);
+    {{ end }}
+
+    populateRevisionsDropdown(data["num_revisions"], data["revision"]);
+    showHideRevisionsDropdown();
+  }
+
+  function changeNavHeader(mode) {
+    if(mode === "default") {
+      $("#labelContainer").css("margin-top", "-2em");
+      $("#navHeader").css("min-height", "290px");
+      $("#navHeader").show();
+    } else if(mode === "noimage") {
+      $("#labelContainer").css("margin-top", "0");
+      $("#navHeader").css("min-height", "200px");
+      $("#annotationControlsGrid").hide();
+      $("#navHeader").show();
+    } else {
+      $("#labelContainer").css("margin-top", "0");
+      $("#navHeader").css("min-height", "200px");
+      $("#navHeader").show();
+    }
+  }
+
+
+
+  function getUnannotatedImage(validationId) {
+    var url = '';
+
+    if(validationId === undefined)
+      url = '{{ .apiBaseUrl }}/v1/annotate?add_auto_annotations=true' + ((labelId === null) ? "" : ("&label_id=" + labelId));
+    else
+      url = '{{ .apiBaseUrl }}/v1/annotate?validation_id=' + validationId;
+
+    showHideControls(false);
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data) {
+        handleUnannotatedImageResponse(data);
+      },
+      error: function (xhr, options, err) {
+        handleUnannotatedImageResponse(null);
+      }
+    });
+  }
+
+  function getAnnotationsForImage(imageId) {
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/annotations";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data) {
+        
+      },
+      error: function (xhr, options, err) {
+      }
+    });
+  }
+
+  function getLabelsForImage(imageId) {
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/labels";
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data) {
+        
+      },
+      error: function (xhr, options, err) {
+      }
+    });
+  }
+
+  function getAnnotatedImage(annotationId, annotationRevision) {
+    var url = '{{ .apiBaseUrl }}/v1/annotation?annotation_id=' + annotationId;
+
+    if(annotationRevision !== -1)
+      url += '&rev=' + annotationRevision;
+
+    showHideControls(false);
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        handleAnnotatedImageResponse(data);
+
+        //if there are already annotations, do not show blacklist or unannotatable button
+        $("#blacklistButton").hide();
+        $("#notAnnotableButton").hide();
+      }
+    });
+  }
+
+  function blacklistAnnotation(validationId) {
+    showHideControls(false);
+    var url = '{{ .apiBaseUrl }}/v1/validation/' + validationId + '/blacklist-annotation';
+    $.ajax({
+      url: url,
+      type: 'POST',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data, status, xhr){
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        clearDetailedCanvas();
+        annotator.reset();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
+      }
+    });
+  }
+
+  function markAsNotAnnotatable(validationId) {
+    showHideControls(false);
+    var url = '{{ .apiBaseUrl }}/v1/validation/' + validationId + '/not-annotatable';
+    $.ajax({
+      url: url,
+      type: 'POST',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data, status, xhr){
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        clearDetailedCanvas();
+        annotator.reset();
+        showBrowseAnnotationImageGrid();
+        {{ end }}
+      }
+    });
+  }
+
+  function getUrlFromImageUrl(imageUrl, imageUnlocked){
+    var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
+
+    if(imageUrl !== ""){
+      if(!imageUnlocked){
+        url += "?token=" + getCookie("imagemonkey");
+      }
+
+      {{ if eq .annotationMode "browse" }}
+      if($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
+        var labelToAnnotate = $("#label").attr("accessor");
+        if(labelToAnnotate in labelAccessorsLookupTable) {
+          if(!imageUnlocked) {
+            url += "&highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
+          } else {
+            url += "?highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
+          }
+        }
+      }
+      {{ end }}
+    }
+
+    return url;
+  }
+
+  function isTrashMenuButtonEnabled(){
+    return !$("#trashMenuItem").hasClass("disabled");
+  }
+
+  function isSmartAnnotationEnabled(){
+    return $("#smartAnnotation").checkbox("is checked")
+  }
+
+  function changeMenuItem(type){
+    var id = "";
+    if(type === 'Rectangle')
+      id = "rectMenuItem";
+    else if(type === "Circle")
+      id = "circleMenuItem";
+    else if(type === "Polygon")
+      id = "polygonMenuItem";
+    else if(type === "PanMode")
+      id = "panMenuItem";
+    else if(type === "BlockSelection")
+      id = "blockSelectMenuItem";
+    else if(type === "FreeDrawing")
+      id = "freeDrawingMenuItem";
+    else if(type === "ForegroundSelection")
+      id = "smartAnnotationFgMenuItem";
+    else if(type === "BackgroundSelection")
+      id = "smartAnnotationBgMenuItem";
+    else if(type === "SelectMove")
+      id = "selectMoveMenutItem";
+
+    {{ if eq .annotationMode "browse" }}
+    browseModeLastSelectedAnnotatorMenuItem = type;
+    {{ end }}
+
+    $("#annotatorMenu").children().each(function (){
+      if($(this).attr("id") === id)
+        $(this).addClass("active");
+      else
+        $(this).removeClass("active");
+    });
+
+  }
+
+
+  function showHideSmartAnnotationControls(show){
+    if(show){
+      $("#circleMenuItem").hide();
+      $("#polygonMenuItem").hide();
+      $("#smartAnnotationFgMenuItem").show();
+      $("#smartAnnotationBgMenuItem").show();
+    }
+    else{
+      $("#circleMenuItem").show();
+      $("#polygonMenuItem").show();
+      $("#smartAnnotationFgMenuItem").hide();
+      $("#smartAnnotationBgMenuItem").hide();
+    }
+
+    $('#annotatorMenu .item').popup({
+      inline: true,
+      hoverable: true
+    });
+  }
+
+  function showHideControls(show){
+    if(show){
+      $("#doneButton").show();
+      $("#blacklistButton").show();
+      $("#notAnnotableButton").show();
+      $("#annotatorMenu").show();
+      $("#smartAnnotation").show();
+      $("#showSmartAnnotationHelpDlg").show();
+      $("#annotationControlsGrid").show();
+      $("#annotationControlsMainArea").show();
+      $("#annotationButtons").show();
+      $("#loadingSpinner").hide();
+
+      if(annotationInfo.imageUnlocked)
+        $("#imageLockedLabel").hide();
+      else
+        $("#imageLockedLabel").show();
+
+      $("#annotationColumnContent").show();
+      $("#annotationColumnSpacer").show();
+    }
+    else{
+      $("#doneButton").hide();
+      $("#blacklistButton").hide();
+      $("#notAnnotableButton").hide();
+      $("#annotatorMenu").hide();
+      $("#smartAnnotation").hide();
+      $("#showSmartAnnotationHelpDlg").hide();
+      $("#annotationControlsGrid").hide();
+      $("#annotationControlsMainArea").hide();
+      $("#annotationButtons").hide();
+      $("#loadingSpinner").show();
+      $("#imageLockedLabel").hide();
+      $("#annotationColumnContent").hide();
+      $("#annotationColumnSpacer").hide();
+    }
+  }
+
+  function pollUntilProcessed(uuid) {
+    var url = "{{ .playgroundBaseUrl }}/v1/grabcut/" + uuid;
+    $.getJSON(url, function (response) {
+      if(jQuery.isEmptyObject(response))
+        setTimeout(pollUntilProcessed(uuid), 1000);
+      else{
+        detailedCanvas.clearObjects();
+
+        if(response["result"]["points"].length > 0){
+          var data = [];
+          data.push(response["result"]);
+          annotator.setSmartAnnotationData(data);
+          detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
+        }
+        
+        numOfPendingRequests -= 1;
+        if(numOfPendingRequests <= 0){
+          $("#smartAnnotationCanvasWrapper").dimmer("hide");
+          numOfPendingRequests = 0;
+        }
+      }
+    });
+  }
+
+  function populateDetailedCanvas(force = false){
+    if((detailedCanvas !== null) && !force)
+      detailedCanvas.clear();
+    else
+      detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", 0, 0);
+
+    var maxWidth = document.getElementById("smartAnnotationContainer").clientWidth - 50; //margin
+    var scaleFactor = maxWidth/annotationInfo.origImageWidth;
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+
+    var w = annotationInfo.origImageWidth * scaleFactor;
+    var h = annotationInfo.origImageHeight * scaleFactor;
+
+    $("#smartAnnotationCanvasWrapper").attr("width", w);
+    $("#smartAnnotationCanvasWrapper").attr("height", h);
+    $("#smartAnnotationCanvasWrapper").attr("scaleFactor", scaleFactor);
+    //detailedCanvas = new CanvasDrawer("smartAnnotationCanvas", w, h);
+    detailedCanvas.setWidth(w);
+    detailedCanvas.setHeight(h);
+    detailedCanvas.setCanvasBackgroundImage(canvas.fabric().backgroundImage, null);
+  }
+
+  function clearDetailedCanvas(){
+    if(detailedCanvas !== null){
+      detailedCanvas.clear();
+    }
+  }
+
+  function getCanvasScaleFactor(){
+    var maxWidth = document.getElementById("annotationAreaContainer").clientWidth - 50; //margin
+    var scaleFactor = maxWidth/annotationInfo.origImageWidth;
+    if(scaleFactor > 1.0)
+      scaleFactor = 1.0;
+    return scaleFactor;
+  }
+
+  function populateCanvas(backgroundImageUrl, initAnnotator, force=true){
+    if((canvas !== null) && !force)
+      annotator.reset();
+    else{
+      canvas = new CanvasDrawer("annotationArea");
+      canvas.fabric().selection = false;
+      annotator = new Annotator(canvas.fabric(), onAnnotatorObjectSelected, onAnnotatorMouseUp, onAnnotatorObjectDeselected);
+    }
+
+    var scaleFactor = getCanvasScaleFactor();
+
+    var w = annotationInfo.origImageWidth * scaleFactor;
+    var h = annotationInfo.origImageHeight * scaleFactor;
+
+    $("#annotationAreaContainer").attr("width", w);
+    $("#annotationAreaContainer").attr("height", h);
+    $("#annotationAreaContainer").attr("scaleFactor", scaleFactor);
+    canvas.setWidth(w);
+    canvas.setHeight(h);
+
+    if(initAnnotator){
+      canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
+        annotator.initHistory();
+        onCanvasBackgroundImageSet();
+
+      });
+    } 
+    else{
+      canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, onCanvasBackgroundImageSet);
+    }
+  }
+
+  function dataURItoBlob(dataURI) {
+    var byteString = atob(dataURI.split(',')[1]);
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], {type: 'image/png'});
+  }
+
+  function grabCutMe(){
+    numOfPendingRequests += 1;
+    $("#smartAnnotationCanvasWrapper").dimmer("show");
+    var blob = dataURItoBlob(annotator.getMask());
+    var formData = new FormData()
+    formData.append('image', blob);
+    formData.append('uuid', annotationInfo.imageId);
+    $.ajax({
+      url: '{{ .playgroundBaseUrl }}/v1/grabcut',
+      processData: false,
+      contentType: false,
+      data: formData,
+      type: 'POST',
+      success: function(data, status, xhr){
+        pollUntilProcessed(xhr.getResponseHeader("Location"));
+      }
+    });
+  }
+
+  function changeControl(annotator){
+    if(annotationInfo.imageId === ""){
+      $("#labelContainer").hide();
+      $("#doneButton").hide();
+      $("#bottomLabel").hide();
+      annotator.block();
+    }
+    else{
+      $("#labelContainer").show();
+      $("#doneButton").show();
+      $("#bottomLabel").show();
+      annotator.unblock();
+    }
+  }
+
+  function setLabel(label, sublabel, accessor){
+    $("#label").attr("label", label);
+    $("#label").attr("sublabel", sublabel);
+
+    if(accessor !== null)
+      $("#label").attr("accessor", accessor);
+
+    if(sublabel === ""){
+      $("#label").text(("Annotate all: " + label));
+      $("#bottomLabel").text(("Annotate all: " + label));
+    } 
+    else {
+      $("#label").text(("Annotate all: " + sublabel + "/" + label));
+      $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
+    }
+  }
+
+  function onAnnotatorObjectSelected(){
+    if(annotator.objectsSelected()) {
+        if(annotator.isSelectMoveModeEnabled()) {
+          $("#trashMenuItem").removeClass("disabled");
+          $("#propertiesMenuItem").removeClass("disabled");
+
+          var strokeColor = annotator.getStrokeColorOfSelected();
+          if(strokeColor !== null)
+            colorPicker.setColor(strokeColor);
+        }
+        context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
+    } else {
+      $("#trashMenuItem").addClass("disabled");
+      $("#propertiesMenuItem").addClass("disabled");
+    }
+  }
+
+  function onAnnotatorObjectDeselected() {
+    context.destroy('#annotationColumn');
+  }
+
+  function onAnnotatorMouseUp(){
+    if(isSmartAnnotationEnabled() && !annotator.isPanModeEnabled())
+      grabCutMe();
+  }
+
+  function canvasHasObjects(){
+    if(canvas.fabric().getObjects().length > 0)
+      return true;
+    return false;
+  }
+
+  function onCanvasBackgroundImageSet(){
+    if(isSmartAnnotationEnabled())
+      populateDetailedCanvas();
+
+    if(existingAnnotations !== null) {
+      annotator.loadAnnotations(existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      //drawAnnotations(canvas.fabric(), existingAnnotations, canvas.fabric().backgroundImage.scaleX);
+      existingAnnotations = annotator.toJSON(); //export JSON after loading annotations 
+                                                //due to rounding we might end up with slightly different values, so we
+                                                //export them in order to make sure that we don't accidentially detect 
+                                                //a rounding errors as changes.
+    }
+
+    showHideControls(true);
+    $("#annotationArea").css({"border-width":"1px",
+                              "border-style": "solid",
+                              "border-color": "#000000"});
+  }
+
+  function isLoadingIndicatorVisible(){
+    return $("#smartAnnotationDimmer").is(":visible"); 
+  }
+
+  function showHideAutoAnnotationsLoadButton(){
+    if(autoAnnotations && (autoAnnotations.length > 0) && (!isSmartAnnotationEnabled())){
+      $("#loadAutoAnnotationsMenuItem").show();
+      $("#loadAutoAnnotationsMenuItem").removeClass("disabled");
+      $("#loadAutoAnnotationsMenuItem").addClass("orange");
+    }
+    else{
+      $("#loadAutoAnnotationsMenuItem").hide();
+    }
+  }
+
+  function addMainCanvas() {
+    $("#annotationColumnSpacer").remove();
+    $("#annotationColumnContent").remove();
+
+    var spacer = '';
+    var w = "sixteen";
+    if(isSmartAnnotationEnabled()) {
+      w = "eight";
+
+    }
+    else {
+      var workspaceSize = annotationSettings.loadWorkspaceSize();
+      {{ if eq .annotationMode "unified" }}
+        if(workspaceSize === "small"){
+          w = "eight";
+          spacer = '<div class="four wide column" id="annotationColumnSpacer"><div class="ui list" id="annotationLabelsLst"></div></div>';
+        }
+        else if(workspaceSize === "medium"){
+          w = "ten";
+          spacer = '<div class="three wide column" id="annotationColumnSpacer"><div class="ui list" id="annotationLabelsLst"></div></div>';
+        }
+        else if(workspaceSize === "big"){
+          w = "ten";
+          spacer = '<div class="three wide column" id="annotationColumnSpacer"><div class="ui list" id="annotationLabelsLst"></div></div>';
+        }
+      {{ else }}
+        if(workspaceSize === "small"){
+          w = "eight";
+          spacer = '<div class="four wide column" id="annotationColumnSpacer"></div>';
+        }
+        else if(workspaceSize === "medium"){
+          w = "ten";
+          spacer = '<div class="three wide column" id="annotationColumnSpacer"></div>';
+        }
+        else if(workspaceSize === "big")
+          w = "sixteen";
+      {{ end }}
+    }
+
+ 
+    var data =  spacer +
+                '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
+                 '<div id="annotationAreaContainer">' +
+                    '<canvas id="annotationArea" imageId=""></canvas>' +
+                 '</div>' +
+                '</div>';
+
+    $("#annotationColumn").show();
+    $("#annotationColumn").append(data);
+
+    $("#annotationArea").attr("imageId", annotationInfo.imageId);
+    $("#annotationArea").attr("origImageWidth", annotationInfo.origImageWidth);
+    $("#annotationArea").attr("origImageHeight", annotationInfo.origImageHeight);
+    $("#annotationArea").attr("validationId", annotationInfo.validationId);
+
+    {{ if eq .annotationMode "unified" }}
+    $("#annotationLabelsLst").append('<a class="item">What is a FAQ?</a>');
+    {{ end }}
+  }
+
+  function handleUpdateAnnotationsRes(res) {
+    {{ if eq .annotationMode "browse" }}
+    $("#loadingSpinner").hide();
+    updateAnnotationsForImage(annotationInfo.annotationId, res);
+    showBrowseAnnotationImageGrid();
+    {{ end }}
+
+    {{ if eq .onlyOnce true }}
+    showHideControls(false);
+    $("#onlyOnceDoneMessageContainer").show();
+    $("#onlyOnceDoneMessage").fadeIn("slow");
+    $("#loadingSpinner").hide();
+    {{ end }}
+  }
+
+  function updateAnnotations(res) {
+    
+    if(_.isEqual(res, existingAnnotations)) {
+      showHideControls(false);
+      clearDetailedCanvas();
+      annotator.reset();
+      handleUpdateAnnotationsRes(existingAnnotations);
+      return;
+    }
+
+    var postData = {}
+    postData["annotations"] = res;
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers["X-Browser-Fingerprint"] = browserFingerprint;
+
+    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
+    showHideControls(false);
+    clearDetailedCanvas();
+    annotator.reset();
+
+    var url = "{{ .apiBaseUrl }}/v1/annotation/" + annotationInfo.annotationId;
+    $.ajax({
+      url: url,
+      type: 'PUT',
+      data: JSON.stringify(postData),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        handleUpdateAnnotationsRes(res);
+      }
+    });
+  }
+
+  function addAnnotations(res) {
+    var postData = {}
+
+    postData["annotations"] = res;
+    postData["label"] = $('#label').attr('label');
+    postData["sublabel"] = $('#label').attr('sublabel');
+
+    var headers = {}
+    if(browserFingerprint !== null)
+      headers["X-Browser-Fingerprint"] = browserFingerprint;
+
+    headers['X-App-Identifier'] = '{{ .appIdentifier }}';
+
+    showHideControls(false);
+    clearDetailedCanvas();
+    annotator.reset();
+
+    var url = "{{ .apiBaseUrl }}/v1/annotate/" + annotationInfo.imageId;
+    $.ajax({
+      url: url,
+      type: 'POST',
+      data: JSON.stringify(postData),
+      headers: headers,
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data){
+        {{ if eq .annotationMode "default" }}
+        getUnannotatedImage();
+        {{ else }}
+        $("#loadingSpinner").hide();
+        changeNavHeader("browse");
+        showBrowseAnnotationImageGrid();
+        {{ end }}
+
+        {{ if eq .onlyOnce true }}
+        $("#onlyOnceDoneMessage").fadeIn("slow");
+        showHideControls(false);
+        $("#loadingSpinner").hide();
+        {{ end }}
+      }
+    });
+  }
+  
+
+  $(document).ready(function(){
+      var lastActiveMenuItem = "";
+      $('#warningMsg').hide();
+      
+      $('#smartAnnotation').checkbox({
+        onChange : function() {
+          var enabled = isSmartAnnotationEnabled();
+          if(enabled){
+            annotator.enableSmartAnnotation();
+
+            $("#spacer").remove();
+            $("#annotationColumn").show();
+            $("#annotationColumn").prepend('<div class="eight wide center aligned column" id="smartAnnotationContainer">' +
+                                      '<div class="" id="smartAnnotationCanvasWrapper">' +
+                                        '<div class="ui dimmer" id="smartAnnotationDimmer">' +
+                                          '<div class="ui loader">' +
+                                          '</div>' +
+                                        '</div>' +
+                                        '<canvas id="smartAnnotationCanvas"></canvas>' +
+                                      '</div>' +
+                                    '</div>');
+
+            populateDetailedCanvas(true);
+          }
+          else{
+            annotator.disableSmartAnnotation();
+
+            $("#smartAnnotationContainer").remove();
+            //$("#annotationColumn").prepend('<div class="four wide column" id="spacer"></div>');
+          }
+
+          addMainCanvas();
+          populateCanvas(getUrlFromImageUrl(annotationInfo.imageUrl, annotationInfo.imageUnlocked), false);
+
+          showHideSmartAnnotationControls(enabled);
+          showHideAutoAnnotationsLoadButton();
+        },
+        beforeChecked : function() {
+          if(canvasHasObjects() > 0){
+            $('#discardChangesPopup').modal('show');
+            return false;
+          }
+        },
+        beforeUnchecked : function() {
+          if(canvasHasObjects() > 0){
+            $('#discardChangesPopup').modal('show');
+            return false;
+          }
+        }
+      });
+
+      
+      showHideSmartAnnotationControls(false);
+      
+
+      colorPicker = new Huebee($('#colorPicker')[0], {});
+      colorPicker.on('change', function(color, hue, sat, lum) {
+        annotator.setStrokeColorOfSelected(color);
+      });
+
+      $("#skipAnnotationDropdown").dropdown();
+
+      Mousetrap.bind("r", function() { 
+        $("#rectMenuItem").trigger("click");
+      });
+
+
+      annotationRefinementsContextMenu = {
+        data: [
+          {header: 'Refinements'},
+          {text: 'Add refinements', action: function(e, selector) {
+            e.preventDefault();
+
+            if(annotator.getIdOfSelectedItem() !== "") {
+              annotationRefinementsDlg.populateRefinements(annotator.getRefinementsOfSelectedItem());
+              annotationRefinementsDlg.open();
+            }
+          }}
+        ]
+      }
+
+      context.init({preventDoubleContext: false});
+
+      $("#addAnnotationRefinementsDlgDoneButton").click(function(e) {
+        annotator.setRefinements(annotationRefinementsDlg.getSelectedRefinements().split(','));
+      });
+      
+
+
+      $("#rectMenuItem").click(function(e) {
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Rectangle");
+          changeMenuItem("Rectangle");
+        }
+      });
+
+      Mousetrap.bind("c", function() { 
+        $("#circleMenuItem").trigger("click");
+      });
+
+      $("#circleMenuItem").click(function(e) {
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Circle");
+          changeMenuItem("Circle");
+        }
+      });
+
+      Mousetrap.bind("p", function() {
+        $("#polygonMenuItem").trigger("click");
+      });
+
+      Mousetrap.bind("s", function() { 
+        $("#selectMoveMenutItem").trigger("click");
+      });
+
+      $("#polygonMenuItem").click(function(e) {
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("Polygon");
+          changeMenuItem("Polygon");
+        }
+      });
+
+      $("#selectMoveMenutItem").click(function(e) {
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.setShape("");
+          annotator.enableSelectMoveMode();
+          changeMenuItem("SelectMove");
+        }
+      });
+
+      
+
+       $("#freeDrawingMenuItem").click(function(e) {
+        if(annotator !== undefined) {
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("FreeDrawing");
+          annotator.setBrushColor("red");
+          changeMenuItem("FreeDrawing");
+        }
+      });
+
+      Mousetrap.bind("y", function() {
+        if(deleteObjectsPopupShown)
+          $("#deletedObjectsYesButton").trigger("click");
+      });
+
+      Mousetrap.bind("n", function() {
+        if(deleteObjectsPopupShown)
+          $("#deleteObjectsPopup").modal("hide");
+      });
+
+      Mousetrap.bind("del", function() {
+        $("#trashMenuItem").trigger("click");
+      });
+
+      $("#trashMenuItem").click(function(e) {
+        if(isTrashMenuButtonEnabled()) {
+          $('#deleteObjectsPopup').modal({
+            onShow: function() {
+              deleteObjectsPopupShown = true;
+            },
+            onHidden: function() {
+              deleteObjectsPopupShown = false;
+            }
+          }).modal('show');
+        }
+      });
+
+      $("#redoMenuItem").click(function(e) {
+        if(annotator !== undefined)
+          annotator.redo();
+      });
+
+      $("#undoMenuItem").click(function(e) {
+        if(annotator !== undefined)
+          annotator.undo();
+      });
+
+      Mousetrap.bind('+', function() { 
+        zoomIn(); 
+      });
+
+      $("#zoomInMenuItem").click(function(e) {
+        zoomIn();
+      });
+
+      Mousetrap.bind('-', function() { 
+        zoomOut(); 
+      });
+
+      $("#zoomOutMenuItem").click(function(e) {
+        zoomOut();
+      });
+
+      $('#strokeWidthSlider').on('input', function(e) {
+        var val = parseInt($(this).val());
+        annotator.setStrokeWidthOfSelected(val);
+      });
+
+      Mousetrap.bind("ctrl", function(e) {
+        if(!e.repeat) { //if the ctrl key is held down, the event constantly fires. we are only interested in the first event 
+          lastActiveMenuItem = getActiveAnnotationMenuItem(true); //remember active menu item
+          $("#panMenuItem").trigger("click");
+        }
+      }, "keydown");
+
+      Mousetrap.bind("ctrl", function(e) { //ctrl key released
+        $("#"+lastActiveMenuItem).trigger("click");
+      }, "keyup");
+
+      $("#panMenuItem").click(function(e) {
+        annotator.enablePanMode();
+        annotator.disableSelectMoveMode();
+        annotator.setShape("");
+        changeMenuItem("PanMode");
+      });
+
+      $("#blockSelectMenuItem").click(function(e) {
+        annotator.disablePanMode();
+        annotator.disableSelectMoveMode();
+        annotator.setShape("Blocks");
+        changeMenuItem("BlockSelection");
+        annotator.toggleGrid();
+      });
+
+      $("#deletedObjectsYesButton").click(function(e) {
+        annotator.deleteSelected();
+        if(!annotator.objectsSelected())
+          $("#trashMenuItem").addClass("disabled");
+      });
+
+      $("#smartAnnotationFgMenuItem").click(function(e) {
+        if(annotator !== undefined) {
+          changeMenuItem("ForegroundSelection");
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setBrushColor("white"); //do not change color (grabcut requires this!)
+          annotator.setBrushWidth(10);
+          annotator.setShape("FreeDrawing");
+        }
+      });
+
+      $("#smartAnnotationBgMenuItem").click(function(e) {
+        if(annotator !== undefined) {
+          changeMenuItem("BackgroundSelection");
+          annotator.disablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setBrushColor("black"); //do not change color (grabcut requires this!)
+          annotator.setBrushWidth(10);
+          annotator.setShape("FreeDrawing");
+        }
+      });
+
+      $("#loadAutoAnnotationsMenuItem").click(function(e) {
+        if((autoAnnotations !== null) && !$("#loadAutoAnnotationsMenuItem").hasClass("disabled")){
+          annotator.loadAutoAnnotations(autoAnnotations, getCanvasScaleFactor());
+          $("#loadAutoAnnotationsMenuItem").addClass("disabled"); //once clicked, disable it
+          $("#loadAutoAnnotationsMenuItem").removeClass("orange"); //and remove highlight
+        }
+      });
+
+      $("#discardChangesYesButton").click(function(e) {
+        annotator.deleteAll();
+        $("#smartAnnotation").checkbox("toggle");
+      });
+
+      $('#showSmartAnnotationHelpDlg').click(function(){
+        $('#smartAnnotationHelpDlgGif').attr('src', 'img/smart_annotation.gif');
+        $('#smartAnnotationHelpDlg').modal('setting', { detachable:false }).modal('show');
+      });
+
+      $("#settingsMenuItem").click(function(e) {
+        annotationSettings.setAll();
+        $('#annotationSettingsPopup').modal('show');
+      });
+
+      $("#saveAnnotationSettingsButton").click(function(e) {
+        annotationSettings.persistAll(); 
+        $('#annotationSettingsPopup').modal('hide');
+        $('#annotationSettingsRefreshBrowserPopup').modal('show');
+
+      });
+
+      $('#blacklistButton').click(function(e) {
+        {{ if (eq .sessionInformation.LoggedIn false) }}
+        //in case we aren't logged in, do nothing
+        return;
+
+        {{else}}
+        {{ if (eq .sessionInformation.LoggedIn true) }}
+        var blacklistAnnotationUsageDlgAlreadyShown = localStorage.getItem("blacklistAnnotationUsageDlgShown");
+          if(blacklistAnnotationUsageDlgAlreadyShown === null) {
+            $("#blacklistAnnotationUsageDlg").modal("show");
+            localStorage.setItem("blacklistAnnotationUsageDlgShown", true);
+          } else {
+            blacklistAnnotation(annotationInfo.validationId);
+          }
+        {{ else }}
+          $("#blacklistAnnotationUsageDlg").modal("show");
+        {{ end }}
+
+        {{ end }}
+        
+      });
+
+      $('#blacklistAnnotationUsageDlgAcceptButton').click(function(e) {
+        $("#blacklistAnnotationUsageDlg").modal("hide");
+        blacklistAnnotation(annotationInfo.validationId);
+      });
+
+      $('#notAnnotableButton').click(function(e) {
+        var markAsUnannotatableUsageDlgAlreadyShown = localStorage.getItem("markAsUnannotatableUsageDlgShown");
+        if(markAsUnannotatableUsageDlgAlreadyShown === null) {
+          $("#markAsUnannotatableUsageDlg").modal("show");
+          localStorage.setItem("markAsUnannotatableUsageDlgShown", true);
+        } else {
+          markAsNotAnnotatable(annotationInfo.validationId);
+        }
+      });
+
+      $('#markAsUnannotatableUsageDlgAcceptButton').click(function(e) {
+        $("#markAsUnannotatableUsageDlg").modal("hide");
+        markAsNotAnnotatable(annotationInfo.validationId);
+      });
+
+      $('#doneButton').click(function(e) {
+        var res = annotator.toJSON();
+
+        if(res.length === 0){ //at least one annotation needs to be there
+          $('#warningMsgText').text('Please annotate the image first.');
+          $('#warningMsg').show(200).delay(1500).hide(200);
+          return;
+        }
+
+        if(isLoadingIndicatorVisible()){ //in case smart annotation is currently running
+          $('#warningMsgText').text('Smart Annotation is currently in progress.');
+          $('#warningMsg').show(200).delay(1500).hide(200);
+          return;
+        }
+
+        e.preventDefault();
+        
+        if(existingAnnotations !== null)
+          updateAnnotations(res);
+        else
+          addAnnotations(res);
+      });
+
+      changeNavHeader({{ .annotationMode }});
+
+      {{ if eq .annotationMode "default" }}
+        {{ if eq .validationId "" }}
+        getUnannotatedImage();
+        {{ else }}
+        getUnannotatedImage({{ .validationId }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "refine" }}
+        {{ if ne .annotationId "" }}
+        getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "unified" }}
+        getUnannotatedImage();
+      {{ end }}
+
+      try {
+        //can fail in case someone uses uBlock origin or Co.
+        new Fingerprint2().get(function(result, components){
+          browserFingerprint = result;
+        });
+      } catch(e) {
+      }
+
+      
+});

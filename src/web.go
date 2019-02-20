@@ -40,7 +40,7 @@ func ShowErrorPage(c *gin.Context) {
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
     templ := template.New("main").Funcs(funcMap)
     err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-        if strings.Contains(path, ".html") {
+        if strings.Contains(path, ".html") || strings.Contains(path, ".js") {
             _, err = templ.ParseFiles(path)
             if err != nil {
                 return err
@@ -428,7 +428,6 @@ func main() {
 			annotationId := ""
 
 			if mode == "default" {
-
 				annotationId = commons.GetParamFromUrlParams(c, "annotation_id", "")
 				if annotationId != "" {
 					mode = "refine"
