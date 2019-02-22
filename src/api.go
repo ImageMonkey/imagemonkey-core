@@ -1142,7 +1142,13 @@ func main(){
 		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, "")
+			includeOnlyUnlockedLabels := false
+			temp := commons.GetParamFromUrlParams(c, "only_unlocked_labels", "")
+			if temp == "true" {
+				includeOnlyUnlockedLabels = true
+			}
+
+			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, "", includeOnlyUnlockedLabels)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1269,7 +1275,7 @@ func main(){
 
 			imageId := commons.GetParamFromUrlParams(c, "image_id", "")
 
-			image, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name)
+			image, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name, false)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
