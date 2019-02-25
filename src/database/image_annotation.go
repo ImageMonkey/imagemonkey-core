@@ -1008,7 +1008,7 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
         q1 = parseResult.Query
         queryValues = parseResult.QueryValues
     } else {
-        q1 = "q.key = $1"
+        q1 = "WHERE q.key = $1"
         queryValues = append(queryValues, imageId)
     }
 
@@ -1060,7 +1060,7 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
                                          AND an.auto_generated = false
                                      ) q
                                      JOIN label_accessor a ON a.label_id = q.label_id
-                                     WHERE %s
+                                     %s
                                    ) q1
 
                                    JOIN
