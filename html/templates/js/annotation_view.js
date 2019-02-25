@@ -4,11 +4,14 @@
   var autoAnnotations = null;
   var labelId = null;
   var annotationInfo = new AnnotationInfo();
+  var UnifiedModeStates = {uninitialized: 0, fetchedLabels: 1, fetchedAnnotations: 2, initialized: 4};
+  var unifiedModePopulated = UnifiedModeStates.uninitialized;
   var annotationSettings = new AnnotationSettings();
   var colorPicker = null;
   var existingAnnotations = null;
   var browserFingerprint = null;
   var deleteObjectsPopupShown = false;
+  var unifiedModeAnnotations = {};
 
   {{ if eq .annotationMode "browse" }}
   var browseModeLastSelectedAnnotatorMenuItem = null;
@@ -104,8 +107,8 @@
 
 
     {{ if eq .annotationMode "unified" }}
-      console.log("getting")
-      getAnnotationsForImage(annotationInfo.imageId);
+      if(annotationInfo.imageId !== "")
+        populateUnifiedModeToolbox(annotationInfo.imageId);
     {{ end }}
 
     populateRevisionsDropdown(0, 0);
@@ -188,6 +191,11 @@
     });
   }
 
+  function populateUnifiedModeToolbox(imageId) {
+    getAnnotationsForImage(imageId);
+    getLabelsForImage(imageId, true);
+  }
+
   function getAnnotationsForImage(imageId) {
     var url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/annotations";
     $.ajax({
@@ -198,15 +206,72 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data) {
-        
+        {{ if eq .annotationMode "unified" }}
+        unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
+        for(var i = 0; i < data.length; i++) {
+          if(data[i].validation.sublabel !== "")
+            unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = data[i].annotations
+          else {
+            unifiedModeAnnotations[data[i].validation.label] = data[i].annotations
+          }
+        }
+        {{ end }}
       },
       error: function (xhr, options, err) {
       }
     });
   }
 
-  function getLabelsForImage(imageId) {
-    var url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/labels";
+  function onLabelInLabelLstClicked(elem) {
+    var key = "";
+
+    //before changing label, save existing annotations
+    if($("#label").attr("sublabel") === "")
+      key = $("#label").attr("label");
+    else
+      key = $("#label").attr("sublabel") + "/" + $("#label").attr("label");
+
+    var annos = annotator.toJSON();
+    if(annos.length > 0)
+      unifiedModeAnnotations[key] = annos;
+
+    $("#annotationLabelsLst").children().each(function(i) {
+      $(this).removeClass("grey inverted");
+    }); 
+
+    setLabel($(elem).attr("data-label"), $(elem).attr("data-sublabel"), null);
+    $(elem).addClass("grey inverted");
+
+    //clear existing annotations 
+    annotator.deleteAll();
+
+    key = "";
+    if($(elem).attr("data-sublabel") === "")
+      key = $(elem).attr("data-label");
+    else
+      key = $(elem).attr("data-sublabel") + "/" + $(elem).attr("data-label");
+
+    //show annotations for selected label
+    if(key in unifiedModeAnnotations) {
+      annotator.loadAnnotations(unifiedModeAnnotations[key], canvas.fabric().backgroundImage.scaleX);
+    }
+  }
+
+  function addLabelToLabelLst(label, sublabel, uuid, isFirst) {
+    var id = "labellstitem-" + uuid;
+    $("#annotationLabelsLst").append('<div class="ui segment center aligned" id="' + id + '"' +
+                                        ' data-label="' + label + '" data-uuid="' + uuid +
+                                        '" data-sublabel="' + sublabel + 
+                                          '" onclick="onLabelInLabelLstClicked(this);"' +
+                                          'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
+                                          'onmouseout="this.style.backgroundColor=\'white\';"' + 
+                                          'style="overflow: auto;"><p>' + label + '</p></div>');
+    if(isFirst)
+      $("#"+id).click();
+  }
+
+  function getLabelsForImage(imageId, onlyUnlockedLabels) {
+    var url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/labels?only_unlocked_labels=" + (onlyUnlockedLabels ? "true" : "false");
     $.ajax({
       url: url,
       dataType: 'json',
@@ -215,7 +280,20 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data) {
-        
+        {{ if eq .annotationMode "unified" }}
+        unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
+        for(var i = 0; i < data.length; i++) {
+          var isFirst = (i === 0) ? true : false;
+          addLabelToLabelLst(data[i].label, '', data[i].uuid, isFirst);
+          if(data[i].sublabels !== null) {
+            for(var j = 0; j < data[i].sublabels.length; j++) {
+              addLabelToLabelLst(data[i].sublabels[j].name + "/" + data[i].label, data[i].sublabels[j].name, 
+                                  data[i].sublabels[j].uuid, false);
+            }
+          }
+          
+        }
+        {{ end }}
       },
       error: function (xhr, options, err) {
       }
@@ -652,7 +730,17 @@
       {{ if eq .annotationMode "unified" }}
         if(workspaceSize === "small"){
           w = "eight";
-          spacer = '<div class="four wide column" id="annotationColumnSpacer"><div class="ui list" id="annotationLabelsLst"></div></div>';
+          spacer = '<div class="four wide column id="annotationColumnSpacer">' +
+                      '<h2 class="ui center aligned header">' + 
+                        '<div class="content">' +
+                          'Labels' +
+                        '</div>' + 
+                      '</h2>' +
+                      '<div class="ui segments" style="margin-left: 15px;">' +
+                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                        '</div>' + 
+                      '</div>' + 
+                    '</div>';
         }
         else if(workspaceSize === "medium"){
           w = "ten";
@@ -691,10 +779,6 @@
     $("#annotationArea").attr("origImageWidth", annotationInfo.origImageWidth);
     $("#annotationArea").attr("origImageHeight", annotationInfo.origImageHeight);
     $("#annotationArea").attr("validationId", annotationInfo.validationId);
-
-    {{ if eq .annotationMode "unified" }}
-    $("#annotationLabelsLst").append('<a class="item">What is a FAQ?</a>');
-    {{ end }}
   }
 
   function handleUpdateAnnotationsRes(res) {
@@ -1129,13 +1213,22 @@
       });
 
       $('#doneButton').click(function(e) {
-        var res = annotator.toJSON();
+        var res = null;
 
-        if(res.length === 0){ //at least one annotation needs to be there
+        {{ if eq .annotationMode "unified" }}
+        if(Object.keys(unifiedModeAnnotations).length === 0) {
           $('#warningMsgText').text('Please annotate the image first.');
           $('#warningMsg').show(200).delay(1500).hide(200);
           return;
         }
+        {{ else }}
+        res = annotator.toJSON();
+        if(res.length === 0) { //at least one annotation needs to be there
+          $('#warningMsgText').text('Please annotate the image first.');
+          $('#warningMsg').show(200).delay(1500).hide(200);
+          return;
+        }
+        {{ end }}
 
         if(isLoadingIndicatorVisible()){ //in case smart annotation is currently running
           $('#warningMsgText').text('Smart Annotation is currently in progress.');
