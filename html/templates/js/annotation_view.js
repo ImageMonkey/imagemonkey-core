@@ -834,13 +834,7 @@
     });
   }
 
-  function addAnnotations(res) {
-    var postData = {}
-
-    postData["annotations"] = res;
-    postData["label"] = $('#label').attr('label');
-    postData["sublabel"] = $('#label').attr('sublabel');
-
+  function addAnnotations(annotations) {
     var headers = {}
     if(browserFingerprint !== null)
       headers["X-Browser-Fingerprint"] = browserFingerprint;
@@ -851,11 +845,11 @@
     clearDetailedCanvas();
     annotator.reset();
 
-    var url = "{{ .apiBaseUrl }}/v1/annotate/" + annotationInfo.imageId;
+    var url = "{{ .apiBaseUrl }}/v1/donation/" + annotationInfo.imageId + "/annotate";
     $.ajax({
       url: url,
       type: 'POST',
-      data: JSON.stringify(postData),
+      data: JSON.stringify(annotations),
       headers: headers,
       beforeSend: function(xhr) {
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
@@ -1240,8 +1234,21 @@
         
         if(existingAnnotations !== null)
           updateAnnotations(res);
-        else
-          addAnnotations(res);
+        else {
+          var annotations = [];
+
+          {{ if eq .annotationMode "unified" }}
+
+          {{ else }}
+          var annotation = {};
+          annotation["annotations"] = res;
+          annotation["label"] = $('#label').attr('label');
+          annotation["sublabel"] = $('#label').attr('sublabel');
+          annotations.push(annotation);
+          {{ end }}
+                
+          addAnnotations(annotations);
+        }
       });
 
       changeNavHeader({{ .annotationMode }});

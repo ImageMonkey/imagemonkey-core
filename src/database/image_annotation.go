@@ -126,7 +126,7 @@ func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, a
 }
 
 func (p *ImageMonkeyDatabase) AddAnnotations(apiUser datastructures.APIUser, imageId string, 
-			annotations []datastructures.AnnotationsWithRefinements) ([]string, error) {
+			annotations []datastructures.AnnotationsContainer) ([]string, error) {
 
     annotationIds := []string{}
 
@@ -221,7 +221,7 @@ func (p *ImageMonkeyDatabase) AddAnnotations(apiUser datastructures.APIUser, ima
         }
         rows.Close()
 
-        if len(annotation.Refinements) != len(annotationDataIds) {
+        if len(annotation.AllowedRefinements) != len(annotationDataIds) {
             tx.Rollback()
             err = errors.New("Num of annotation refinements do not match num of annotation data ids!")
             log.Error("[Add Annotation] Couldn't add annotations : ", err.Error())
@@ -229,7 +229,7 @@ func (p *ImageMonkeyDatabase) AddAnnotations(apiUser datastructures.APIUser, ima
             return annotationIds, err
         }
 
-        for i, refinements := range annotation.Refinements {
+        for i, refinements := range annotation.AllowedRefinements {
             if val, ok := annotationDataIds[i]; ok {
                 err = p._addOrUpdateRefinementsInTransaction(tx, annotationId, val, refinements, apiUser.ClientFingerprint)
                 if err != nil { //transaction already rolled back, so we can return here
