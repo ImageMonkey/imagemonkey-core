@@ -71,18 +71,12 @@ func testLogin(t *testing.T, username string, password string, requiredStatusCod
 }
 
 func testAnnotate(t *testing.T, imageId string, label string, sublabel string, annotations string, token string, expectedStatusCode int) {
-	/*type Annotation struct {
-		Annotations []json.RawMessage `json:"annotations"`
-		Label string `json:"label"`
-		Sublabel string `json:"sublabel"`
-	}*/
-
 	annotationEntry := datastructures.Annotations{Label: label, Sublabel: sublabel}
 
 	err := json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
 	ok(t, err)
 
-	url := BASE_URL + API_VERSION + "/annotate/" + imageId
+	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/annotate"
 
 	req := resty.R().
 			SetHeader("Content-Type", "application/json").
