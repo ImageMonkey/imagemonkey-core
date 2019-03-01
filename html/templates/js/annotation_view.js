@@ -210,9 +210,15 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
         for(var i = 0; i < data.length; i++) {
           if(data[i].validation.sublabel !== "")
-            unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = data[i].annotations
+            unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = {annotations: data[i].annotations, 
+                                                                                                    label: data[i].validation.label, 
+                                                                                                    sublabel: data[i].validation.sublabel
+                                                                                                   };
           else {
-            unifiedModeAnnotations[data[i].validation.label] = data[i].annotations
+            unifiedModeAnnotations[data[i].validation.label] = {annotations: data[i].annotations, 
+                                                                label: data[i].validation.label, 
+                                                                sublabel: data[i].validation.sublabel
+                                                               };
           }
         }
         {{ end }}
@@ -222,10 +228,7 @@
     });
   }
 
-  function onLabelInLabelLstClicked(elem) {
-    var key = "";
-
-    //before changing label, save existing annotations
+  function saveCurrentSelectLabelInUnifiedModeList() {
     if($("#label").attr("sublabel") === "")
       key = $("#label").attr("label");
     else
@@ -233,7 +236,14 @@
 
     var annos = annotator.toJSON();
     if(annos.length > 0)
-      unifiedModeAnnotations[key] = annos;
+      unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel")};
+  }
+
+  function onLabelInLabelLstClicked(elem) {
+    var key = "";
+
+    //before changing label, save existing annotations
+    saveCurrentSelectLabelInUnifiedModeList();
 
     $("#annotationLabelsLst").children().each(function(i) {
       $(this).removeClass("grey inverted");
@@ -253,7 +263,7 @@
 
     //show annotations for selected label
     if(key in unifiedModeAnnotations) {
-      annotator.loadAnnotations(unifiedModeAnnotations[key], canvas.fabric().backgroundImage.scaleX);
+      annotator.loadAnnotations(unifiedModeAnnotations[key].annotations, canvas.fabric().backgroundImage.scaleX);
     }
   }
 
@@ -1236,9 +1246,17 @@
           updateAnnotations(res);
         else {
           var annotations = [];
-
+          saveCurrentSelectLabelInUnifiedModeList();
           {{ if eq .annotationMode "unified" }}
-
+          for(var key in unifiedModeAnnotations) {
+            if(unifiedModeAnnotations.hasOwnProperty(key)) {
+              var annotation = {};
+              annotation["annotations"] = unifiedModeAnnotations[key].annotations;
+              annotation["label"] = unifiedModeAnnotations[key].label;
+              annotation["sublabel"] = unifiedModeAnnotations[key].sublabel;
+              annotations.push(annotation);
+            }
+          }
           {{ else }}
           var annotation = {};
           annotation["annotations"] = res;
