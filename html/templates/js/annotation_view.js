@@ -212,12 +212,14 @@
           if(data[i].validation.sublabel !== "")
             unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = {annotations: data[i].annotations, 
                                                                                                     label: data[i].validation.label, 
-                                                                                                    sublabel: data[i].validation.sublabel
+                                                                                                    sublabel: data[i].validation.sublabel,
+                                                                                                    dirty: false
                                                                                                    };
           else {
             unifiedModeAnnotations[data[i].validation.label] = {annotations: data[i].annotations, 
                                                                 label: data[i].validation.label, 
-                                                                sublabel: data[i].validation.sublabel
+                                                                sublabel: data[i].validation.sublabel,
+                                                                dirty: false
                                                                };
           }
         }
@@ -234,9 +236,18 @@
     else
       key = $("#label").attr("sublabel") + "/" + $("#label").attr("label");
 
-    var annos = annotator.toJSON();
-    if(annos.length > 0)
-      unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel")};
+    var annos = annotator.toJSON(); 
+
+    if(key in unifiedModeAnnotations) {
+      var existingAnnos = unifiedModeAnnotations[key].annotations;
+      if(!_.isEqual(annos, existingAnnos)) {
+        unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel"), dirty: true};
+      }
+    } else {
+      if(annos.length > 0) {
+        unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel"), dirty: true};
+      }
+    }
   }
 
   function onLabelInLabelLstClicked(elem) {
@@ -844,6 +855,22 @@
     });
   }
 
+  function onAddAnnotationsDone() {
+    {{ if eq .annotationMode "default" }}
+    getUnannotatedImage();
+    {{ else }}
+    $("#loadingSpinner").hide();
+    changeNavHeader("browse");
+    showBrowseAnnotationImageGrid();
+    {{ end }}
+
+    {{ if eq .onlyOnce true }}
+    $("#onlyOnceDoneMessage").fadeIn("slow");
+    showHideControls(false);
+    $("#loadingSpinner").hide();
+    {{ end }}
+  }
+
   function addAnnotations(annotations) {
     var headers = {}
     if(browserFingerprint !== null)
@@ -855,6 +882,11 @@
     clearDetailedCanvas();
     annotator.reset();
 
+    if(annotations.length === 0) {
+      onAddAnnotationsDone();
+      return;
+    }
+
     var url = "{{ .apiBaseUrl }}/v1/donation/" + annotationInfo.imageId + "/annotate";
     $.ajax({
       url: url,
@@ -865,19 +897,7 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data){
-        {{ if eq .annotationMode "default" }}
-        getUnannotatedImage();
-        {{ else }}
-        $("#loadingSpinner").hide();
-        changeNavHeader("browse");
-        showBrowseAnnotationImageGrid();
-        {{ end }}
-
-        {{ if eq .onlyOnce true }}
-        $("#onlyOnceDoneMessage").fadeIn("slow");
-        showHideControls(false);
-        $("#loadingSpinner").hide();
-        {{ end }}
+        onAddAnnotationsDone();
       }
     });
   }
@@ -1250,11 +1270,13 @@
           {{ if eq .annotationMode "unified" }}
           for(var key in unifiedModeAnnotations) {
             if(unifiedModeAnnotations.hasOwnProperty(key)) {
-              var annotation = {};
-              annotation["annotations"] = unifiedModeAnnotations[key].annotations;
-              annotation["label"] = unifiedModeAnnotations[key].label;
-              annotation["sublabel"] = unifiedModeAnnotations[key].sublabel;
-              annotations.push(annotation);
+              if(unifiedModeAnnotations[key].dirty) {
+                var annotation = {};
+                annotation["annotations"] = unifiedModeAnnotations[key].annotations;
+                annotation["label"] = unifiedModeAnnotations[key].label;
+                annotation["sublabel"] = unifiedModeAnnotations[key].sublabel;
+                annotations.push(annotation);
+              }
             }
           }
           {{ else }}
