@@ -106,7 +106,7 @@
     {{ end }}
 
 
-    {{ if eq .annotationMode "unified" }}
+    {{ if eq .annotationView "unified" }}
       if(annotationInfo.imageId !== "")
         populateUnifiedModeToolbox(annotationInfo.imageId);
     {{ end }}
@@ -206,7 +206,7 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data) {
-        {{ if eq .annotationMode "unified" }}
+        {{ if eq .annotationView "unified" }}
         unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
         for(var i = 0; i < data.length; i++) {
           if(data[i].validation.sublabel !== "")
@@ -301,7 +301,7 @@
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
       success: function(data) {
-        {{ if eq .annotationMode "unified" }}
+        {{ if eq .annotationView "unified" }}
         unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
         for(var i = 0; i < data.length; i++) {
           var isFirst = (i === 0) ? true : false;
@@ -748,7 +748,7 @@
     }
     else {
       var workspaceSize = annotationSettings.loadWorkspaceSize();
-      {{ if eq .annotationMode "unified" }}
+      {{ if eq .annotationView "unified" }}
         if(workspaceSize === "small"){
           w = "eight";
           spacer = '<div class="four wide column id="annotationColumnSpacer">' +
@@ -1239,7 +1239,7 @@
       $('#doneButton').click(function(e) {
         var res = null;
 
-        {{ if eq .annotationMode "unified" }}
+        {{ if eq .annotationView "unified" }}
         if(Object.keys(unifiedModeAnnotations).length === 0) {
           $('#warningMsgText').text('Please annotate the image first.');
           $('#warningMsg').show(200).delay(1500).hide(200);
@@ -1267,7 +1267,7 @@
         else {
           var annotations = [];
           saveCurrentSelectLabelInUnifiedModeList();
-          {{ if eq .annotationMode "unified" }}
+          {{ if eq .annotationView "unified" }}
           for(var key in unifiedModeAnnotations) {
             if(unifiedModeAnnotations.hasOwnProperty(key)) {
               if(unifiedModeAnnotations[key].dirty) {
@@ -1305,10 +1305,6 @@
         {{ if ne .annotationId "" }}
         getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
         {{ end }}
-      {{ end }}
-
-      {{ if eq .annotationMode "unified" }}
-        getUnannotatedImage();
       {{ end }}
 
       try {

@@ -410,9 +410,6 @@ func main() {
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			//sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-			
-
 			labelId, err := commons.GetLabelIdFromUrlParams(params)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
@@ -453,6 +450,7 @@ func main() {
 				}
 			}
 
+			view := commons.GetParamFromUrlParams(c, "view", "default")
 			
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
@@ -466,6 +464,7 @@ func main() {
 				"annotationId": annotationId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"annotationMode": mode,
+				"annotationView": view,
 				"onlyOnce": onlyOnce,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],
