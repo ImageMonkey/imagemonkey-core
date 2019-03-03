@@ -192,6 +192,7 @@
   }
 
   function populateUnifiedModeToolbox(imageId) {
+    unifiedModePopulated = UnifiedModeStates.uninitialized;
     getAnnotationsForImage(imageId);
     getLabelsForImage(imageId, true);
   }
@@ -207,7 +208,6 @@
       },
       success: function(data) {
         {{ if eq .annotationView "unified" }}
-        unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
         for(var i = 0; i < data.length; i++) {
           if(data[i].validation.sublabel !== "")
             unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = {annotations: data[i].annotations, 
@@ -223,6 +223,7 @@
                                                                };
           }
         }
+        unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
         {{ end }}
       },
       error: function (xhr, options, err) {
@@ -302,7 +303,6 @@
       },
       success: function(data) {
         {{ if eq .annotationView "unified" }}
-        unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
         for(var i = 0; i < data.length; i++) {
           var isFirst = (i === 0) ? true : false;
           addLabelToLabelLst(data[i].label, '', data[i].uuid, isFirst);
@@ -312,8 +312,8 @@
                                   data[i].sublabels[j].uuid, false);
             }
           }
-          
         }
+        unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
         {{ end }}
       },
       error: function (xhr, options, err) {
