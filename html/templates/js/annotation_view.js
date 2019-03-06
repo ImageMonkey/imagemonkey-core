@@ -4,7 +4,7 @@
   var autoAnnotations = null;
   var labelId = null;
   var annotationInfo = new AnnotationInfo();
-  var UnifiedModeStates = {uninitialized: 0, fetchedLabels: 1, fetchedAnnotations: 2, initialized: 4};
+  var UnifiedModeStates = {uninitialized: 0, fetchedLabels: 1, fetchedAnnotations: 2, initialized: 3};
   var unifiedModePopulated = UnifiedModeStates.uninitialized;
   var annotationSettings = new AnnotationSettings();
   var colorPicker = null;
@@ -224,6 +224,12 @@
           }
         }
         unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
+
+        if(unifiedModePopulated === UnifiedModeStates.initialized) {
+          var firstItem = $('#annotationLabelsLst').children(':first-child');
+          if(firstItem.length === 1)
+            firstItem[0].click();
+        }
         {{ end }}
       },
       error: function (xhr, options, err) {
@@ -279,7 +285,7 @@
     }
   }
 
-  function addLabelToLabelLst(label, sublabel, uuid, isFirst) {
+  function addLabelToLabelLst(label, sublabel, uuid) {
     var id = "labellstitem-" + uuid;
     $("#annotationLabelsLst").append('<div class="ui segment center aligned" id="' + id + '"' +
                                         ' data-label="' + label + '" data-uuid="' + uuid +
@@ -288,8 +294,6 @@
                                           'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
                                           'onmouseout="this.style.backgroundColor=\'white\';"' + 
                                           'style="overflow: auto;"><p>' + label + '</p></div>');
-    if(isFirst)
-      $("#"+id).click();
   }
 
   function getLabelsForImage(imageId, onlyUnlockedLabels) {
@@ -304,16 +308,21 @@
       success: function(data) {
         {{ if eq .annotationView "unified" }}
         for(var i = 0; i < data.length; i++) {
-          var isFirst = (i === 0) ? true : false;
-          addLabelToLabelLst(data[i].label, '', data[i].uuid, isFirst);
+          addLabelToLabelLst(data[i].label, '', data[i].uuid);
           if(data[i].sublabels !== null) {
             for(var j = 0; j < data[i].sublabels.length; j++) {
               addLabelToLabelLst(data[i].sublabels[j].name + "/" + data[i].label, data[i].sublabels[j].name, 
-                                  data[i].sublabels[j].uuid, false);
+                                  data[i].sublabels[j].uuid);
             }
           }
         }
         unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
+
+        if(unifiedModePopulated === UnifiedModeStates.initialized) {
+          var firstItem = $('#annotationLabelsLst').children(':first-child');
+          if(firstItem.length === 1)
+            firstItem[0].click();
+        }
         {{ end }}
       },
       error: function (xhr, options, err) {
@@ -751,7 +760,7 @@
       {{ if eq .annotationView "unified" }}
         if(workspaceSize === "small"){
           w = "eight";
-          spacer = '<div class="four wide column id="annotationColumnSpacer">' +
+          spacer = '<div class="four wide column" id="annotationColumnSpacer">' +
                       '<h2 class="ui center aligned header">' + 
                         '<div class="content">' +
                           'Labels' +
