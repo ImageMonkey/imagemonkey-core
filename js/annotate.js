@@ -481,6 +481,7 @@ var Annotator = (function () {
     this.minStrokeWidth = 2;
     this.isSelectMoveMode = false;
     this.refinementsPerAnnotation = {};
+    this._refAnnotations = [];
 
     this.setBrushType(this.brushType);
     this.setBrushColor(this.brushColor);
@@ -891,6 +892,7 @@ var Annotator = (function () {
     //this.canvas.viewport.position.y = 0;
     this.polygon.reset();
     this.canvas.absolutePan(new fabric.Point(0,0));
+    this._refAnnotations = [];
     this.refinementsPerAnnotation = {};
   };
 
@@ -903,6 +905,7 @@ var Annotator = (function () {
     }
     this.polygon.reset();
     this.canvas.renderAll();
+    this._refAnnotations = [];
     this.refinementsPerAnnotation = {};
   };
 
@@ -1327,11 +1330,19 @@ var Annotator = (function () {
     for(var i = 0; i < annotations.length; i++) {
       drawAnnotations(this.canvas, [annotations[i]], scaleFactor, this._handleLoadedAnnotation.bind(this, annotations[i]));
     }
+
+    this._refAnnotations = this.toJSON();
   }
 
   Annotator.prototype.loadAutoAnnotations = function(autoAnnotations, scaleFactor = 1.0) {
     var simplifiedAutoAnnotations = this._simplifyAutoAnnotations(autoAnnotations);
     drawAnnotations(this.canvas, simplifiedAutoAnnotations, scaleFactor, this._handleLoadedAutoAnnotation.bind(this));
+  }
+
+  Annotator.prototype.isDirty = function() {
+    if(_.isEqual(this._refAnnotations, this.toJSON()))
+      return false;
+    return true;
   }
 
 

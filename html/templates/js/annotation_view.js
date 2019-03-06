@@ -243,14 +243,13 @@
     else
       key = $("#label").attr("sublabel") + "/" + $("#label").attr("label");
 
-    var annos = annotator.toJSON(); 
-
     if(key in unifiedModeAnnotations) {
       var existingAnnos = unifiedModeAnnotations[key].annotations;
-      if(!_.isEqual(annos, existingAnnos)) {
+      if(annotator.isDirty()) {
         unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel"), dirty: true};
       }
     } else {
+      var annos = annotator.toJSON();
       if(annos.length > 0) {
         unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel"), dirty: true};
       }
