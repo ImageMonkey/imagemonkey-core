@@ -246,6 +246,7 @@
     if(key in unifiedModeAnnotations) {
       var existingAnnos = unifiedModeAnnotations[key].annotations;
       if(annotator.isDirty()) {
+        var annos = annotator.toJSON();
         unifiedModeAnnotations[key] = {annotations: annos, label: $("#label").attr("label"), sublabel: $("#label").attr("sublabel"), dirty: true};
       }
     } else {
@@ -1294,7 +1295,6 @@
           annotation["sublabel"] = $('#label').attr('sublabel');
           annotations.push(annotation);
           {{ end }}
-                
           addAnnotations(annotations);
         }
       });
