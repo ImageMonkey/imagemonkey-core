@@ -96,6 +96,8 @@
      </div>
      <div class="ui inverted sixteen wide centered center aligned grid" id="annotationControlsGrid" 
       style="display: none; margin-top: 1em;">
+
+      {{ if ne .annotationView "unified" }}
       <div class="row">
        <div hidden class="ui inverted toggle checkbox" id="smartAnnotation">
           <input type="checkbox">
@@ -103,9 +105,11 @@
        </div>
        <a href="#" id="showSmartAnnotationHelpDlg"> [?]</a>
       </div>
+      {{ end }}
 
       <div class="row" style="margin-top: -1em;">
        {{ template "annotation_menu.html" .}}
+       
       </div>
       {{ template "annotation_revisions.html" .}}
      </div>

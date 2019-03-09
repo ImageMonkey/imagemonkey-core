@@ -429,7 +429,11 @@
   }
 
   function isSmartAnnotationEnabled(){
-    return $("#smartAnnotation").checkbox("is checked")
+    var obj = $("smartAnnotation");
+    if(obj.length) {
+      return obj.checkbox("is checked");
+    }
+    return false;
   }
 
   function changeMenuItem(type){
