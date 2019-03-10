@@ -113,6 +113,20 @@ class ImageMonkeyWebClient(object):
 
 		wait.until(EC.invisibility_of_element_located(locator))
 
+	def unlock_multiple_images(self):
+		self._driver.get(BASE_URL + "/image_unlock?mode=browse")
+
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "loadingIndicator")
+		wait.until(EC.invisibility_of_element_located(locator))
+
+		images = self._driver.find_elements_by_xpath('//div[@id="imageGrid"]/div')
+		for image in images:
+			image.click()
+
+		self._driver.find_element_by_id("imageUnlockDoneButton").click()
+
+
 	def label_image(self, labels):
 		self._driver.get(BASE_URL + "/label")
 
