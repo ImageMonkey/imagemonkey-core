@@ -126,6 +126,16 @@ class ImageMonkeyWebClient(object):
 
 		self._driver.find_element_by_id("imageUnlockDoneButton").click()
 
+		#after all images unlocked, open unlock page again
+		#and make sure that there are no more images to unlock
+		self._driver.get(BASE_URL + "/image_unlock?mode=browse")
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "warningMessageBoxContent")
+		wait.until(EC.visibility_of_element_located(locator))
+
+		num_of_images_after_unlock = len(self._driver.find_elements_by_xpath('//div[@id="imageGrid"]/div'))
+		assert num_of_images_after_unlock == 0, "there are still images to unlock"
+
 
 	def label_image(self, labels):
 		self._driver.get(BASE_URL + "/label")
