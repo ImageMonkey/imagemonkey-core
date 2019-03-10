@@ -69,7 +69,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityLabelsAlreadyExists(t *testing.T)
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -104,7 +104,7 @@ func TestBasicTrendingLabelsWorkerFunctionality(t *testing.T) {
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -156,8 +156,8 @@ func TestBasicTrendingLabelsWorkerFunctionality2(t *testing.T) {
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
 
-	testSuggestLabelForImage(t, imageIds[0], "wooden floor", token)
-	testSuggestLabelForImage(t, imageIds[1], "dirty floor", token)
+	testSuggestLabelForImage(t, imageIds[0], "wooden floor", true, token)
+	testSuggestLabelForImage(t, imageIds[1], "dirty floor", true, token)
 
 	runTrendingLabelsWorker(t)
 
@@ -212,7 +212,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestion(t *testi
 		if i == 0 {
 			continue
 		}
-		testSuggestLabelForImage(t, imageId, "red apple", token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -250,7 +250,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestion(t *testi
 	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
 
 
-	testSuggestLabelForImage(t, imageIds[0], "red apple", token)
+	testSuggestLabelForImage(t, imageIds[0], "red apple", true, token)
 	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
 	ok(t, err)
 	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
@@ -283,7 +283,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityNumOfSent(t *testing.T) {
 		if i == 0 {
 			continue
 		}
-		testSuggestLabelForImage(t, imageId, "red apple", token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -356,7 +356,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityUuidNumOfSent(t *testing.T) {
 		if i == 0 {
 			continue
 		}
-		testSuggestLabelForImage(t, imageId, "mouth of dog", token)
+		testSuggestLabelForImage(t, imageId, "mouth of dog", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -428,7 +428,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionUuid(t *t
 		if i == 0 {
 			continue
 		}
-		testSuggestLabelForImage(t, imageId, "mouth of dog", token)
+		testSuggestLabelForImage(t, imageId, "mouth of dog", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -466,7 +466,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionUuid(t *t
 	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
 
 
-	testSuggestLabelForImage(t, imageIds[0], "mouth of dog", token)
+	testSuggestLabelForImage(t, imageIds[0], "mouth of dog", true, token)
 	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
 	ok(t, err)
 	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
@@ -499,7 +499,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionUuidHandl
 		if i == 0 {
 			continue
 		}
-		testSuggestLabelForImage(t, imageId, "mouth of dog", token)
+		testSuggestLabelForImage(t, imageId, "mouth of dog", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -537,7 +537,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionUuidHandl
 	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
 
 
-	testSuggestLabelForImage(t, imageIds[1], "mouth of dog", token)
+	testSuggestLabelForImage(t, imageIds[1], "mouth of dog", true, token)
 	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("mouth of dog")
 	ok(t, err)
 	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
@@ -567,7 +567,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityWithMetaLabel(t *testing.T) {
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "kitchen scene", token)
+		testSuggestLabelForImage(t, imageId, "kitchen scene", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -630,7 +630,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionWithMetal
 		if i == 0 {
 			continue
 		}
-		testSuggestLabelForImage(t, imageId, "kitchen scene", token)
+		testSuggestLabelForImage(t, imageId, "kitchen scene", true, token)
 	}
 	runTrendingLabelsWorker(t)
 
@@ -668,7 +668,7 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionWithMetal
 	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
 
 
-	testSuggestLabelForImage(t, imageIds[0], "kitchen scene", token)
+	testSuggestLabelForImage(t, imageIds[0], "kitchen scene", true, token)
 	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("kitchen scene")
 	ok(t, err)
 	equals(t, int(recurringLabelSuggestionNumBefore), int(1))

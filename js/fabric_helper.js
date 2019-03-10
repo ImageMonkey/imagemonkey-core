@@ -65,8 +65,10 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
     var type = annotations[i]["type"];
     var hasRefinements = false;
 
-    if("refinements" in annotations[i])
-        hasRefinements = true;
+    if("refinements" in annotations[i]) {
+        if(annotations[i].refinements.length !== 0)
+            hasRefinements = true;
+    }
 
     if(type === "rect"){
         var top = (annotations[i]["top"] * scaleFactor);

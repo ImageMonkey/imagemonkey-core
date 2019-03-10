@@ -35,6 +35,11 @@
 					"description": "optional",
 					"uuid": "d8fa312b-38d3-4e50-9a6d-980c6c111af9",
 					"accessors": [".has"]
+				},
+				"head": {
+					"description": "optional",
+					"uuid": "edb62ea7-d952-4953-96cc-97c31be71933",
+					"accessors": [".has"]
 				}
 			},
 
@@ -280,6 +285,11 @@
 				"nose": {
 					"description": "optional",
 					"uuid": "09c167cd-186b-4b93-a972-ddf1f9763c8f",
+					"accessors": [".has"]
+				},
+				"head": {
+					"description": "optional",
+					"uuid": "33ed8c33-28fc-4920-8b43-1ffb89e5bef1",
 					"accessors": [".has"]
 				}
 			}
@@ -1211,7 +1221,66 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "9eb38bb1-7468-4933-a277-aa89d18f5d4f"
+		},
+		"fence": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f45f733f-a497-473c-9254-b1d52f32ab4c"
+		},
+		"wrist watch": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2ee8481d-4319-4249-b85e-788859e628a9"
+		},
+		"glove": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ad31d449-4f82-45d4-a907-02d453dd3737"
+		},
+		"coat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f321bfbd-897c-4edc-9529-dd329e5d82be"
+		},
+		"pineapple": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1ab94463-3344-4615-a5a4-661e26d2d3b9"
+		},
+		"snail": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "20643981-dceb-4c3e-b3fd-8cb329650b65"
+		},
+		"moth": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cf97eff5-93bf-4d26-b8a2-4c5266c3641e"
+		},
+		"bowl": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "168690ff-7da0-4b7b-bcdb-d740dc355f15"
+		},
+		"sculpture": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "879940b2-247b-4079-9349-3b834b58a8c2"
+		},
+		"ladder": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "88b3789c-4acf-411b-bb2e-6c487532b7b4"
+		},
+		"train": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "dcf65e07-a71f-4226-8efd-ec6846960ba2"
+		},
+		"swimming pool": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d4a2bec5-5e2a-4e30-818e-4f975d5c5c78"
 		}
-
 	}
 }

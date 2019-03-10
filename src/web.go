@@ -40,7 +40,7 @@ func ShowErrorPage(c *gin.Context) {
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
     templ := template.New("main").Funcs(funcMap)
     err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-        if strings.Contains(path, ".html") {
+        if strings.Contains(path, ".html") || strings.Contains(path, ".js") {
             _, err = templ.ParseFiles(path)
             if err != nil {
                 return err
@@ -410,9 +410,6 @@ func main() {
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 
-			//sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-			
-
 			labelId, err := commons.GetLabelIdFromUrlParams(params)
 			if err != nil {
 				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
@@ -428,7 +425,6 @@ func main() {
 			annotationId := ""
 
 			if mode == "default" {
-
 				annotationId = commons.GetParamFromUrlParams(c, "annotation_id", "")
 				if annotationId != "" {
 					mode = "refine"
@@ -454,6 +450,7 @@ func main() {
 				}
 			}
 
+			view := commons.GetParamFromUrlParams(c, "view", "default")
 			
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
@@ -467,6 +464,7 @@ func main() {
 				"annotationId": annotationId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"annotationMode": mode,
+				"annotationView": view,
 				"onlyOnce": onlyOnce,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],

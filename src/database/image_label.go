@@ -13,7 +13,7 @@ import (
     "errors"
 )
 
-func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (datastructures.ImageToLabel, error) {
+func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, includeOnlyUnlockedLabels bool) (datastructures.ImageToLabel, error) {
     var image datastructures.ImageToLabel
     var labelMeEntries []datastructures.LabelMeEntry
     image.Provider = "donation"
@@ -97,6 +97,17 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                               WHERE (i.unlocked = true %s) AND i.key = $%d`, includeOwnImageDonations, paramPos)
         } 
 
+        q2 := ""
+        if !includeOnlyUnlockedLabels {
+            q2  = `UNION ALL
+
+                   SELECT ils.image_id as image_id, s.name as label, 
+                   '' as parent_label, false as unlocked, ils.annotatable as annotatable,
+                   '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
+                   FROM image_label_suggestion ils
+                   JOIN label_suggestion s on ils.label_suggestion_id = s.id`
+        }
+
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
                           COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
@@ -112,13 +123,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     JOIN label l on v.label_id = l.id 
                                     LEFT JOIN label pl on l.parent_id = pl.id
 
-                                    UNION ALL
-
-                                    SELECT ils.image_id as image_id, s.name as label, 
-                                    '' as parent_label, false as unlocked, ils.annotatable as annotatable,
-                                    '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
-                                    FROM image_label_suggestion ils
-                                    JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                    %s
                                 ) q1
                                 RIGHT JOIN (
                                     %s
@@ -134,7 +139,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                 ) q2 ON q2.image_id = q1.image_id
                                 ORDER BY parent_label ASC NULLS FIRST -- return base labels first
                                                                       -- otherwise, the below logic won't work correctly
-                                `, q1)
+                                `, q2, q1)
 
         var rows *sql.Rows
         if imageId == "" {
