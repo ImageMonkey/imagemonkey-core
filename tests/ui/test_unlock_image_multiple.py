@@ -18,7 +18,6 @@ class TestUnlockMultipleImage(unittest.TestCase):
 		self._driver.quit()
 
 	def test_unlock_image_should_succeed(self):
-		print("here")
 		path = os.path.abspath(".." + os.path.sep + "images" + os.path.sep + "apples")
 		for img in os.listdir(path):
 			p = path + os.path.sep + img

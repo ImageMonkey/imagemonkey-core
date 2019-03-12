@@ -3,6 +3,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException
 import subprocess
 import time
@@ -162,6 +163,43 @@ class ImageMonkeyWebClient(object):
 		#get all direct children (no grandchildren!) of div with id = 'label' 
 		num_of_labels_after = len(self._driver.find_elements_by_xpath('//div[@id="labels"]/div'))
 		assert (num_of_labels_before + len(labels)) == num_of_labels_after, "Label Image: num of labels before do not match num of labels after"
+
+		self._driver.find_element_by_id("doneButton").click()
+
+	def browse_annotate(self):
+		self._driver.get(BASE_URL + "/annotate?mode=browse")
+
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "browseAnnotationsGoButton")
+		wait.until(EC.visibility_of_element_located(locator))
+
+
+		elem = self._driver.find_element_by_id("annotationQuery")
+		elem.send_keys("apple")
+
+		elem = self._driver.find_element_by_id("browseAnnotationsGoButton")
+		elem.click()
+
+
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "loadingIndicator")
+		wait.until(EC.invisibility_of_element_located(locator))
+
+
+		images = self._driver.find_elements_by_xpath('//div[@id="imageGrid"]/div')
+		images[0].click()
+
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "loadingIndicator")
+		wait.until(EC.invisibility_of_element_located(locator))
+
+
+		canvas = self.driver.find_element_by_id("annotationArea")
+		drawing = ActionChains(self.driver)\
+					.click_and_hold(canvas)\
+    				.move_by_offset(-10, -15)\
+    				.release()
+		drawing.perform()
 
 		self._driver.find_element_by_id("doneButton").click()
 
