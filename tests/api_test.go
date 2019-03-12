@@ -76,11 +76,14 @@ func testAnnotate(t *testing.T, imageId string, label string, sublabel string, a
 	err := json.Unmarshal([]byte(annotations), &annotationEntry.Annotations)
 	ok(t, err)
 
+	var annotationEntries []datastructures.Annotations
+	annotationEntries = append(annotationEntries, annotationEntry)
+
 	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/annotate"
 
 	req := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(annotationEntry)
+			SetBody(annotationEntries)
 
 	if token != "" {
 		req.SetAuthToken(token)
