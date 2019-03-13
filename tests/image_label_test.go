@@ -345,8 +345,8 @@ func TestGetLabelsForImage(t *testing.T) {
 	equals(t, labels[0].Label, "apple")
 	equals(t, labels[0].Unlocked, true)
 	equals(t, labels[0].Annotatable, true)
-	equals(t, labels[0].Validation.NumOfValid, 0)
-	equals(t, labels[0].Validation.NumOfInvalid, 0)
+	equals(t, int(labels[0].Validation.NumOfValid), int(0))
+	equals(t, int(labels[0].Validation.NumOfInvalid), int(0))
 }
 func TestGetLabelsForImageMultipleLabels(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
@@ -436,22 +436,22 @@ func TestGetLabelsForImageMultipleLabelsWithoutNonProductiveOnes(t *testing.T) {
 
 	sort.SliceStable(labels, func(i, j int) bool { return labels[i].Label < labels[j].Label })
 
-	equals(t, len(labels), 3)
+	equals(t, len(labels), 2)
 	equals(t, labels[0].Label, "apple")
 	equals(t, labels[0].Unlocked, true)
 	equals(t, labels[0].Annotatable, true)
 	equals(t, labels[0].Validation.NumOfValid, int32(0))
 	equals(t, labels[0].Validation.NumOfInvalid, int32(0))
 
-	equals(t, labels[1].Label, "not-existing")
+	/*equals(t, labels[1].Label, "not-existing")
 	equals(t, labels[1].Unlocked, false)
 	equals(t, labels[1].Annotatable, true)
 	equals(t, labels[1].Validation.NumOfValid, int32(0))
-	equals(t, labels[1].Validation.NumOfInvalid, int32(0))
+	equals(t, labels[1].Validation.NumOfInvalid, int32(0))*/
 
-	equals(t, labels[2].Label, "table")
-	equals(t, labels[2].Unlocked, true)
-	equals(t, labels[2].Annotatable, true)
-	equals(t, labels[2].Validation.NumOfValid, int32(0))
-	equals(t, labels[2].Validation.NumOfInvalid, int32(0))
+	equals(t, labels[1].Label, "table")
+	equals(t, labels[1].Unlocked, true)
+	equals(t, labels[1].Annotatable, true)
+	equals(t, labels[1].Validation.NumOfValid, int32(0))
+	equals(t, labels[1].Validation.NumOfInvalid, int32(0))
 }
