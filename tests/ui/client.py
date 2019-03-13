@@ -121,9 +121,17 @@ class ImageMonkeyWebClient(object):
 		locator = (By.ID, "loadingIndicator")
 		wait.until(EC.invisibility_of_element_located(locator))
 
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "imageGrid")
+		wait.until(EC.visibility_of_element_located(locator))
+
 		images = self._driver.find_elements_by_xpath('//div[@id="imageGrid"]/div')
 		for image in images:
 			image.click()
+
+		wait = WebDriverWait(self._driver, 10)
+		locator = (By.ID, "imageUnlockDoneButton")
+		wait.until(EC.visibility_of_element_located(locator))
 
 		self._driver.find_element_by_id("imageUnlockDoneButton").click()
 
