@@ -790,7 +790,14 @@
 		"truck": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "60c08783-9869-4d56-804f-14e14152b02f"
+			"uuid": "60c08783-9869-4d56-804f-14e14152b02f",
+			"has": {
+				"cabin": {
+					"description": "optional",
+					"uuid": "ff4187df-b9e3-4c4c-b342-07bbf2e38310",
+					"accessors": [".has"]
+				}
+			}
 		},
 		"motorbike": {
 			"description": "optional",
@@ -1281,6 +1288,31 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "d4a2bec5-5e2a-4e30-818e-4f975d5c5c78"
+		},
+		"castle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2897e51d-218c-4202-b3ce-fd82ab9ea434"
+		},
+		"harbour": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0e6c12b1-8fe9-4022-985c-6b9ea3cf0bca"
+		},
+		"tower": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "996093dc-ac0c-4458-b7f4-0d4e12edc42d"
+		},
+		"pallet": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d7db16e2-ed10-49f1-b1c1-458993c7ec21"
+		},
+		"barrier": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a9640f8d-9c1c-457c-91de-62149b1b3951"
 		}
 	}
 }
