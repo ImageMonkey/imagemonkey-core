@@ -150,16 +150,15 @@
       beforeSend: function(xhr) {
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
-      error: function(jqXHR, textStatus, errorThrown){
-        if(jqXHR.status === 422) {
-          cachedAnnotations = [];
+      success: function(data) {
+        cachedAnnotations = [];
+
+        if(data.length === 0) {
           $('#warningMessageBoxContent').text("No annotations available for that image");
           $('#warningMessageBox').show(200).delay(1500).hide(200);
           $('#annotationsLoadingIndicator').hide();
+          return;
         }
-      },
-      success: function(data){
-        cachedAnnotations = [];
 
         var entries;
         var color;

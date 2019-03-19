@@ -198,7 +198,11 @@
   }
 
   function getAnnotationsForImage(imageId) {
-    var url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/annotations";
+    var url = '';
+    if(annotationInfo.imageUnlocked)
+      url = '{{ .apiBaseUrl }}/v1/donation/' + imageId + "/annotations";
+    else
+      url = '{{ .apiBaseUrl }}/v1/unverified-donation/' + imageId + "/annotations" + "?token=" + getCookie("imagemonkey");
     $.ajax({
       url: url,
       dataType: 'json',

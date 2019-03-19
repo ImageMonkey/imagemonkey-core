@@ -1084,7 +1084,7 @@ func (p *ImageMonkeyDatabase) GetAnnotationsForRefinement(parseResult parser.Par
 
 func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, parseResult parser.ParseResult, 
                         imageId string, apiBaseUrl string) ([]datastructures.AnnotatedImage, error) {
-    var annotatedImages []datastructures.AnnotatedImage
+    annotatedImages := []datastructures.AnnotatedImage{}
     var queryValues []interface{}
 
 

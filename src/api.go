@@ -33,6 +33,21 @@ import (
 
 var geoipDb *geoip2.Reader
 
+func handleImageAnnotationsRequest(c *gin.Context, imageId string, imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase, 
+									authTokenHandler *AuthTokenHandler, apiBaseUrl string) {
+	var apiUser datastructures.APIUser
+	apiUser.ClientFingerprint = getBrowserFingerprint(c)
+	apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+	annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parser.ParseResult{}, imageId, apiBaseUrl)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+		return
+	}
+
+	c.JSON(200, annotatedImages)
+}
+
 func handleUnverifiedDonation(imageId string, action string, 
 								donationsDir string, unverifiedDonationsDir string, imageQuarantineDir string,
 								imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase) (int, error) {
@@ -741,12 +756,12 @@ func main(){
 				return
 			} 
 
-			unlocked, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
+			isOwnDonation, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
 			if err != nil {
 				c.String(500, "Couldn't process request, please try again later")
 				return
 			}
-			if !unlocked {
+			if !isOwnDonation {
 				//check if user has unlock permission
 				userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
 				if err != nil {
@@ -776,6 +791,27 @@ func main(){
 	            c.String(500, "Couldn't process request, please try again later")
 	            return
 	        }
+		})
+
+		router.GET("/v1/unverified-donation/:imageid/annotations", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfoFromUrl(c).Username
+
+			isOwnDonation, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
+			if err != nil {
+				c.String(500, "Couldn't process request, please try again later")
+				return
+			}
+
+			if !isOwnDonation {
+				c.String(403, "You do not have the appropriate permissions to access the image")
+				return
+			}
+
+			handleImageAnnotationsRequest(c, imageId, imageMonkeyDatabase, authTokenHandler, *apiBaseUrl)
 		})
 
 
@@ -1181,23 +1217,7 @@ func main(){
 
 		router.GET("/v1/donation/:imageid/annotations", func(c *gin.Context) {
 			imageId := c.Param("imageid")
-
-			var apiUser datastructures.APIUser
-			apiUser.ClientFingerprint = getBrowserFingerprint(c)
-			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
-
-			annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parser.ParseResult{}, imageId, *apiBaseUrl)
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
-				return
-			}
-
-			if len(annotatedImages) == 0 {
-				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
-				return
-			}
-
-			c.JSON(200, annotatedImages)
+			handleImageAnnotationsRequest(c, imageId, imageMonkeyDatabase, authTokenHandler, *apiBaseUrl)
 		})
 
 		router.GET("/v1/donation/:imageid/annotations/coverage", func(c *gin.Context) {
