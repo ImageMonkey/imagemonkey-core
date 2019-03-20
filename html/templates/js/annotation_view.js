@@ -107,6 +107,7 @@
 
 
     {{ if eq .annotationView "unified" }}
+      unifiedModeAnnotations = {};
       if(annotationInfo.imageId !== "")
         populateUnifiedModeToolbox(annotationInfo.imageId);
     {{ end }}
@@ -311,12 +312,14 @@
       },
       success: function(data) {
         {{ if eq .annotationView "unified" }}
-        for(var i = 0; i < data.length; i++) {
-          addLabelToLabelLst(data[i].label, '', data[i].uuid);
-          if(data[i].sublabels !== null) {
-            for(var j = 0; j < data[i].sublabels.length; j++) {
-              addLabelToLabelLst(data[i].sublabels[j].name + "/" + data[i].label, data[i].sublabels[j].name, 
-                                  data[i].sublabels[j].uuid);
+        if(data !== null) {
+          for(var i = 0; i < data.length; i++) {
+            addLabelToLabelLst(data[i].label, '', data[i].uuid);
+            if(data[i].sublabels !== null) {
+              for(var j = 0; j < data[i].sublabels.length; j++) {
+                addLabelToLabelLst(data[i].sublabels[j].name + "/" + data[i].label, data[i].sublabels[j].name, 
+                                    data[i].sublabels[j].uuid);
+              }
             }
           }
         }
@@ -1257,6 +1260,7 @@
         var res = null;
 
         {{ if eq .annotationView "unified" }}
+        saveCurrentSelectLabelInUnifiedModeList();
         if(Object.keys(unifiedModeAnnotations).length === 0) {
           $('#warningMsgText').text('Please annotate the image first.');
           $('#warningMsg').show(200).delay(1500).hide(200);
@@ -1283,7 +1287,6 @@
           updateAnnotations(res);
         else {
           var annotations = [];
-          saveCurrentSelectLabelInUnifiedModeList();
           {{ if eq .annotationView "unified" }}
           for(var key in unifiedModeAnnotations) {
             if(unifiedModeAnnotations.hasOwnProperty(key)) {
@@ -1296,6 +1299,7 @@
               }
             }
           }
+          unifiedModeAnnotations = {};
           {{ else }}
           var annotation = {};
           annotation["annotations"] = res;

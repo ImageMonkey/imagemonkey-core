@@ -1185,13 +1185,17 @@ func main(){
 		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
 			includeOnlyUnlockedLabels := false
 			temp := commons.GetParamFromUrlParams(c, "only_unlocked_labels", "")
 			if temp == "true" {
 				includeOnlyUnlockedLabels = true
 			}
 
-			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, "", includeOnlyUnlockedLabels)
+			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name, includeOnlyUnlockedLabels)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
