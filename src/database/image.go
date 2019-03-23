@@ -193,6 +193,9 @@ func (p *ImageMonkeyDatabase) ImageExists(hash uint64) (bool, error) {
 }
 
 func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string) (bool, error) {
+    var queryValues []interface{}
+    queryValues = append(queryValues, imageId)
+
     includeOwnImageDonations := ""
     if username != "" {
         includeOwnImageDonations = `OR (
@@ -210,13 +213,14 @@ func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string
                                             WHERE q.image_id = i.id 
                                         )
                                        )`
+        queryValues = append(queryValues, username)
         
     }
 
-    q := fmt.Sprintf(`SELECT COUNT(i.id) FROM image 
+    q := fmt.Sprintf(`SELECT COUNT(i.id) FROM image i 
                       WHERE i.key = $1 AND (i.unlocked = true %s)`, includeOwnImageDonations)
     var num int = 0
-    err := p.db.QueryRow(q).Scan(&num)
+    err := p.db.QueryRow(q, queryValues...).Scan(&num)
     if err != nil {
         log.Error("[Image exists for user] Couldn't determine whether image exists: ", err.Error())
         raven.CaptureError(err, nil)
