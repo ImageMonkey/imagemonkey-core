@@ -192,6 +192,43 @@ func (p *ImageMonkeyDatabase) ImageExists(hash uint64) (bool, error) {
     }
 }
 
+func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string) (bool, error) {
+    includeOwnImageDonations := ""
+    if username != "" {
+        includeOwnImageDonations = `OR (
+                                        EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM user_image u
+                                            JOIN account a ON a.id = u.account_id
+                                            WHERE u.image_id = i.id AND a.name = $2
+                                        )
+                                        AND NOT EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM image_quarantine q 
+                                            WHERE q.image_id = i.id 
+                                        )
+                                       )`
+        
+    }
+
+    q := fmt.Sprintf(`SELECT COUNT(i.id) FROM image 
+                      WHERE i.key = $1 AND (i.unlocked = true %s)`, includeOwnImageDonations)
+    var num int = 0
+    err := p.db.QueryRow(q).Scan(&num)
+    if err != nil {
+        log.Error("[Image exists for user] Couldn't determine whether image exists: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    if num > 0 {
+        return true, nil
+    }
+    return false, nil
+}
+
 func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, imageInfo datastructures.ImageInfo, autoUnlock bool, 
                                               labels []datastructures.LabelMeEntry, imageCollectionName string, labelMap map[string]datastructures.LabelMapEntry, 
                                               metalabels *commons.MetaLabels) ImageDonationErrorType {

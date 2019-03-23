@@ -39,10 +39,28 @@ func handleImageAnnotationsRequest(c *gin.Context, imageId string, imageMonkeyDa
 	apiUser.ClientFingerprint = getBrowserFingerprint(c)
 	apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
+	_, err := uuid.FromString(imageId)
+	if err != nil {
+		c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid image id"})
+		return
+	}
+
 	annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parser.ParseResult{}, imageId, apiBaseUrl)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
 		return
+	}
+
+	if len(annotatedImages) == 0 {
+		imageExistsForUser, err := imageMonkeyDatabase.ImageExistsForUser(imageId, apiUser.Name)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		if !imageExistsForUser {
+			c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid image id"})
+			return
+		}
 	}
 
 	c.JSON(200, annotatedImages)
