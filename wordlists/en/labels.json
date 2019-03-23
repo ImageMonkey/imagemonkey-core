@@ -1313,6 +1313,46 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "a9640f8d-9c1c-457c-91de-62149b1b3951"
+		},
+		"helmet": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "14abedd0-85b9-4b83-a103-647bcfd1003f"
+		},
+		"wind turbine": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "b647f5f9-7bf4-4aa5-a9cf-74238b77e11b"
+		},
+		"typewriter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "42e1f70e-15ad-4f5c-bd6c-a92d1344d423"
+		},
+		"clock": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "282e4dd7-d519-49ea-858b-f100309ce0bf"
+		},
+		"skyscraper": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "30431063-77e0-47cd-9241-2fc4c7e06b76"
+		},
+		"meat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9edffd21-99b8-4ee1-89f0-1bf4ad1ff92f"
+		},
+		"squirrel": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e948b99c-06e5-4d08-b7d1-deec3fc77b18"
+		},
+		"lizard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7b60239c-2716-4572-8458-cfbd0fae5912"
 		}
 	}
 }
