@@ -733,3 +733,7 @@ type ImageHuntStats struct {
     Stars int `json:"stars"`
     Achievements []ImageHuntAchievement `json:"achievements"`
 }
+
+type ApiTokenRequest struct {
+    Description string `json:"description"`
+}

@@ -2739,9 +2739,6 @@ func main(){
 		})
 
 		router.POST("/v1/user/:username/api-token", func(c *gin.Context) {
-			type ApiTokenRequest struct {
-				Description string `json:"description"`
-			}
 			username := c.Param("username")
 
 			if username == "" {
@@ -2749,7 +2746,7 @@ func main(){
 				return
 			}
 
-			var apiTokenRequest ApiTokenRequest
+			var apiTokenRequest datastructures.ApiTokenRequest
 			if c.BindJSON(&apiTokenRequest) != nil {
 				c.JSON(422, gin.H{"error": "Invalid request - description missing"})
 				return
