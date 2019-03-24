@@ -6,6 +6,7 @@ import (
     "github.com/dgrijalva/jwt-go"
     "../datastructures"
     "time"
+    "errors"
 )
 
 func (p *ImageMonkeyDatabase) GetApiTokens(username string) ([]datastructures.APIToken, error) {
@@ -38,15 +39,27 @@ func (p *ImageMonkeyDatabase) GetApiTokens(username string) ([]datastructures.AP
 }
 
 func (p *ImageMonkeyDatabase) IsApiTokenRevoked(token string) (bool, error) {
-    var revoked bool
-    err := p.db.QueryRow("SELECT revoked FROM api_token WHERE token = $1", token).Scan(&revoked)
+    var revoked bool = false
+    rows, err := p.db.Query("SELECT revoked FROM api_token WHERE token = $1", token)
     if err != nil {
-        log.Debug("[Is API Token revoked] Couldn't scan row: ", err.Error())
+        log.Error("[Is API Token revoked] Couldn't determine whether API token is revoked: ", err.Error())
         raven.CaptureError(err, nil)
         return false, err
     }
+    defer rows.Close()
 
-    return revoked, nil
+    if rows.Next() {
+        err = rows.Scan(&revoked)
+        if err != nil {
+            log.Error("[Is API Token revoked] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return false, err
+        }
+
+        return revoked, nil
+    }
+
+    return revoked, errors.New("[Is API Token revoked] Invalid result set")
 }
 
 func (p *ImageMonkeyDatabase) GenerateApiToken(jwtSecret string, username string, description string) (datastructures.APIToken, error) {

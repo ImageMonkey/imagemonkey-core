@@ -102,8 +102,8 @@ func _parseApiToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string) A
 		//token is valid and signed by the backend, check now if the token was revoked
 		//or if it is still valid
 
-		revoked, _ := db.IsApiTokenRevoked(tokenString) 
-		if !revoked { //still valid - not revoked
+		revoked, err := db.IsApiTokenRevoked(tokenString) 
+		if err == nil && !revoked { //still valid - not revoked
 			apiTokenInfo.Valid = true
 			apiTokenInfo.Token = tokenString
 			apiTokenInfo.Username = token.Claims.(jwt.MapClaims)["username"].(string)
