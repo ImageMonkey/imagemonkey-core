@@ -458,7 +458,13 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
     }
 
     //get all unlabeled donations
-    err = tx.QueryRow(`SELECT count(i.id) from image i WHERE i.id NOT IN (SELECT image_id FROM image_validation)`).Scan(&statistics.NumOfUnlabeledDonations)
+    err = tx.QueryRow(`SELECT count(i.id) from image i 
+                        WHERE i.id NOT IN 
+                        (
+                            SELECT image_id FROM image_validation
+                        ) AND i.id NOT IN (
+                            SELECT image_id FROM image_label_suggestion
+                        )`).Scan(&statistics.NumOfUnlabeledDonations)
     if err != nil {
         tx.Rollback()
         log.Debug("[Explore] Couldn't scan data row: ", err.Error())
