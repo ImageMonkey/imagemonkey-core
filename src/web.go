@@ -28,6 +28,8 @@ import (
 	"github.com/NYTimes/gziphandler"
 	"github.com/bbernhard/gin-wraphh"
 	"compress/gzip"
+	"net/url"
+	"io/ioutil"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -123,6 +125,7 @@ func main() {
 	modelsPath :=   flag.String("models_path", "https://raw.githubusercontent.com/bbernhard/imagemonkey-models/master/models.json", 
 								"Path to the pre-trained models")
 	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
+	localSentryDsn := flag.String("local_sentry_dsn", "http://sentry:sentry@127.0.0.1:8080/sentry", "local Sentry DSN")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -140,7 +143,10 @@ func main() {
 		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up web worker", nil)
+	} else { //also disable local sentry reporting
+		*localSentryDsn = ""
 	}
+
 
 	var tmpl *template.Template
 
@@ -466,6 +472,7 @@ func main() {
 				"annotationMode": mode,
 				"annotationView": view,
 				"onlyOnce": onlyOnce,
+				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
@@ -797,6 +804,69 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})*/
+
+		router.POST("/api/sentry/store/", func(c *gin.Context) {
+			//parse sentry dsn
+			sentryDsnWithoutHttps := strings.Replace(SENTRY_DSN, "https://", "", 1)
+			sentryDsnParts := strings.Split(sentryDsnWithoutHttps, ":")
+			if len(sentryDsnParts) != 2 { //invalid Sentry DSN
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			sentryKey := sentryDsnParts[0]
+
+			sentryDsnSubParts := strings.Split(sentryDsnParts[1], "/")
+			if len(sentryDsnSubParts) != 2 { //invalid Sentry DSN
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			entry := sentryDsnSubParts[1]
+
+
+			u, err := url.ParseRequestURI(c.Request.RequestURI)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			baseUrl, err := url.Parse("https://sentry.io/api/" + entry + "/store/")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			queryValues := u.Query()
+			queryValues.Set("sentry_key", sentryKey) //replace Sentry Key with real key
+
+			baseUrl.RawQuery = queryValues.Encode()
+
+			var resp *http.Response
+			var req *http.Request
+			client := &http.Client{}
+
+			req, err = http.NewRequest(c.Request.Method, baseUrl.String(), c.Request.Body)
+			for name, value := range c.Request.Header {
+				req.Header.Set(name, value[0])
+			}
+			resp, err = client.Do(req)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != 200 && resp.StatusCode != 201  {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+    		c.JSON(resp.StatusCode, body)
+		})
 
 		router.NoRoute(func(c *gin.Context) {
 			c.HTML(404, "404.html", gin.H{

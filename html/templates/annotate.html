@@ -32,6 +32,7 @@
   <script src="js/huebee.min.js"></script>
   <link rel="stylesheet" href="css/huebee.min.css"/>
   <script src="js/contextjs/context.js"></script>
+  <script src="js/sentry/sentry.min.js"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <style>
@@ -73,6 +74,15 @@
   </style>
 
   <script>
+    try{
+      Sentry.init({
+        dsn: '{{ .localSentryDsn }}',
+      });
+    } catch(e) {
+    } 
+
+
+
     {{ template "annotation_view.js" .}}
   </script>
 </head>
