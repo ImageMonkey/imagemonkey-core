@@ -806,7 +806,7 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerApp(contributionType string,
 
 
 func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIUser, excludeMetalabels bool) ([]datastructures.AnnotatedStat, error) {
-    var annotatedStats []datastructures.AnnotatedStat
+    annotatedStats := []datastructures.AnnotatedStat{}
     var queryValues []interface{}
 
     includeOwnImageDonations := ""
