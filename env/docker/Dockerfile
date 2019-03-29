@@ -71,8 +71,8 @@ ENV GOBIN="/home/imagemonkey/bin"
 
 
 RUN cd /tmp/ \
-   && wget https://redirector.gvt1.com/edgedl/go/go1.10.3.linux-amd64.tar.gz \
-   && tar -C /usr/local -xzf go1.10.3.linux-amd64.tar.gz \
+   && wget https://dl.google.com/go/go1.12.1.linux-amd64.tar.gz \
+   && tar -C /usr/local -xzf go1.12.1.linux-amd64.tar.gz \
    && cd /root/
 
 RUN cp /root/imagemonkey-core/env/docker/conf/supervisor/* /etc/supervisor/conf.d/ \
