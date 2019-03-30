@@ -76,7 +76,7 @@
   <script>
     try{
       Sentry.init({
-        dsn: '{{ .localSentryDsn }}',
+        dsn: '{{ .sentryDsn }}',
       });
     } catch(e) {
     } 
