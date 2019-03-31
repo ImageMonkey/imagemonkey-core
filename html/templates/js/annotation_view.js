@@ -193,6 +193,7 @@
   }
 
   function populateUnifiedModeToolbox(imageId) {
+    $("#unifiedModeLabelsLstLoadingIndicator").show();
     unifiedModePopulated = UnifiedModeStates.uninitialized;
     getAnnotationsForImage(imageId);
     getLabelsForImage(imageId, true);
@@ -234,6 +235,8 @@
           var firstItem = $('#annotationLabelsLst').children(':first-child');
           if(firstItem.length === 1)
             firstItem[0].click();
+
+          $("#unifiedModeLabelsLstLoadingIndicator").hide();
         }
         {{ end }}
       },
@@ -329,6 +332,8 @@
           var firstItem = $('#annotationLabelsLst').children(':first-child');
           if(firstItem.length === 1)
             firstItem[0].click();
+
+          $("#unifiedModeLabelsLstLoadingIndicator").hide();
         }
         {{ end }}
       },
@@ -779,17 +784,40 @@
                       '</h2>' +
                       '<div class="ui segments" style="margin-left: 15px;">' +
                         '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
                         '</div>' + 
                       '</div>' + 
                     '</div>';
         }
         else if(workspaceSize === "medium"){
           w = "ten";
-          spacer = '<div class="three wide column" id="annotationColumnSpacer"><div class="ui list" id="annotationLabelsLst"></div></div>';
+          spacer = '<div class="three wide column" id="annotationColumnSpacer">' +
+                      '<h2 class="ui center aligned header">' + 
+                        '<div class="content">' +
+                          'Labels' +
+                        '</div>' + 
+                      '</h2>' +
+                      '<div class="ui segments" style="margin-left: 15px;">' +
+                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                        '</div>' + 
+                      '</div>' + 
+                    '</div>';
         }
         else if(workspaceSize === "big"){
           w = "ten";
-          spacer = '<div class="three wide column" id="annotationColumnSpacer"><div class="ui list" id="annotationLabelsLst"></div></div>';
+          spacer = '<div class="three wide column" id="annotationColumnSpacer">' +
+                      '<h2 class="ui center aligned header">' + 
+                        '<div class="content">' +
+                          'Labels' +
+                        '</div>' + 
+                      '</h2>' +
+                      '<div class="ui segments" style="margin-left: 15px;">' +
+                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                        '</div>' + 
+                      '</div>' + 
+                    '</div>';
         }
       {{ else }}
         if(workspaceSize === "small"){
