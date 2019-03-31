@@ -145,6 +145,16 @@
 
     populateRevisionsDropdown(data["num_revisions"], data["revision"]);
     showHideRevisionsDropdown();
+
+    {{ if eq .annotationView "unified" }}
+      addLabelToLabelLst(data.validation.label, data.validation.sublabel, data.uuid);
+      var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
+      if(firstItem && firstItem.length === 1) {
+        $(firstItem[0]).addClass("grey inverted");
+      }
+
+      $("#unifiedModeLabelsLstLoadingIndicator").hide();
+    {{ end }}
   }
 
   function changeNavHeader(mode) {
@@ -232,8 +242,8 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
 
         if(unifiedModePopulated === UnifiedModeStates.initialized) {
-          var firstItem = $('#annotationLabelsLst').children(':first-child');
-          if(firstItem.length === 1)
+          var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
+          if(firstItem && firstItem.length === 1)
             firstItem[0].click();
 
           $("#unifiedModeLabelsLstLoadingIndicator").hide();
@@ -295,7 +305,7 @@
 
   function addLabelToLabelLst(label, sublabel, uuid) {
     var id = "labellstitem-" + uuid;
-    $("#annotationLabelsLst").append('<div class="ui segment center aligned" id="' + id + '"' +
+    $("#annotationLabelsLst").append('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
                                         ' data-label="' + label + '" data-uuid="' + uuid +
                                         '" data-sublabel="' + sublabel + 
                                           '" onclick="onLabelInLabelLstClicked(this);"' +
@@ -329,8 +339,8 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
 
         if(unifiedModePopulated === UnifiedModeStates.initialized) {
-          var firstItem = $('#annotationLabelsLst').children(':first-child');
-          if(firstItem.length === 1)
+          var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
+          if(firstItem && firstItem.length === 1)
             firstItem[0].click();
 
           $("#unifiedModeLabelsLstLoadingIndicator").hide();
@@ -1311,8 +1321,9 @@
 
         e.preventDefault();
         
-        if(existingAnnotations !== null)
-          updateAnnotations(res);
+        if(existingAnnotations !== null) {
+          updateAnnotations(annotator.toJSON());
+        }
         else {
           var annotations = [];
           {{ if eq .annotationView "unified" }}
