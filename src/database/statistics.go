@@ -24,7 +24,7 @@ func (p *ImageMonkeyDatabase) GetNumOfDonatedImages() (int64, error) {
 }
 
 func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]datastructures.DataPoint, error) {
-    var imageDescriptionStatistics []datastructures.DataPoint
+    imageDescriptionStatistics := []datastructures.DataPoint{}
 
     if period != "last-month" {
         return imageDescriptionStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -73,7 +73,7 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]da
 
 
 func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastructures.DataPoint, error) {
-    var annotationStatistics []datastructures.DataPoint
+    annotationStatistics := []datastructures.DataPoint{}
 
     if period != "last-month" {
         return annotationStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -121,7 +121,7 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
 }
 
 func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastructures.DataPoint, error) {
-    var validationStatistics []datastructures.DataPoint
+    validationStatistics := []datastructures.DataPoint{}
 
     if period != "last-month" {
         return validationStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -134,9 +134,6 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation_history h
                             WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
-                            UNION ALL
-                            SELECT sys_period FROM image_validation h1
-                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
@@ -166,6 +163,51 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
     }
 
     return validationStatistics, nil
+}
+
+func (p *ImageMonkeyDatabase) GetLabeledObjectsStatistics(period string) ([]datastructures.DataPoint, error) {
+    labeledObjectsStatistics := []datastructures.DataPoint{}
+
+    if period != "last-month" {
+        return labeledObjectsStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := p.db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_validations AS (
+                            SELECT sys_period FROM image_validation h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_validations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Error("[Get Label Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labeledObjectsStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint datastructures.DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Error("[Get Label Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labeledObjectsStatistics, err
+        }
+
+        labeledObjectsStatistics = append(labeledObjectsStatistics, datapoint)
+    }
+
+    return labeledObjectsStatistics, nil
 }
 
 

@@ -39,11 +39,13 @@
     var validationStatistics = {{ .validationStatistics }};
     var annotationRefinementStatistics = {{ .annotationRefinementStatistics }};
     var imageDescriptionStatistics = {{ .imageDescriptionStatistics }};
+    var labeledObjectsStatistics = {{ .labeledObjectsStatistics }};
 
     var numOfAnnotations = [];
     var numOfValidations = [];
     var numOfImageDescriptions = [];
     var numOfAnnotationRefinements = [];
+    var numOfLabeledObjects = [];
     var dates = [];
     var detailedActivityData = null;
     var currentDetailedActivityIdx = -1;
@@ -56,12 +58,14 @@
 
     if((annotationStatistics.length === validationStatistics.length) 
       && (annotationStatistics.length === annotationRefinementStatistics.length)
-      && (annotationStatistics.length === imageDescriptionStatistics.length)) {
+      && (annotationStatistics.length === imageDescriptionStatistics.length)
+      && (annotationStatistics.length === labeledObjectsStatistics.length)) {
       for(var i = 0; i < annotationStatistics.length; i++) {
         numOfAnnotations.push(annotationStatistics[i]["value"]);
         numOfValidations.push(validationStatistics[i]["value"]);
         numOfAnnotationRefinements.push(annotationRefinementStatistics[i]["value"]);
         numOfImageDescriptions.push(imageDescriptionStatistics[i]["value"]);
+        numOfLabeledObjects.push(labeledObjectsStatistics[i]["value"]);
         dates.push(annotationStatistics[i]["date"]);
       }
     }
@@ -169,8 +173,14 @@
               {
                 data: numOfImageDescriptions,
                 backgroundColor: "orange",
-                label: "Descriptions",
-                stack: 1
+                label: "Image Descriptions",
+                stack: 1 //stack descriptions
+              },
+              {
+                data: numOfLabeledObjects,
+                backgroundColor: "violet",
+                label: "Labeled Objects",
+                stack: 1 //...and labeled objects
               }
             ],
             labels: dates
