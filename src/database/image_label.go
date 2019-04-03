@@ -369,8 +369,8 @@ func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, im
         }
     }
 
-    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable) 
-                        SELECT $1, id, $3, $4 FROM image WHERE key = $2
+    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period) 
+                        SELECT $1, id, $3, $4, '["now()",]'::tstzrange FROM image WHERE key = $2
                         ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
     if err != nil {
         tx.Rollback()

@@ -179,6 +179,10 @@ func (p *ImageMonkeyDatabase) GetLabeledObjectsStatistics(period string) ([]data
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation h
                             WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+
+                            UNION ALL
+                            SELECT sys_period FROM image_label_suggestion s
+                            WHERE date(lower(s.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
