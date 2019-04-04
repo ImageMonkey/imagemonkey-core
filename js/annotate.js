@@ -34,7 +34,7 @@ function generateRandomId() {
 
 
 var Polygon = (function () {
-  function Polygon(canvas) {
+  function Polygon(canvas, polygonVertexSize = 5) {
     var inst=this;
     this.canvas = canvas;
     this.polygonMode = true;
@@ -48,7 +48,12 @@ var Polygon = (function () {
     this.currentId = "";
     this.polygons = {}
     this.currentlyShownPolygonId = "";
+    this.polygonVertexSize = polygonVertexSize;
   }
+
+  Polygon.prototype.setPolygonVertexSize = function(polygonVertexSize) {
+    this.polygonVertexSize = polygonVertexSize;
+  };
 
   Polygon.prototype.clear = function () {
     this.polygonMode = true;
@@ -81,7 +86,7 @@ var Polygon = (function () {
     var id = new Date().getTime() + random;
     var pointer = this.canvas.getPointer(options.e);
     var circle = new fabric.Circle({
-      radius: 5,
+      radius: this.polygonVertexSize,
       fill: '#ffffff',
       stroke: '#333333',
       strokeWidth: 0.5,
@@ -240,7 +245,7 @@ var Polygon = (function () {
     var polyPoints = new Array();
     for(var i = 0; i < points.length; i++){
       var circle = new fabric.Circle({
-        radius: 5,
+        radius: this.polygonVertexSize,
         fill: '#ffffff',
         stroke: '#333333',
         strokeWidth: 0.5,
@@ -271,7 +276,7 @@ var Polygon = (function () {
       });
 
       var circle = new fabric.Circle({
-        radius: 5,
+        radius: inst.polygonVertexSize,
         fill: '#ffffff',
         stroke: '#333333',
         strokeWidth: 0.5,
@@ -489,6 +494,10 @@ var Annotator = (function () {
 
     this.bindEvents();
   }
+
+  Annotator.prototype.setPolygonVertexSize = function(polygonVertexSize) {
+    this.polygon.setPolygonVertexSize(polygonVertexSize);
+  };
 
   Annotator.prototype._selectObjectByMouse = function(pointer) {
     var point = new fabric.Point(pointer.x, pointer.y);
@@ -1448,6 +1457,11 @@ var AnnotationSettings = (function () {
     return "default";
   }
 
+  AnnotationSettings.prototype.getPolygonVertexSize = function() {
+    var polygonVertexSize = $("#annotationPolygonVertexSizeInput").val();
+    return polygonVertexSize;
+  }
+
   AnnotationSettings.prototype.persistAll = function() {
     var settings = new Settings();
 
@@ -1457,12 +1471,15 @@ var AnnotationSettings = (function () {
     localStorage.setItem('annotationWorkspaceSize', workspaceSize);
     var annotationMode = this.getAnnotationMode();
     settings.setAnnotationMode(annotationMode);
+    var polygonVertexSize = this.getPolygonVertexSize();
+    settings.setPolygonVertexSize(polygonVertexSize);
   }
 
   AnnotationSettings.prototype.setAll = function() {
     this.setPreferedAnnotationTool();
     this.setWorkspaceSize();
     this.setAnnotationMode();
+    this.setPolygonVertexSize();
   }
 
   AnnotationSettings.prototype.setWorkspaceSize = function() {
@@ -1513,6 +1530,11 @@ var AnnotationSettings = (function () {
       $("#annotationDefaultModeCheckbox").checkbox("set unchecked");
       $("#annotationBrowseModeCheckbox").checkbox("check");
     }
+  }
+
+  AnnotationSettings.prototype.setPolygonVertexSize = function() {
+    var settings = new Settings();
+    $("#annotationPolygonVertexSizeInput").val(settings.getPolygonVertexSize());
   }
 
   AnnotationSettings.prototype.loadPreferedAnnotationTool = function(annotator) {

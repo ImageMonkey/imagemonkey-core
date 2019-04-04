@@ -97,11 +97,20 @@
       changeNavHeader("noimage");
 
     {{ if eq .annotationMode "browse" }}
-    if(browseModeLastSelectedAnnotatorMenuItem === null)
-      annotationSettings.loadPreferedAnnotationTool(annotator);
+    if(browseModeLastSelectedAnnotatorMenuItem === null) {
+      if(annotator) {
+        annotationSettings.loadPreferedAnnotationTool(annotator);
+        annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
+      }
+    }
     else {
       changeMenuItem(browseModeLastSelectedAnnotatorMenuItem);
       annotator.setShape(browseModeLastSelectedAnnotatorMenuItem);
+    }
+    {{ else }}
+    if(annotator) {
+      annotationSettings.loadPreferedAnnotationTool(annotator);
+      annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
     }
     {{ end }}
 
@@ -140,7 +149,21 @@
     showHideControls(true);
 
     {{ if eq .annotationMode "browse" }}
-    annotationSettings.loadPreferedAnnotationTool(annotator);
+    if(browseModeLastSelectedAnnotatorMenuItem === null) {
+      if(annotator) {
+        annotationSettings.loadPreferedAnnotationTool(annotator);
+        annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
+      }
+    }
+    else {
+      changeMenuItem(browseModeLastSelectedAnnotatorMenuItem);
+      annotator.setShape(browseModeLastSelectedAnnotatorMenuItem);
+    }
+    {{ else }}
+    if(annotator) {
+      annotationSettings.loadPreferedAnnotationTool(annotator);
+      annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
+    }
     {{ end }}
 
     populateRevisionsDropdown(data["num_revisions"], data["revision"]);
@@ -1242,14 +1265,19 @@
 
       $("#settingsMenuItem").click(function(e) {
         annotationSettings.setAll();
-        $('#annotationSettingsPopup').modal('show');
-      });
+        $('#annotationSettingsPopup').modal({
+          onApprove : function() {
+            if(!/^\d+$/.test($("#annotationPolygonVertexSizeInput").val())) {
+              $('#annotationSettingsPopupWarningMessageBoxContent').text("The polygon vertex size needs to be a numeric value!");
+              $("#annotationSettingsPopupWarningMessageBox").show(200).delay(1500).hide(200);
+              return false;
+            }
 
-      $("#saveAnnotationSettingsButton").click(function(e) {
-        annotationSettings.persistAll(); 
-        $('#annotationSettingsPopup').modal('hide');
-        $('#annotationSettingsRefreshBrowserPopup').modal('show');
-
+            annotationSettings.persistAll(); 
+            $('#annotationSettingsPopup').modal('hide');
+            $('#annotationSettingsRefreshBrowserPopup').modal('show');
+          }
+        }).modal('show');
       });
 
       $('#blacklistButton').click(function(e) {
