@@ -256,6 +256,8 @@
       
       var itemId = imageGridData[i]["annotation"]["data"]["uuid"];
       annotationsScaleFactor = justifiedLayoutGeometry.boxes[i].width / imageGridData[i]["image"]["width"];
+      if(annotationsScaleFactor > 1.0)
+        annotationsScaleFactor = 1.0;
 
       item = newCanvasItem(itemId, justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);

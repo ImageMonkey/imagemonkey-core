@@ -248,6 +248,8 @@
       if(browseAnnotationsOnlyMode) {
         var itemId = imageGridData[i]["uuid"];
         annotationsScaleFactor = justifiedLayoutGeometry.boxes[i].width / imageGridData[i]["image"]["width"];
+        if(annotationsScaleFactor > 1.0)
+          annotationsScaleFactor = 1.0;
 
         item = newCanvasItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
