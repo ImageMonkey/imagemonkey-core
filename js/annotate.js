@@ -558,14 +558,15 @@ var Annotator = (function () {
     });*/
 
     inst.canvas.on('mouse:down', function(o) {
-      inst.onMouseDown(o);
-      if(inst.isPanMode)
-        inst.panning = true;
-      if(inst.isSelectMoveMode) {
-        var pointer = inst.canvas.getPointer(o.e);
-        inst._selectObjectByMouse(pointer);
+      if(o) {
+        inst.onMouseDown(o);
+        if(inst.isPanMode)
+          inst.panning = true;
+        if(inst.isSelectMoveMode) {
+          var pointer = inst.canvas.getPointer(o.e);
+          inst._selectObjectByMouse(pointer);
+        }
       }
-
     });
 
     inst.canvas.on('before:selection:cleared', function() {
@@ -573,7 +574,8 @@ var Annotator = (function () {
     });
 
     inst.canvas.on('mouse:move', function(o) {
-      inst.onMouseMove(o);
+      if(o)
+        inst.onMouseMove(o);
     });
     inst.canvas.on('mouse:up', function(o) {
       inst.onMouseUp(o);
