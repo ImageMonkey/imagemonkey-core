@@ -1,6 +1,15 @@
 The following document briefly describes how to start up your own ImageMonkey instance in a Docker container. 
 
-# Scenario #1
+# Modes
+
+The ImageMonkey docker container supports three different modes
+
+* normal
+* run tests: run all unit- and integration tests from the [tests folder](https://github.com/bbernhard/imagemonkey-core/tree/master/tests)
+* run stresstest
+
+# Normal Mode
+## Scenario #1
 This is the most common scenario and the easiest to set up. Choose this option, if your web browser and your docker container will run on the same machine. 
 
 * install docker
@@ -18,7 +27,7 @@ Now open your browser and navigate to `http://127.0.0.1:8080`
 
 You can now upload your first image to your own ImageMonkey instance.
 
-# Scenario #2
+## Scenario #2
 As docker acquires a significant portion of your systems resources, one might want to run the docker instance on a different machine. 
 
 Let's assume your workstation has the private IP `192.168.1.9`. As your workstation is quite old, you want to run the ImageMonkey docker container on a different machine (e.q Raspberry Pi) which is in the same subnet and has the IP `192.168.1.16`. 
@@ -34,7 +43,7 @@ The docker run command looks almost identical to the one in Scenario #1, except 
 
 Now open your browser and navigate to `http://192.168.1.16:8080`
 
-# FAQ
+## FAQ
 **Detailed description of the docker run command** 
 
 `-p 8080:8080 -p 8081:8081`
@@ -47,3 +56,9 @@ The docker port mapping is also helpful if you already have a service running on
 
 `--ulimit nofile=90000:90000` This commandline option changes the number of available file descriptors within the docker container. Without that option `redis` will not be able to run inside the docker container. 
 
+# Run Tests
+`docker run imagemonkey-core --run-tests`
+
+# Run stresstest
+
+`docker run --mount type=bind,source=/home/imagemonkey/imagemonkey_04_11_2018.zip,target=/tmp/stresstest/imagemonkey_data.zip,readonly imagemonkey-core --run-stresstest`
