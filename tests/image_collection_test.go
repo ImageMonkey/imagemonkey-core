@@ -160,7 +160,7 @@ func TestAddImageToImageCollection(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -176,7 +176,7 @@ func TestAddImageToImageCollectionTwiceShouldFail(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -193,7 +193,7 @@ func TestAddImageToImageCollectionWrongTokenShouldFail(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -213,7 +213,7 @@ func TestAddImageToImageCollectionWrongTokenShouldFail2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
 	token := testLogin(t, "user", "pwd", 200)
@@ -233,7 +233,7 @@ func TestDonateImageAndAssignToImageCollection(t *testing.T) {
 	token := testLogin(t, "user", "pwd", 200)
 
 	testAddImageCollection(t, "user", token, "new-image-collection", "my-new-image-collection", 201)
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, token, "new-image-collection") 
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, token, "new-image-collection", 200) 
 }
 
 

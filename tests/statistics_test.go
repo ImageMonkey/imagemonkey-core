@@ -71,13 +71,13 @@ func TestGetAnnotatedStatistics(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 
 	annotationStatistics := testGetAnnotatedStatistics(t, "", 1)
@@ -91,7 +91,7 @@ func TestGetAnnotatedStatistics1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -99,7 +99,7 @@ func TestGetAnnotatedStatistics1(t *testing.T) {
 	testLabelImage(t, imageId, "orange", "")
 
 	testAnnotate(t, imageId, "apple", "", 
-					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "")
+					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
 
 
 	annotationStatistics := testGetAnnotatedStatistics(t, "", 2)
@@ -133,7 +133,7 @@ func TestGetPerCountryStatistics(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	statistics := testGetStatistics(t)
 

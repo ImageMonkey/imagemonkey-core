@@ -9,11 +9,11 @@ import (
     "encoding/json"
     "github.com/lib/pq"
     commons "../commons"
-    parser "../parser"
+    parser "../parser/v2"
     "errors"
 )
 
-func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (datastructures.ImageToLabel, error) {
+func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, includeOnlyUnlockedLabels bool) (datastructures.ImageToLabel, error) {
     var image datastructures.ImageToLabel
     var labelMeEntries []datastructures.LabelMeEntry
     image.Provider = "donation"
@@ -97,6 +97,17 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                               WHERE (i.unlocked = true %s) AND i.key = $%d`, includeOwnImageDonations, paramPos)
         } 
 
+        q2 := ""
+        if !includeOnlyUnlockedLabels {
+            q2  = `UNION ALL
+
+                   SELECT ils.image_id as image_id, s.name as label, 
+                   '' as parent_label, false as unlocked, ils.annotatable as annotatable,
+                   '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
+                   FROM image_label_suggestion ils
+                   JOIN label_suggestion s on ils.label_suggestion_id = s.id`
+        }
+
         q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
                           COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
@@ -112,13 +123,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     JOIN label l on v.label_id = l.id 
                                     LEFT JOIN label pl on l.parent_id = pl.id
 
-                                    UNION ALL
-
-                                    SELECT ils.image_id as image_id, s.name as label, 
-                                    '' as parent_label, false as unlocked, ils.annotatable as annotatable,
-                                    '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
-                                    FROM image_label_suggestion ils
-                                    JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                    %s
                                 ) q1
                                 RIGHT JOIN (
                                     %s
@@ -132,7 +137,9 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
                                     WHERE dsc.state != 'locked' --only show non locked image descriptions
                                     GROUP BY i.id
                                 ) q2 ON q2.image_id = q1.image_id
-                                `, q1)
+                                ORDER BY parent_label ASC NULLS FIRST -- return base labels first
+                                                                      -- otherwise, the below logic won't work correctly
+                                `, q2, q1)
 
         var rows *sql.Rows
         if imageId == "" {
@@ -174,6 +181,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
             err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
                             &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked, &image.Width, &image.Height,
                             &imageDescriptions)
+
             if err != nil {
                 tx.Rollback()
                 raven.CaptureError(err, nil)
@@ -267,7 +275,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string) (
 
 
 func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
-                        imageId string, labels []datastructures.LabelMeEntry) error {
+                                                metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry) error {
     tx, err := p.db.Begin()
     if err != nil {
         log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
@@ -275,29 +283,11 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
         return err
     }
 
-    var knownLabels []datastructures.LabelMeEntry
-    for _, item := range labels {
-        if !commons.IsLabelValid(labelMap, item.Label, item.Sublabels) { //if its a label that is not known to us
-            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
-                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
-                if err != nil {
-                    return err //tx already rolled back in case of error, so we can just return here 
-                }
-            } else {
-                tx.Rollback()
-                log.Debug("you need to be authenticated")
-                return errors.New("you need to be authenticated to perform this action") 
-            }
-        } else {
-            knownLabels = append(knownLabels, item)
-        }
-    }
-
-    if len(knownLabels) > 0 {
-        _, err = AddLabelsToImageInTransaction(apiUser.ClientFingerprint, imageId, knownLabels, 0, 0, tx)
-        if err != nil { 
-            return err //tx already rolled back in case of error, so we can just return here 
-        }
+    _, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageId, labels, 0, 0)
+    if err != nil { //tx already rolled back in case of error, so we can just return here 
+        log.Debug("[Adding image labels] Couldn't add labels: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
     }
 
     
@@ -308,6 +298,40 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
         return err 
     }
     return err
+}
+
+
+func _addLabelsAndLabelSuggestionsToImageInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
+                                                        metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry,
+                                                        numOfValid int, numOfNotAnnotatable int) ([]int64, error) {
+    var insertedValidationIds []int64
+    var err error
+    var knownLabels []datastructures.LabelMeEntry
+    for _, item := range labels {
+        if !commons.IsLabelValid(labelMap, metalabels, item.Label, item.Sublabels) { //if its a label that is not known to us
+            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
+                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
+                if err != nil {
+                    return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here 
+                }
+            } else {
+                tx.Rollback()
+                log.Debug("you need to be authenticated")
+                return insertedValidationIds, errors.New("you need to be authenticated to perform this action") 
+            }
+        } else {
+            knownLabels = append(knownLabels, item)
+        }
+    }
+
+    if len(knownLabels) > 0 {
+        insertedValidationIds, err = AddLabelsToImageInTransaction(apiUser.ClientFingerprint, imageId, knownLabels, numOfValid, numOfNotAnnotatable, tx)
+        if err != nil { 
+            return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here 
+        }
+    }
+
+    return insertedValidationIds, nil
 }
 
 func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {
@@ -345,8 +369,8 @@ func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, im
         }
     }
 
-    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable) 
-                        SELECT $1, id, $3, $4 FROM image WHERE key = $2
+    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period) 
+                        SELECT $1, id, $3, $4, '["now()",]'::tstzrange FROM image WHERE key = $2
                         ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
     if err != nil {
         tx.Rollback()

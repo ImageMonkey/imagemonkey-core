@@ -4,7 +4,7 @@ import (
     "github.com/getsentry/raven-go"
     log "github.com/Sirupsen/logrus"
     "../datastructures"
-    "../parser"
+    parser "../parser/v2"
     commons "../commons"
     "encoding/json"
     "errors"
@@ -12,20 +12,62 @@ import (
     "database/sql"
     "github.com/lib/pq"
     "image"
+    "github.com/satori/go.uuid"
+    //"github.com/francoispqt/gojay"
+    //"bytes"
 )
 
-func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, annotationId string, 
-		annotations datastructures.Annotations) error {
-    byt, err := json.Marshal(annotations.Annotations)
+
+func updateAnnotationInTransaction2(tx *sql.Tx, apiUser datastructures.APIUser, label string, sublabel string, 
+                                                            annotationsContainer datastructures.AnnotationsContainer) error {
+    var queryValues []interface{}
+    query := ""
+    if label == "" && sublabel == "" {
+        query = `SELECT a.uuid 
+                        FROM image_annotation a 
+                        JOIN label l ON l.id = a.label_id
+                        JOIN label pl ON l.parent_id = pl.id 
+                        WHERE l.name = $1 AND pl.name = $2` 
+        queryValues = append(queryValues, label)
+        queryValues = append(queryValues, sublabel)
+    } else {
+        query = `SELECT a.uuid 
+                        FROM image_annotation a 
+                        JOIN label l ON l.id = a.label_id
+                        WHERE l.name = $1`
+        queryValues = append(queryValues, label)
+    }
+
+    rows, err := tx.Query(query, queryValues...)
     if err != nil {
-        log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
+        tx.Rollback()
+        log.Error("[Update Annotation] Couldn't get annotation id: ", err.Error())
         return err
     }
 
-    tx, err := p.db.Begin()
+    if rows.Next() {
+        var annotationId string
+        err = rows.Scan(&annotationId)
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Update Annotation] Couldn't scan annotation id: ", err.Error())
+            return err
+        }
+
+        rows.Close()
+
+        return updateAnnotationInTransaction(tx, apiUser, annotationId, annotationsContainer)
+    }
+    tx.Rollback()
+    return errors.New("[Update Annotation] Couldn't get uuid for label")
+}
+
+func updateAnnotationInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, annotationId string, 
+                                                annotationsContainer datastructures.AnnotationsContainer) error {
+    byt, err := json.Marshal(annotationsContainer.Annotations.Annotations)
     if err != nil {
-        log.Debug("[Update Annotation] Couldn't begin transaction: ", err.Error())
-        raven.CaptureError(err, nil)
+        tx.Rollback()
+        log.Error("[Update Annotation] Couldn't create byte array: ", err.Error())
         return err
     }
 
@@ -36,7 +78,7 @@ func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, a
                          WHERE a.uuid = $1 RETURNING id`, annotationId).Scan(&imageAnnotationRevisionId)
     if err != nil {
         tx.Rollback()
-        log.Debug("[Update Annotation] Couldn't insert to annotation revision: ", err.Error())
+        log.Error("[Update Annotation] Couldn't insert to annotation revision: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
@@ -48,7 +90,7 @@ func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, a
                      annotationId, imageAnnotationRevisionId)
     if err != nil {
         tx.Rollback()
-        log.Debug("[Update Annotation] Couldn't update annotation data: ", err.Error())
+        log.Error("[Update Annotation] Couldn't update annotation data: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
@@ -59,18 +101,73 @@ func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, a
                        RETURNING id`, annotationId).Scan(&imageAnnotationId)
     if err != nil {
         tx.Rollback()
-        log.Debug("[Update Annotation] Couldn't update annotation: ", err.Error())
+        log.Error("[Update Annotation] Couldn't update annotation: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
 
-    //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
-                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, imageAnnotationId, byt)
+    //insertes annotation data; 'type' and 'refinements' are removed removed before inserting data
+    var rows *sql.Rows
+    rows, err = tx.Query(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                            SELECT $1, uuid_generate_v4(), 
+                                    ((q.*)::jsonb - 'type' - 'refinements'), 
+                                    (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) 
+                                    FROM json_array_elements($2) q
+                            RETURNING uuid`, imageAnnotationId, byt)
     if err != nil {
         tx.Rollback()
-        log.Debug("[Update Annotation] Couldn't add new annotation data: ", err.Error())
+        log.Error("[Update Annotation] Couldn't add annotations: ", err.Error())
         raven.CaptureError(err, nil)
+        return err
+    }
+    defer rows.Close()
+    annotationDataIds := make(map[int]string)
+    i := 0
+    for rows.Next() {
+        var annotationDataId string
+        err = rows.Scan(&annotationDataId)
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Update Annotation] Couldn't scan annotation data ids: ", err.Error())
+            raven.CaptureError(err, nil)
+            return err
+        }
+        annotationDataIds[i] = annotationDataId
+        i += 1
+    }
+    rows.Close()
+
+    if len(annotationsContainer.AllowedRefinements) != len(annotationDataIds) {
+        tx.Rollback()
+        err = errors.New("Num of annotation refinements do not match num of annotation data ids!")
+        log.Error("[Update Annotation] Couldn't add annotations : ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    for i, refinements := range annotationsContainer.AllowedRefinements {
+        if val, ok := annotationDataIds[i]; ok {
+            err = addOrUpdateRefinementsInTransaction(tx, annotationId, val, refinements, apiUser.ClientFingerprint)
+            if err != nil { //transaction already rolled back, so we can return here
+                return err
+            }
+        }
+    }
+    return nil
+}
+
+func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, annotationId string, 
+		                                          annotationsContainer datastructures.AnnotationsContainer) error {
+
+    tx, err := p.db.Begin()
+    if err != nil {
+        log.Debug("[Update Annotation] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    err = updateAnnotationInTransaction(tx, apiUser, annotationId, annotationsContainer)
+    if err != nil { //transaction already rolled back, so we can return here
         return err
     }
 
@@ -85,96 +182,164 @@ func (p *ImageMonkeyDatabase) UpdateAnnotation(apiUser datastructures.APIUser, a
 }
 
 func (p *ImageMonkeyDatabase) AddAnnotations(apiUser datastructures.APIUser, imageId string, 
-			annotations datastructures.Annotations, autoGenerated bool) (string, error) {
+			annotations []datastructures.AnnotationsContainer) ([]string, error) {
+
+    annotationIds := []string{}
+
+    tx, err := p.db.Begin()
+    if err != nil {
+        log.Error("[Add Annotation] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return annotationIds, err
+    }
+
     //currently there is a uniqueness constraint on the image_id column to ensure that we only have
     //one image annotation per image. That means that the below query can fail with a unique constraint error. 
     //at the moment the uniqueness constraint errors are handled gracefully - that means we return nil.
     //we might want to change that in the future to support multiple annotations per image (if there is a use case for it),
     //but for now it should be fine.
-    var annotationId string
-    annotationId = ""
 
-    byt, err := json.Marshal(annotations.Annotations)
-    if err != nil {
-        log.Debug("[Add Annotation] Couldn't create byte array: ", err.Error())
-        return annotationId, err
-    }
+    for _, annotation := range annotations {
+        byt, err := json.Marshal(annotation.Annotations.Annotations)
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Add Annotation] Couldn't create byte array: ", err.Error())
+            return annotationIds, err
+        }
 
+        var idRows *sql.Rows
+        if annotation.Annotations.Sublabel == "" {
+            idRows, err = tx.Query(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, 
+                                                            image_id, uuid, auto_generated, revision) 
+                                        SELECT (SELECT l.id FROM label l WHERE l.name = $5 AND l.parent_id is null), 
+                                                $2, $3, $4, 
+                                                (SELECT i.id FROM image i WHERE i.key = $1), 
+                                                uuid_generate_v4(), $6, $7 
+                                            ON CONFLICT DO NOTHING RETURNING id, uuid`, 
+                                      imageId, 0, 0, apiUser.ClientFingerprint, annotation.Annotations.Label, 
+                                      annotation.AutoGenerated, 1)
+        } else {
+            idRows, err = tx.Query(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, 
+                                                            image_id, uuid, auto_generated, revision) 
+                                        SELECT (SELECT l.id FROM label l JOIN label pl ON l.parent_id = pl.id WHERE l.name = $5 AND pl.name = $6), 
+                                                $2, $3, $4, 
+                                                (SELECT i.id FROM image i WHERE i.key = $1), 
+                                                uuid_generate_v4(), $7, $8 
+                                            ON CONFLICT DO NOTHING RETURNING id, uuid`, 
+                                      imageId, 0, 0, apiUser.ClientFingerprint, annotation.Annotations.Sublabel, annotation.Annotations.Label, 
+                                      annotation.AutoGenerated, 1)
+        }
 
-    tx, err := p.db.Begin()
-    if err != nil {
-        log.Debug("[Add Annotation] Couldn't begin transaction: ", err.Error())
-        raven.CaptureError(err, nil)
-        return annotationId, err
-    }
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Update Annotation] Couldn't add image annotation: ", err.Error())
+            return annotationIds, err
+        }
 
-    insertedId := 0
-    if annotations.Sublabel == "" {
-        err = tx.QueryRow(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id, uuid, auto_generated, revision) 
-                            SELECT (SELECT l.id FROM label l WHERE l.name = $5 AND l.parent_id is null), $2, $3, $4, (SELECT i.id FROM image i WHERE i.key = $1), 
-                            uuid_generate_v4(), $6, $7 RETURNING id, uuid`, 
-                          imageId, 0, 0, apiUser.ClientFingerprint, annotations.Label, autoGenerated, 1).Scan(&insertedId, &annotationId)
-    } else {
-        err = tx.QueryRow(`INSERT INTO image_annotation(label_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, image_id, uuid, auto_generated, revision) 
-                            SELECT (SELECT l.id FROM label l JOIN label pl ON l.parent_id = pl.id WHERE l.name = $5 AND pl.name = $6), $2, $3, $4, 
-                            (SELECT i.id FROM image i WHERE i.key = $1), uuid_generate_v4(), $7, $8 RETURNING id, uuid`, 
-                          imageId, 0, 0, apiUser.ClientFingerprint, annotations.Sublabel, annotations.Label, autoGenerated, 1).Scan(&insertedId, &annotationId)
-    }
+        defer idRows.Close()
 
+        var annotationId string
+        var insertedId int64
 
-    if err != nil {
-        if pqErr, ok := err.(*pq.Error); ok {
-            if pqErr.Code.Name() == "unique_violation" {
-                tx.Commit()
-                return annotationId, err
+        if !idRows.Next() { //we get no result set in case there already exists an entry 
+                            //in that case, just update the annotation
+            idRows.Close()
+            err = updateAnnotationInTransaction2(tx, apiUser, annotation.Annotations.Label, annotation.Annotations.Sublabel, annotation)
+            if err != nil { //transaction already rolled back, so we can return here
+                return annotationIds, err
+            }
+            continue 
+        } else { //image annotation successfully added, get inserted ids
+            err = idRows.Scan(&insertedId, &annotationId)
+            if err != nil {
+                tx.Rollback()
+                log.Error("[Update Annotation] Couldn't scan image annotation row: ", err.Error())
+                return annotationIds, err
             }
         }
 
-        tx.Rollback()
-        log.Debug("[Add Annotation] Couldn't add image annotation: ", err.Error())
-        raven.CaptureError(err, nil)
-        return annotationId, err
-    }
+        idRows.Close()
 
-    //insertes annotation data; 'type' gets removed before inserting data
-    _, err = tx.Exec(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
-                            SELECT $1, uuid_generate_v4(), ((q.*)::jsonb - 'type'), (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) FROM json_array_elements($2) q`, insertedId, byt)
-    if err != nil {
-        tx.Rollback()
-        log.Debug("[Add Annotation] Couldn't add annotations: ", err.Error())
-        raven.CaptureError(err, nil)
-        return annotationId, err
-    }
-
-    if apiUser.Name != "" {
-        var id int64
-
-        id = 0
-        err = tx.QueryRow(`INSERT INTO user_image_annotation(image_annotation_id, account_id, timestamp)
-                                SELECT $1, a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2 RETURNING id`, insertedId, apiUser.Name).Scan(&id)
+        //insertes annotation data; 'type' and 'refinements' are removed removed before inserting data
+        var rows *sql.Rows
+        rows, err = tx.Query(`INSERT INTO annotation_data(image_annotation_id, uuid, annotation, annotation_type_id)
+                                SELECT $1, uuid_generate_v4(), 
+                                        ((q.*)::jsonb - 'type' - 'refinements'), 
+                                        (SELECT id FROM annotation_type where name = ((q.*)->>'type')::text) 
+                                        FROM json_array_elements($2) q
+                                RETURNING uuid`, insertedId, byt)
         if err != nil {
             tx.Rollback()
-            log.Debug("[Add User Annotation] Couldn't add user annotation entry: ", err.Error())
+            log.Error("[Add Annotation] Couldn't add annotations: ", err.Error())
             raven.CaptureError(err, nil)
-            return annotationId, err
+            return annotationIds, err
+        }
+        defer rows.Close()
+        annotationDataIds := make(map[int]string)
+        i := 0
+        for rows.Next() {
+            var annotationDataId string
+            err = rows.Scan(&annotationDataId)
+            if err != nil {
+                tx.Rollback()
+                log.Error("[Add Annotation] Couldn't scan annotation data ids: ", err.Error())
+                raven.CaptureError(err, nil)
+                return annotationIds, err
+            }
+            annotationDataIds[i] = annotationDataId
+            i += 1
+        }
+        rows.Close()
+
+        if len(annotation.AllowedRefinements) != len(annotationDataIds) {
+            tx.Rollback()
+            err = errors.New("Num of annotation refinements do not match num of annotation data ids!")
+            log.Error("[Add Annotation] Couldn't add annotations : ", err.Error())
+            raven.CaptureError(err, nil)
+            return annotationIds, err
         }
 
-        if id == 0 {
-            tx.Rollback()
-            log.Debug("[Add User Annotation] Nothing inserted")
-            return annotationId, errors.New("nothing inserted")
+        for i, refinements := range annotation.AllowedRefinements {
+            if val, ok := annotationDataIds[i]; ok {
+                err = addOrUpdateRefinementsInTransaction(tx, annotationId, val, refinements, apiUser.ClientFingerprint)
+                if err != nil { //transaction already rolled back, so we can return here
+                    return annotationIds, err
+                }
+            }
         }
+
+        if apiUser.Name != "" {
+            var id int64
+
+            id = 0
+            err = tx.QueryRow(`INSERT INTO user_image_annotation(image_annotation_id, account_id, timestamp)
+                                    SELECT $1, a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2 RETURNING id`, insertedId, apiUser.Name).Scan(&id)
+            if err != nil {
+                tx.Rollback()
+                log.Error("[Add User Annotation] Couldn't add user annotation entry: ", err.Error())
+                raven.CaptureError(err, nil)
+                return annotationIds, err
+            }
+
+            if id == 0 {
+                tx.Rollback()
+                log.Error("[Add User Annotation] Nothing inserted")
+                return annotationIds, errors.New("nothing inserted")
+            }
+        }
+
+        annotationIds = append(annotationIds, annotationId)
     }
 
 
     err = tx.Commit()
     if err != nil {
-        log.Debug("[Add Annotation] Couldn't commit transaction: ", err.Error())
+        log.Error("[Add Annotation] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
-        return annotationId, err
+        return annotationIds, err
     }
 
-    return annotationId, nil
+    return annotationIds, nil
 }
 
 func (p *ImageMonkeyDatabase) _getImageForAnnotationFromValidationId(username string, validationId string, 
@@ -346,7 +511,7 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
                             JOIN label l ON v.label_id = l.id
                             JOIN label_accessor acc ON acc.label_id = v.label_id
                             LEFT JOIN label pl ON l.parent_id = pl.id
-                            WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
+                            WHERE (i.unlocked = true %s) AND p.name = 'donation' AND l.label_type != 'meta' AND
                             CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                             %s
                             AND NOT EXISTS
@@ -363,7 +528,7 @@ func (p *ImageMonkeyDatabase) GetImageForAnnotation(username string, addAutoAnno
                                     JOIN image_provider p ON i.image_provider_id = p.id
                                     JOIN image_validation v ON v.image_id = i.id
                                     JOIN label l ON v.label_id = l.id
-                                    WHERE (i.unlocked = true %s) AND p.name = 'donation' AND 
+                                    WHERE (i.unlocked = true %s) AND p.name = 'donation' AND l.label_type != 'meta' AND 
                                     CASE WHEN v.num_of_valid + v.num_of_invalid = 0 THEN 0 ELSE (CAST (v.num_of_valid AS float)/(v.num_of_valid + v.num_of_invalid)) END >= 0.8
                                     %s
                                     AND NOT EXISTS
@@ -479,48 +644,60 @@ func (p *ImageMonkeyDatabase) GetAnnotatedImage(apiUser datastructures.APIUser, 
             includeOwnImageDonations = fmt.Sprintf(includeOwnImageDonationsStr, 3)
         }
 
-        q = fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
-                                json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
-                                   FROM (
-                                     SELECT i.key as key, i.id as image_id, q2.label_id as label_id, 
-                                     q2.id as entry_id, q2.annotation_uuid as annotation_uuid, q2.num_of_valid as num_of_valid, 
-                                     q2.num_of_invalid as num_of_invalid, i.width as width, i.height as height, q2.is_revision,
-                                     i.unlocked as image_unlocked
-                                     FROM image i
-                                     JOIN image_provider p ON i.image_provider_id = p.id
-                                     JOIN (
-                                        SELECT DISTINCT a.image_id as image_id, a.label_id as label_id, a.uuid as annotation_uuid,
-                                        a.num_of_valid as num_of_valid, a.num_of_invalid as num_of_invalid,
-                                        CASE WHEN r.revision = $1 THEN r.id ELSE a.id END as id, 
-                                        CASE WHEN r.revision = $1 THEN true ELSE false END as is_revision
-                                        FROM image_annotation a
-                                        LEFT JOIN image_annotation_revision r ON r.image_annotation_id = a.id
-                                        where a.uuid::text = $2 
-                                        AND a.auto_generated = false and (r.revision = $1 or a.revision = $1)
-                                     ) q2 ON q2.image_id = i.id
-                                     WHERE (i.unlocked = true %s) AND p.name = 'donation'
-                                     
-                                     
-                                   ) q1
+        q = fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), 
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                            FROM
+                            (
+                                SELECT q1.key as image_key, l.name as label_name, COALESCE(pl.name, '') as parent_label_name, q1.annotation_uuid as annotation_uuid, 
+                                    q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb
+                                     || jsonb_strip_nulls(jsonb_build_object('refinements', ((json_agg(jsonb_build_object('label_uuid', q.annotation_refinement_uuid)) 
+                                        FILTER (WHERE q.annotation_refinement_uuid IS NOT NULL))))) as annotation, 
+                                     q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, q1.width as image_width, 
+                                     q1.height as image_height, q1.image_unlocked as image_unlocked
+                                       FROM (
+                                         SELECT i.key as key, i.id as image_id, q2.label_id as label_id, 
+                                         q2.id as entry_id, q2.annotation_uuid as annotation_uuid, q2.num_of_valid as num_of_valid, 
+                                         q2.num_of_invalid as num_of_invalid, i.width as width, i.height as height, q2.is_revision,
+                                         i.unlocked as image_unlocked
+                                         FROM image i
+                                         JOIN image_provider p ON i.image_provider_id = p.id
+                                         JOIN (
+                                            SELECT DISTINCT a.image_id as image_id, a.label_id as label_id, a.uuid as annotation_uuid,
+                                            a.num_of_valid as num_of_valid, a.num_of_invalid as num_of_invalid,
+                                            CASE WHEN r.revision = $1 THEN r.id ELSE a.id END as id, 
+                                            CASE WHEN r.revision = $1 THEN true ELSE false END as is_revision
+                                            FROM image_annotation a
+                                            LEFT JOIN image_annotation_revision r ON r.image_annotation_id = a.id
+                                            where a.uuid::text = $2 
+                                            AND a.auto_generated = false and (r.revision = $1 or a.revision = $1)
+                                         ) q2 ON q2.image_id = i.id
+                                         WHERE (i.unlocked = true %s) AND p.name = 'donation'
+                                         
+                                         
+                                       ) q1
 
-                                   JOIN
-                                   (
-                                     SELECT d.annotation as annotation, t.name as annotation_type,
-                                     d.image_annotation_id as image_annotation_id, d.image_annotation_revision_id as image_annotation_revision_id
-                                     FROM annotation_data d 
-                                     JOIN annotation_type t on d.annotation_type_id = t.id
-                                   ) q ON 
-                                     CASE 
-                                        WHEN q1.is_revision THEN q.image_annotation_revision_id = q1.entry_id
-                                        ELSE q.image_annotation_id = q1.entry_id 
-                                     END
+                                       JOIN
+                                       (
+                                         SELECT d.annotation as annotation, l.uuid as annotation_refinement_uuid, t.name as annotation_type,
+                                         d.image_annotation_id as image_annotation_id, d.image_annotation_revision_id as image_annotation_revision_id
+                                         FROM annotation_data d 
+                                         JOIN annotation_type t on d.annotation_type_id = t.id
+                                         LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                                         LEFT JOIN label l ON l.id = r.label_id
+                                       ) q ON 
+                                         CASE 
+                                            WHEN q1.is_revision THEN q.image_annotation_revision_id = q1.entry_id
+                                            ELSE q.image_annotation_id = q1.entry_id 
+                                         END
 
 
-                                   JOIN label l ON q1.label_id = l.id
-                                   LEFT JOIN label pl ON l.parent_id = pl.id
-                                   GROUP BY q1.key, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations)
+                                       JOIN label l ON q1.label_id = l.id
+                                       LEFT JOIN label pl ON l.parent_id = pl.id
+                                       GROUP BY q1.key, q.annotation, q.annotation_type, q1.annotation_uuid, l.name, pl.name, 
+                                       q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
+                            ) q2
+                            GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked`, includeOwnImageDonations)
 
 
     } else {
@@ -549,35 +726,47 @@ func (p *ImageMonkeyDatabase) GetAnnotatedImage(apiUser datastructures.APIUser, 
                               LIMIT 1`, includeOwnImageDonations)
         }
 
-        q = fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
-                                 json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                                 q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
-                                   FROM (
-                                     SELECT i.key as key, i.id as image_id, a.label_id as label_id, 
-                                     a.id as image_annotation_id, a.uuid as annotation_uuid, a.num_of_valid as num_of_valid, 
-                                     a.num_of_invalid as num_of_invalid, i.width as width, i.height as height, i.unlocked as image_unlocked
-                                     FROM image i
-                                     JOIN image_provider p ON i.image_provider_id = p.id
-                                     JOIN image_annotation a ON a.image_id = i.id
-                                     WHERE (i.unlocked = true %s) AND p.name = 'donation' AND a.auto_generated = $1
-                                     %s
-                                     
-                                     
-                                   ) q1
+        q = fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), q2.num_of_valid,
+                            q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                            FROM
+                            (
+                                SELECT q1.key as image_key, l.name as label_name, COALESCE(pl.name, '') as parent_label_name, q1.annotation_uuid as annotation_uuid, 
+                                     q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb
+                                     || jsonb_strip_nulls(jsonb_build_object('refinements', ((json_agg(jsonb_build_object('label_uuid', q.annotation_refinement_uuid)) 
+                                        FILTER (WHERE q.annotation_refinement_uuid IS NOT NULL))))) as annotation, 
+                                     q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, q1.width as image_width, 
+                                     q1.height as image_height, q1.image_unlocked as image_unlocked
+                                       FROM (
+                                         SELECT i.key as key, i.id as image_id, a.label_id as label_id, 
+                                         a.id as image_annotation_id, a.uuid as annotation_uuid, a.num_of_valid as num_of_valid, 
+                                         a.num_of_invalid as num_of_invalid, i.width as width, i.height as height, i.unlocked as image_unlocked
+                                         FROM image i
+                                         JOIN image_provider p ON i.image_provider_id = p.id
+                                         JOIN image_annotation a ON a.image_id = i.id
+                                         WHERE (i.unlocked = true %s) AND p.name = 'donation' AND a.auto_generated = $1
+                                         %s
+                                         
+                                         
+                                       ) q1
 
-                                   JOIN
-                                   (
-                                     SELECT d.image_annotation_id as image_annotation_id, d.annotation as annotation,
-                                     t.name as annotation_type
-                                     FROM annotation_data d 
-                                     JOIN annotation_type t on d.annotation_type_id = t.id
-                                   ) q ON q.image_annotation_id = q1.image_annotation_id
+                                       JOIN
+                                       (
+                                         SELECT d.image_annotation_id as image_annotation_id, l.uuid as annotation_refinement_uuid, 
+                                         d.annotation as annotation, t.name as annotation_type
+                                         FROM annotation_data d 
+                                         JOIN annotation_type t on d.annotation_type_id = t.id
+                                         LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                                         LEFT JOIN label l ON l.id = r.label_id
+                                       ) q ON q.image_annotation_id = q1.image_annotation_id
 
 
-                                   JOIN label l ON q1.label_id = l.id
-                                   LEFT JOIN label pl ON l.parent_id = pl.id
-                                   GROUP BY q1.key, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked`, includeOwnImageDonations, q1)
+                                       JOIN label l ON q1.label_id = l.id
+                                       LEFT JOIN label pl ON l.parent_id = pl.id
+                                       GROUP BY q1.key, q.annotation, q.annotation_type, q1.annotation_uuid, l.name, pl.name, 
+                                       q1.num_of_valid, q1.num_of_invalid, q1.width, q1.height, q1.image_unlocked
+                            ) q2
+                            GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, q2.num_of_valid,
+                            q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked`, includeOwnImageDonations, q1)
     }
 
     var err error
@@ -895,16 +1084,16 @@ func (p *ImageMonkeyDatabase) GetAnnotationsForRefinement(parseResult parser.Par
 
 func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, parseResult parser.ParseResult, 
                         imageId string, apiBaseUrl string) ([]datastructures.AnnotatedImage, error) {
-    var annotatedImages []datastructures.AnnotatedImage
+    annotatedImages := []datastructures.AnnotatedImage{}
     var queryValues []interface{}
 
 
     q1 := ""
     if imageId == "" {
-        q1 = parseResult.Query
+        q1 = "WHERE " + parseResult.Query
         queryValues = parseResult.QueryValues
     } else {
-        q1 = "q.key = $1"
+        q1 = "WHERE q.key = $1"
         queryValues = append(queryValues, imageId)
     }
 
@@ -928,9 +1117,17 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
         queryValues = append(queryValues, apiUser.Name)
     }
 
-    q := fmt.Sprintf(`SELECT q1.key, l.name, COALESCE(pl.name, ''), q1.annotation_uuid, 
-                             json_agg(q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb)::jsonb as annotations, 
-                             q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked
+    q := fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), 
+                      q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                      FROM
+                      (
+                        SELECT q1.key as image_key, l.name as label_name, COALESCE(pl.name, '') as parent_label_name, 
+                            q1.annotation_uuid as annotation_uuid, 
+                             q.annotation || ('{"type":"' || q.annotation_type || '"}')::jsonb
+                                || jsonb_strip_nulls(jsonb_build_object('refinements', ((json_agg(jsonb_build_object('label_uuid', q.annotation_refinement_uuid)) 
+                                FILTER (WHERE q.annotation_refinement_uuid IS NOT NULL))))) as annotation, 
+                             q1.num_of_valid as num_of_valid, q1.num_of_invalid as num_of_invalid, 
+                             q1.image_width as image_width, q1.image_height as image_height, q1.image_unlocked as image_unlocked
                                    FROM (
                                      SELECT key, image_id, q.label_id, entry_id, annotation_uuid, num_of_valid,
                                      num_of_invalid, image_width, image_height, image_unlocked, annotated_percentage
@@ -948,22 +1145,28 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
                                          AND an.auto_generated = false
                                      ) q
                                      JOIN label_accessor a ON a.label_id = q.label_id
-                                     WHERE %s
+                                     %s
                                    ) q1
 
                                    JOIN
                                    (
-                                     SELECT d.image_annotation_id as annotation_id, d.annotation as annotation, t.name as annotation_type 
+                                     SELECT d.image_annotation_id as annotation_id, d.annotation as annotation, t.name as annotation_type,
+                                     l.uuid as annotation_refinement_uuid
                                      FROM annotation_data d 
                                      JOIN annotation_type t on d.annotation_type_id = t.id
+                                     LEFT JOIN image_annotation_refinement r ON r.annotation_data_id = d.id
+                                     LEFT JOIN label l ON l.id = r.label_id
                                    ) q ON q.annotation_id = q1.entry_id
 
 
                                    JOIN label l ON q1.label_id = l.id
                                    LEFT JOIN label pl ON l.parent_id = pl.id
-                                   GROUP BY q1.key, q.annotation_id, q1.annotation_uuid, l.name, pl.name, 
-                                   q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked`, 
-                                   includeOwnImageDonations, q1)
+                                   GROUP BY q1.key, q.annotation_id, q.annotation, q.annotation_type, q1.annotation_uuid, l.name, pl.name, 
+                                   q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked
+                      ) q2
+                      GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                      `, includeOwnImageDonations, q1)
 
     rows, err := p.db.Query(q, queryValues...)
     if err != nil {
@@ -1212,18 +1415,18 @@ func (p *ImageMonkeyDatabase) GetRandomAnnotationForQuizRefinement() (datastruct
     return refinement, nil
 }
 
-func (p *ImageMonkeyDatabase) AddOrUpdateRefinements(annotationUuid string, annotationDataId string, 
-			annotationRefinementEntries []datastructures.AnnotationRefinementEntry, clientFingerprint string) error {
-    var err error
 
-    tx, err := p.db.Begin()
-    if err != nil {
-        log.Debug("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
-
+func addOrUpdateRefinementsInTransaction(tx *sql.Tx, annotationUuid string, annotationDataId string, 
+            annotationRefinementEntries []datastructures.AnnotationRefinementEntry, clientFingerprint string) error {
     for _, item := range annotationRefinementEntries {
+
+        _, err := uuid.FromString(item.LabelId)
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Add or Update annotation refinement] Couldn't add/update refinements - invalid label id")
+            raven.CaptureError(err, nil)
+            return &InvalidLabelIdError{Description: "invalid label id"}
+        }
 
         _, err = tx.Exec(`INSERT INTO image_annotation_refinement(annotation_data_id, label_id, num_of_valid, fingerprint_of_last_modification)
                             SELECT d.id, (SELECT l.id FROM label l WHERE l.uuid = $2), $3, $4 
@@ -1236,15 +1439,33 @@ func (p *ImageMonkeyDatabase) AddOrUpdateRefinements(annotationUuid string, anno
         
         if err != nil {
             tx.Rollback()
-            log.Debug("[Add or Update annotation refinement] Couldn't update: ", err.Error())
+            log.Error("[Add or Update annotation refinement] Couldn't update: ", err.Error())
             raven.CaptureError(err, nil)
             return err
         }
     }
+    return nil
+}
+
+func (p *ImageMonkeyDatabase) AddOrUpdateRefinements(annotationUuid string, annotationDataId string, 
+			annotationRefinementEntries []datastructures.AnnotationRefinementEntry, clientFingerprint string) error {
+    var err error
+
+    tx, err := p.db.Begin()
+    if err != nil {
+        log.Error("[Add or Update annotation refinement] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    err = addOrUpdateRefinementsInTransaction(tx, annotationUuid, annotationDataId, annotationRefinementEntries, clientFingerprint)
+    if err != nil { //transaction already rolled back, so we can return here
+        return err
+    }
 
     err = tx.Commit()
     if err != nil {
-        log.Debug("[Add or Update annotation refinement] Couldn't commit transaction: ", err.Error())
+        log.Error("[Add or Update annotation refinement] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }

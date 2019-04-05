@@ -35,12 +35,20 @@ var Settings = (function () {
     return this.get("annotationmode", "default");
   }
 
+  Settings.prototype.getPolygonVertexSize = function() {
+    return this.get("polygonvertexsize", 5);
+  }
+
   Settings.prototype.getDefaultImageDescriptionLanguage = function() {
     return this.get("defaultimagedescriptionlanguage", "en");
   }
 
   Settings.prototype.setAnnotationMode = function(value) {
     return this.set("annotationmode", value);
+  }
+
+  Settings.prototype.setPolygonVertexSize = function(value) {
+    return this.set("polygonvertexsize", value);
   }
 
   Settings.prototype.isLabelViewFirstTimeOpened = function() {

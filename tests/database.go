@@ -259,6 +259,14 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 	return nil
 }
 
+func (p *ImageMonkeyDatabase) GiveUserUnlockImagePermissions(name string) error {
+	_, err := p.db.Exec(`UPDATE account_permission 
+						 SET can_unlock_image = true
+						 FROM account a
+						 WHERE a.id = account_id AND a.name = $1`, name)
+	return err
+}
+
 func (p *ImageMonkeyDatabase) GetNumberOfImages() (int32, error) {
 	var numOfImages int32
 	err := p.db.QueryRow("SELECT count(*) FROM image").Scan(&numOfImages)
@@ -415,6 +423,12 @@ func (p *ImageMonkeyDatabase) GetLastAddedAnnotationDataId() (string, error) {
 	return annotationDataId, err
 }
 
+func (p *ImageMonkeyDatabase) GetLastAddedAnnotationId() (string, error) {
+	var annotationId string
+	err := p.db.QueryRow(`SELECT a.uuid FROM image_annotation a ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId)
+	return annotationId, err
+}
+
 func (p *ImageMonkeyDatabase) GetRandomLabelId() (int64, error) {
 	var labelId int64
 	err := p.db.QueryRow(`SELECT l.id FROM label l ORDER BY random() LIMIT 1`).Scan(&labelId)
@@ -482,6 +496,27 @@ func (p *ImageMonkeyDatabase) GetNumberOfTrendingLabelSuggestions() (int32, erro
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfImageHuntTasksForImageWithLabel(imageId string, label string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM imagehunt_task h
+						   JOIN image_validation v ON v.id = h.image_validation_id
+						   JOIN label l ON l.id = v.label_id
+						   JOIN image i ON i.id = v.image_id
+						   WHERE i.key = $1 AND l.name = $2`, imageId, label).Scan(&num)
+	return num, err
+}
+
+func (p *ImageMonkeyDatabase) GetNumberOfImageUserEntriesForImageAndUser(imageId string, username string) (int32, error) {
+	var num int32
+	err := p.db.QueryRow(`SELECT count(*) 
+						   FROM image i
+						   JOIN user_image u ON u.image_id = i.id
+						   JOIN account a ON a.id = u.account_id
+						   WHERE i.key = $1 AND a.name = $2`, imageId, username).Scan(&num)
+	return num, err
+}
+
 func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64, error) {
 	productiveLabelIds := []int64{}
 
@@ -508,7 +543,7 @@ func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
 	var label string
 	err := p.db.QueryRow(`SELECT l.name
 						   FROM label l
-						   WHERE l.parent_id is null
+						   WHERE l.parent_id is null AND l.label_type = 'normal'
 						   ORDER BY random() LIMIT 1`).Scan(&label)
 	return label, err
 }
@@ -586,6 +621,12 @@ func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) e
 							SET num_of_valid = $2 
 							WHERE uuid = $1`, validationId, num)
 	return err
+}
+
+func (p *ImageMonkeyDatabase) GetNumOfRefinements() (int, error) {
+	var num int 
+	err := p.db.QueryRow(`SELECT count(*) FROM image_annotation_refinement`).Scan(&num)
+	return num, err
 }
 
 func (p *ImageMonkeyDatabase) GetAllAnnotationIds() ([]string, error) {
@@ -766,6 +807,15 @@ func (p *ImageMonkeyDatabase) DoLabelAccessorsBelongToMoreThanOneLabelId() (bool
 	}
 
 	return false, nil
+}
+
+func (p *ImageMonkeyDatabase) GetNumOfMetaLabelImageValidations() (int, error) {
+	var num int 
+	err := p.db.QueryRow(`SELECT count(*) FROM 
+							image_validation v 
+							JOIN label l ON l.id = v.label_id
+							WHERE l.label_type = 'meta'`).Scan(&num)
+	return num, err
 }
 
 

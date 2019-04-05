@@ -24,7 +24,7 @@
   <script src="js/justified-layout.min.js"></script>
   <script src="js/mousetrap.min.js"></script>
   <script src="js/mousetrap-record.min.js"></script>
-  <script src="js/settings.js?v=3"></script>
+  <script src="js/settings.js?v=4"></script>
   <script src="js/contextjs/context.js"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
   <script src="js/infinitescroll.js?v=2"></script>
@@ -55,7 +55,7 @@
   var newlyAddedLabels = {}
   var oldImageDescriptions = {}
   var newlyAddedImageDescriptions = {}
-  var labelMap = {{ .labels }};
+  var labelAccessorsLookupTable = {{ .labelAccessorsLookup }};
   var canvas = null;
   var cachedAnnotations = null;
   var annotationsShown = false;
@@ -85,8 +85,8 @@
   }
 
   function buildColorMap(){
-    for(var key in labelMap){
-      if(labelMap.hasOwnProperty(key)){
+    for(var key in labelAccessorsLookupTable){
+      if(labelAccessorsLookupTable.hasOwnProperty(key)){
         var color = StringToColor.next(key);
         colorMap[key] = color;
       }
@@ -150,16 +150,15 @@
       beforeSend: function(xhr) {
         xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
       },
-      error: function(jqXHR, textStatus, errorThrown){
-        if(jqXHR.status === 422) {
-          cachedAnnotations = [];
+      success: function(data) {
+        cachedAnnotations = [];
+
+        if(data.length === 0) {
           $('#warningMessageBoxContent').text("No annotations available for that image");
           $('#warningMessageBox').show(200).delay(1500).hide(200);
           $('#annotationsLoadingIndicator').hide();
+          return;
         }
-      },
-      success: function(data){
-        cachedAnnotations = [];
 
         var entries;
         var color;
@@ -222,6 +221,7 @@
       },
       success: function(data){
         $("#image").attr("imageId", data.image.uuid);
+        populateGotoDlg(data.image.uuid);
 
         var scaleFactor = getCanvasScaleFactor(data.image.width);
         canvas.clear();
@@ -249,6 +249,7 @@
                                 if(validationUuid !== "") {
                                   $("#moderatorRemoveLabelDlg").attr("data-remove-label-id", selector.attr("id"));
                                   $("#moderatorRemoveLabelDlg").attr("data-validation-uuid", validationUuid);
+                                  $("#moderatorRemoveLabelDlgContent").html("Do you really want to remove <b>" + selector.text()  + "</b>?");
                                   $("#moderatorRemoveLabelDlg").modal("show");
                                 } else {
                                   $("#moderatorOnlyRemoveProductiveLabelsInfoDlg").modal("show");
@@ -499,7 +500,7 @@
 
         elem = $(('<div class="ui huge ' + color + ' label existing-label" sublabel="' + subLabels[i]["name"] 
                     +'" label="' + label + '"' + ' data-validation-uuid="' 
-                    + data["validation"]["uuid"] + '"' + ' id="' + id + '"' + ' >' + displayedLabel + '</div>'));
+                    + subLabels[i]["validation"]["uuid"] + '"' + ' id="' + id + '"' + ' >' + displayedLabel + '</div>'));
 
         if(strikethrough)
           elem.css("text-decoration", "line-through");
@@ -529,50 +530,57 @@
     $('#labels').prepend(elem);
   }
 
-  function addLabel(label){
-    var added = false;
-    var escapedLabel = escapeHtml(label);
+
+  function addLabel(labelAccessor) {
+    var escapedLabelAccessor = escapeHtml(labelAccessor);
+    var escapedLabel = null;
+    var escapedSublabel = null;
+
+    if(!(labelAccessor in labelAccessorsLookupTable)) {
+      escapedLabel = escapedLabelAccessor;
+      escapedSublabel = null;
+    } else {
+      var labelItem = labelAccessorsLookupTable[escapedLabelAccessor];
+      escapedLabel = escapeHtml(labelItem.label);
+
+      if(labelItem.sublabel !== null)
+        escapedSublabel = escapeHtml(labelItem.sublabel);
+      else
+        escapedSublabel = null;
+    }
+
     var baseLabelExists = labelExists(escapedLabel);
-    var subLabels = []; 
-    var subLabelsDict = {};
-    if(escapedLabel in labelMap){
-      subLabelsDict = labelMap[escapedLabel]["has"];
-    }
-
-    for (key in subLabelsDict) {
-      if (subLabelsDict.hasOwnProperty(key))
-        subLabels.push(key);
-    }
+    var added = false;
+    var color = colorMap[escapedLabel];
 
 
-    var color = colorMap[label];
+    if(escapedSublabel !== null) {
+      if(!sublabelExists(escapedLabel, escapedSublabel)) {
+        $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + escapedSublabel + 
+                                '" label="' + escapedLabel + '"' + '>' + escapedSublabel + '/' + escapedLabel + 
+                                '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+        added = true;
 
-    if((subLabels !== null) && (subLabels.length > 0)){
-      for(var j = 0; j < subLabels.length; j++){
-        if(!sublabelExists(label, subLabels[j])){
-          $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + subLabels[j] +'" label="' + escapedLabel + '"' + '>' + subLabels[j] + '/' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
-          added = true;
-
-          if(escapedLabel in newlyAddedLabels){
-            var alreadyAvailableSubLabels = newlyAddedLabels[escapedLabel];
-            alreadyAvailableSubLabels.push(subLabels[j])
-            newlyAddedLabels[escapedLabel] = alreadyAvailableSubLabels;
-          }
-          else{
-            newlyAddedLabels[escapedLabel] = [subLabels[j]];
-          }
+        if(escapedLabel in newlyAddedLabels) {
+          var alreadyAvailableSubLabels = newlyAddedLabels[escapedLabel];
+          alreadyAvailableSubLabels.push(escapedSublabel)
+          newlyAddedLabels[escapedLabel] = alreadyAvailableSubLabels;
         }
-      }    
-    }
-    else{ 
+        else {
+          newlyAddedLabels[escapedLabel] = [escapedSublabel];
+        }
+      }
+    } else {
       if(!baseLabelExists)
         newlyAddedLabels[escapedLabel] = [];
     }
 
-    if(!baseLabelExists){
+    if(!baseLabelExists) {
       added = true;
-      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
+      $('#labels').prepend($(('<div class="ui huge ' + color + ' label" label="' + escapedLabel +  '" >' + 
+                              escapedLabel + '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
     }
+
 
     if(!added) {
       $('#warningMessageBoxContent').text("Label already exists");
@@ -740,13 +748,24 @@
     canvas = new CanvasDrawer("image");
     canvas.fabric().selection = false;
 
+    {{ if eq .type "object" }}
+    {{ if (eq .sessionInformation.LoggedIn false) }}
+    var addLabelsToDropdown = true;
+
+    {{ end }}
+    {{ end }}
+
     var availableLabels = [];
     var availableLabelsLookupTable = {} //use map for faster access
-    var productiveLabels = {{ .labels }};
-    for (var key in productiveLabels) {
-      if (productiveLabels.hasOwnProperty(key)) { 
+    for (var key in labelAccessorsLookupTable) {
+      if (labelAccessorsLookupTable.hasOwnProperty(key)) {
         availableLabelsLookupTable[key] = true;
         availableLabels.push(escapeHtml(key));
+
+        if(typeof addLabelsToDropdown !== typeof undefined && addLabelsToDropdown) {
+          $("#labelDropdownMenu").append(('<div class="item" data-value="' + 
+                                            escapeHtml(key) + '"><i class="tag icon"></i>' + escapeHtml(key) + '</div>'));
+        }
       }
     } 
 
@@ -1036,10 +1055,7 @@
                   <!--<input class="prompt" placeholder="Enter Label..." type="text" id="newLabel">-->
                   <div class="ui search selection dropdown" id="labelDropdown">
                     <div class="default text">Select Label</div>
-                    <div class="menu">
-                      {{ range $key, $value := .labels }}
-                      <div class="item" data-value="{{ $key }}"><i class="tag icon"></i>{{ $key }}</div>
-                      {{ end }}
+                    <div class="menu" id="labelDropdownMenu">
                     </div>
                   </div>
 
@@ -1126,7 +1142,7 @@
       </div>
 
       {{ template "report_dlg.html" .}}
-      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "#image" "currentScreen" "labeling" "languages" .languages "type" .type }}
+      {{ template "goto_labels_dlg.html" dict "validation" 1 "annotation" 1 "apiBaseUrl" .apiBaseUrl "imageIdentifier" "" "currentScreen" "labeling" "languages" .languages "type" .type }}
 
       {{ if eq .isModerator true }}
       {{ template "moderator_label_remove_dlg.html" dict "apiBaseUrl" .apiBaseUrl}}

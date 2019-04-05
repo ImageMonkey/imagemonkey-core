@@ -9,3 +9,4 @@ avatars/*
 src/shared_secrets.go
 quarantine/*
 tests/secrets.go
+tests/ui/__pycache__

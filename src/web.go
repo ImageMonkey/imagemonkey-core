@@ -25,6 +25,11 @@ import (
 	imagemonkeydb "./database"
 	languages "./languages"
 	img "./image"
+	"github.com/NYTimes/gziphandler"
+	"github.com/bbernhard/gin-wraphh"
+	"compress/gzip"
+	"net/url"
+	"io/ioutil"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -37,7 +42,7 @@ func ShowErrorPage(c *gin.Context) {
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
     templ := template.New("main").Funcs(funcMap)
     err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-        if strings.Contains(path, ".html") {
+        if strings.Contains(path, ".html") || strings.Contains(path, ".js") {
             _, err = templ.ParseFiles(path)
             if err != nil {
                 return err
@@ -89,6 +94,7 @@ func ReverseProxy(target string, sessionCookieHandler *SessionCookieHandler,
 	            req.URL.Scheme = "http"
 	            req.URL.Host = target
 	            req.Host = ""
+	            req.URL.Path = ""
 	        }
 	        proxy := &httputil.ReverseProxy{Director: director}
 	        proxy.ServeHTTP(c.Writer, c.Request)
@@ -105,6 +111,7 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
@@ -114,7 +121,11 @@ func main() {
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	listenPort := flag.Int("listen_port", 8080, "Specify the listen port")
 	publicBackupsPath := flag.String("public_backups_path", "../public_backups/public_backups.json", "Path to public backups")
-	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL") 
+	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL")
+	modelsPath :=   flag.String("models_path", "https://raw.githubusercontent.com/bbernhard/imagemonkey-models/master/models.json", 
+								"Path to the pre-trained models")
+	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
+	localSentryDsn := flag.String("local_sentry_dsn", "http://sentry:sentry@127.0.0.1:8080/sentry", "local Sentry DSN")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -132,7 +143,10 @@ func main() {
 		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up web worker", nil)
+	} else { //also disable local sentry reporting
+		*localSentryDsn = ""
 	}
+
 
 	var tmpl *template.Template
 
@@ -186,7 +200,7 @@ func main() {
 	}
 
 	log.Debug("[Main] Reading labels")
-	labelMap, words, err := commons.GetLabelMap(*wordlistPath)
+	_, words, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
 		log.Fatal(err)
@@ -199,6 +213,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Debug("[Main] Reading Metalabel Map")
+	metaLabels := commons.NewMetaLabels(*metalabelsPath)
+	err = metaLabels.Load()
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read metalabel map...terminating!")
+		log.Fatal(err)
+	}
+
 	log.Debug("[Main] Reading public backups")
 	publicBackups, err := commons.GetPublicBackups(*publicBackupsPath)
 	if err != nil {
@@ -206,10 +228,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//currently, there is both the imageMonkeyDb and the db. 
-	//the reason for that is, that the database part initially started out really simple.
-	//as the database part now is pretty big its time to move it to an own library.
-	//until the migration is completed, we will have two database handles here.
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
 	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
@@ -222,6 +240,11 @@ func main() {
 	}
 
 	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase)
+
+	availableModels, err := commons.GetAvailableModels(*modelsPath)
+	if err != nil {
+		log.Fatal("[Main] Couldn't get available models: ", err.Error())
+	}
 
 	//if file exists, start in maintenance mode
 	maintenanceMode := false
@@ -242,6 +265,17 @@ func main() {
 
 	router := gin.Default()
 	router.SetHTMLTemplate(tmpl)
+
+	if *gzipCompress {
+		gzipHandler, err := gziphandler.GzipHandlerWithOpts(gziphandler.CompressionLevel(gzip.DefaultCompression), 
+															gziphandler.ContentTypes([]string{"text/html", "text/css", "application/javascript", "text/javascript"}))
+		if err != nil {
+			log.Fatal("[Main] Couldn't initialize Gzip Handler", err.Error())
+		}
+		router.Use(wraphh.WrapHH(gzipHandler))
+	}
+
+	
 	router.Static("./js", "../js") //serve javascript files
 	router.Static("./css", "../css") //serve css files
 
@@ -311,6 +345,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"annotationStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationStatistics("last-month"))[0],
 				"validationStatistics": commons.Pick(imageMonkeyDatabase.GetValidationStatistics("last-month"))[0],
+				"labeledObjectsStatistics": commons.Pick(imageMonkeyDatabase.GetLabeledObjectsStatistics("last-month"))[0],
 				"annotationRefinementStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month"))[0],
 				"imageDescriptionStatistics": commons.Pick(imageMonkeyDatabase.GetImageDescriptionStatistics("last-month"))[0],
 			})
@@ -368,12 +403,12 @@ func main() {
 				"type": operationType,
 				"activeMenuNr": activeMenuNr,
 				"apiBaseUrl": apiBaseUrl,
-				"labels": labelMap,
 				"languages": languages.GetAllSupported(),
 				"labelSuggestions": commons.Pick(imageMonkeyDatabase.GetLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
+				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
@@ -381,9 +416,6 @@ func main() {
 
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
-
-			//sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-			
 
 			labelId, err := commons.GetLabelIdFromUrlParams(params)
 			if err != nil {
@@ -400,7 +432,6 @@ func main() {
 			annotationId := ""
 
 			if mode == "default" {
-
 				annotationId = commons.GetParamFromUrlParams(c, "annotation_id", "")
 				if annotationId != "" {
 					mode = "refine"
@@ -426,6 +457,7 @@ func main() {
 				}
 			}
 
+			view := commons.GetParamFromUrlParams(c, "view", "default")
 			
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
@@ -439,7 +471,9 @@ func main() {
 				"annotationId": annotationId,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"annotationMode": mode,
+				"annotationView": view,
 				"onlyOnce": onlyOnce,
+				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
@@ -492,6 +526,7 @@ func main() {
 				}
 			}
 
+			validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
 			mode := commons.GetParamFromUrlParams(c, "mode", "default")
 
 			c.HTML(http.StatusOK, "validate.html", gin.H{
@@ -505,6 +540,7 @@ func main() {
 				"appIdentifier": appIdentifier,
 				"callback": callback,
 				"mode": mode,
+				"validationId": validationId,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
@@ -747,7 +783,19 @@ func main() {
 			})
 		})
 
-		router.GET("/monitoring", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
+		router.GET("/models", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			c.HTML(http.StatusOK, "models.html", gin.H{
+				"title": "Models",
+				"activeMenuNr": 16,
+				"sessionInformation": sessionInformation,
+				"models": availableModels,
+			})
+		})
+
+
+		router.GET("/monitoring/", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
 
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{
@@ -757,6 +805,69 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})*/
+
+		router.POST("/api/sentry/store/", func(c *gin.Context) {
+			//parse sentry dsn
+			sentryDsnWithoutHttps := strings.Replace(SENTRY_DSN, "https://", "", 1)
+			sentryDsnParts := strings.Split(sentryDsnWithoutHttps, ":")
+			if len(sentryDsnParts) != 2 { //invalid Sentry DSN
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			sentryKey := sentryDsnParts[0]
+
+			sentryDsnSubParts := strings.Split(sentryDsnParts[1], "/")
+			if len(sentryDsnSubParts) != 2 { //invalid Sentry DSN
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			entry := sentryDsnSubParts[1]
+
+
+			u, err := url.ParseRequestURI(c.Request.RequestURI)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			baseUrl, err := url.Parse("https://sentry.io/api/" + entry + "/store/")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			queryValues := u.Query()
+			queryValues.Set("sentry_key", sentryKey) //replace Sentry Key with real key
+
+			baseUrl.RawQuery = queryValues.Encode()
+
+			var resp *http.Response
+			var req *http.Request
+			client := &http.Client{}
+
+			req, err = http.NewRequest(c.Request.Method, baseUrl.String(), c.Request.Body)
+			for name, value := range c.Request.Header {
+				req.Header.Set(name, value[0])
+			}
+			resp, err = client.Do(req)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != 200 && resp.StatusCode != 201  {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+    		c.JSON(resp.StatusCode, body)
+		})
 
 		router.NoRoute(func(c *gin.Context) {
 			c.HTML(404, "404.html", gin.H{

@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"testing"
@@ -83,8 +83,6 @@ func TestParserKeepWhitespacesInAssigment(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected nil, but got not nil: %s", err.Error())
 	}
-
-	//t.Errorf("a = %s\n", parseResult.queryValues)
 }
 
 func TestParserAssignment(t *testing.T) {  
@@ -168,7 +166,7 @@ func TestResultSetComplexQuery1(t *testing.T) {
 	}
 
 	ref := []string{"a", "string with spaces", "c", "d"}
-	reflect.DeepEqual(parseResult.queryValues, ref)
+	reflect.DeepEqual(parseResult.QueryValues, ref)
 }
 
 func TestNotOperator(t *testing.T) {
@@ -232,7 +230,8 @@ func TestQueryAnnotationCoverage(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage=10"), true)
+	equals(t, len(parseResult.QueryValues), 2)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage=10"), true)
 }
 
 func TestQueryAnnotationCoverage1(t *testing.T) {
@@ -240,8 +239,7 @@ func TestQueryAnnotationCoverage1(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, len(parseResult.queryValues), 1)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<50"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage<50"), true)
 }
 
 func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
@@ -263,7 +261,7 @@ func TestQueryAnnotationCoverageOperator(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>=1"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage>=1"), true)
 }
 
 func TestQueryAnnotationCoverageOperator1(t *testing.T) {
@@ -271,7 +269,7 @@ func TestQueryAnnotationCoverageOperator1(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<=50"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage<=50"), true)
 }
 
 func TestQueryAnnotationCoverageOperator2(t *testing.T) {
@@ -279,7 +277,7 @@ func TestQueryAnnotationCoverageOperator2(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage=70"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage=70"), true)
 }
 
 func TestQueryAnnotationCoverageOperator3(t *testing.T) {
@@ -287,7 +285,7 @@ func TestQueryAnnotationCoverageOperator3(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage<50"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage<50"), true)
 }
 
 func TestQueryAnnotationCoverageOperator4(t *testing.T) {
@@ -295,7 +293,7 @@ func TestQueryAnnotationCoverageOperator4(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>50"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage>50"), true)
 }
 
 func TestQueryMultipleAnnotationCoverage(t *testing.T) {
@@ -303,7 +301,7 @@ func TestQueryMultipleAnnotationCoverage(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.annotated_percentage>10 AND q.annotated_percentage<10"), true)
+	equals(t, strings.Contains(parseResult.Query, "q.annotated_percentage>10 AND q.annotated_percentage<10"), true)
 }
 
 func TestQueryImageWidth(t *testing.T) {
@@ -311,7 +309,7 @@ func TestQueryImageWidth(t *testing.T) {
 	queryParser.AllowStaticQueryAttributes(true)
 	parseResult, err := queryParser.Parse(1)
 	ok(t, err)
-	equals(t, strings.Contains(parseResult.query, "q.image_width>50"), true)
+	equals(t, strings.Contains(parseResult.Query, "image_width>50"), true)
 }
 
 

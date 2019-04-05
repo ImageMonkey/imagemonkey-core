@@ -120,7 +120,7 @@ func TestGetImageDescription(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -147,7 +147,7 @@ func TestGetImageDescriptionMultiple(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -176,7 +176,7 @@ func TestGetImageDescriptionMultipleDifferent(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -210,7 +210,7 @@ func TestUnlockImageDescriptionNoModerator(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -238,7 +238,7 @@ func TestUnlockImageDescriptionFromModerator(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -276,7 +276,7 @@ func TestUnlockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -310,7 +310,7 @@ func TestUnlockImageDescriptionFromModeratorButInvalidDescriptionId(t *testing.T
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -344,7 +344,7 @@ func TestGetUnprocessedImageDescriptionsNoPermissions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -363,7 +363,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -389,7 +389,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlock(t *testing
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -422,7 +422,7 @@ func TestLockImageDescriptionFromModeratorButInvalidImageId(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -459,7 +459,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLock(t *testing.T
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -491,7 +491,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndLockCheckProcesse
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -526,7 +526,7 @@ func TestGetUnprocessedImageDescriptionsModeratorPermissionsAndUnlockCheckProces
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -561,7 +561,7 @@ func TestGetNumOfUnprocessedImageDescriptions(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -592,7 +592,7 @@ func TestAddImageDescriptionGermanLanguage(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
@@ -620,7 +620,7 @@ func TestAddImageDescriptionMultipleLanguages(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "")
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)

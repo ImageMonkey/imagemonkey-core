@@ -441,7 +441,7 @@
     <div class="one wide center aligned column"></div>
 
     <div class="five wide center aligned column">
-      <div class="ui green inverted segment">
+      <div class="ui green inverted segment" data-tooltip="The dataset contains {{ .statistics.NumOfDonations }} image donations." data-inverted="">
         <h3 class="ui center aligned header">#Donations</h3>
         <div class="ui inverted relaxed divided list">
           <div class="item">
@@ -456,8 +456,8 @@
     </div>
 
     <div class="five wide center aligned column">
-       <div class="ui purple inverted segment">
-        <h3 class="ui center aligned header">#Validations</h3>
+       <div class="ui purple inverted segment" data-tooltip="The dataset contains {{ .statistics.NumOfValidations }} labeled objects." data-inverted="">
+        <h3 class="ui center aligned header">#Labeled Objects</h3>
         <div class="ui inverted relaxed divided list">
           <div class="item">
             <div class="row">
@@ -471,7 +471,7 @@
     </div>
 
     <div class="four wide center aligned column">
-      <div class="ui pink inverted segment">
+      <div class="ui pink inverted segment" data-tooltip="There are {{ .statistics.NumOfUnlabeledDonations }} unlabeled donations in the dataset." data-inverted="">
         <h3 class="ui center aligned header">#Unlabeled Donations</h3>
         <div class="ui inverted relaxed divided list">
           <div class="item">
@@ -492,7 +492,7 @@
     <div class="one wide center aligned column"></div>
 
     <div class="five wide center aligned column">
-      <div class="ui teal inverted segment">
+      <div class="ui teal inverted segment" data-tooltip="There are {{ .statistics.NumOfAnnotationRefinements }} refinements in the dataset." data-inverted="">
         <h3 class="ui center aligned header">#Refinements</h3>
         <div class="ui inverted relaxed divided list">
           <div class="item">
@@ -507,8 +507,8 @@
     </div>
 
     <div class="five wide center aligned column">
-      <div class="ui violet inverted segment">
-        <h3 class="ui center aligned header">#Labels</h3>
+      <div class="ui violet inverted segment" data-tooltip="There are {{ .statistics.NumOfLabels }} label categories in the dataset." data-inverted="">
+        <h3 class="ui center aligned header">#Label Categories</h3>
         <div class="ui inverted relaxed divided list">
           <div class="item">
             <div class="row">
@@ -522,7 +522,7 @@
     </div>
 
     <div class="four wide center aligned column">
-      <div class="ui red inverted segment">
+      <div class="ui red inverted segment" data-tooltip="There are {{ .statistics.NumOfLabelSuggestions }} label suggestions (=labels that are not yet unlocked) in the dataset." data-inverted="">
         <h3 class="ui center aligned header">#Label Suggestions</h3>
         <div class="ui inverted relaxed divided list">
           <div class="item">

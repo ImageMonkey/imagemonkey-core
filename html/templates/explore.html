@@ -140,6 +140,8 @@
         var canvasId = ("canvas" + i.toString());
 
         annotationsScaleFactor = geometry.boxes[i].width / data[i]["width"];
+        if(annotationsScaleFactor > 1.0)
+          annotationsScaleFactor = 1.0;
 
         $("#canvasContainer").append(newCanvasItem(canvasId, geometry.boxes[i].top, geometry.boxes[i].left, geometry.boxes[i].width, geometry.boxes[i].height));
         canvas[i] = new CanvasDrawer(canvasId, geometry.boxes[i].width, geometry.boxes[i].height);

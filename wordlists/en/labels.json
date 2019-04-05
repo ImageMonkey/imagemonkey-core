@@ -1,26 +1,4 @@
 {
-	"metalabels": {
-		"animal": {
-			"description": "optional"
-		},
-		"vehicle": {
-			"description": "optional"
-		},
-		"food": {
-			"description": "optional"
-		},
-		"electronics": {
-			"description": "optional"
-		},
-		"nature": {
-			"description": "optional"
-		},
-		"sports": {
-			"description": "optional"
-		}
-	},
-
-
 	"labels": {
 		"dog": {
 			"description": "optional",
@@ -41,6 +19,26 @@
 				"mouth": {
 					"description": "optional",
 					"uuid": "d4304606-7d1f-4803-b7b4-7d37dcc30714",
+					"accessors": [".has"]
+				},
+				"tail": {
+					"description": "optional",
+					"uuid": "3fb21e22-05cc-4700-acf9-806896e2bbb9",
+					"accessors": [".has"]
+				},
+				"paw": {
+					"description": "optional",
+					"uuid": "a7725a15-95f0-4f3c-ab8b-8655662bdd46",
+					"accessors": [".has"]
+				},
+				"nose": {
+					"description": "optional",
+					"uuid": "d8fa312b-38d3-4e50-9a6d-980c6c111af9",
+					"accessors": [".has"]
+				},
+				"head": {
+					"description": "optional",
+					"uuid": "edb62ea7-d952-4953-96cc-97c31be71933",
 					"accessors": [".has"]
 				}
 			},
@@ -273,6 +271,26 @@
 					"description": "optional",
 					"uuid": "3bf40bb8-f671-46d5-9f6b-efe385010508",
 					"accessors": [".has"]
+				},
+				"tail": {
+					"description": "optional",
+					"uuid": "44fdc5c6-15b9-4a3e-9f4d-c4e3a9d1d55a",
+					"accessors": [".has"]
+				},
+				"paw": {
+					"description": "optional",
+					"uuid": "de5b8963-b32f-4050-a5ce-069ec27f67b2",
+					"accessors": [".has"]
+				},
+				"nose": {
+					"description": "optional",
+					"uuid": "09c167cd-186b-4b93-a972-ddf1f9763c8f",
+					"accessors": [".has"]
+				},
+				"head": {
+					"description": "optional",
+					"uuid": "33ed8c33-28fc-4920-8b43-1ffb89e5bef1",
+					"accessors": [".has"]
 				}
 			}
 		},
@@ -331,6 +349,18 @@
 			"uuid": "67f02864-cb77-48aa-811c-7633a7d7d564",
 			"accessors": ["."],
 			"isa": ["vehicle"],
+			"has": {
+				"wheel": {
+					"description": "optional",
+					"uuid": "dd74f30a-7908-4120-8a8f-b12082e1b04c",
+					"accessors": [".has"]
+				},
+				"headlight": {
+					"description": "optional",
+					"uuid": "e8eb2b56-921f-4b6e-985a-f10331c22fe7",
+					"accessors": [".has"]
+				}
+			},
 			"quiz": [
 				{
 					"question": "It's a...",
@@ -598,7 +628,23 @@
 			"has": {
 				"head": {
 					"description": "optional",
-					"uuid": "a9b9c7c8-9340-4b91-a573-d1f115b6d137"
+					"uuid": "a9b9c7c8-9340-4b91-a573-d1f115b6d137",
+					"accessors": [".has"]
+				},
+				"hand": {
+					"description": "optional",
+					"uuid": "9cf2d1ab-69a8-48eb-9adf-fd3977c56722",
+					"accessors": [".has"]
+				},
+				"foot": {
+					"description": "optional",
+					"uuid": "9c62425d-874b-4b50-93fc-3f4de7ef1bd5",
+					"accessors": [".has"]
+				},
+				"face": {
+					"description": "optional",
+					"uuid": "8184620a-b6bb-4a3e-9c69-9a75a18b7734",
+					"accessors": [".has"]
 				}
 			}
 		},
@@ -650,7 +696,14 @@
 		"bird": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7"
+			"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7",
+			"has": {
+				"head": {
+					"description": "optional",
+					"accessors": [".has"],
+					"uuid": "bc7f4dc3-0037-4517-893e-91e31725432d"
+				}
+			}
 		},
 		"street light": {
 			"description": "optional",
@@ -666,11 +719,6 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "d25e8353-2b45-434c-b8e7-8fe98ab2925b"
-		},
-		"kitchen": {
-			"description": "optional",
-			"accessors": ["."],
-			"uuid": "6ea6beb7-b1ce-4ee1-bc94-bd35e118ddda"
 		},
 		"lake": {
 			"description": "optional",
@@ -720,7 +768,14 @@
 		"house": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "22bbce9a-9f50-4f38-ba11-6f2963d19809"
+			"uuid": "22bbce9a-9f50-4f38-ba11-6f2963d19809",
+			"has": {
+				"roof": {
+					"description": "optional",
+					"uuid": "b21f0558-956e-4739-9dbe-247e93ac42c0",
+					"accessors": [".has"]
+				}
+			}
 		},
 		"van": {
 			"description": "optional",
@@ -735,7 +790,14 @@
 		"truck": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "60c08783-9869-4d56-804f-14e14152b02f"
+			"uuid": "60c08783-9869-4d56-804f-14e14152b02f",
+			"has": {
+				"cabin": {
+					"description": "optional",
+					"uuid": "ff4187df-b9e3-4c4c-b342-07bbf2e38310",
+					"accessors": [".has"]
+				}
+			}
 		},
 		"motorbike": {
 			"description": "optional",
@@ -1076,6 +1138,221 @@
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "a86d4227-50c3-4ded-ace6-02d7321af718"
+		},
+		"field": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "19f062dc-1f03-46fe-b672-87931596358b"
+		},
+		"forest": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "476c449a-096c-4ed5-9b19-c4b19cf5b434"
+		},
+		"beach": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1e37be04-df57-47c7-9f3e-fd7cbb01f980"
+		},
+		"carpet": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a475be1e-963c-412e-bf4b-fd57ba069e0c"
+		},
+		"rock": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c7cb83a3-1317-48dd-bd66-c93c2941e30a"
+		},
+		"chimney": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4051de80-f782-47be-a806-878ccdabd2a2"
+		},
+		"fork": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9b087567-b49b-47da-afbb-a6f5e9f0cf0f"
+		},
+		"cactus": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2de14381-5204-431e-996a-261a411c50e8"
+		},
+		"knife": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0db1c5b5-2feb-41fd-bbd0-33ff156f36c0"
+		},
+		"guitar": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "00e8851f-715e-4c03-8597-f2b2545a3ca2"
+		},
+		"butterfly": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9cb91307-ab62-489a-b774-0dea18e7f9ab"
+		},
+		"football": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9d0c112d-34eb-4d04-ac5c-0995af42dbc6"
+		},
+		"sand": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "fd5e9951-4e65-471e-9ade-b08d85eedd98"
+		},
+		"temple": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7ccdfd4d-e13a-4518-8d10-e3743fe97d80"
+		},
+		"ant": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0245c27a-b45a-4ab0-bc1c-3397651b994e"
+		},
+		"elephant": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "76b1eb48-70b3-43d4-8890-5a967649a00d"
+		},
+		"fish": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ab9bf24e-acc0-4857-85f8-907447c97127"
+		},
+		"carrot": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9eb38bb1-7468-4933-a277-aa89d18f5d4f"
+		},
+		"fence": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f45f733f-a497-473c-9254-b1d52f32ab4c"
+		},
+		"wrist watch": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2ee8481d-4319-4249-b85e-788859e628a9"
+		},
+		"glove": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ad31d449-4f82-45d4-a907-02d453dd3737"
+		},
+		"coat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f321bfbd-897c-4edc-9529-dd329e5d82be"
+		},
+		"pineapple": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1ab94463-3344-4615-a5a4-661e26d2d3b9"
+		},
+		"snail": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "20643981-dceb-4c3e-b3fd-8cb329650b65"
+		},
+		"moth": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cf97eff5-93bf-4d26-b8a2-4c5266c3641e"
+		},
+		"bowl": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "168690ff-7da0-4b7b-bcdb-d740dc355f15"
+		},
+		"sculpture": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "879940b2-247b-4079-9349-3b834b58a8c2"
+		},
+		"ladder": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "88b3789c-4acf-411b-bb2e-6c487532b7b4"
+		},
+		"train": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "dcf65e07-a71f-4226-8efd-ec6846960ba2"
+		},
+		"swimming pool": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d4a2bec5-5e2a-4e30-818e-4f975d5c5c78"
+		},
+		"castle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "2897e51d-218c-4202-b3ce-fd82ab9ea434"
+		},
+		"harbour": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0e6c12b1-8fe9-4022-985c-6b9ea3cf0bca"
+		},
+		"tower": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "996093dc-ac0c-4458-b7f4-0d4e12edc42d"
+		},
+		"pallet": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d7db16e2-ed10-49f1-b1c1-458993c7ec21"
+		},
+		"barrier": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a9640f8d-9c1c-457c-91de-62149b1b3951"
+		},
+		"helmet": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "14abedd0-85b9-4b83-a103-647bcfd1003f"
+		},
+		"wind turbine": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "b647f5f9-7bf4-4aa5-a9cf-74238b77e11b"
+		},
+		"typewriter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "42e1f70e-15ad-4f5c-bd6c-a92d1344d423"
+		},
+		"clock": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "282e4dd7-d519-49ea-858b-f100309ce0bf"
+		},
+		"skyscraper": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "30431063-77e0-47cd-9241-2fc4c7e06b76"
+		},
+		"meat": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9edffd21-99b8-4ee1-89f0-1bf4ad1ff92f"
+		},
+		"squirrel": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e948b99c-06e5-4d08-b7d1-deec3fc77b18"
+		},
+		"lizard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7b60239c-2716-4572-8458-cfbd0fae5912"
 		}
 	}
 }

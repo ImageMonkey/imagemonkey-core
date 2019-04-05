@@ -4,7 +4,7 @@ import (
     "github.com/getsentry/raven-go"
     log "github.com/Sirupsen/logrus"
     datastructures "../datastructures"
-    parser "../parser"
+    parser "../parser/v2"
     commons "../commons"
     "database/sql"
     "github.com/lib/pq"

@@ -81,6 +81,7 @@
     var numberOfQueryResults = 0;
     var numberOfCurrentlyShownResults = 0;
     var pendingImages = {};
+    var totalNumOfImages = 0;
 
     var clearImageGrid = function() {
       justifiedLayoutGeometry = null;
@@ -183,7 +184,7 @@
       numOfLastFetchedImg += n;
       numberOfCurrentlyShownResults = numOfLastFetchedImg;
 
-      $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
+      $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown (total: " + totalNumOfImages + ")");
     }
 
     function populateImageGrid(d) {
@@ -226,6 +227,7 @@
         $('#warningMessageBoxContent').text("No more images to unlock");
         $('#warningMessageBox').show(200).delay(1500).hide(200);
         $('#loadingIndicator').hide();
+        return;
       }
 
       currentEntry = unverifiedImageEntries[currentIdx];
@@ -350,13 +352,14 @@
         success: function(data) {
           $('#loadingIndicator').hide();
           currentEntry = null;
-          unverifiedImageEntries = data;
+          unverifiedImageEntries = data.images;
+          totalNumOfImages = data.total;
 
           if(unverifiedImageEntries) {
             {{ if eq .mode "default" }}
             getNextEntry();
             {{ else }}
-            populateImageGrid(data);
+            populateImageGrid(data.images);
             {{ end }}
           }
           else {

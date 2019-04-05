@@ -17,7 +17,11 @@
   }
 
   function onRevisionDropdownClicked(e) {
+    {{ if eq .annotationView "unified" }}
+    window.location.href = "annotate?annotation_id=" + annotationInfo.annotationId + "&rev=" + $(e).attr("data-index") + "&view=unified";
+    {{ else }}
     window.location.href = "annotate?annotation_id=" + annotationInfo.annotationId + "&rev=" + $(e).attr("data-index");
+    {{ end }}
   }
 </script>
 

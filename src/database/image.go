@@ -6,11 +6,12 @@ import (
     "../datastructures"
     "database/sql"
     commons "../commons"
-    parser "../parser"
+    parser "../parser/v2"
     "fmt"
     "errors"
     "encoding/json"
     "github.com/lib/pq"
+    "time"
 )
 
 type ImageDonationErrorType int
@@ -191,8 +192,50 @@ func (p *ImageMonkeyDatabase) ImageExists(hash uint64) (bool, error) {
     }
 }
 
-func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastructures.ImageInfo, autoUnlock bool, clientFingerprint string, 
-        labels []datastructures.LabelMeEntry, imageCollectionName string) ImageDonationErrorType {
+func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string) (bool, error) {
+    var queryValues []interface{}
+    queryValues = append(queryValues, imageId)
+
+    includeOwnImageDonations := ""
+    if username != "" {
+        includeOwnImageDonations = `OR (
+                                        EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM user_image u
+                                            JOIN account a ON a.id = u.account_id
+                                            WHERE u.image_id = i.id AND a.name = $2
+                                        )
+                                        AND NOT EXISTS 
+                                        (
+                                            SELECT 1 
+                                            FROM image_quarantine q 
+                                            WHERE q.image_id = i.id 
+                                        )
+                                       )`
+        queryValues = append(queryValues, username)
+        
+    }
+
+    q := fmt.Sprintf(`SELECT COUNT(i.id) FROM image i 
+                      WHERE i.key = $1 AND (i.unlocked = true %s)`, includeOwnImageDonations)
+    var num int = 0
+    err := p.db.QueryRow(q, queryValues...).Scan(&num)
+    if err != nil {
+        log.Error("[Image exists for user] Couldn't determine whether image exists: ", err.Error())
+        raven.CaptureError(err, nil)
+        return false, err
+    }
+
+    if num > 0 {
+        return true, nil
+    }
+    return false, nil
+}
+
+func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, imageInfo datastructures.ImageInfo, autoUnlock bool, 
+                                              labels []datastructures.LabelMeEntry, imageCollectionName string, labelMap map[string]datastructures.LabelMapEntry, 
+                                              metalabels *commons.MetaLabels) ImageDonationErrorType {
 	tx, err := p.db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
@@ -200,11 +243,17 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
         return ImageDonationInternalError
     }
 
+    imageProvider := imageInfo.Source.Provider
+    if imageProvider == "imagehunt" {
+        imageProvider = "donation"
+    }
+
+
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
     //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	var imageId int64 
 	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
-					  imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageInfo.Source.Provider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
+					  imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageProvider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
 	if err != nil {
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -222,14 +271,15 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
             numOfValid = 1
         }
 
-        insertedValidationIds, err = AddLabelsToImageInTransaction(clientFingerprint, imageInfo.Name, labels, numOfValid, 0, tx)
+
+        insertedValidationIds, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageInfo.Name, labels, numOfValid, 0)
         if err != nil {
             return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
         }
     }
 
 
-    if imageInfo.Source.Provider != "donation" {
+    if imageProvider != "donation" {
         imageSourceId, err := _addImageSource(imageId, imageInfo.Source, tx)
         if err != nil {
             return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
@@ -242,9 +292,9 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
     }
 
     //in case a username is provided, link image to user account
-    if username != "" {
+    if apiUser.Name != "" {
         _, err := tx.Exec(`INSERT INTO user_image(image_id, account_id)
-                            SELECT $1, id FROM account WHERE name = $2`, imageId, username)
+                            SELECT $1, id FROM account WHERE name = $2`, imageId, apiUser.Name)
         if err != nil {
             tx.Rollback()
             log.Debug("[Add user image entry] Couldn't add entry: ", err.Error())
@@ -253,13 +303,13 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
         }
     }
 
-    if imageCollectionName != "" && username != "" {
+    if imageCollectionName != "" && apiUser.Name != "" {
         _, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
                            SELECT (SELECT u.id 
                                  FROM user_image_collection u 
                                  JOIN account a ON u.account_id = a.id
                                  WHERE u.name = $1 AND a.name = $2), $3`,
-                           imageCollectionName, username, imageId)
+                           imageCollectionName, apiUser.Name, imageId)
         if err != nil {
             if err, ok := err.(*pq.Error); ok {
                 log.Info(err.Code)
@@ -269,6 +319,25 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(username string, imageInfo datastr
             }
             tx.Rollback()
             log.Error("[Add donated Image To Collection] Couldn't add image to collection: ", err.Error())
+            raven.CaptureError(err, nil)
+            return ImageDonationInternalError
+        }
+    }
+
+    if imageInfo.Source.Provider == "imagehunt" {
+        if len(insertedValidationIds) != 1 {
+            tx.Rollback()
+            err = errors.New("Couldn't create imagehunt entry due to missing or invalid label")
+            log.Error("[Create ImageHunt entry for donated image]", err.Error())
+            raven.CaptureError(err, nil)
+            return ImageDonationInternalError 
+        }
+
+        _, err := tx.Exec(`INSERT INTO imagehunt_task(image_validation_id, created)
+                            VALUES($1, $2)`, insertedValidationIds[0], time.Now().Unix())
+        if err != nil {
+            tx.Rollback()
+            log.Error("[Create ImageHunt entry for donated image] Couldn't create entry: ", err.Error())
             raven.CaptureError(err, nil)
             return ImageDonationInternalError
         }
@@ -340,8 +409,8 @@ func (p *ImageMonkeyDatabase) ReportImage(imageId string, reason string) error{
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool, limit int) ([]datastructures.LockedImage, error){
-    var images []datastructures.LockedImage
+func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuffle bool, limit int) (datastructures.LockedImages, error){
+    var lockedImages datastructures.LockedImages
     var queryValues []interface{}
 
     orderRandomly := ""
@@ -387,14 +456,32 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                     %s
                     %s`, q1, orderRandomly, limitBy)
 
+
+    totalImagesQuery := fmt.Sprintf(`SELECT count(*) 
+                                     FROM 
+                                     ( SELECT i.id as image_id, i.image_provider_id as image_provider_id,
+                                       i.unlocked as unlocked
+                                       FROM image i
+                                     ) q
+                                     JOIN image_provider p ON p.id = q.image_provider_id 
+                                     %s AND q.unlocked = false`, q1)
+
     var err error
     var rows *sql.Rows
-    rows, err = p.db.Query(q, queryValues...)
+    
+    tx, err := p.db.Begin()
+    if err != nil {
+        log.Debug("[Fetch unverified images] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return lockedImages, err
+    }
+
+    rows, err = tx.Query(q, queryValues...)
 
     if err != nil {
         log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
         raven.CaptureError(err, nil)
-        return images, err
+        return lockedImages, err
     }
 
     defer rows.Close()
@@ -405,13 +492,28 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
         if err != nil {
             log.Debug("[Fetch unverified images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
-            return images, err
+            return lockedImages, err
         }
 
-        images = append(images, image)
+        lockedImages.Images = append(lockedImages.Images, image)
     }
 
-    return images, nil
+
+    err = tx.QueryRow(totalImagesQuery).Scan(&lockedImages.Total)
+    if err != nil {
+        log.Debug("[Fetch unverified images] Couldn't get number of images: ", err.Error())
+        raven.CaptureError(err, nil)
+        return lockedImages, err
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Debug("[Fetch unverified images] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return lockedImages, err
+    }
+
+    return lockedImages, nil
 }
 
 func (p *ImageMonkeyDatabase) DeleteImage(uuid string) error {

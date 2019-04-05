@@ -17,7 +17,6 @@ import (
 	"errors"
 	"html"
 	"net/url"
-	"bytes"
     "strings"
     "encoding/base64"
     "github.com/dgrijalva/jwt-go"
@@ -27,13 +26,45 @@ import (
     datastructures "./datastructures"
     imagemonkeydb "./database"
     commons "./commons"
-    parser "./parser"
+    parser "./parser/v2"
     "image"
     img "./image"
-	//"gopkg.in/h2non/bimg.v1"
 )
 
 var geoipDb *geoip2.Reader
+
+func handleImageAnnotationsRequest(c *gin.Context, imageId string, imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase, 
+									authTokenHandler *AuthTokenHandler, apiBaseUrl string) {
+	var apiUser datastructures.APIUser
+	apiUser.ClientFingerprint = getBrowserFingerprint(c)
+	apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+	_, err := uuid.FromString(imageId)
+	if err != nil {
+		c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid image id"})
+		return
+	}
+
+	annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parser.ParseResult{}, imageId, apiBaseUrl)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+		return
+	}
+
+	if len(annotatedImages) == 0 {
+		imageExistsForUser, err := imageMonkeyDatabase.ImageExistsForUser(imageId, apiUser.Name)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
+			return
+		}
+		if !imageExistsForUser {
+			c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid image id"})
+			return
+		}
+	}
+
+	c.JSON(200, annotatedImages)
+}
 
 func handleUnverifiedDonation(imageId string, action string, 
 								donationsDir string, unverifiedDonationsDir string, imageQuarantineDir string,
@@ -217,45 +248,6 @@ func pushAnnotationCoverageUpdateRequestToRedis(redisPool *redis.Pool, uuid stri
 
         shapeType := obj["type"]
         if shapeType == "rect" {
-        	var rectangleAnnotation RectangleAnnotation 
-			err = json.Unmarshal(r, &rectangleAnnotation)
-			if err != nil {
-				return err
-			}
-        } else if shapeType == "ellipse" {
-        	var ellipsisAnnotation EllipsisAnnotation 
-			err = json.Unmarshal(r, &ellipsisAnnotation)
-			if err != nil {
-				return err
-			}
-        } else if shapeType == "polygon" {
-        	var polygonAnnotation PolygonAnnotation 
-			err = json.Unmarshal(r, &polygonAnnotation)
-			if err != nil {
-				return err
-			}
-        } else {
-        	return errors.New("Invalid shape type")
-        }
-	}
-
-	if len(annotations) == 0 {
-		return errors.New("annotations missing")
-	}
-
-	return nil
-}*/
-
-func annotationsValid(annotations []json.RawMessage) error{
-	for _, r := range annotations {
-		var obj map[string]interface{}
-        err := json.Unmarshal(r, &obj)
-        if err != nil {
-            return err
-        }
-
-        shapeType := obj["type"]
-        if shapeType == "rect" {
         	var rectangleAnnotation datastructures.RectangleAnnotation 
         	decoder := json.NewDecoder(bytes.NewReader([]byte(r)))
         	decoder.DisallowUnknownFields() //throw an error in case of an unknown field 
@@ -292,7 +284,7 @@ func annotationsValid(annotations []json.RawMessage) error{
 	}
 
 	return nil
-}
+}*/
 
 
 func getBrowserFingerprint(c *gin.Context) string {
@@ -335,9 +327,23 @@ func getUsernameFromContext(c *gin.Context, authTokenHandler *AuthTokenHandler) 
 }
 
 func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username string, imageSource datastructures.ImageSource, 
-			labelMap map[string]datastructures.LabelMapEntry, dir string, redisPool *redis.Pool, statisticsPusher *commons.StatisticsPusher, 
-			geodb *geoip2.Reader, autoUnlock bool) {
+			labelMap map[string]datastructures.LabelMapEntry, metalabels *commons.MetaLabels, dir string, 
+			redisPool *redis.Pool, statisticsPusher *commons.StatisticsPusher, geodb *geoip2.Reader, autoUnlock bool) {
 	label := c.PostForm("label")
+
+
+	if imageSource.Provider == "imagehunt" {
+		if label == "" {
+			c.JSON(400, gin.H{"error": "Please provide a label"})
+			return
+		} else {
+			if !commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
+				c.JSON(400, gin.H{"error": "Please provide a valid label"})
+				return
+			}
+		}
+	}
+
 
 	file, header, err := c.Request.FormFile("image")
 	if err != nil {
@@ -381,13 +387,6 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
         return
     }
 
-    if label != "" { //allow unlabeled donation. If label is provided it needs to be valid!
-        if !commons.IsLabelValid(labelMap, label, []datastructures.Sublabel{}) {
-        	c.JSON(409, gin.H{"error": "Couldn't add photo - invalid label"})
-        	return
-        }
-    }
-
     addSublabels := false
     temp := c.PostForm("add_sublabels")
     if temp == "true" {
@@ -400,17 +399,26 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 		return
 	}
 
-
-	labelMapEntry := labelMap[label]
-	if !addSublabels {
-		labelMapEntry.LabelMapEntries = nil
-	}
 	var labelMeEntry datastructures.LabelMeEntry
 	var labelMeEntries []datastructures.LabelMeEntry
 	labelMeEntry.Label = label
-	labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
-	for key, _ := range labelMapEntry.LabelMapEntries {
-		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: key})
+
+	if label != "" {
+		if commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
+			labelMapEntry := labelMap[label]
+			if !addSublabels {
+				labelMapEntry.LabelMapEntries = nil
+			}
+			labelMeEntry.Annotatable = true //assume that the label that was directly provided together with the donation is annotatable 
+			for key, _ := range labelMapEntry.LabelMapEntries {
+				labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: key})
+			}
+		} else { //labels that are not already productive, can only be added if authenticated
+			if username == "" {
+				c.JSON(401, gin.H{"error": "Authentication required"})
+				return
+			}
+		}
 	}
 	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
@@ -432,7 +440,13 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 	imageInfo.Source = imageSource
 	imageInfo.Name = uuid
 
-	e := db.AddDonatedPhoto(username, imageInfo, autoUnlock, browserFingerprint, labelMeEntries, imageCollectionName)
+	var apiUser datastructures.APIUser
+	apiUser.ClientFingerprint = browserFingerprint
+	apiUser.Name = username
+
+
+	e := db.AddDonatedPhoto(apiUser, imageInfo, autoUnlock, labelMeEntries, 
+							imageCollectionName, labelMap, metalabels)
 	if e == imagemonkeydb.ImageDonationInternalError {
 		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})	
 		return
@@ -485,6 +499,8 @@ func main(){
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 	imageQuarantineDir := flag.String("image_quarantine_dir", "../quarantine/", "Location of the images that are put in quarantine")
@@ -500,6 +516,7 @@ func main(){
 	listenPort := flag.Int("listen_port", 8081, "Specify the listen port")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081/", "API Base URL")
 	corsAllowOrigin := flag.String("cors_allow_origin", "*", "CORS Access-Control-Allow-Origin")
+	imageHuntAssetsDir := flag.String("imagehunt_assets_dir", "../img/game-assets/", "ImageHunt Game Assets Directory")
 
 	sentryEnvironment := "api"
 
@@ -524,14 +541,21 @@ func main(){
 		log.Fatal(err)
 	}
 
-	//if the mostPopularLabels gets extended with sublabels, 
-	//adapt getRandomGroupedImages() and validateImages() also!
-	//mostPopularLabels := []string{"cat", "dog"}
+	log.Debug("[Main] Reading Metalabel Map")
+	metaLabels := commons.NewMetaLabels(*metalabelsPath)
+	err = metaLabels.Load()
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read metalabel map...terminating!")
+		log.Fatal(err)
+	}
 
-	//currently, there is both the imageMonkeyDb and the db. 
-	//the reason for that is, that the database part initially started out really simple.
-	//as the database part now is pretty big its time to move it to an own library.
-	//until the migration is completed, we will have two database handles here.
+	log.Debug("[Main] Reading label refinements")
+	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)
+	if err != nil {
+		fmt.Printf("[Main] Couldn't read label refinements: %s...terminating!", *labelRefinementsPath)
+		log.Fatal(err)
+	}
+
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
 	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
 	if err != nil {
@@ -750,12 +774,12 @@ func main(){
 				return
 			} 
 
-			unlocked, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
+			isOwnDonation, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
 			if err != nil {
 				c.String(500, "Couldn't process request, please try again later")
 				return
 			}
-			if !unlocked {
+			if !isOwnDonation {
 				//check if user has unlock permission
 				userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
 				if err != nil {
@@ -785,6 +809,27 @@ func main(){
 	            c.String(500, "Couldn't process request, please try again later")
 	            return
 	        }
+		})
+
+		router.GET("/v1/unverified-donation/:imageid/annotations", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfoFromUrl(c).Username
+
+			isOwnDonation, err := imageMonkeyDatabase.IsOwnDonation(imageId, apiUser.Name) 
+			if err != nil {
+				c.String(500, "Couldn't process request, please try again later")
+				return
+			}
+
+			if !isOwnDonation {
+				c.String(403, "You do not have the appropriate permissions to access the image")
+				return
+			}
+
+			handleImageAnnotationsRequest(c, imageId, imageMonkeyDatabase, authTokenHandler, *apiBaseUrl)
 		})
 
 
@@ -847,7 +892,7 @@ func main(){
 
 				//we trust images from the labelme database, so we automatically save them
 				//into the donations folder and unlock them per default.
-				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, dir, redisPool, 
+				donate(c, imageMonkeyDatabase, "", imageSource, labelMap, metaLabels, dir, redisPool, 
 						statisticsPusher, geoipDb, autoUnlock)
 			})
 
@@ -865,7 +910,8 @@ func main(){
 					return
 				}
 
-				err = annotationsValid(annotations.Annotations)
+				annotationsValidator := commons.NewAnnotationsValidator(annotations.Annotations)
+				err = annotationsValidator.Parse()
 				if err != nil {
 					c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 					return
@@ -875,8 +921,15 @@ func main(){
 				apiUser.ClientFingerprint = ""
 				apiUser.Name = ""
 
-				_, err = imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, true)
-				if(err != nil){
+				var annos []datastructures.AnnotationsContainer
+				annos = append(annos, datastructures.AnnotationsContainer{
+												Annotations: annotations, 
+												AllowedRefinements: annotationsValidator.GetRefinements(), 
+												AutoGenerated: true,
+										})
+
+				_, err = imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annos)
+				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 					return
 				}
@@ -947,7 +1000,9 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			image, err := imageMonkeyDatabase.GetImageToValidate("", apiUser.Name)
+			validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
+
+			image, err := imageMonkeyDatabase.GetImageToValidate(validationId, apiUser.Name)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1137,7 +1192,7 @@ func main(){
 				return
 			} 
 			
-			err := imageMonkeyDatabase.AddLabelsToImage(apiUser, labelMap, imageId, labels)
+			err := imageMonkeyDatabase.AddLabelsToImage(apiUser, labelMap, metaLabels, imageId, labels)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1148,7 +1203,17 @@ func main(){
 		router.GET("/v1/donation/:imageid/labels", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 
-			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, "")
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			includeOnlyUnlockedLabels := false
+			temp := commons.GetParamFromUrlParams(c, "only_unlocked_labels", "")
+			if temp == "true" {
+				includeOnlyUnlockedLabels = true
+			}
+
+			img, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name, includeOnlyUnlockedLabels)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1174,23 +1239,7 @@ func main(){
 
 		router.GET("/v1/donation/:imageid/annotations", func(c *gin.Context) {
 			imageId := c.Param("imageid")
-
-			var apiUser datastructures.APIUser
-			apiUser.ClientFingerprint = getBrowserFingerprint(c)
-			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
-
-			annotatedImages, err := imageMonkeyDatabase.GetAnnotations(apiUser, parser.ParseResult{}, imageId, *apiBaseUrl)
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"error": "Couldn't process request - please try again later"})
-				return
-			}
-
-			if len(annotatedImages) == 0 {
-				c.JSON(422, gin.H{"error": "Couldn't process request - missing result set"})
-				return
-			}
-
-			c.JSON(200, annotatedImages)
+			handleImageAnnotationsRequest(c, imageId, imageMonkeyDatabase, authTokenHandler, *apiBaseUrl)
 		})
 
 		router.GET("/v1/donation/:imageid/annotations/coverage", func(c *gin.Context) {
@@ -1275,7 +1324,7 @@ func main(){
 
 			imageId := commons.GetParamFromUrlParams(c, "image_id", "")
 
-			image, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name)
+			image, err := imageMonkeyDatabase.GetImageToLabel(imageId, apiUser.Name, false)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -1408,9 +1457,9 @@ func main(){
 				return
 		    }
 
-			queryParser := parser.NewQueryParserV2(query)
+			queryParser := parser.NewQueryParser(query)
 			queryParser.AllowStaticQueryAttributes(true)
-	        parseResult, err := queryParser.Parse(1)
+	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
@@ -1473,7 +1522,8 @@ func main(){
 			}
 
 			queryParser := parser.NewQueryParser(query)
-	        parseResult, err := queryParser.Parse(1)
+			queryParser.SetVersion(1)
+	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
@@ -1603,6 +1653,10 @@ func main(){
 			c.JSON(http.StatusOK, labelAccessors)
 		})
 
+		router.GET("/v1/label/refinements", func(c *gin.Context) {
+			c.JSON(http.StatusOK, labelRefinementsMap)
+		})
+
 		router.GET("/v1/label/graph/:labelgraphname", func(c *gin.Context) {
 			labelGraphName := c.Param("labelgraphname")
 
@@ -1730,8 +1784,8 @@ func main(){
 			}
 
 
-			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, *unverifiedDonationsDir, redisPool, 
-					statisticsPusher, geoipDb, false)
+			donate(c, imageMonkeyDatabase, username, imageSource, labelMap, metaLabels, 
+					*unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
 		})
 
 		router.POST("/v1/report/:imageid", func(c *gin.Context) {
@@ -1763,9 +1817,9 @@ func main(){
 					return
 		        }
 
-		        queryParser := parser.NewQueryParserV2(query)
+		        queryParser := parser.NewQueryParser(query)
 		        queryParser.AllowStaticQueryAttributes(true)
-		        parseResult, err := queryParser.Parse(1)
+		        parseResult, err := queryParser.Parse()
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
 		            return
@@ -1808,9 +1862,9 @@ func main(){
 					return
 		        }
 
-		        queryParser := parser.NewQueryParserV2(query)
+		        queryParser := parser.NewQueryParser(query)
 		        queryParser.AllowStaticQueryAttributes(true)
-		        parseResult, err := queryParser.Parse(1)
+		        parseResult, err := queryParser.Parse()
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
 		            return
@@ -1887,7 +1941,8 @@ func main(){
 				return
 			}
 
-			err = annotationsValid(annotations.Annotations)
+			annotationsValidator := commons.NewAnnotationsValidator(annotations.Annotations)
+			err = annotationsValidator.Parse()
 			if err != nil {
 				c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 				return
@@ -1897,8 +1952,13 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			err = imageMonkeyDatabase.UpdateAnnotation(apiUser, annotationId, annotations)
-			if(err != nil){
+			annotationsContainer := datastructures.AnnotationsContainer{
+										Annotations: annotations, 
+										AllowedRefinements: annotationsValidator.GetRefinements(), 
+										AutoGenerated: false,
+									}
+			err = imageMonkeyDatabase.UpdateAnnotation(apiUser, annotationId, annotationsContainer)
+			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't update annotation - please try again later"})
 				return
 			}
@@ -1979,23 +2039,11 @@ func main(){
 			c.JSON(http.StatusOK, nil)
 		})
 
-		router.POST("/v1/annotate/:imageid", func(c *gin.Context) {
+
+		router.POST("/v1/donation/:imageid/annotate", func(c *gin.Context) {
 			imageId := c.Param("imageid")
 			if imageId == "" {
 				c.JSON(422, gin.H{"error": "invalid request - image id missing"})
-				return
-			}
-
-			var annotations datastructures.Annotations
-			err := c.BindJSON(&annotations)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
-				return
-			}
-
-			err = annotationsValid(annotations.Annotations)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
 				return
 			}
 
@@ -2003,9 +2051,36 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
+			var annotations []datastructures.Annotations
+			err := c.BindJSON(&annotations)
+			if err != nil {
+				c.JSON(422, gin.H{"error": "invalid request - annotations missing"})
+				return
+			}
 
-			annotationId, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annotations, false)
-			if(err != nil){
+			var annos []datastructures.AnnotationsContainer
+			for _, annotation := range annotations {
+
+				annotationsValidator := commons.NewAnnotationsValidator(annotation.Annotations)
+				err = annotationsValidator.Parse()
+				if err != nil {
+					c.JSON(422, gin.H{"error": "invalid request - annotations invalid"})
+					return
+				}
+
+				if annotation.Sublabel == "" && metaLabels.Contains(annotation.Label) {
+					c.JSON(400, gin.H{"error": "Couldn't add annotations - it's not possible to annotate metalabels"})
+					return
+				}
+			
+				annos = append(annos, datastructures.AnnotationsContainer{
+										Annotations: annotation,
+										AllowedRefinements: annotationsValidator.GetRefinements(),
+										AutoGenerated: false,
+								})
+			}
+			annotationIds, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annos)
+			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
 				return
 			}
@@ -2030,8 +2105,10 @@ func main(){
 
 			pushAnnotationCoverageUpdateRequestToRedis(redisPool, imageId, "image")
 
-			c.Writer.Header().Set("Location", (*apiBaseUrl + "v1/annotation?annotation_id=" + annotationId))
-			c.JSON(201, nil)
+			if len(annotationIds) == 1 {
+				c.Writer.Header().Set("Location", (*apiBaseUrl + "v1/annotation?annotation_id=" + annotationIds[0]))
+				c.JSON(201, nil)
+			}
 		})
 
 		router.GET("/v1/annotate", func(c *gin.Context) {
@@ -2091,8 +2168,9 @@ func main(){
 		    }
 
 			queryParser := parser.NewQueryParser(query)
+			queryParser.SetVersion(1)
 			queryParser.AllowStaticQueryAttributes(true)
-	        parseResult, err := queryParser.Parse(1)
+	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
 	            return
@@ -2113,9 +2191,6 @@ func main(){
 			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
-
-			log.Debug(apiUser.Name)
-			
 
 			autoGenerated := false
 			if temp, ok := params["auto_generated"]; ok {
@@ -2177,8 +2252,8 @@ func main(){
 		            return
 		        }
 
-				queryParser := parser.NewQueryParserV2(query)
-		        parseResult, err = queryParser.Parse(1)
+				queryParser := parser.NewQueryParser(query)
+		        parseResult, err = queryParser.Parse()
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
 		            return
@@ -2234,8 +2309,14 @@ func main(){
 
 			err := imageMonkeyDatabase.AddOrUpdateRefinements(annotationId, annotationDataId, annotationRefinementEntries, browserFingerprint)
 			if err != nil {
-				c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
-				return
+				switch err.(type) {
+					case *imagemonkeydb.InvalidLabelIdError:
+						c.JSON(400, gin.H{"error": "Couldn't add annotation refinement - please provide a valid label id"})
+						return
+					default:
+						c.JSON(500, gin.H{"error": "Couldn't add annotation refinement - please try again later"})
+						return
+				}
 			}
 
 			//get client IP address and try to determine country
@@ -2658,9 +2739,6 @@ func main(){
 		})
 
 		router.POST("/v1/user/:username/api-token", func(c *gin.Context) {
-			type ApiTokenRequest struct {
-				Description string `json:"description"`
-			}
 			username := c.Param("username")
 
 			if username == "" {
@@ -2668,7 +2746,7 @@ func main(){
 				return
 			}
 
-			var apiTokenRequest ApiTokenRequest
+			var apiTokenRequest datastructures.ApiTokenRequest
 			if c.BindJSON(&apiTokenRequest) != nil {
 				c.JSON(422, gin.H{"error": "Invalid request - description missing"})
 				return
@@ -2875,7 +2953,7 @@ func main(){
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-			annotatedStatistics, err := imageMonkeyDatabase.GetAnnotatedStatistics(apiUser)
+			annotatedStatistics, err := imageMonkeyDatabase.GetAnnotatedStatistics(apiUser, true)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
@@ -2927,6 +3005,71 @@ func main(){
 			}
 			c.JSON(200, gin.H{"activity": activity, "period": "last-month"})
 		})
+
+		router.GET("/v1/user/:username/games/imagehunt/tasks", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			username := c.Param("username")
+
+			if (apiUser.Name == "") || (apiUser.Name != username) {
+				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+				return
+			}
+
+			imageHuntTasks, err := imageMonkeyDatabase.GetImageHuntTasks(apiUser, *apiBaseUrl)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, imageHuntTasks)
+		})
+
+		router.GET("/v1/user/:username/games/imagehunt/stats", func(c *gin.Context) {
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			username := c.Param("username")
+			utcOffset, err := commons.GetIntParamFromUrlParams(c, "utc_offset", 0)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "Please provide a valid utc offset"})
+				return
+			}
+
+			if (apiUser.Name == "") || (apiUser.Name != username)  {
+				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+				return
+			}
+
+			imageHuntStats, err := imageMonkeyDatabase.GetImageHuntStats(apiUser, *apiBaseUrl + "v1/games/imagehunt/assets/" ,len(labelMap), utcOffset)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, imageHuntStats)
+		})
+
+		router.POST("/v1/games/imagehunt/donate", func(c *gin.Context) {
+			var imageSource datastructures.ImageSource
+			imageSource.Provider = "imagehunt"
+			imageSource.Trusted = false
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+				return
+			}
+
+			donate(c, imageMonkeyDatabase, apiUser.Name, imageSource, labelMap, metaLabels, 
+					*unverifiedDonationsDir, redisPool, statisticsPusher, geoipDb, false)
+		})
+
+		router.Static("/v1/games/imagehunt/assets", *imageHuntAssetsDir)
 	}
 
 	if *corsAllowOrigin == "*" {

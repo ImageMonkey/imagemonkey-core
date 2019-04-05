@@ -253,8 +253,8 @@ func makeLabelMeEntry(tx *sql.Tx, name string) (datastructures.LabelMeEntry, err
     return label, nil
 }
 
-func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, label datastructures.LabelMeEntry) bool {
-	return commons.IsLabelValid(labelMap, label.Label, label.Sublabels)
+func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, metalabels *commons.MetaLabels, label datastructures.LabelMeEntry) bool {
+	return commons.IsLabelValid(labelMap, metalabels, label.Label, label.Sublabels)
 }
 
 
@@ -264,6 +264,7 @@ func main() {
 	trendingLabel := flag.String("trendinglabel", "", "The name of the trending label that should be made productive")
 	renameTo := flag.String("renameto", "", "Rename the label")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels map")
 	dryRun := flag.Bool("dryrun", true, "Specifies whether this is a dryrun or not")
 	autoCloseIssue := flag.Bool("autoclose", true, "Automatically close issue")
 	githubRepository := flag.String("repository", "", "Github repository")
@@ -278,6 +279,13 @@ func main() {
 	labelMap, _, err := commons.GetLabelMap(*wordlistPath)
 	if err != nil {
 		log.Error("[Main] Couldn't read label map...terminating!")
+		return
+	}
+
+	metaLabels := commons.NewMetaLabels(*metalabelsPath)
+	err = metaLabels.Load()
+	if err != nil {
+		log.Error("[Main] Couldn't read metalabel map...terminating!")
 		return
 	}
 
@@ -345,7 +353,7 @@ func main() {
 		return
 	}
 
-	if !isLabelInLabelsMap(labelMap, labelMeEntry) && *renameTo == "" {
+	if !isLabelInLabelsMap(labelMap, metaLabels, labelMeEntry) && *renameTo == "" {
 		tx.Rollback()
 		log.Error("[Main] Label doesn't exist in labels map - please add it first!")
 		return

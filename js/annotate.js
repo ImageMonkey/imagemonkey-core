@@ -34,7 +34,7 @@ function generateRandomId() {
 
 
 var Polygon = (function () {
-  function Polygon(canvas) {
+  function Polygon(canvas, polygonVertexSize = 5) {
     var inst=this;
     this.canvas = canvas;
     this.polygonMode = true;
@@ -48,7 +48,12 @@ var Polygon = (function () {
     this.currentId = "";
     this.polygons = {}
     this.currentlyShownPolygonId = "";
+    this.polygonVertexSize = polygonVertexSize;
   }
+
+  Polygon.prototype.setPolygonVertexSize = function(polygonVertexSize) {
+    this.polygonVertexSize = polygonVertexSize;
+  };
 
   Polygon.prototype.clear = function () {
     this.polygonMode = true;
@@ -81,7 +86,7 @@ var Polygon = (function () {
     var id = new Date().getTime() + random;
     var pointer = this.canvas.getPointer(options.e);
     var circle = new fabric.Circle({
-      radius: 5,
+      radius: this.polygonVertexSize,
       fill: '#ffffff',
       stroke: '#333333',
       strokeWidth: 0.5,
@@ -240,7 +245,7 @@ var Polygon = (function () {
     var polyPoints = new Array();
     for(var i = 0; i < points.length; i++){
       var circle = new fabric.Circle({
-        radius: 5,
+        radius: this.polygonVertexSize,
         fill: '#ffffff',
         stroke: '#333333',
         strokeWidth: 0.5,
@@ -271,7 +276,7 @@ var Polygon = (function () {
       });
 
       var circle = new fabric.Circle({
-        radius: 5,
+        radius: inst.polygonVertexSize,
         fill: '#ffffff',
         stroke: '#333333',
         strokeWidth: 0.5,
@@ -446,7 +451,7 @@ var FreeDrawer = (function () {
 
 
 var Annotator = (function () {
-  function Annotator(canvas, objSelected, mouseUp) {
+  function Annotator(canvas, objSelected, mouseUp, objDeselected) {
     var inst=this;
     this.canvas = canvas;
     this.className= "Rectangle";
@@ -456,6 +461,7 @@ var Annotator = (function () {
     this.type = "Rectangle";
     this.polygon = new Polygon(this.canvas);
     this.objSelected = objSelected;
+    this.objDeselected = objDeselected;
     this.history = new Array();
     this.isRedoing = false;
     this.currentHistoryPosition = 0;
@@ -479,6 +485,8 @@ var Annotator = (function () {
     this.maxStrokeWidth = 5;
     this.minStrokeWidth = 2;
     this.isSelectMoveMode = false;
+    this.refinementsPerAnnotation = {};
+    this._refAnnotations = [];
 
     this.setBrushType(this.brushType);
     this.setBrushColor(this.brushColor);
@@ -486,6 +494,10 @@ var Annotator = (function () {
 
     this.bindEvents();
   }
+
+  Annotator.prototype.setPolygonVertexSize = function(polygonVertexSize) {
+    this.polygon.setPolygonVertexSize(polygonVertexSize);
+  };
 
   Annotator.prototype._selectObjectByMouse = function(pointer) {
     var point = new fabric.Point(pointer.x, pointer.y);
@@ -546,17 +558,24 @@ var Annotator = (function () {
     });*/
 
     inst.canvas.on('mouse:down', function(o) {
-      inst.onMouseDown(o);
-      if(inst.isPanMode)
-        inst.panning = true;
-      if(inst.isSelectMoveMode) {
-        var pointer = inst.canvas.getPointer(o.e);
-        inst._selectObjectByMouse(pointer);
+      if(o) {
+        inst.onMouseDown(o);
+        if(inst.isPanMode)
+          inst.panning = true;
+        if(inst.isSelectMoveMode) {
+          var pointer = inst.canvas.getPointer(o.e);
+          inst._selectObjectByMouse(pointer);
+        }
       }
-
     });
+
+    inst.canvas.on('before:selection:cleared', function() {
+      inst.objDeselected();
+    });
+
     inst.canvas.on('mouse:move', function(o) {
-      inst.onMouseMove(o);
+      if(o)
+        inst.onMouseMove(o);
     });
     inst.canvas.on('mouse:up', function(o) {
       inst.onMouseUp(o);
@@ -880,9 +899,12 @@ var Annotator = (function () {
   Annotator.prototype.reset = function () {
     this.canvas.clear();
     this.canvas.setZoom(1.0);
-    this.canvas.viewport.position.x = 0;
-    this.canvas.viewport.position.y = 0;
+    //this.canvas.viewport.position.x = 0;
+    //this.canvas.viewport.position.y = 0;
     this.polygon.reset();
+    this.canvas.absolutePan(new fabric.Point(0,0));
+    this._refAnnotations = [];
+    this.refinementsPerAnnotation = {};
   };
 
   Annotator.prototype.deleteAll = function () {
@@ -894,6 +916,8 @@ var Annotator = (function () {
     }
     this.polygon.reset();
     this.canvas.renderAll();
+    this._refAnnotations = [];
+    this.refinementsPerAnnotation = {};
   };
 
   Annotator.prototype.deleteSelected = function (o) {
@@ -936,6 +960,7 @@ var Annotator = (function () {
           selectable: false,
           selected: false,
           evented: false,
+          id: generateRandomId(),
           strokeWidth: inst.defaultStrokeWidth
         });
 
@@ -956,6 +981,7 @@ var Annotator = (function () {
           selectable: false,
           selected: false,
           evented: false,
+          id: generateRandomId(),
           strokeWidth: inst.defaultStrokeWidth
         });
 
@@ -1097,6 +1123,31 @@ var Annotator = (function () {
     return this.isPanMode;
   }
 
+  Annotator.prototype.getIdOfSelectedItem = function() {
+    var activeObj = this.canvas.getActiveObject();
+    if(activeObj !== undefined && activeObj !== null) {
+      return activeObj.get("id");
+    }
+    return "";
+  }
+
+  Annotator.prototype.setRefinements = function(refinements) {
+    var id = this.getIdOfSelectedItem();
+    if(id !== "") {
+      this.refinementsPerAnnotation[id] = refinements;
+    }
+  }
+
+  Annotator.prototype.getRefinementsOfSelectedItem = function() {
+    var id = this.getIdOfSelectedItem();
+    if(id !== "") {
+      if(id in this.refinementsPerAnnotation) {
+        return this.refinementsPerAnnotation[id];
+      }
+    }
+    return [];
+  }
+
   Annotator.prototype.showGrid = function(){
     this.gridVisible = true;
 
@@ -1164,7 +1215,7 @@ var Annotator = (function () {
   }
 
   Annotator.prototype.toJSON = function(){
-    var data = this.canvas.toJSON();
+    var data = this.canvas.toJSON(["id"]); //include custom property "id" when converting to json
     var imgScaleX = data["backgroundImage"]["scaleX"];
     var imgScaleY = data["backgroundImage"]["scaleY"];
     var objs = data["objects"];
@@ -1178,7 +1229,7 @@ var Annotator = (function () {
     }
     else{
       var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, 
-          pointX, pointY, pX, pY, strokeWidth, strokeColor;
+          pointX, pointY, pX, pY, strokeWidth, strokeColor, annotationId, refinements;
 
       for(var i = 0; i < objs.length; i++){
         //skip polygon handles
@@ -1188,6 +1239,16 @@ var Annotator = (function () {
 
         angle = objs[i]["angle"];
         type = objs[i]["type"];
+        annotationId = objs[i]["id"];
+        refinements = [];
+        if(annotationId in this.refinementsPerAnnotation) {
+          ref = this.refinementsPerAnnotation[annotationId];
+          for(var j = 0; j < ref.length; j++) {
+            refinements.push({"label_uuid": ref[j]});
+          }
+        }
+
+
         if(type === "rect"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
           top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
@@ -1197,8 +1258,9 @@ var Annotator = (function () {
           strokeColor = objs[i]["stroke"];
 
           if((width != 0) && (height != 0))
-            res.push({"left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", 
+            res.push({"refinements": refinements, "left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", 
                       "stroke": {"width" : strokeWidth, "color": strokeColor}});
+
         }
         else if(type === "ellipse"){
           left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
@@ -1209,7 +1271,7 @@ var Annotator = (function () {
           strokeColor = objs[i]["stroke"];
 
           if((rx != 0) && (ry != 0))
-            res.push({"left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", 
+            res.push({"refinements": refinements, "left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", 
                       "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
         else if(type === "polygon"){
@@ -1232,7 +1294,8 @@ var Annotator = (function () {
             scaledPoints.push({"x" : pX, "y": pY});
           }
 
-          res.push({"points": scaledPoints, "angle": angle, "type": "polygon", "stroke": {"width" : strokeWidth, "color": strokeColor}});
+          res.push({"refinements": refinements, "points": scaledPoints, "angle": angle, "type": "polygon", 
+                    "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
       }
     }
@@ -1248,12 +1311,21 @@ var Annotator = (function () {
     }
   }
 
-  Annotator.prototype._handleLoadedAnnotation = function(obj) {
+  Annotator.prototype._handleLoadedAnnotation = function(annotation, obj) {
+    obj.id = generateRandomId();
     if(obj.type === "polygon"){
-      obj.id = generateRandomId();
       obj.objectCaching = false;
       this.polygon.addPolygon(obj);
       this.polygon.showPolyPoints(obj.id);
+    }
+
+    if("refinements" in annotation) {
+      var refinements = [];
+      var ref = annotation["refinements"];
+      for(var j = 0; j < ref.length; j++) {
+        refinements.push(ref[j]["label_uuid"]);
+      }
+      this.refinementsPerAnnotation[obj.id] = refinements;
     }
   }
 
@@ -1266,12 +1338,22 @@ var Annotator = (function () {
 
   Annotator.prototype.loadAnnotations = function(annotations, scaleFactor = 1.0) {
     this.deleteAll();
-    drawAnnotations(this.canvas, annotations, scaleFactor, this._handleLoadedAnnotation.bind(this));
+    for(var i = 0; i < annotations.length; i++) {
+      drawAnnotations(this.canvas, [annotations[i]], scaleFactor, this._handleLoadedAnnotation.bind(this, annotations[i]));
+    }
+
+    this._refAnnotations = this.toJSON();
   }
 
   Annotator.prototype.loadAutoAnnotations = function(autoAnnotations, scaleFactor = 1.0) {
     var simplifiedAutoAnnotations = this._simplifyAutoAnnotations(autoAnnotations);
     drawAnnotations(this.canvas, simplifiedAutoAnnotations, scaleFactor, this._handleLoadedAutoAnnotation.bind(this));
+  }
+
+  Annotator.prototype.isDirty = function() {
+    if(_.isEqual(this._refAnnotations, this.toJSON()))
+      return false;
+    return true;
   }
 
 
@@ -1377,6 +1459,11 @@ var AnnotationSettings = (function () {
     return "default";
   }
 
+  AnnotationSettings.prototype.getPolygonVertexSize = function() {
+    var polygonVertexSize = $("#annotationPolygonVertexSizeInput").val();
+    return polygonVertexSize;
+  }
+
   AnnotationSettings.prototype.persistAll = function() {
     var settings = new Settings();
 
@@ -1386,12 +1473,15 @@ var AnnotationSettings = (function () {
     localStorage.setItem('annotationWorkspaceSize', workspaceSize);
     var annotationMode = this.getAnnotationMode();
     settings.setAnnotationMode(annotationMode);
+    var polygonVertexSize = this.getPolygonVertexSize();
+    settings.setPolygonVertexSize(polygonVertexSize);
   }
 
   AnnotationSettings.prototype.setAll = function() {
     this.setPreferedAnnotationTool();
     this.setWorkspaceSize();
     this.setAnnotationMode();
+    this.setPolygonVertexSize();
   }
 
   AnnotationSettings.prototype.setWorkspaceSize = function() {
@@ -1442,6 +1532,11 @@ var AnnotationSettings = (function () {
       $("#annotationDefaultModeCheckbox").checkbox("set unchecked");
       $("#annotationBrowseModeCheckbox").checkbox("check");
     }
+  }
+
+  AnnotationSettings.prototype.setPolygonVertexSize = function() {
+    var settings = new Settings();
+    $("#annotationPolygonVertexSizeInput").val(settings.getPolygonVertexSize());
   }
 
   AnnotationSettings.prototype.loadPreferedAnnotationTool = function(annotator) {

@@ -295,7 +295,8 @@ func IsAlphaNumeric(s string) bool {
     return true
 }
 
-func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label string, sublabels []datastructures.Sublabel) bool {
+func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, metalabels *MetaLabels, 
+                    label string, sublabels []datastructures.Sublabel) bool {
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
@@ -308,6 +309,10 @@ func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, label strin
             }
             return true
         }
+        return true
+    }
+
+    if metalabels.Contains(label) {
         return true
     }
 
@@ -375,6 +380,18 @@ func GetParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string
     return param
 }
 
+func GetIntParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound int64) (int64, error) {
+    params := c.Request.URL.Query()
+
+    var param int64 = defaultIfNotFound
+    if temp, ok := params[name]; ok {
+        param, err := strconv.ParseInt(temp[0], 10, 64)
+        return param, err
+    }
+
+    return param, nil
+}
+
 func GetParamsFromUrlParams(c *gin.Context, name string) []string {
     params := c.Request.URL.Query()
 
@@ -411,48 +428,6 @@ func GetPublicBackups(path string) ([]datastructures.PublicBackup, error){
 
     return publicBackups, nil
 }
-
-/*type ExtractRoIFromImageErrorType int
-
-const (
-  ExtractRoIFromImageSuccess ExtractRoIFromImageErrorType = 1 << iota
-  ExtractRoIFromImageInvalidRegionError
-  ExtractRoIFromImageInternalError
-)
-
-func ExtractRoIFromImage(path string, imageRegion datastructures.ImageRegion) ([]byte, string, ExtractRoIFromImageErrorType, error) {
-    imgType := "unknown"
-    buffer, err := bimg.Read(path)
-    if err != nil {
-      log.Error("[Extract From Image] Couldn't read image: ", err.Error())
-      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
-    }
-
-    img := bimg.NewImage(buffer)
-    imgSize, err := img.Size()
-    if err != nil {
-        return []byte{}, imgType, ExtractRoIFromImageInternalError, err
-    }
-
-    if imageRegion.Top < 0 || imageRegion.Left < 0 || imageRegion.Width < 0 || imageRegion.Height < 0 {
-        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
-    }
-
-    if imageRegion.Top > imgSize.Height || imageRegion.Height > imgSize.Height || 
-        imageRegion.Left > imgSize.Width || imageRegion.Width > imgSize.Width {
-        return []byte{}, imgType, ExtractRoIFromImageInvalidRegionError, err
-    }
-
-    buf, err := img.Extract(imageRegion.Top, imageRegion.Left, imageRegion.Width, imageRegion.Height)
-    if err != nil {
-        log.Error("[Extract From Image] Couldn't read image: ", err.Error())
-      return []byte{}, imgType, ExtractRoIFromImageInternalError, err
-    }
-
-    imgType = bimg.DetermineImageTypeName(buffer)
-
-    return buf, imgType, ExtractRoIFromImageSuccess, nil
-}*/
 
 func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
     regionsOfInterest := GetParamsFromUrlParams(c, "roi")
@@ -496,4 +471,304 @@ func GetImageRegionsFromUrlParams(c *gin.Context) ([]image.Rectangle, error) {
     }
 
     return imageRects, nil
+}
+
+func GetAvailableModels(s string) ([]json.RawMessage, error) {
+    var models []json.RawMessage
+
+    _, err := url.ParseRequestURI(s)
+    if err == nil { //it's an URL
+        resp, err := http.Get(s)
+        if err != nil {
+            return models, err
+        }
+        defer resp.Body.Close()
+
+        data, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            return models, err
+        }
+
+        err = json.Unmarshal(data, &models)
+        if err != nil {
+            return models, err
+        }
+
+    } else {
+        data, err := ioutil.ReadFile(s)
+        if err != nil {
+            return models, err
+        }
+
+        err = json.Unmarshal(data, &models)
+        if err != nil {
+            return models, err
+        }
+    }
+
+    return models, nil
+}
+
+
+
+type MetaLabels struct {
+    metalabels datastructures.MetaLabelMap
+    path string
+}
+
+func NewMetaLabels(path string) *MetaLabels {
+    return &MetaLabels {
+        path: path,
+    } 
+}
+
+func (p *MetaLabels) Load() error {
+    data, err := ioutil.ReadFile(p.path)
+    if err != nil {
+        return err
+    }
+
+    err = json.Unmarshal(data, &p.metalabels)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (p *MetaLabels) GetMapping() datastructures.MetaLabelMap {
+    return p.metalabels
+}
+
+func (p *MetaLabels) Contains(val string) bool {
+    if _, ok := p.metalabels.MetaLabelMapEntries[val]; ok {
+        return true
+    }
+
+    return false
+}
+
+type AchievementsGenerator struct {
+    achievements []datastructures.ImageHuntAchievement
+
+    numOfWeekendWarriorEntries int
+    lastAddedWeekendWarriorEntry time.Time
+
+    numOfNightOwlEntries int
+    lastAddedNightOwlEntry time.Time
+
+    numOfEarlyBirdEntries int
+    lastAddedEarlyBirdEntry time.Time
+
+    numOfCouchPotatoEntries int
+    lastAddedCouchPotatorEntry time.Time
+
+    numOfWorkerBeeEntries int
+    lastAddedWorkerBeeEntry time.Time
+
+    numOfAntEntries int
+    lastAddedAntEntry time.Time
+
+    numOfGreedySquirrelEntries int
+    lastAddedGreedySquirrelEntry time.Time
+
+    numOfImageMonkeyEntries int
+    lastAddedImageMonkeyEntry time.Time
+
+    numOfAvailableLabels int
+}
+
+func NewAchievementsGenerator() *AchievementsGenerator {
+    return &AchievementsGenerator {
+        achievements: []datastructures.ImageHuntAchievement{datastructures.ImageHuntAchievement{Name: "Early Bird",
+                                                                Description: "Add an image between 05:00 and 08:00 AM on three consecutive days in a row",
+                                                                Badge: "bird.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Night Owl",
+                                                                Description: "Add an image between 00:00 and 03:00 AM on three consecutive days in a row",
+                                                                Badge: "owl.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Weekend Warrior",
+                                                                Description: "Add an image on three consecutive weekends in a row",
+                                                                Badge: "warrior.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Couch Potato",
+                                                                Description: "Add an image between 08:00 and 09:00 PM on three consecutive days in a row",
+                                                                Badge: "potato.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Worker Bee",
+                                                                Description: "Add an image every day for at least one week",
+                                                                Badge: "bee.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Ant Power",
+                                                                Description: "Add an image every day for at least one month",
+                                                                Badge: "ant.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Greedy Squirrel",
+                                                                Description: "Add an image every day for at least two months",
+                                                                Badge: "squirrel.png"},
+                                                          datastructures.ImageHuntAchievement{Name: "Image Monkey",
+                                                                Description: "Add an image for every label",
+                                                                Badge: "monkey.png"},
+                                                         },
+        numOfWeekendWarriorEntries: 0,
+        numOfNightOwlEntries: 0,
+        numOfEarlyBirdEntries: 0,
+        numOfCouchPotatoEntries: 0,
+        numOfWorkerBeeEntries: 0,
+        numOfAntEntries: 0,
+        numOfGreedySquirrelEntries: 0,
+        numOfImageMonkeyEntries: 0,
+        numOfAvailableLabels: 0,
+    } 
+}
+
+func (p *AchievementsGenerator) isConsecutiveDay(old time.Time, new time.Time) bool {
+    if old.IsZero() {
+        return true
+    }
+
+    if new.Equal(old.AddDate(0, 0, 1)) {
+        return true
+    }
+    return false
+}
+
+func (p *AchievementsGenerator) SetNumOfAvailableLabels(numOfAvailableLabels int) {
+    p.numOfAvailableLabels = numOfAvailableLabels
+}
+
+func (p *AchievementsGenerator) Add(t time.Time) {
+    weekday := t.Weekday()
+
+    //weekend warrior?
+    if (weekday == time.Sunday) || (weekday == time.Saturday) {
+        if p.isConsecutiveDay(p.lastAddedWeekendWarriorEntry, t) {
+            p.numOfWeekendWarriorEntries += 1
+            p.lastAddedWeekendWarriorEntry = t
+        } else {
+            p.numOfWeekendWarriorEntries = 0
+        }
+    }
+
+    //night owl?
+    hour, _, _ := t.Clock()
+    if hour >= 0 && hour <= 3 {
+        if p.isConsecutiveDay(p.lastAddedNightOwlEntry, t) {
+            p.numOfNightOwlEntries += 1
+            p.lastAddedNightOwlEntry = t
+        } else {
+            p.numOfNightOwlEntries = 0
+        }
+    }
+
+
+    //early bird? 
+    hour, _, _ = t.Clock()
+    if hour >= 5 && hour <= 7 {
+        if p.isConsecutiveDay(p.lastAddedEarlyBirdEntry, t) {
+            p.numOfEarlyBirdEntries += 1
+            p.lastAddedEarlyBirdEntry = t
+        } else {
+            p.numOfEarlyBirdEntries = 0
+        }
+    }
+
+    //couch potato? 
+    hour, _, _ = t.Clock()
+    if hour >= 20 && hour <= 20 {
+        if p.isConsecutiveDay(p.lastAddedCouchPotatorEntry, t) {
+            p.numOfCouchPotatoEntries += 1
+            p.lastAddedCouchPotatorEntry = t
+        } else {
+            p.numOfCouchPotatoEntries = 0
+        }
+    }
+
+    //worker bee?
+    if p.isConsecutiveDay(p.lastAddedWorkerBeeEntry, t) {
+        p.numOfWorkerBeeEntries += 1
+        p.lastAddedWorkerBeeEntry = t
+    } else {
+        p.numOfWorkerBeeEntries = 0
+    }
+
+    //ant?
+    if p.isConsecutiveDay(p.lastAddedAntEntry, t) {
+        p.numOfAntEntries += 1
+        p.lastAddedAntEntry = t
+    } else {
+        p.numOfAntEntries = 0
+    }
+
+    //greedy squirrel?
+    if p.isConsecutiveDay(p.lastAddedGreedySquirrelEntry, t) {
+        p.numOfGreedySquirrelEntries += 1
+        p.lastAddedGreedySquirrelEntry = t
+    } else {
+        p.numOfGreedySquirrelEntries = 0
+    }
+
+    //image monkey?
+    if p.isConsecutiveDay(p.lastAddedImageMonkeyEntry, t) {
+        p.numOfImageMonkeyEntries += 1
+        p.lastAddedImageMonkeyEntry = t
+    } else {
+        p.numOfImageMonkeyEntries = 0
+    }
+
+}
+
+func (p *AchievementsGenerator) GetAchievements(apiBaseUrl string) ([]datastructures.ImageHuntAchievement, error) {
+    achievements := p.achievements
+    for key, val := range achievements {
+
+        if val.Name == "Weekend Warrior" {
+            val.Accomplished = false
+            if p.numOfWeekendWarriorEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Early Bird" {
+            val.Accomplished = false
+            if p.numOfEarlyBirdEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Night Owl" {
+            val.Accomplished = false
+            if p.numOfNightOwlEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Couch Potato" {
+            val.Accomplished = false
+            if p.numOfCouchPotatoEntries >= 3 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Worker Bee" {
+            val.Accomplished = false
+            if p.numOfWorkerBeeEntries >= 7 {
+                val.Accomplished = true
+            }
+        } else if val.Name == "Ant Power" {
+            val.Accomplished = false
+            if p.numOfAntEntries >= 30 {
+                val.Accomplished = true
+            }
+
+        } else if val.Name == "Greedy Squirrel" {
+            val.Accomplished = false
+            if p.numOfGreedySquirrelEntries >= 60 {
+                val.Accomplished = true
+            }
+        } else if val.Name == "Image Monkey" {
+            val.Accomplished = false
+            if p.numOfImageMonkeyEntries == p.numOfAvailableLabels {
+                val.Accomplished = true
+            }
+        } else {
+            return achievements, errors.New("Invalid entry")
+        }
+
+        val.Badge = apiBaseUrl + val.Badge
+        achievements[key] = val
+    }
+
+    return achievements, nil
 }

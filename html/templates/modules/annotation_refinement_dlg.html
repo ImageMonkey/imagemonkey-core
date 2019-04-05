@@ -1,0 +1,103 @@
+<script type="text/javascript">
+  var annotationRefinementsDlg = (function() { 
+    var isOpened = false;
+
+    return {
+
+        getSelectedRefinements: function() {
+          return $("#refinementInputDropdown").dropdown('get value');
+        },
+
+        open: function() {
+          $('#addAnnotationRefinementsDlg').modal({
+            onShow: function() {
+              isOpened = true;
+              $(this).draggable({
+                cancel: ".content"
+              });
+            },
+            onHidden: function() {
+              isOpened = false;
+              $(this).css({
+                'top': '50%',
+                'left': '50%'
+              })
+            }
+          }).modal('show');
+        },
+
+        isOpened: function() {
+          return isOpened;
+        },
+
+        populateRefinements: function(refinementUuids) {
+          $("#refinementInputDropdown").dropdown('clear');
+          $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
+        },
+ 
+        getPossibleRefinements: function() {
+          var url = "{{ .apiBaseUrl }}/v1/label/refinements";
+          $.ajax({
+            url: url,
+            dataType: 'json',
+            type: 'GET',
+            success: function(data) {
+              for(key in data) {
+                if(data.hasOwnProperty(key)) {
+                  var labelEntry = data[key];
+                  var labelValues = labelEntry.values;
+                  var entry = '';
+                  for(labelKey in labelValues) {
+                    if(labelValues.hasOwnProperty(labelKey)) {
+                      entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
+                      if(labelEntry.icon !== "") {
+                        entry += '<i class="' + labelEntry.icon + ' icon"></i>';
+                        //labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
+                      }
+                      entry += (labelKey + '</div>');
+                      $("#refinementInputDropdownMenu").append(entry);
+                    }
+                  }
+                }
+              }
+            },
+            error: function (xhr, options, err) {
+            }
+          });
+        }
+    };  
+  })();
+
+  $(document).ready(function(){ 
+    $("#refinementInputDropdown").dropdown();
+    annotationRefinementsDlg.getPossibleRefinements();
+  });
+
+</script>
+
+<div class="ui small modal" id="addAnnotationRefinementsDlg">
+  <div class="header">
+    Add Refinements
+  </div>
+  <div class="content">
+    <div class="row" id="refinementInput">
+      <div class="eight wide center aligned centered column">
+        <div class="ui fluid multiple search selection dropdown" id="refinementInputDropdown">
+          <input class="search">
+          <div class="default text">Refinements...</div>
+          <div class="menu" id="refinementInputDropdownMenu">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui negative button">
+      Cancel
+    </div>
+    <div class="ui positive right labeled icon button" id="addAnnotationRefinementsDlgDoneButton">
+      Done
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>

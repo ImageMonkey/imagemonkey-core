@@ -24,7 +24,7 @@ func (p *ImageMonkeyDatabase) GetNumOfDonatedImages() (int64, error) {
 }
 
 func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]datastructures.DataPoint, error) {
-    var imageDescriptionStatistics []datastructures.DataPoint
+    imageDescriptionStatistics := []datastructures.DataPoint{}
 
     if period != "last-month" {
         return imageDescriptionStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -36,8 +36,10 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]da
                            ),
                            num_of_image_descriptions AS (
                             SELECT sys_period FROM image_description_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL 
                             SELECT sys_period FROM image_description h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_image_descriptions s
@@ -71,7 +73,7 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]da
 
 
 func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastructures.DataPoint, error) {
-    var annotationStatistics []datastructures.DataPoint
+    annotationStatistics := []datastructures.DataPoint{}
 
     if period != "last-month" {
         return annotationStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -83,8 +85,10 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
                            ),
                            num_of_annotations AS (
                             SELECT sys_period FROM image_annotation_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL 
                             SELECT sys_period FROM image_annotation h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_annotations s
@@ -117,7 +121,7 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
 }
 
 func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastructures.DataPoint, error) {
-    var validationStatistics []datastructures.DataPoint
+    validationStatistics := []datastructures.DataPoint{}
 
     if period != "last-month" {
         return validationStatistics, errors.New("Only last-month statistics are supported at the moment")
@@ -129,8 +133,7 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
                            ),
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation_history h
-                            UNION ALL
-                            SELECT sys_period FROM image_validation h1
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
@@ -162,6 +165,55 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
     return validationStatistics, nil
 }
 
+func (p *ImageMonkeyDatabase) GetLabeledObjectsStatistics(period string) ([]datastructures.DataPoint, error) {
+    labeledObjectsStatistics := []datastructures.DataPoint{}
+
+    if period != "last-month" {
+        return labeledObjectsStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := p.db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_validations AS (
+                            SELECT sys_period FROM image_validation h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+
+                            UNION ALL
+                            SELECT sys_period FROM image_label_suggestion s
+                            WHERE date(lower(s.sys_period)) IN (SELECT date FROM dates)
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_validations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Error("[Get Label Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return labeledObjectsStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint datastructures.DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Error("[Get Label Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return labeledObjectsStatistics, err
+        }
+
+        labeledObjectsStatistics = append(labeledObjectsStatistics, datapoint)
+    }
+
+    return labeledObjectsStatistics, nil
+}
+
 
 func (p *ImageMonkeyDatabase) GetAnnotationRefinementStatistics(period string) ([]datastructures.DataPoint, error) {
     var annotationRefinementStatistics []datastructures.DataPoint
@@ -176,8 +228,10 @@ func (p *ImageMonkeyDatabase) GetAnnotationRefinementStatistics(period string) (
                            ),
                            num_of_annotation_refinements AS (
                             SELECT sys_period FROM image_annotation_refinement_history h
+                            WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
                             UNION ALL 
                             SELECT sys_period FROM image_annotation_refinement h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_annotation_refinements s
@@ -450,7 +504,13 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
     }
 
     //get all unlabeled donations
-    err = tx.QueryRow(`SELECT count(i.id) from image i WHERE i.id NOT IN (SELECT image_id FROM image_validation)`).Scan(&statistics.NumOfUnlabeledDonations)
+    err = tx.QueryRow(`SELECT count(i.id) from image i 
+                        WHERE i.id NOT IN 
+                        (
+                            SELECT image_id FROM image_validation
+                        ) AND i.id NOT IN (
+                            SELECT image_id FROM image_label_suggestion
+                        )`).Scan(&statistics.NumOfUnlabeledDonations)
     if err != nil {
         tx.Rollback()
         log.Debug("[Explore] Couldn't scan data row: ", err.Error())
@@ -791,8 +851,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerApp(contributionType string,
 }
 
 
-func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIUser) ([]datastructures.AnnotatedStat, error) {
-    var annotatedStats []datastructures.AnnotatedStat
+func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIUser, excludeMetalabels bool) ([]datastructures.AnnotatedStat, error) {
+    annotatedStats := []datastructures.AnnotatedStat{}
     var queryValues []interface{}
 
     includeOwnImageDonations := ""
@@ -813,6 +873,11 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
                                             )
                                         )`
         queryValues = append(queryValues, apiUser.Name)
+    }
+
+    q1 := ""
+    if excludeMetalabels {
+        q1 = "WHERE l.label_type != 'meta'"
     }
 
 
@@ -836,12 +901,13 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
                      JOIN label_accessor acc ON acc.label_id = v.label_id
                      JOIN label l ON acc.label_id = l.id
                      LEFT JOIN num_annotations a ON a.label_id = acc.label_id
+                     %s
                      ORDER BY 
                         CASE 
                             WHEN v.num = 0 THEN 0
                             ELSE a.num/v.num
                         END DESC`, 
-                     includeOwnImageDonations, includeOwnImageDonations)
+                     includeOwnImageDonations, includeOwnImageDonations, q1)
 
     rows, err := p.db.Query(q, queryValues...)
     if err != nil {
