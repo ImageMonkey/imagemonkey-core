@@ -702,6 +702,11 @@
 					"description": "optional",
 					"accessors": [".has"],
 					"uuid": "bc7f4dc3-0037-4517-893e-91e31725432d"
+				},
+				"wing": {
+					"description": "optional",
+					"accessors": [".has"],
+					"uuid": "b7be845d-6192-4ef9-bbc3-be3b2cf0fe0b"
 				}
 			}
 		},
@@ -1347,12 +1352,47 @@
 		"squirrel": {
 			"description": "optional",
 			"accessors": ["."],
-			"uuid": "e948b99c-06e5-4d08-b7d1-deec3fc77b18"
+			"uuid": "e948b99c-06e5-4d08-b7d1-deec3fc77b18",
+			"has": {
+				"head": {
+					"description": "optional",
+					"uuid": "63eec330-3950-41cd-b303-9d887c744126",
+					"accessors": [".has"]
+				}
+			}
 		},
 		"lizard": {
 			"description": "optional",
 			"accessors": ["."],
 			"uuid": "7b60239c-2716-4572-8458-cfbd0fae5912"
+		},
+		"cake": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "6ac249f5-c741-4280-8397-d4783b4fcca0"
+		},
+		"rope": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "db9accb6-e4e0-4898-bb68-bb3df7807f63"
+		},
+		"owl": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a4882938-8566-4bcb-b5a8-b01263b1622c"
+		},
+		"deer": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "51dc0cce-a8e2-4368-ae52-253f5e7f7e16",
+			"has": {
+				"head": {
+					"description": "optional",
+					"uuid": "284fbd7f-bdfc-4426-bc19-f1d2a0606f84",
+					"accessors": [".has"]
+				}
+			}
 		}
+
 	}
 }
