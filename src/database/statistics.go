@@ -179,6 +179,12 @@ func (p *ImageMonkeyDatabase) GetLabeledObjectsStatistics(period string) ([]data
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation h
                             WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+                            AND (num_of_valid = 0 AND num_of_invalid = 0)
+
+                            UNION ALL
+                            SELECT sys_period FROM image_validation_history h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
+                            AND (num_of_valid = 0 AND num_of_invalid = 0)
 
                             UNION ALL
                             SELECT sys_period FROM image_label_suggestion s
