@@ -498,7 +498,7 @@ func main(){
 	log.SetLevel(log.DebugLevel)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to label map")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")

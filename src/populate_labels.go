@@ -409,7 +409,7 @@ func main(){
 		log.Info("Populating labels...")
 	}
 
-    labelMap, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
+    labelMap, _, err := commons.GetLabelMap("../wordlists/en/labels.jsonnet")
 	if err != nil {
 		log.Fatal("Couldn't get label map: ", err.Error())
 	}

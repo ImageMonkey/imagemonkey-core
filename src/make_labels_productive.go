@@ -263,7 +263,7 @@ func main() {
 
 	trendingLabel := flag.String("trendinglabel", "", "The name of the trending label that should be made productive")
 	renameTo := flag.String("renameto", "", "Rename the label")
-	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to label map")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels map")
 	dryRun := flag.Bool("dryrun", true, "Specifies whether this is a dryrun or not")
 	autoCloseIssue := flag.Bool("autoclose", true, "Automatically close issue")
