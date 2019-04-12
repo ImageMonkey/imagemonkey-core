@@ -58,7 +58,7 @@ func TestMetaLabelsDoNotOverlapLaps(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	labels, _, err := commons.GetLabelMap("../wordlists/en/labels.json")
+	labels, _, err := commons.GetLabelMap("../wordlists/en/labels.jsonnet")
 
 	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
 	err = metalabels.Load()
