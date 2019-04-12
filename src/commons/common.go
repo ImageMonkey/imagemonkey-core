@@ -22,6 +22,8 @@ import (
     "github.com/gin-gonic/gin"
     "../datastructures"
     "strconv"
+    "github.com/google/go-jsonnet"
+    "path/filepath"
 )
 
 
@@ -167,7 +169,19 @@ func GetLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string
         return labelMap.LabelMapEntries, words, err
     }
 
-    err = json.Unmarshal(data, &labelMap)
+    vm := jsonnet.MakeVM()
+
+    dir, _ := filepath.Split(path)
+    vm.Importer(&jsonnet.FileImporter{
+        JPaths: []string{dir},
+    })
+
+    out, err := vm.EvaluateSnippet("file", string(data))
+    if err != nil {
+        return labelMap.LabelMapEntries, words, err
+    }
+
+    err = json.Unmarshal([]byte(out), &labelMap)
     if err != nil {
         return labelMap.LabelMapEntries, words, err
     }
