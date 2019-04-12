@@ -101,6 +101,10 @@ RUN /usr/local/go/bin/go get -u -d gocv.io/x/gocv \
 
 # until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
 RUN curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash -
+
+# that is a requirement for go-jsonnet
+RUN go get github.com/fatih/color
+
 RUN chown -R imagemonkey:imagemonkey /home/imagemonkey/go && chmod -R u+rwx /home/imagemonkey/go \
  && /bin/su - imagemonkey -c "cd /tmp/imagemonkey-core-src/ && export GOPATH=/home/imagemonkey/go && export GOBIN=/home/imagemonkey/bin && /usr/local/go/bin/go get -d && /usr/local/go/bin/go install api.go api_secrets.go auth.go label_graph.go && /usr/local/go/bin/go install web.go web_secrets.go auth.go && /usr/local/go/bin/go install statworker.go web_secrets.go && /usr/local/go/bin/go install populate_labels.go web_secrets.go && /usr/local/go/bin/go install auto_unlocker.go api_secrets.go && /usr/local/go/bin/go install data_processor.go api_secrets.go" \
  && rm -rf /tmp/imagemonkey-core/src
