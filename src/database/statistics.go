@@ -134,6 +134,13 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation_history h
                             WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+
+                            UNION ALL
+
+                            SELECT sys_period FROM image_validation v
+                            WHERE date(lower(v.sys_period)) IN (SELECT date FROM dates) AND 
+                            (v.num_of_valid > 0 OR v.num_of_invalid > 0)
+
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
