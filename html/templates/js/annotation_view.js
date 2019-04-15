@@ -328,13 +328,14 @@
 
   function addLabelToLabelLst(label, sublabel, uuid) {
     var id = "labellstitem-" + uuid;
+    var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     $("#annotationLabelsLst").append('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
                                         ' data-label="' + label + '" data-uuid="' + uuid +
                                         '" data-sublabel="' + sublabel + 
                                           '" onclick="onLabelInLabelLstClicked(this);"' +
                                           'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
                                           'onmouseout="this.style.backgroundColor=\'white\';"' + 
-                                          'style="overflow: auto;"><p>' + label + '</p></div>');
+                                          'style="overflow: auto;"><p>' + displayedLabel + '</p></div>');
   }
 
   function getLabelsForImage(imageId, onlyUnlockedLabels) {
@@ -353,7 +354,7 @@
             addLabelToLabelLst(data[i].label, '', data[i].uuid);
             if(data[i].sublabels !== null) {
               for(var j = 0; j < data[i].sublabels.length; j++) {
-                addLabelToLabelLst(data[i].sublabels[j].name + "/" + data[i].label, data[i].sublabels[j].name, 
+                addLabelToLabelLst(data[i].label, data[i].sublabels[j].name, 
                                     data[i].sublabels[j].uuid);
               }
             }
