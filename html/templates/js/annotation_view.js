@@ -12,6 +12,8 @@
   var browserFingerprint = null;
   var deleteObjectsPopupShown = false;
   var unifiedModeAnnotations = {};
+  var pluralAnnotations = false;
+  var pluralLabels = null;
 
   {{ if eq .annotationMode "browse" }}
   var browseModeLastSelectedAnnotatorMenuItem = null;
@@ -222,6 +224,28 @@
       error: function (xhr, options, err) {
         handleUnannotatedImageResponse(null);
       }
+    });
+  }
+
+  function populatePluralsAndLoadData() {
+    getPluralLabels(function() {
+      {{ if eq .annotationMode "default" }}
+        {{ if eq .validationId "" }}
+          getUnannotatedImage();
+        {{ else }}
+          getUnannotatedImage({{ .validationId }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "refine" }}
+        {{ if ne .annotationId "" }}
+          getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "browse" }}
+      $("#loadingSpinner").hide();
+      {{ end }}
     });
   }
 
@@ -702,12 +726,14 @@
       $("#labelContainer").hide();
       $("#doneButton").hide();
       $("#bottomLabel").hide();
+      $("#isPluralContainer").hide();
       annotator.block();
     }
     else{
       $("#labelContainer").show();
       $("#doneButton").show();
       $("#bottomLabel").show();
+      $("#isPluralContainer").show();
       annotator.unblock();
     }
   }
@@ -722,10 +748,12 @@
     if(sublabel === ""){
       $("#label").text(("Annotate all: " + label));
       $("#bottomLabel").text(("Annotate all: " + label));
+      $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + label + " objects at once");
     } 
     else {
       $("#label").text(("Annotate all: " + sublabel + "/" + label));
       $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
+      $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + sublabel + "/" + label + " objects at once");
     }
   }
 
@@ -983,6 +1011,26 @@
       }
     });
   }
+
+  function getPluralLabels(onDoneCallback) {
+    {{ if ne .annotationMode "browse" }}
+    $("#loadingSpinner").show();
+    {{ end }}
+
+    var url = "{{ .apiBaseUrl }}/v1/label/plurals";
+    $.ajax({
+      url: url,
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data) {
+        pluralLabels = data;
+
+        onDoneCallback();
+      }
+    });
+  }
   
 
   $(document).ready(function(){
@@ -1187,6 +1235,34 @@
         zoomOut();
       });
 
+      $("#isPluralButton").click(function(e) {
+        var pluralLabel = null;
+        var currentLabel = "";
+        if ($("#label").attr("sublabel") !== "")
+          currentLabel = $("#label").attr("sublabel") + $("#label").attr("label");
+        else
+          currentLabel = $("#label").attr("label");
+
+        if(pluralLabels && currentLabel in pluralLabels) {
+          pluralLabel = pluralLabels[currentLabel];
+        }
+
+        var isPluralButton = $("#isPluralButton");
+        if(isPluralButton.hasClass("basic")) {
+          pluralAnnotations = true;
+          isPluralButton.removeClass("basic");
+          isPluralButton.addClass("white");
+
+          if(pluralLabel)
+            $("#label").text("Annotate all: " + pluralLabel);
+        } else {
+          pluralAnnotations = false;
+          isPluralButton.removeClass("white");
+          isPluralButton.addClass("basic");
+          $("#label").text("Annotate all: " + currentLabel);
+        }
+      });
+
       $('#strokeWidthSlider').on('input', function(e) {
         var val = parseInt($(this).val());
         annotator.setStrokeWidthOfSelected(val);
@@ -1381,19 +1457,7 @@
 
       changeNavHeader({{ .annotationMode }});
 
-      {{ if eq .annotationMode "default" }}
-        {{ if eq .validationId "" }}
-        getUnannotatedImage();
-        {{ else }}
-        getUnannotatedImage({{ .validationId }});
-        {{ end }}
-      {{ end }}
-
-      {{ if eq .annotationMode "refine" }}
-        {{ if ne .annotationId "" }}
-        getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
-        {{ end }}
-      {{ end }}
+      populatePluralsAndLoadData();
 
       try {
         //can fail in case someone uses uBlock origin or Co.
@@ -1402,6 +1466,4 @@
         });
       } catch(e) {
       }
-
-      
 });
