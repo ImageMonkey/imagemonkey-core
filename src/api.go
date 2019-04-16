@@ -535,11 +535,14 @@ func main(){
 	}
 
 	log.Debug("[Main] Reading Label Map")
-	labelMap, words, err := commons.GetLabelMap(*wordlistPath)
+	labelRepository := commons.NewLabelRepository()
+	err := labelRepository.Load(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
 	}
+	labelMap := labelRepository.GetMapping()
+	words := labelRepository.GetWords()
 
 	log.Debug("[Main] Reading Metalabel Map")
 	metaLabels := commons.NewMetaLabels(*metalabelsPath)
@@ -1651,6 +1654,11 @@ func main(){
 				return
 			}
 			c.JSON(http.StatusOK, labelAccessors)
+		})
+
+		router.GET("/v1/label/plurals", func(c *gin.Context) {
+			pluralsMapping := labelRepository.GetPluralsMapping()
+			c.JSON(200, pluralsMapping)
 		})
 
 		router.GET("/v1/label/refinements", func(c *gin.Context) {
