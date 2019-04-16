@@ -2,6 +2,7 @@
 	"deer": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "deer",
 		"uuid": "51dc0cce-a8e2-4368-ae52-253f5e7f7e16",
 		"has": {
 			"head": {
@@ -14,16 +15,19 @@
 	"lizard": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "lizards",
 		"uuid": "7b60239c-2716-4572-8458-cfbd0fae5912"
 	},
 	"owl": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "owls",
 		"uuid": "a4882938-8566-4bcb-b5a8-b01263b1622c"
 	},
 	"squirrel": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "squirrels",
 		"uuid": "e948b99c-06e5-4d08-b7d1-deec3fc77b18",
 		"has": {
 			"head": {
@@ -36,16 +40,19 @@
 	"snail": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "snails",
 		"uuid": "20643981-dceb-4c3e-b3fd-8cb329650b65"
 	},
 	"moth": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "moths",
 		"uuid": "cf97eff5-93bf-4d26-b8a2-4c5266c3641e"
 	},
 	"bird": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "birds",
 		"uuid": "e5e2bb31-6950-4a18-b98f-f9a45e3c1eb7",
 		"has": {
 			"head": {
@@ -65,6 +72,7 @@
 		"uuid": "bac46d8e-0655-46d5-a393-36c69a18ee2c",
 		"accessors": ["."],
 		"isa": ["animal"],
+		"plural": "dogs",
 		"has": {
 			"eye": {
 				"description": "optional",
@@ -280,6 +288,7 @@
 		"uuid": "05c02fc5-9095-41e4-acb1-68303654ebb1",
 		"accessors": ["."],
 		"isa": ["animal"],
+		"plural": "cats",
 		"has": {
 			"eye": {
 				"description": "optional",
@@ -321,71 +330,85 @@
 	"ant": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "ants",
 		"uuid": "0245c27a-b45a-4ab0-bc1c-3397651b994e"
 	},
 	"elephant": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "elephants",
 		"uuid": "76b1eb48-70b3-43d4-8890-5a967649a00d"
 	},
 	"fish": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "fishes",
 		"uuid": "ab9bf24e-acc0-4857-85f8-907447c97127"
 	},
 	"horse": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "horses",
 		"uuid": "6cdadd8b-6dd1-4ebb-bf7e-ae388ec9cdf2"
 	},
 	"sheep": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "sheeps",
 		"uuid": "297932ac-5f16-4164-8997-a9d3343b2648"
 	},
 	"cow": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "cows",
 		"uuid": "04f9c653-b660-4471-8541-aaf0f33958a0"
 	},
 	"butterfly": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "butterflies",
 		"uuid": "9cb91307-ab62-489a-b774-0dea18e7f9ab"
 	},
 	"rabbit": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "rabbits",
 		"uuid": "a86d4227-50c3-4ded-ace6-02d7321af718"
 	},
 	"bee": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "bees",
 		"uuid": "26233e92-cc48-4e80-bc47-5f8c84b4ab47"
 	},
 	"beetle": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "beatles",
 		"uuid": "2a19e98a-3b0b-4a7d-85c7-31a49dfe3cf5"
 	},
 	"snake": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "snakes",
 		"uuid": "8e650c03-85a0-445d-9706-7a69a94b43c9"
 	},
 	"frog": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "frogs",
 		"uuid": "fdd05a68-ff42-47f8-8905-00611b3a17bf"
 	},
 	"jellyfish": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "jellyfish",
 		"uuid": "16cc13ae-f7e8-4347-b362-9c70a61f74d8"
 	},
 	"spider": {
 		"description": "optional",
 		"accessors": ["."],
+		"plural": "spiders",
 		"uuid": "f7a12c25-bc80-4f58-883b-5c237f26d893"
 	}
 }
