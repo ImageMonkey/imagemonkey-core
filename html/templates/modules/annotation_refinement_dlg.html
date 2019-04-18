@@ -35,7 +35,7 @@
           $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
         },
  
-        getPossibleRefinements: function() {
+        getPossibleRefinements: function(ignoreCountLabels) {
           var url = "{{ .apiBaseUrl }}/v1/label/refinements";
           $.ajax({
             url: url,
@@ -49,10 +49,15 @@
                   var entry = '';
                   for(labelKey in labelValues) {
                     if(labelValues.hasOwnProperty(labelKey)) {
+
+                      if(ignoreCountLabels) {
+                        if(key === "count")
+                          continue;
+                      }
+
                       entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
                       if(labelEntry.icon !== "") {
                         entry += '<i class="' + labelEntry.icon + ' icon"></i>';
-                        //labelUuidIconLookupTable[labelValues[labelKey].uuid] = labelEntry.icon;
                       }
                       entry += (labelKey + '</div>');
                       $("#refinementInputDropdownMenu").append(entry);
@@ -70,7 +75,7 @@
 
   $(document).ready(function(){ 
     $("#refinementInputDropdown").dropdown();
-    annotationRefinementsDlg.getPossibleRefinements();
+    annotationRefinementsDlg.getPossibleRefinements(true);
   });
 
 </script>
