@@ -91,5 +91,21 @@
 				"accessors": ["gender='female'"]
 			}
 		}
+	},
+	"count": {
+		"uuid": "fb18654c-50d1-4119-a6a5-130133549889",
+		"icon": "",
+		"values": {
+			"one": {
+				"description": "",
+				"uuid": "4d393401-5d0c-456e-b889-15b3e61d0e3d",
+				"accessors": ["count='one'"]
+			},
+			"many": {
+				"description": "",
+				"uuid": "fba5ea4f-2c58-48ff-a67b-c8457ff90e13",
+				"accessors": ["count='many'"]
+			}
+		}
 	}
 }
