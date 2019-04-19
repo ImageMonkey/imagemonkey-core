@@ -265,9 +265,22 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
 
         if(unifiedModePopulated === UnifiedModeStates.initialized) {
-          var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
-          if(firstItem && firstItem.length === 1)
-            firstItem[0].click();
+          var unifiedModeToolboxChildren = $('#annotationLabelsLst').children('.labelslstitem');
+          var foundLabelInUnifiedModeToolbox = false;
+          unifiedModeToolboxChildren.each(function(index, value) {
+            if(($(this).attr("data-label") === $("#label").attr("label")) && ($(this).attr("data-sublabel") === $("#label").attr("sublabel"))) {
+              foundLabelInUnifiedModeToolbox = true;
+              $(this).click();
+              return false;
+            }  
+          })
+
+          //when label not found, select first one in list
+          if(!foundLabelInUnifiedModeToolbox) {
+            var firstItem = unifiedModeToolboxChildren.first();
+            if(firstItem && firstItem.length === 1)
+              firstItem[0].click();
+          }
 
           $("#unifiedModeLabelsLstLoadingIndicator").hide();
         }
@@ -363,9 +376,22 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
 
         if(unifiedModePopulated === UnifiedModeStates.initialized) {
-          var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
-          if(firstItem && firstItem.length === 1)
-            firstItem[0].click();
+          var unifiedModeToolboxChildren = $('#annotationLabelsLst').children('.labelslstitem');
+          var foundLabelInUnifiedModeToolbox = false;
+          unifiedModeToolboxChildren.each(function(index, value) {
+            if(($(this).attr("data-label") === $("#label").attr("label")) && ($(this).attr("data-sublabel") === $("#label").attr("sublabel"))) {
+              foundLabelInUnifiedModeToolbox = true;
+              $(this).click();
+              return false;
+            }  
+          })
+
+          //when label not found, select first one in list
+          if(!foundLabelInUnifiedModeToolbox) {
+            var firstItem = unifiedModeToolboxChildren.first();
+            if(firstItem && firstItem.length === 1)
+              firstItem[0].click();
+          }
 
           $("#unifiedModeLabelsLstLoadingIndicator").hide();
         }
