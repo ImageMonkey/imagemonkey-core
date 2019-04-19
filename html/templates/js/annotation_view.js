@@ -1204,10 +1204,12 @@
       }, "keyup");
 
       $("#panMenuItem").click(function(e) {
-        annotator.enablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("");
-        changeMenuItem("PanMode");
+        if(annotator !== undefined) {
+          annotator.enablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("");
+          changeMenuItem("PanMode");
+        }
       });
 
       $("#blockSelectMenuItem").click(function(e) {
