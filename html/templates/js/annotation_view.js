@@ -14,6 +14,7 @@
   var unifiedModeAnnotations = {};
   var pluralAnnotations = false;
   var pluralLabels = null;
+  var initializeLabelsLstAftLoadDelayed = false;
 
   {{ if eq .annotationMode "browse" }}
   var browseModeLastSelectedAnnotatorMenuItem = null;
@@ -59,6 +60,7 @@
   function handleUnannotatedImageResponse(data) {
     existingAnnotations = null;
     autoAnnotations = null;
+    initializeLabelsLstAftLoadDelayed = false;
 
     if(data !== null) {
       annotationInfo.imageId = data.uuid;
@@ -135,6 +137,7 @@
     annotationInfo.imageUrl = data.image.url;
     annotationInfo.imageUnlocked = data.image.unlocked;
 
+    initializeLabelsLstAftLoadDelayed = false;
     autoAnnotations = null;
     existingAnnotations = data["annotations"];
     showHideAutoAnnotationsLoadButton();
@@ -289,11 +292,14 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
 
         if(unifiedModePopulated === UnifiedModeStates.initialized) {
-          var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
-          if(firstItem && firstItem.length === 1)
-            firstItem[0].click();
-
-          $("#unifiedModeLabelsLstLoadingIndicator").hide();
+          if(canvas.fabric().backgroundImage && canvas.fabric().backgroundImage !== undefined) {
+            initializeLabelsLstAftLoadDelayed = false;
+            selectLabelInUnifiedLabelsLstAfterLoad();
+          }
+          else { //image is not yet loaded (which we need before we can initialize the labels list), 
+                 //so we need to initialize the labels list when the image is loaded
+            initializeLabelsLstAftLoadDelayed = true;
+          }
         }
         {{ end }}
       },
@@ -387,17 +393,41 @@
         unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
 
         if(unifiedModePopulated === UnifiedModeStates.initialized) {
-          var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
-          if(firstItem && firstItem.length === 1)
-            firstItem[0].click();
-
-          $("#unifiedModeLabelsLstLoadingIndicator").hide();
+          if(canvas.fabric().backgroundImage && canvas.fabric().backgroundImage !== undefined) {
+            initializeLabelsLstAftLoadDelayed = false;
+            selectLabelInUnifiedLabelsLstAfterLoad();
+          }
+          else { //image is not yet loaded (which we need before we can initialize the labels list), 
+                 //so we need to initialize the labels list when the image is loaded
+            initializeLabelsLstAftLoadDelayed = true;
+          }
         }
         {{ end }}
       },
       error: function (xhr, options, err) {
       }
     });
+  }
+
+  function selectLabelInUnifiedLabelsLstAfterLoad() {
+    var unifiedModeToolboxChildren = $('#annotationLabelsLst').children('.labelslstitem');
+    var foundLabelInUnifiedModeToolbox = false;
+    unifiedModeToolboxChildren.each(function(index, value) {
+      if(($(this).attr("data-label") === $("#label").attr("label")) && ($(this).attr("data-sublabel") === $("#label").attr("sublabel"))) {
+        foundLabelInUnifiedModeToolbox = true;
+        $(this).click();
+        return false;
+      }  
+    })
+
+    //when label not found, select first one in list
+    if(!foundLabelInUnifiedModeToolbox) {
+      var firstItem = unifiedModeToolboxChildren.first();
+      if(firstItem && firstItem.length === 1)
+        firstItem[0].click();
+    }
+
+    $("#unifiedModeLabelsLstLoadingIndicator").hide();
   }
 
   function getAnnotatedImage(annotationId, annotationRevision) {
@@ -806,6 +836,14 @@
     $("#annotationArea").css({"border-width":"1px",
                               "border-style": "solid",
                               "border-color": "#000000"});
+
+
+    {{ if eq .annotationView "unified" }}
+    if(initializeLabelsLstAftLoadDelayed) {
+      selectLabelInUnifiedLabelsLstAfterLoad();
+      initializeLabelsLstAftLoadDelayed = false;
+    }
+    {{ end }}
   }
 
   function isLoadingIndicatorVisible(){
@@ -1280,10 +1318,12 @@
       }, "keyup");
 
       $("#panMenuItem").click(function(e) {
-        annotator.enablePanMode();
-        annotator.disableSelectMoveMode();
-        annotator.setShape("");
-        changeMenuItem("PanMode");
+        if(annotator !== undefined) {
+          annotator.enablePanMode();
+          annotator.disableSelectMoveMode();
+          annotator.setShape("");
+          changeMenuItem("PanMode");
+        }
       });
 
       $("#blockSelectMenuItem").click(function(e) {
