@@ -1289,7 +1289,8 @@
         if(isPluralButton.hasClass("basic")) {
           pluralAnnotations = true;
           isPluralButton.removeClass("basic");
-          isPluralButton.addClass("white");
+          isPluralButton.css("background-color", "white");
+          isPluralButton.removeClass("inverted");
 
           if(pluralLabel)
             $("#label").text("Annotate all: " + pluralLabel);
@@ -1297,6 +1298,7 @@
           pluralAnnotations = false;
           isPluralButton.removeClass("white");
           isPluralButton.addClass("basic");
+          isPluralButton.addClass("inverted");
           $("#label").text("Annotate all: " + currentLabel);
         }
       });
@@ -1450,7 +1452,7 @@
           return;
         }
         {{ else }}
-        res = annotator.toJSON();
+        res = annotator.toJSON((pluralAnnotations ? annotationRefinementsDlg.getPluralAnnotationRefinementUuid() : null));
         if(res.length === 0) { //at least one annotation needs to be there
           $('#warningMsgText').text('Please annotate the image first.');
           $('#warningMsg').show(200).delay(1500).hide(200);

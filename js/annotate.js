@@ -1214,7 +1214,7 @@ var Annotator = (function () {
     this.smartAnnotationData = smartAnnotationData;
   }
 
-  Annotator.prototype.toJSON = function(){
+  Annotator.prototype.toJSON = function(includeRefinementUuid = null){
     var data = this.canvas.toJSON(["id"]); //include custom property "id" when converting to json
     var imgScaleX = data["backgroundImage"]["scaleX"];
     var imgScaleY = data["backgroundImage"]["scaleY"];
@@ -1246,6 +1246,10 @@ var Annotator = (function () {
           for(var j = 0; j < ref.length; j++) {
             refinements.push({"label_uuid": ref[j]});
           }
+        }
+
+        if(includeRefinementUuid != null) {
+          refinements.push({"label_uuid": includeRefinementUuid});
         }
 
 

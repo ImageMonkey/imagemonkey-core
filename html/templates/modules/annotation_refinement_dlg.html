@@ -1,9 +1,12 @@
 <script type="text/javascript">
   var annotationRefinementsDlg = (function() { 
     var isOpened = false;
+    var pluralAnnotationRefinementUuid = null;
 
     return {
-
+        getPluralAnnotationRefinementUuid: function() {
+          return pluralAnnotationRefinementUuid;
+        },
         getSelectedRefinements: function() {
           return $("#refinementInputDropdown").dropdown('get value');
         },
@@ -49,6 +52,9 @@
                   var entry = '';
                   for(labelKey in labelValues) {
                     if(labelValues.hasOwnProperty(labelKey)) {
+
+                      if(key === "count" && labelKey === "many")
+                        pluralAnnotationRefinementUuid = labelValues[labelKey].uuid;
 
                       if(ignoreCountLabels) {
                         if(key === "count")
