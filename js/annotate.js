@@ -1138,6 +1138,16 @@ var Annotator = (function () {
     }
   }
 
+  Annotator.prototype.getRefinements = function() {
+    var refs = [];
+    for (var key in this.refinementsPerAnnotation) {
+      if (this.refinementsPerAnnotation.hasOwnProperty(key)) {
+        refs.push(this.refinementsPerAnnotation[key]);
+      }
+    }
+    return refs;
+  }
+
   Annotator.prototype.getRefinementsOfSelectedItem = function() {
     var id = this.getIdOfSelectedItem();
     if(id !== "") {

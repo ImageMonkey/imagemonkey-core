@@ -2,6 +2,7 @@
   var annotationRefinementsDlg = (function() { 
     var isOpened = false;
     var pluralAnnotationRefinementUuid = null;
+    var refinementsUuidMapping = {};
 
     return {
         getPluralAnnotationRefinementUuid: function() {
@@ -10,7 +11,9 @@
         getSelectedRefinements: function() {
           return $("#refinementInputDropdown").dropdown('get value');
         },
-
+        getRefinementsUuidMapping: function() {
+          return refinementsUuidMapping;
+        },
         open: function() {
           $('#addAnnotationRefinementsDlg').modal({
             onShow: function() {
@@ -55,6 +58,8 @@
 
                       if(key === "count" && labelKey === "many")
                         pluralAnnotationRefinementUuid = labelValues[labelKey].uuid;
+
+                      refinementsUuidMapping[labelValues[labelKey].uuid] = {"name": labelKey, "icon": labelEntry.icon};
 
                       if(ignoreCountLabels) {
                         if(key === "count")
@@ -108,6 +113,25 @@
     </div>
     <div class="ui positive right labeled icon button" id="addAnnotationRefinementsDlgDoneButton">
       Done
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+
+
+<div class="ui small modal" id="removeAnnotationRefinementsDlg" data-to-be-removed-id="">
+  <div class="header">
+    Remove Refinement
+  </div>
+  <div class="content">
+    <p>Do you really want to remove this refinement?
+  </div>
+  <div class="actions">
+    <div class="ui negative button">
+      Cancel
+    </div>
+    <div class="ui positive right labeled icon button" id="removeAnnotationRefinementsDlgYesButton">
+      Yes
       <i class="checkmark icon"></i>
     </div>
   </div>

@@ -328,6 +328,11 @@
     }
   }
 
+  function onRefinementInRefinementsLstClicked(elem) {
+    $("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id", $(elem).attr("id"));
+    $("#removeAnnotationRefinementsDlg").modal("show");
+  }
+
   function onLabelInLabelLstClicked(elem) {
     var key = "";
 
@@ -354,6 +359,19 @@
     if(key in unifiedModeAnnotations) {
       annotator.loadAnnotations(unifiedModeAnnotations[key].annotations, canvas.fabric().backgroundImage.scaleX);
     }
+  }
+
+  function addRefinementToRefinementsLst(name, uuid, icon) {
+    var id = "refinementlstitem-" + uuid;
+    $("#annotationPropertiesLst").append('<div class="ui segment center aligned refinementlstitem" id="' + id + '"' +
+                                        ' data-uuid="' + uuid +
+                                          '" onclick="onRefinementInRefinementsLstClicked(this);"' +
+                                          'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
+                                          'onmouseout="this.style.backgroundColor=\'white\';"' + 
+                                          'style="overflow: auto;">' +
+                                          '<span class="left-floated">' +
+                                            '<p><i class="' + icon + ' icon"></i> ' + name + '</p>' + 
+                                          '</span><span class="right-floated"><i class="right icon delete ui red"></i></span></div>');
   }
 
   function addLabelToLabelLst(label, sublabel, uuid) {
@@ -611,6 +629,7 @@
 
       $("#annotationColumnContent").show();
       $("#annotationColumnSpacer").show();
+      $("#annotationPropertiesColumnSpacer").show();
     }
     else{
       $("#doneButton").hide();
@@ -626,6 +645,7 @@
       $("#imageLockedLabel").hide();
       $("#annotationColumnContent").hide();
       $("#annotationColumnSpacer").hide();
+      $("#annotationPropertiesColumnSpacer").hide();
     }
   }
 
@@ -797,6 +817,19 @@
           if(strokeColor !== null)
             colorPicker.setColor(strokeColor);
         }
+
+        {{ if eq .annotationView "unified" }}
+        //when object is selected, show refinements
+        var refs = annotator.getRefinements();
+        var refsUuidMapping = annotationRefinementsDlg.getRefinementsUuidMapping();
+        for(var i = 0; i < refs.length; i++) {
+          if(refs[i] in refsUuidMapping) {
+            addRefinementToRefinementsLst(refsUuidMapping[refs[i]].name, refs[i], refsUuidMapping[refs[i]].icon);
+          }
+        }
+        {{ end }}
+
+
         context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
     } else {
       $("#trashMenuItem").addClass("disabled");
@@ -806,6 +839,10 @@
 
   function onAnnotatorObjectDeselected() {
     context.destroy('#annotationColumn');
+
+    {{ if eq .annotationView "unified" }}
+    $("#annotationPropertiesLst").empty();
+    {{ end }}
   }
 
   function onAnnotatorMouseUp(){
@@ -863,9 +900,11 @@
 
   function addMainCanvas() {
     $("#annotationColumnSpacer").remove();
+    $("#annotationPropertiesColumnSpacer").remove();
     $("#annotationColumnContent").remove();
 
     var spacer = '';
+    var unifiedModePropertiesLst = '';
     var w = "sixteen";
     if(isSmartAnnotationEnabled()) {
       w = "eight";
@@ -888,6 +927,7 @@
                         '</div>' + 
                       '</div>' + 
                     '</div>';
+          unifiedModePropertiesLstWidth = 'four';
         }
         else if(workspaceSize === "medium"){
           w = "ten";
@@ -903,6 +943,7 @@
                         '</div>' + 
                       '</div>' + 
                     '</div>';
+          unifiedModePropertiesLstWidth = 'three';
         }
         else if(workspaceSize === "big"){
           w = "ten";
@@ -918,7 +959,22 @@
                         '</div>' + 
                       '</div>' + 
                     '</div>';
+          unifiedModePropertiesLstWidth = 'three';
         }
+
+
+        unifiedModePropertiesLst = '<div class="' + unifiedModePropertiesLstWidth + ' wide column" id="annotationPropertiesColumnSpacer">' +
+                                      '<h2 class="ui center aligned header">' + 
+                                        '<div class="content">' +
+                                          'Properties' +
+                                        '</div>' + 
+                                      '</h2>' +
+                                      '<div class="ui segments" style="margin-right: 15px;">' +
+                                       '<div class="ui raised segments" style="margin-right: 15px; overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
+                                       '</div>' + 
+                                      '</div>' + 
+                                   '</div>';
+
       {{ else }}
         if(workspaceSize === "small"){
           w = "eight";
@@ -939,7 +995,7 @@
                  '<div id="annotationAreaContainer">' +
                     '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
-                '</div>';
+                '</div>' + unifiedModePropertiesLst;
 
     $("#annotationColumn").show();
     $("#annotationColumn").append(data);
@@ -1271,6 +1327,14 @@
 
       $("#zoomOutMenuItem").click(function(e) {
         zoomOut();
+      });
+
+      $("#removeAnnotationRefinementsDlgYesButton").click(function(e) {
+        $("#"+$("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id")).remove();
+        var refs = annotator.getRefinementsOfSelectedItem();
+        var idx = refs.indexOf($("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id").replace("refinementlstitem-", ""));
+        if(idx > -1) refs.splice(idx, 1);
+        annotator.setRefinements(refs);
       });
 
       $("#isPluralButton").click(function(e) {
