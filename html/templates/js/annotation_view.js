@@ -829,10 +829,9 @@
         }
         $("#addRefinementButton").removeClass("disabled");
         $("#addRefinementButtonTooltip").removeAttr("data-tooltip");
-        {{ end }}
-
-
         context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
+
+        {{ end }}
     } else {
       $("#trashMenuItem").addClass("disabled");
       $("#propertiesMenuItem").addClass("disabled");
