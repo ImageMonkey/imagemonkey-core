@@ -41,7 +41,7 @@
           $("#refinementInputDropdown").dropdown('set selected', refinementUuids);
         },
  
-        getPossibleRefinements: function(ignoreCountLabels) {
+        getPossibleRefinements: function() {
           var url = "{{ .apiBaseUrl }}/v1/label/refinements";
           $.ajax({
             url: url,
@@ -60,11 +60,6 @@
                         pluralAnnotationRefinementUuid = labelValues[labelKey].uuid;
 
                       refinementsUuidMapping[labelValues[labelKey].uuid] = {"name": labelKey, "icon": labelEntry.icon};
-
-                      if(ignoreCountLabels) {
-                        if(key === "count")
-                          continue;
-                      }
 
                       entry = '<div class="item" data-value="' + labelValues[labelKey].uuid + '">';
                       if(labelEntry.icon !== "") {
@@ -86,7 +81,7 @@
 
   $(document).ready(function(){ 
     $("#refinementInputDropdown").dropdown();
-    annotationRefinementsDlg.getPossibleRefinements(true);
+    annotationRefinementsDlg.getPossibleRefinements();
   });
 
 </script>

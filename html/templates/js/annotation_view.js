@@ -820,13 +820,15 @@
 
         {{ if eq .annotationView "unified" }}
         //when object is selected, show refinements
-        var refs = annotator.getRefinements();
+        var refs = annotator.getRefinementsOfSelectedItem();
         var refsUuidMapping = annotationRefinementsDlg.getRefinementsUuidMapping();
         for(var i = 0; i < refs.length; i++) {
           if(refs[i] in refsUuidMapping) {
             addRefinementToRefinementsLst(refsUuidMapping[refs[i]].name, refs[i], refsUuidMapping[refs[i]].icon);
           }
         }
+        $("#addRefinementButton").removeClass("disabled");
+        $("#addRefinementButtonTooltip").removeAttr("data-tooltip");
         {{ end }}
 
 
@@ -842,6 +844,8 @@
 
     {{ if eq .annotationView "unified" }}
     $("#annotationPropertiesLst").empty();
+    $("#addRefinementButton").addClass("disabled");
+    $("#addRefinementButtonTooltip").attr("data-tooltip", "Select a annotation first")
     {{ end }}
   }
 
@@ -921,11 +925,13 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui segments" style="margin-left: 15px;">' +
-                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                      '<div class="ui basic segment">'
+                        '<div class="ui segments">' +
+                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                          '</div>' + 
                         '</div>' + 
-                      '</div>' + 
+                      '</div>' +
                     '</div>';
           unifiedModePropertiesLstWidth = 'four';
         }
@@ -937,11 +943,13 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui segments" style="margin-left: 15px;">' +
-                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
-                        '</div>' + 
-                      '</div>' + 
+                      '<div class="ui basic segment">' +
+                        '<div class="ui segments">' +
+                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                          '</div>' + 
+                        '</div>' +
+                      '</div>' +
                     '</div>';
           unifiedModePropertiesLstWidth = 'three';
         }
@@ -953,11 +961,13 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui segments" style="margin-left: 15px;">' +
-                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                      '<div class="ui basic segment">' +
+                        '<div class="ui segments">' +
+                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                          '</div>' + 
                         '</div>' + 
-                      '</div>' + 
+                      '</div>' +
                     '</div>';
           unifiedModePropertiesLstWidth = 'three';
         }
@@ -969,9 +979,33 @@
                                           'Properties' +
                                         '</div>' + 
                                       '</h2>' +
-                                      '<div class="ui segments" style="margin-right: 15px;">' +
-                                       '<div class="ui raised segments" style="margin-right: 15px; overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
-                                       '</div>' + 
+                                      '<div class="ui basic segment">' +
+                                        '<div class="ui segments">' +
+                                         '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
+                                         '</div>' +
+                                          
+                                          '<div class="ui form">' +
+                                            '<div class="field">' +
+                                              '<div class="ui search">' +
+                                                '<div class="ui center aligned action input" id="addRefinementForm">' +
+                                                  '<div class="ui small search selection dropdown" id="addRefinementDropdown">' +
+                                                    '<div class="default text">Select Refinement</div>' +
+                                                    '<div class="menu" id="addRefinementDropdownMenu">' +
+                                                    '</div>' +
+                                                  '</div>' +
+                                                  '<div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first" data-position="left center">' +
+                                                    '<div class="ui disabled button" id="addRefinementButton">Add</div>' +
+                                                  '</div>' +
+                                                '</div>' +
+                                              '</div>' +
+                                            '</div>' +
+                                          '</div>' + 
+                                        
+                                        '</div>' +
+
+                                        
+
+                                       //'<div class="ui bottom attached segment"><div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first"><div class="ui fluid disabled button" id="addRefinementButton"><i class="plus icon"></i>Add</div></div></div>' + 
                                       '</div>' + 
                                    '</div>';
 
@@ -999,6 +1033,34 @@
 
     $("#annotationColumn").show();
     $("#annotationColumn").append(data);
+
+    {{ if eq .annotationView "unified" }}
+    $("#addRefinementButton").click(function(e) {
+      var refs = annotator.getRefinementsOfSelectedItem();
+      if(refs.indexOf($('#addRefinementDropdown').dropdown('get value')) == -1 ) {
+        refs.push($('#addRefinementDropdown').dropdown('get value'));
+        annotator.setRefinements(refs);
+        var allRefs = annotationRefinementsDlg.getRefinementsUuidMapping();
+        var refIcon = "";
+        if($('#addRefinementDropdown').dropdown('get value') in allRefs)
+          refIcon = allRefs[$('#addRefinementDropdown').dropdown('get value')].icon;
+        addRefinementToRefinementsLst($('#addRefinementDropdown').dropdown('get text'), $('#addRefinementDropdown').dropdown('get value'), refIcon);
+      }
+      $('#addRefinementDropdown').dropdown('restore placeholder text');
+    });
+    var refs = annotationRefinementsDlg.getRefinementsUuidMapping();
+    for(k in refs) {
+      if(refs.hasOwnProperty(k)) {
+        var entry = '<div class="item" data-value="' + k + '">';
+        if(refs[k].icon !== "") {
+          entry += '<i class="' + refs[k].icon + ' icon"></i>';
+        }
+        entry += (refs[k].name + '</div>');
+        $("#addRefinementDropdownMenu").append(entry);
+      }
+    }
+    $("#addRefinementDropdown").dropdown();
+    {{ end }}
 
     $("#annotationArea").attr("imageId", annotationInfo.imageId);
     $("#annotationArea").attr("origImageWidth", annotationInfo.origImageWidth);
