@@ -223,12 +223,6 @@
       {{ template "pointing_menu.html" .}}
       <div class="ui text container">
        <h2 class="ui inverted header">What do you see?</h2>
-        <div id="modeButtons">
-          <button class="ui {{ if eq .mode "default" }}white{{ else }}inverted basic{{ end }} button" 
-            onclick="window.location='/verify?mode=default';" data-tooltip="Default Mode">Default</button>
-          <button class="ui {{ if eq .mode "default" }}inverted basic{{ else }}white{{ end }} button" 
-            onclick="window.location='/verify?mode=browse';" data-tooltip="Browse Mode">Browse</button>
-        </div>
        <div style="display: none;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>
    </div>

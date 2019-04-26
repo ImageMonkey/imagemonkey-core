@@ -5,11 +5,19 @@
     </a>
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
-  <div class="ui dropdown item" id="labelPointingMenuDropdown">
+  <div class="ui floating labeled dropdown item" id="labelPointingMenuDropdown">
     Label<i class="dropdown icon"></i>
     <div class="menu">
-      <div class="center aligned item" onclick="window.location='/label';">Object</div>
-      <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
+      <div class="header" style="font-size: 15px;">
+        Label Object
+      </div>
+      <div class="center aligned item" onclick="window.location='/label?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/label?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Label Image
+      </div>
+      <div class="center aligned item" onclick="window.location='/label?type=image&mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/label?type=image&mode=browse';">Browse</div>
     </div>
   </div>
   
@@ -29,11 +37,18 @@
     </div>
   </div>
 
-  <div class="ui dropdown item" id="validatePointingMenuDropdown">
+  <div class="ui floating labeled dropdown item" id="validatePointingMenuDropdown">
     Validate<i class="dropdown icon"></i>
     <div class="menu">
-      <div class="center aligned item" onclick="window.location='/verify';">Object</div>
-      <div class="center aligned item" onclick="window.location='/verify_annotation';">Annotation</div>
+      <div class="header" style="font-size: 15px;">
+        Validate Object
+      </div>
+      <div class="center aligned item" onclick="window.location='/verify?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/verify?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Validate Annotation
+      </div>
+      <div class="center aligned item" onclick="window.location='/verify_annotation';">Default</div>
     </div>
   </div>
   
