@@ -816,23 +816,24 @@
           var strokeColor = annotator.getStrokeColorOfSelected();
           if(strokeColor !== null)
             colorPicker.setColor(strokeColor);
-        }
 
-        {{ if eq .annotationView "unified" }}
-        //when object is selected, show refinements
-        var refs = annotator.getRefinementsOfSelectedItem();
-        var refsUuidMapping = annotationRefinementsDlg.getRefinementsUuidMapping();
-        for(var i = 0; i < refs.length; i++) {
-          if(refs[i] in refsUuidMapping) {
-            addRefinementToRefinementsLst(refsUuidMapping[refs[i]].name, refs[i], refsUuidMapping[refs[i]].icon);
+          {{ if eq .annotationView "unified" }}
+          //when object is selected, show refinements
+          var refs = annotator.getRefinementsOfSelectedItem();
+          var refsUuidMapping = annotationRefinementsDlg.getRefinementsUuidMapping();
+          for(var i = 0; i < refs.length; i++) {
+            if(refs[i] in refsUuidMapping) {
+              addRefinementToRefinementsLst(refsUuidMapping[refs[i]].name, refs[i], refsUuidMapping[refs[i]].icon);
+            }
           }
-        }
-        $("#addRefinementButton").removeClass("disabled");
-        $("#addRefinementButtonTooltip").removeAttr("data-tooltip");
-        context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
+          $("#addRefinementButton").removeClass("disabled");
+          $("#addRefinementButtonTooltip").removeAttr("data-tooltip");
+          context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
 
-        {{ end }}
+          {{ end }}
+        }
     } else {
+
       $("#trashMenuItem").addClass("disabled");
       $("#propertiesMenuItem").addClass("disabled");
     }
