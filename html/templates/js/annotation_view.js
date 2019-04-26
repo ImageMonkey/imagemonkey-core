@@ -1272,7 +1272,18 @@
       context.init({preventDoubleContext: false});
 
       $("#addAnnotationRefinementsDlgDoneButton").click(function(e) {
-        annotator.setRefinements(annotationRefinementsDlg.getSelectedRefinements().split(','));
+        var refs = annotationRefinementsDlg.getSelectedRefinements().split(',');
+        {{ if eq .annotationView "unified" }}
+        $("#annotationPropertiesLst").empty();
+        var allRefs = annotationRefinementsDlg.getRefinementsUuidMapping();
+        for(var i = 0; i < refs.length; i++) {
+          var refIcon = "";
+          if(refs[i] in allRefs)
+            refIcon = allRefs[refs[i]].icon;
+          addRefinementToRefinementsLst(allRefs[refs[i]].name, refs[i], refIcon);
+        }
+        {{ end }}
+        annotator.setRefinements(refs);
       });
       
 
