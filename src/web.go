@@ -200,11 +200,14 @@ func main() {
 	}
 
 	log.Debug("[Main] Reading labels")
-	_, words, err := commons.GetLabelMap(*wordlistPath)
+	labelRepository := commons.NewLabelRepository()
+	err := labelRepository.Load(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
 		log.Fatal(err)
 	}
+
+	words := labelRepository.GetWords()
 
 	log.Debug("[Main] Reading label refinements")
 	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)

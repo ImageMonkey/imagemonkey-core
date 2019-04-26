@@ -15,7 +15,14 @@
         <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
       </div>
     </div>
-    <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationNavigationMenuItem" href="/annotate">Annotate</a>
+
+    <div class="ui dropdown item" id="annotateMenuDropdown">
+      Annotate<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/annotate?mode=default';">Default Mode</div>
+        <div class="center aligned item" onclick="window.location='/annotate?mode=browse';">Browse Mode</div>
+      </div>
+    </div>
 
     <div class="ui dropdown item" id="validateMenuDropdown">
       Label<i class="dropdown icon"></i>
@@ -93,12 +100,6 @@
     $('#refinementMenuDropdown').dropdown();
     $('#labelMenuDropdown').dropdown();
     $('#validateMenuDropdown').dropdown();
-
-    //switch to browse mode when annotation mode is set to browse
-    var settings = new Settings();
-    if(settings.getAnnotationMode() === "browse") {
-      $("#annotationNavigationMenuItem").attr("href", "/annotate?mode=browse");
-      $("#annotationSidebarMenuItem").attr("href", "/annotate?mode=browse");
-    }
+    $('#annotateMenuDropdown').dropdown();
   });
 </script>

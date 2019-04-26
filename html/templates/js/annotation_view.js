@@ -12,6 +12,8 @@
   var browserFingerprint = null;
   var deleteObjectsPopupShown = false;
   var unifiedModeAnnotations = {};
+  var pluralAnnotations = false;
+  var pluralLabels = null;
   var initializeLabelsLstAftLoadDelayed = false;
 
   {{ if eq .annotationMode "browse" }}
@@ -228,6 +230,28 @@
     });
   }
 
+  function populatePluralsAndLoadData() {
+    getPluralLabels(function() {
+      {{ if eq .annotationMode "default" }}
+        {{ if eq .validationId "" }}
+          getUnannotatedImage();
+        {{ else }}
+          getUnannotatedImage({{ .validationId }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "refine" }}
+        {{ if ne .annotationId "" }}
+          getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
+        {{ end }}
+      {{ end }}
+
+      {{ if eq .annotationMode "browse" }}
+      $("#loadingSpinner").hide();
+      {{ end }}
+    });
+  }
+
   function populateUnifiedModeToolbox(imageId) {
     $("#unifiedModeLabelsLstLoadingIndicator").show();
     unifiedModePopulated = UnifiedModeStates.uninitialized;
@@ -304,6 +328,11 @@
     }
   }
 
+  function onRefinementInRefinementsLstClicked(elem) {
+    $("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id", $(elem).attr("id"));
+    $("#removeAnnotationRefinementsDlg").modal("show");
+  }
+
   function onLabelInLabelLstClicked(elem) {
     var key = "";
 
@@ -330,6 +359,19 @@
     if(key in unifiedModeAnnotations) {
       annotator.loadAnnotations(unifiedModeAnnotations[key].annotations, canvas.fabric().backgroundImage.scaleX);
     }
+  }
+
+  function addRefinementToRefinementsLst(name, uuid, icon) {
+    var id = "refinementlstitem-" + uuid;
+    $("#annotationPropertiesLst").append('<div class="ui segment center aligned refinementlstitem" id="' + id + '"' +
+                                        ' data-uuid="' + uuid +
+                                          '" onclick="onRefinementInRefinementsLstClicked(this);"' +
+                                          'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
+                                          'onmouseout="this.style.backgroundColor=\'white\';"' + 
+                                          'style="overflow: auto;">' +
+                                          '<span class="left-floated">' +
+                                            '<p><i class="' + icon + ' icon"></i> ' + name + '</p>' + 
+                                          '</span><span class="right-floated"><i class="right icon delete ui red"></i></span></div>');
   }
 
   function addLabelToLabelLst(label, sublabel, uuid) {
@@ -587,6 +629,7 @@
 
       $("#annotationColumnContent").show();
       $("#annotationColumnSpacer").show();
+      $("#annotationPropertiesColumnSpacer").show();
     }
     else{
       $("#doneButton").hide();
@@ -602,6 +645,7 @@
       $("#imageLockedLabel").hide();
       $("#annotationColumnContent").hide();
       $("#annotationColumnSpacer").hide();
+      $("#annotationPropertiesColumnSpacer").hide();
     }
   }
 
@@ -732,12 +776,14 @@
       $("#labelContainer").hide();
       $("#doneButton").hide();
       $("#bottomLabel").hide();
+      $("#isPluralContainer").hide();
       annotator.block();
     }
     else{
       $("#labelContainer").show();
       $("#doneButton").show();
       $("#bottomLabel").show();
+      $("#isPluralContainer").show();
       annotator.unblock();
     }
   }
@@ -752,10 +798,12 @@
     if(sublabel === ""){
       $("#label").text(("Annotate all: " + label));
       $("#bottomLabel").text(("Annotate all: " + label));
+      $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + label + " objects at once");
     } 
     else {
       $("#label").text(("Annotate all: " + sublabel + "/" + label));
       $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
+      $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + sublabel + "/" + label + " objects at once");
     }
   }
 
@@ -768,9 +816,24 @@
           var strokeColor = annotator.getStrokeColorOfSelected();
           if(strokeColor !== null)
             colorPicker.setColor(strokeColor);
+
+          {{ if eq .annotationView "unified" }}
+          //when object is selected, show refinements
+          var refs = annotator.getRefinementsOfSelectedItem();
+          var refsUuidMapping = annotationRefinementsDlg.getRefinementsUuidMapping();
+          for(var i = 0; i < refs.length; i++) {
+            if(refs[i] in refsUuidMapping) {
+              addRefinementToRefinementsLst(refsUuidMapping[refs[i]].name, refs[i], refsUuidMapping[refs[i]].icon);
+            }
+          }
+          $("#addRefinementButton").removeClass("disabled");
+          $("#addRefinementButtonTooltip").removeAttr("data-tooltip");
+          context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
+
+          {{ end }}
         }
-        context.attach('#annotationColumn', annotationRefinementsContextMenu.data);
     } else {
+
       $("#trashMenuItem").addClass("disabled");
       $("#propertiesMenuItem").addClass("disabled");
     }
@@ -778,6 +841,12 @@
 
   function onAnnotatorObjectDeselected() {
     context.destroy('#annotationColumn');
+
+    {{ if eq .annotationView "unified" }}
+    $("#annotationPropertiesLst").empty();
+    $("#addRefinementButton").addClass("disabled");
+    $("#addRefinementButtonTooltip").attr("data-tooltip", "Select a annotation first")
+    {{ end }}
   }
 
   function onAnnotatorMouseUp(){
@@ -835,9 +904,11 @@
 
   function addMainCanvas() {
     $("#annotationColumnSpacer").remove();
+    $("#annotationPropertiesColumnSpacer").remove();
     $("#annotationColumnContent").remove();
 
     var spacer = '';
+    var unifiedModePropertiesLst = '';
     var w = "sixteen";
     if(isSmartAnnotationEnabled()) {
       w = "eight";
@@ -854,12 +925,15 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui segments" style="margin-left: 15px;">' +
-                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                      '<div class="ui basic segment">'
+                        '<div class="ui segments">' +
+                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                          '</div>' + 
                         '</div>' + 
-                      '</div>' + 
+                      '</div>' +
                     '</div>';
+          unifiedModePropertiesLstWidth = 'four';
         }
         else if(workspaceSize === "medium"){
           w = "ten";
@@ -869,12 +943,15 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui segments" style="margin-left: 15px;">' +
-                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
-                        '</div>' + 
-                      '</div>' + 
+                      '<div class="ui basic segment">' +
+                        '<div class="ui segments">' +
+                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                          '</div>' + 
+                        '</div>' +
+                      '</div>' +
                     '</div>';
+          unifiedModePropertiesLstWidth = 'three';
         }
         else if(workspaceSize === "big"){
           w = "ten";
@@ -884,13 +961,54 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui segments" style="margin-left: 15px;">' +
-                        '<div class="ui raised segments" style="margin-left: 15px; overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                          '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                      '<div class="ui basic segment">' +
+                        '<div class="ui segments">' +
+                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                          '</div>' + 
                         '</div>' + 
-                      '</div>' + 
+                      '</div>' +
                     '</div>';
+          unifiedModePropertiesLstWidth = 'three';
         }
+
+
+        unifiedModePropertiesLst = '<div class="' + unifiedModePropertiesLstWidth + ' wide column" id="annotationPropertiesColumnSpacer">' +
+                                      '<h2 class="ui center aligned header">' + 
+                                        '<div class="content">' +
+                                          'Properties' +
+                                        '</div>' + 
+                                      '</h2>' +
+                                      '<div class="ui basic segment">' +
+                                        '<div class="ui segments">' +
+                                         '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
+                                         '</div>' +
+                                          
+                                          '<div class="ui form">' +
+                                            '<div class="field">' +
+                                              '<div class="ui search">' +
+                                                '<div class="ui center aligned action input" id="addRefinementForm">' +
+                                                  '<div class="ui small search selection dropdown" id="addRefinementDropdown">' +
+                                                    '<div class="default text">Select Refinement</div>' +
+                                                    '<div class="menu" id="addRefinementDropdownMenu">' +
+                                                    '</div>' +
+                                                  '</div>' +
+                                                  '<div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first" data-position="left center">' +
+                                                    '<div class="ui disabled button" id="addRefinementButton">Add</div>' +
+                                                  '</div>' +
+                                                '</div>' +
+                                              '</div>' +
+                                            '</div>' +
+                                          '</div>' + 
+                                        
+                                        '</div>' +
+
+                                        
+
+                                       //'<div class="ui bottom attached segment"><div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first"><div class="ui fluid disabled button" id="addRefinementButton"><i class="plus icon"></i>Add</div></div></div>' + 
+                                      '</div>' + 
+                                   '</div>';
+
       {{ else }}
         if(workspaceSize === "small"){
           w = "eight";
@@ -911,10 +1029,38 @@
                  '<div id="annotationAreaContainer">' +
                     '<canvas id="annotationArea" imageId=""></canvas>' +
                  '</div>' +
-                '</div>';
+                '</div>' + unifiedModePropertiesLst;
 
     $("#annotationColumn").show();
     $("#annotationColumn").append(data);
+
+    {{ if eq .annotationView "unified" }}
+    $("#addRefinementButton").click(function(e) {
+      var refs = annotator.getRefinementsOfSelectedItem();
+      if(refs.indexOf($('#addRefinementDropdown').dropdown('get value')) == -1 ) {
+        refs.push($('#addRefinementDropdown').dropdown('get value'));
+        annotator.setRefinements(refs);
+        var allRefs = annotationRefinementsDlg.getRefinementsUuidMapping();
+        var refIcon = "";
+        if($('#addRefinementDropdown').dropdown('get value') in allRefs)
+          refIcon = allRefs[$('#addRefinementDropdown').dropdown('get value')].icon;
+        addRefinementToRefinementsLst($('#addRefinementDropdown').dropdown('get text'), $('#addRefinementDropdown').dropdown('get value'), refIcon);
+      }
+      $('#addRefinementDropdown').dropdown('restore placeholder text');
+    });
+    var refs = annotationRefinementsDlg.getRefinementsUuidMapping();
+    for(k in refs) {
+      if(refs.hasOwnProperty(k)) {
+        var entry = '<div class="item" data-value="' + k + '">';
+        if(refs[k].icon !== "") {
+          entry += '<i class="' + refs[k].icon + ' icon"></i>';
+        }
+        entry += (refs[k].name + '</div>');
+        $("#addRefinementDropdownMenu").append(entry);
+      }
+    }
+    $("#addRefinementDropdown").dropdown();
+    {{ end }}
 
     $("#annotationArea").attr("imageId", annotationInfo.imageId);
     $("#annotationArea").attr("origImageWidth", annotationInfo.origImageWidth);
@@ -1021,6 +1167,26 @@
       }
     });
   }
+
+  function getPluralLabels(onDoneCallback) {
+    {{ if ne .annotationMode "browse" }}
+    $("#loadingSpinner").show();
+    {{ end }}
+
+    var url = "{{ .apiBaseUrl }}/v1/label/plurals";
+    $.ajax({
+      url: url,
+      type: 'GET',
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
+      },
+      success: function(data) {
+        pluralLabels = data;
+
+        onDoneCallback();
+      }
+    });
+  }
   
 
   $(document).ready(function(){
@@ -1107,7 +1273,18 @@
       context.init({preventDoubleContext: false});
 
       $("#addAnnotationRefinementsDlgDoneButton").click(function(e) {
-        annotator.setRefinements(annotationRefinementsDlg.getSelectedRefinements().split(','));
+        var refs = annotationRefinementsDlg.getSelectedRefinements().split(',');
+        {{ if eq .annotationView "unified" }}
+        $("#annotationPropertiesLst").empty();
+        var allRefs = annotationRefinementsDlg.getRefinementsUuidMapping();
+        for(var i = 0; i < refs.length; i++) {
+          var refIcon = "";
+          if(refs[i] in allRefs)
+            refIcon = allRefs[refs[i]].icon;
+          addRefinementToRefinementsLst(allRefs[refs[i]].name, refs[i], refIcon);
+        }
+        {{ end }}
+        annotator.setRefinements(refs);
       });
       
 
@@ -1223,6 +1400,44 @@
 
       $("#zoomOutMenuItem").click(function(e) {
         zoomOut();
+      });
+
+      $("#removeAnnotationRefinementsDlgYesButton").click(function(e) {
+        $("#"+$("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id")).remove();
+        var refs = annotator.getRefinementsOfSelectedItem();
+        var idx = refs.indexOf($("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id").replace("refinementlstitem-", ""));
+        if(idx > -1) refs.splice(idx, 1);
+        annotator.setRefinements(refs);
+      });
+
+      $("#isPluralButton").click(function(e) {
+        var pluralLabel = null;
+        var currentLabel = "";
+        if ($("#label").attr("sublabel") !== "")
+          currentLabel = $("#label").attr("sublabel") + $("#label").attr("label");
+        else
+          currentLabel = $("#label").attr("label");
+
+        if(pluralLabels && currentLabel in pluralLabels) {
+          pluralLabel = pluralLabels[currentLabel];
+        }
+
+        var isPluralButton = $("#isPluralButton");
+        if(isPluralButton.hasClass("basic")) {
+          pluralAnnotations = true;
+          isPluralButton.removeClass("basic");
+          isPluralButton.css("background-color", "white");
+          isPluralButton.removeClass("inverted");
+
+          if(pluralLabel)
+            $("#label").text("Annotate all: " + pluralLabel);
+        } else {
+          pluralAnnotations = false;
+          isPluralButton.removeClass("white");
+          isPluralButton.addClass("basic");
+          isPluralButton.addClass("inverted");
+          $("#label").text("Annotate all: " + currentLabel);
+        }
       });
 
       $('#strokeWidthSlider').on('input', function(e) {
@@ -1374,7 +1589,7 @@
           return;
         }
         {{ else }}
-        res = annotator.toJSON();
+        res = annotator.toJSON((pluralAnnotations ? annotationRefinementsDlg.getPluralAnnotationRefinementUuid() : null));
         if(res.length === 0) { //at least one annotation needs to be there
           $('#warningMsgText').text('Please annotate the image first.');
           $('#warningMsg').show(200).delay(1500).hide(200);
@@ -1421,19 +1636,7 @@
 
       changeNavHeader({{ .annotationMode }});
 
-      {{ if eq .annotationMode "default" }}
-        {{ if eq .validationId "" }}
-        getUnannotatedImage();
-        {{ else }}
-        getUnannotatedImage({{ .validationId }});
-        {{ end }}
-      {{ end }}
-
-      {{ if eq .annotationMode "refine" }}
-        {{ if ne .annotationId "" }}
-        getAnnotatedImage({{ .annotationId }}, {{ .annotationRevision }});
-        {{ end }}
-      {{ end }}
+      populatePluralsAndLoadData();
 
       try {
         //can fail in case someone uses uBlock origin or Co.
@@ -1442,6 +1645,4 @@
         });
       } catch(e) {
       }
-
-      
 });

@@ -22,8 +22,6 @@ import (
     "github.com/gin-gonic/gin"
     "../datastructures"
     "strconv"
-    "github.com/google/go-jsonnet"
-    "path/filepath"
 )
 
 
@@ -158,42 +156,6 @@ func GetIPAddress(r *http.Request) string {
         }
     }
     return ""
-}
-
-func GetLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
-    var words []string
-    var labelMap datastructures.LabelMap
-
-    data, err := ioutil.ReadFile(path)
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    vm := jsonnet.MakeVM()
-
-    dir, _ := filepath.Split(path)
-    vm.Importer(&jsonnet.FileImporter{
-        JPaths: []string{dir},
-    })
-
-    out, err := vm.EvaluateSnippet("file", string(data))
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    err = json.Unmarshal([]byte(out), &labelMap)
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    words = make([]string, len(labelMap.LabelMapEntries))
-    i := 0
-    for key := range labelMap.LabelMapEntries {
-        words[i] = key
-        i++
-    }
-
-    return labelMap.LabelMapEntries, words, nil
 }
 
 func GetLabelRefinementsMap(path string) (map[string]datastructures.LabelMapRefinementEntry, error) {

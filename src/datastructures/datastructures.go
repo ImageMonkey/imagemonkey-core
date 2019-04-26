@@ -543,6 +543,7 @@ type LabelMapEntry struct {
     Accessors []string `json:"accessors"`
     Quiz []LabelMapQuizEntry `json:"quiz"`
     Uuid string `json:"uuid"`
+    Plural string `json:"plural,omitempty"`
 }
 
 type MetaLabelMapEntry struct {
