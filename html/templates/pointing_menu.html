@@ -13,11 +13,19 @@
     </div>
   </div>
   
-  <div class="ui dropdown item" id="annotatePointingMenuDropdown">
+  <div class="ui floating labeled dropdown item" id="annotatePointingMenuDropdown">
     Annotate<i class="dropdown icon"></i>
     <div class="menu">
-      <div class="center aligned item" onclick="window.location='/annotate?mode=default';">Default Mode</div>
-      <div class="center aligned item" onclick="window.location='/annotate?mode=browse';">Browse Mode</div>
+      <div class="header" style="font-size: 15px;">
+        Simple Mode
+      </div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Expert Mode
+      </div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=default&view=unified';">Default</div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=browse&view=unified';">Browse</div>
     </div>
   </div>
 
