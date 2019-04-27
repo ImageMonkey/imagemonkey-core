@@ -28,8 +28,10 @@ func TestLabelUuidsShouldBeUnique(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	labels, _, err := commons.GetLabelMap("../wordlists/en/labels.jsonnet")
+	labelRepository := commons.NewLabelRepository()
+	err := labelRepository.Load("../wordlists/en/labels.jsonnet")
 	ok(t, err)
+	labels := labelRepository.GetMapping()
 
 	uuids := make(map[string]bool)
 	for _, val := range labels {
