@@ -301,7 +301,14 @@ local animals = import 'animals.libsonnet';
 			"uuid": "654c2298-aa63-4d7d-b154-c8b521c26532",
 			"accessors": ["."],
 			"isa": [],
-			"plural": "cups"
+			"plural": "cups",
+			"has": {
+				"handle": {
+					"description": "optional",
+					"accessors": [".has"],
+					"uuid": "8087f4cd-4102-47fc-bb90-0824b0b6897e"
+				}
+			}
 		},
 		"glass": {
 			"description": "optional",
@@ -1105,6 +1112,30 @@ local animals = import 'animals.libsonnet';
 			"accessors": ["."],
 			"plural": "ropes",
 			"uuid": "db9accb6-e4e0-4898-bb68-bb3df7807f63"
+		},
+		"towel": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "towels",
+			"uuid": "14523e0c-9910-491e-985e-8d8a60b5993a"
+		},
+		"bread": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "bread",
+			"uuid": "dd2a451a-042f-4994-b9d5-fa7ddbdce5a1"
+		},
+		"bus shelter": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "bus shelters",
+			"uuid": "fbdb1202-3d1d-47af-bec4-06cdc2e3189f"
+		},
+		"jeans": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "jeans",
+			"uuid": "aa947d16-4f65-4338-b814-507a2d5acac9"
 		},
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],

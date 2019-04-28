@@ -64,6 +64,11 @@
 				"description": "optional",
 				"accessors": [".has"],
 				"uuid": "b7be845d-6192-4ef9-bbc3-be3b2cf0fe0b"
+			},
+			"foot": {
+				"description": "optional",
+				"accessors": [".has"],
+				"uuid": "8828a901-b273-4e91-8805-54d4f6d516fb"
 			}
 		}
 	},
