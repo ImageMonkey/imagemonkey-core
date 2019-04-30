@@ -351,6 +351,7 @@ func main() {
 				"labeledObjectsStatistics": commons.Pick(imageMonkeyDatabase.GetLabeledObjectsStatistics("last-month"))[0],
 				"annotationRefinementStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month"))[0],
 				"imageDescriptionStatistics": commons.Pick(imageMonkeyDatabase.GetImageDescriptionStatistics("last-month"))[0],
+				"donationsStatistics": commons.Pick(imageMonkeyDatabase.GetDonationsStatistics("last-month"))[0],
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {

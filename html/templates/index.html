@@ -40,12 +40,14 @@
     var annotationRefinementStatistics = {{ .annotationRefinementStatistics }};
     var imageDescriptionStatistics = {{ .imageDescriptionStatistics }};
     var labeledObjectsStatistics = {{ .labeledObjectsStatistics }};
+    var donationsStatistics = {{ .donationsStatistics }};
 
     var numOfAnnotations = [];
     var numOfValidations = [];
     var numOfImageDescriptions = [];
     var numOfAnnotationRefinements = [];
     var numOfLabeledObjects = [];
+    var numOfDonations = [];
     var dates = [];
     var detailedActivityData = null;
     var currentDetailedActivityIdx = -1;
@@ -59,13 +61,15 @@
     if((annotationStatistics.length === validationStatistics.length) 
       && (annotationStatistics.length === annotationRefinementStatistics.length)
       && (annotationStatistics.length === imageDescriptionStatistics.length)
-      && (annotationStatistics.length === labeledObjectsStatistics.length)) {
+      && (annotationStatistics.length === labeledObjectsStatistics.length)
+      && (annotationStatistics.length === donationsStatistics.length)) {
       for(var i = 0; i < annotationStatistics.length; i++) {
         numOfAnnotations.push(annotationStatistics[i]["value"]);
         numOfValidations.push(validationStatistics[i]["value"]);
         numOfAnnotationRefinements.push(annotationRefinementStatistics[i]["value"]);
         numOfImageDescriptions.push(imageDescriptionStatistics[i]["value"]);
         numOfLabeledObjects.push(labeledObjectsStatistics[i]["value"]);
+        numOfDonations.push(donationsStatistics[i]["value"]);
         dates.push(annotationStatistics[i]["date"]);
       }
     }
@@ -165,10 +169,16 @@
                 stack: 2 //...and refinements
               },
               {
+                data: numOfDonations,
+                backgroundColor: "white",
+                label: "Donations",
+                stack: 0 //stack donations
+              },
+              {
                 data: numOfValidations,
                 backgroundColor: "red",
                 label: "Validations",
-                stack: 0
+                stack: 0 //..and validations
               },
               {
                 data: numOfImageDescriptions,
