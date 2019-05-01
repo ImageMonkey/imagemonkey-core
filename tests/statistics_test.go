@@ -6,7 +6,6 @@ import (
 	"../src/datastructures"
 	"os/exec"
 	"time"
-	"fmt"
 )
 
 func runStatWorker(t *testing.T) {
