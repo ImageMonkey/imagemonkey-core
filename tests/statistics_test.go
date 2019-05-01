@@ -191,12 +191,16 @@ func TestGetDonationsStatistics(t *testing.T) {
 	defer teardownTestCase(t)
 
 	statisticsBefore := testGetDonationsStatistics(t)
-	equals(t, len(statisticsBefore.Statistics), 32)
+
+	numDays, err := db.GetNumOfDatesFromNowTilOneMonthAgo()
+	ok(t, err)
+
+	equals(t, len(statisticsBefore.Statistics), numDays)
 
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	statisticsAfter := testGetDonationsStatistics(t)
-	equals(t, len(statisticsAfter.Statistics), 32)
+	equals(t, len(statisticsAfter.Statistics), numDays)
 
 	currentTime := time.Now()
 	for _, val := range statisticsAfter.Statistics {

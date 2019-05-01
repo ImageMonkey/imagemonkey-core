@@ -818,6 +818,13 @@ func (p *ImageMonkeyDatabase) GetNumOfMetaLabelImageValidations() (int, error) {
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumOfDatesFromNowTilOneMonthAgo() (int, error) {
+	var num int
+	err := p.db.QueryRow(`SELECT COUNT(*)
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day')`).Scan(&num)
+    return num, err
+}
+
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
