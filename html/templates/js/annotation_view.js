@@ -925,12 +925,12 @@
                           'Labels' +
                         '</div>' + 
                       '</h2>' +
-                      '<div class="ui basic segment">'
+                      '<div class="ui basic segment">' +
                         '<div class="ui segments">' +
                           '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
                             '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
                           '</div>' + 
-                        '</div>' + 
+                        '</div>' +
                       '</div>' +
                     '</div>';
           unifiedModePropertiesLstWidth = 'four';
