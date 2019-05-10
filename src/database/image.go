@@ -432,7 +432,7 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
         queryValues = append(queryValues, imageProvider)
     }
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, string_agg(q.label_name::text, ',') as labels, 
+    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, COALESCE(string_agg(q.label_name::text, ','), '') as labels, 
                       p.name as image_provider
                       FROM 
                       (
