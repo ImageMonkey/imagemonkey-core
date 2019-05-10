@@ -440,7 +440,7 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                         l.name  as label_name, i.image_provider_id as image_provider_id, i.id as image_id
                         FROM image i  
                         LEFT JOIN image_validation v ON v.image_id = i.id
-                        JOIN label l ON v.label_id = l.id
+                        LEFT JOIN label l ON v.label_id = l.id
                         WHERE i.unlocked = false
 
                         UNION
