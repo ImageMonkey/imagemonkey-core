@@ -24,7 +24,7 @@ func TestDatabaseEmptyWithUserThatHasUnlockImagePermission(t *testing.T) {
 	ok(t, err)
 }
 
-func TestLabelUuidsShouldBeUnique(t *testing.T) {
+func TestLabelAndMetalabelUuidsShouldBeUnique(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -47,6 +47,18 @@ func TestLabelUuidsShouldBeUnique(t *testing.T) {
 			} else {
 				uuids[val.Uuid] = true
 			}
+		}
+	}
+
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	err = metalabels.Load()
+	ok(t, err)
+	m := metalabels.GetMapping()
+	for _, val := range m.MetaLabelMapEntries {
+		if _, ok := uuids[val.Uuid]; ok {
+			t.Errorf("Found a duplicate UUID '%s'", val.Uuid)
+		} else {
+			uuids[val.Uuid] = true
 		}
 	}
 } 
