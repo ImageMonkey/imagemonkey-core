@@ -252,7 +252,9 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
     //PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative). 
     //this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	var imageId int64 
-	err = tx.QueryRow("INSERT INTO image(key, unlocked, image_provider_id, hash, width, height) SELECT $1, $2, p.id, $3, $5, $6 FROM image_provider p WHERE p.name = $4 RETURNING id", 
+	err = tx.QueryRow(`INSERT INTO image(key, unlocked, image_provider_id, hash, width, height, sys_period) 
+                        SELECT $1, $2, p.id, $3, $5, $6, '["now()",]'::tstzrange FROM image_provider p WHERE p.name = $4 
+                        RETURNING id`, 
 					  imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageProvider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
 	if err != nil {
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
@@ -430,7 +432,7 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
         queryValues = append(queryValues, imageProvider)
     }
 
-    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, string_agg(q.label_name::text, ',') as labels, 
+    q := fmt.Sprintf(`SELECT q.image_key, q.image_width, q.image_height, COALESCE(string_agg(q.label_name::text, ','), '') as labels, 
                       p.name as image_provider
                       FROM 
                       (
@@ -438,7 +440,7 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                         l.name  as label_name, i.image_provider_id as image_provider_id, i.id as image_id
                         FROM image i  
                         LEFT JOIN image_validation v ON v.image_id = i.id
-                        JOIN label l ON v.label_id = l.id
+                        LEFT JOIN label l ON v.label_id = l.id
                         WHERE i.unlocked = false
 
                         UNION

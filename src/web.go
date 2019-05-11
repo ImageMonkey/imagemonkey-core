@@ -110,7 +110,7 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to labels map")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to labels map")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
@@ -200,11 +200,14 @@ func main() {
 	}
 
 	log.Debug("[Main] Reading labels")
-	_, words, err := commons.GetLabelMap(*wordlistPath)
+	labelRepository := commons.NewLabelRepository()
+	err := labelRepository.Load(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
 		log.Fatal(err)
 	}
+
+	words := labelRepository.GetWords()
 
 	log.Debug("[Main] Reading label refinements")
 	labelRefinementsMap, err := commons.GetLabelRefinementsMap(*labelRefinementsPath)
@@ -348,6 +351,7 @@ func main() {
 				"labeledObjectsStatistics": commons.Pick(imageMonkeyDatabase.GetLabeledObjectsStatistics("last-month"))[0],
 				"annotationRefinementStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month"))[0],
 				"imageDescriptionStatistics": commons.Pick(imageMonkeyDatabase.GetImageDescriptionStatistics("last-month"))[0],
+				"donationsStatistics": commons.Pick(imageMonkeyDatabase.GetDonationsStatistics("last-month"))[0],
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {

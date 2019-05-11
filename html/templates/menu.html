@@ -11,17 +11,47 @@
     <div class="ui dropdown item" id="labelMenuDropdown">
       Label<i class="dropdown icon"></i>
       <div class="menu">
-        <div class="center aligned item" onclick="window.location='/label';">Object</div>
-        <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
+        <div class="header" style="font-size: 15px;">
+          Label Object
+        </div>
+        <div class="center aligned item" onclick="window.location='/label?mode=default';">Default</div>
+        <div class="center aligned item" onclick="window.location='/label?mode=browse';">Browse</div>
+        <div class="header" style="font-size: 15px;">
+          Label Image
+        </div>
+        <div class="center aligned item" onclick="window.location='/label?type=image&mode=default';">Default</div>
+        <div class="center aligned item" onclick="window.location='/label?type=image&mode=browse';">Browse</div>
       </div>
     </div>
-    <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationNavigationMenuItem" href="/annotate">Annotate</a>
+
+    <div class="ui dropdown item" id="annotateMenuDropdown">
+      Annotate<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="header" style="font-size: 15px;">
+          Simple Mode
+        </div>
+        <div class="center aligned item" onclick="window.location='/annotate?mode=default';">Default</div>
+        <div class="center aligned item" onclick="window.location='/annotate?mode=browse';">Browse</div>
+        <div class="header" style="font-size: 15px;">
+          Expert Mode
+        </div>
+        <div class="center aligned item" onclick="window.location='/annotate?mode=default&view=unified';">Default</div>
+        <div class="center aligned item" onclick="window.location='/annotate?mode=browse&view=unified';">Browse</div>
+      </div>
+    </div>
 
     <div class="ui dropdown item" id="validateMenuDropdown">
-      Label<i class="dropdown icon"></i>
+      Validate<i class="dropdown icon"></i>
       <div class="menu">
-        <div class="center aligned item" onclick="window.location='/verify';">Object</div>
-        <div class="center aligned item" onclick="window.location='/verify_annotation';">Annotation</div>
+        <div class="header" style="font-size: 15px;">
+          Validate Object
+        </div>
+        <div class="center aligned item" onclick="window.location='/verify?mode=default';">Default</div>
+        <div class="center aligned item" onclick="window.location='/verify?mode=browse';">Browse</div>
+        <div class="header" style="font-size: 15px;">
+          Validate Annotation
+        </div>
+        <div class="center aligned item" onclick="window.location='/verify_annotation';">Default</div>
       </div>
     </div>
 
@@ -46,7 +76,6 @@
     <div class="ui dropdown item" id="developersMenuDropdown">
       Developers<i class="dropdown icon"></i>
       <div class="menu">
-        <div class="center aligned item" onclick="window.location='/api';">API</div>
         <div class="center aligned item" onclick="window.location='/libraries';">Libraries</div>
         <div class="center aligned item" onclick="window.location='/models';">Models</div>
       </div>
@@ -76,7 +105,6 @@
   <a class="{{if (eq .activeMenuNr 14)}}active {{end}}item" href="/refine?mode=browse">Refinement</a>
   <a class="{{if (eq .activeMenuNr 8)}}active {{end}}item" href="/statistics">Statistics</a>
   <a class="{{if (eq .activeMenuNr 9)}}active {{end}}item" href="/explore">Explore</a>
-  <a class="item" href="/api">API</a>
   <a class="{{if (eq .activeMenuNr 13)}}active {{end}}item" href="/libraries">Libraries</a>
   <a class="{{if (eq .activeMenuNr 16)}}active {{end}}item" href="/models">Models</a>
 
@@ -93,12 +121,6 @@
     $('#refinementMenuDropdown').dropdown();
     $('#labelMenuDropdown').dropdown();
     $('#validateMenuDropdown').dropdown();
-
-    //switch to browse mode when annotation mode is set to browse
-    var settings = new Settings();
-    if(settings.getAnnotationMode() === "browse") {
-      $("#annotationNavigationMenuItem").attr("href", "/annotate?mode=browse");
-      $("#annotationSidebarMenuItem").attr("href", "/annotate?mode=browse");
-    }
+    $('#annotateMenuDropdown').dropdown();
   });
 </script>

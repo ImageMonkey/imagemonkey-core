@@ -310,6 +310,32 @@ func (p *ImageMonkeyDatabase) GetAllValidationIds() ([]string, error) {
 	return validationIds, nil
 }
 
+func (p *ImageMonkeyDatabase) GetAllValidationIdsForLabel(label string) ([]string, error) {
+     var validationIds []string
+
+     rows, err := p.db.Query(`SELECT v.uuid FROM image_validation v 
+	 						  JOIN label l ON v.label_id = l.id 
+							  WHERE l.name = $1 AND l.parent_id is null`, label)
+     if err != nil {
+         return validationIds, err
+     }
+
+     defer rows.Close()
+
+     for rows.Next() {
+         var validationId string
+         err = rows.Scan(&validationId)
+         if err != nil {
+             return validationIds, err
+         }
+
+         validationIds = append(validationIds, validationId)
+     }
+
+     return validationIds, nil
+ }
+
+
 func (p *ImageMonkeyDatabase) GetRandomValidationId() (string, error) {
 	validationIds, err := db.GetAllValidationIds()
 	if err != nil {
@@ -818,6 +844,51 @@ func (p *ImageMonkeyDatabase) GetNumOfMetaLabelImageValidations() (int, error) {
 	return num, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumOfDatesFromNowTilOneMonthAgo() (int, error) {
+	var num int
+	err := p.db.QueryRow(`SELECT COUNT(*)
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day')`).Scan(&num)
+    return num, err
+}
+
+func (p *ImageMonkeyDatabase) RemoveLabel(labelName string) error {
+	tx, err := p.db.Begin()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	_, err = tx.Exec("DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM label l WHERE l.name = $1 AND l.parent_id is null", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
+	return err
+} 
+
+func (p *ImageMonkeyDatabase) GetNumOfNotAnnotatable(uuid string) (int, error) {
+	rows, err := p.db.Query("SELECT num_of_not_annotatable FROM image_validation WHERE uuid = $1", uuid)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	
+	var num int
+	if rows.Next() {
+		err = rows.Scan(&num)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return num, nil
+} 
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()

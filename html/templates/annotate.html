@@ -18,10 +18,10 @@
   <link rel="stylesheet" href="css/common_sub.css"/>
   <script src="js/common.js"></script> 
   <script src="js/fabric.min.js"></script>
-  <script src="js/fabric_helper.js?v=14"></script>
+  <script src="js/fabric_helper.js?v=15"></script>
   <script src="js/fingerprint2.min.js"></script>
   <script src="js/lodash.core.min.js"></script>
-  <script src="js/annotate.js?v=22"></script>
+  <script src="js/annotate.js?v=23"></script>
   <script src="js/simplify.js"></script>
   <script src="js/justified-layout.min.js"></script>
   <script src="js/infinitescroll.js?v=2"></script>
@@ -51,6 +51,14 @@
   #blacklistButton[data-tooltip] {
     pointer-events: auto !important;
     opacity: 1 !important;
+  }
+
+  .left-floated {
+    float: left;
+  }
+
+  .right-floated { 
+    float: right;
   }
 
   .canvas-container{margin: 0 auto;}
@@ -96,11 +104,16 @@
      {{ template "pointing_menu.html" .}}  
      <div class="ui text container" id="labelContainer"> <!--style="margin-top:-2em;">-->
       <h2 class="ui inverted header" id="label" label="" sublabel="" accessor="" style="margin-bottom: 0.2em;"></h2>
+
+      {{ if ne .annotationView "unified" }}
+      <div style="display: none;" id="isPluralContainer">
+        <button class="ui inverted basic button" id="isPluralButton" data-tooltip="" data-position="left center"><i class="clone icon"></i>is plural</button>
+      </div>
+      {{ else }}
+      <br>
+      {{ end }}
+
       
-      <button class="ui {{ if eq .annotationMode "default" }}white{{ else }}inverted basic{{ end }} button" 
-        onclick="window.location='/annotate?mode=default';" data-tooltip="Default Mode">Default</button>
-      <button class="ui {{ if eq .annotationMode "default" }}inverted basic{{ else }}white{{ end }} button" 
-        onclick="window.location='/annotate?mode=browse';" data-tooltip="Browse Mode">Browse</button>
       
       <div style="display: none;margin-right: 10px;" class="ui red bottom right attached label" id="imageLockedLabel">IMAGE LOCKED</div>
      </div>

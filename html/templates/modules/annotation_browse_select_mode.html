@@ -147,7 +147,10 @@
     clearImageGrid();
     $("#numberOfQueryResults").text("");
 
+    {{ if eq .annotationView "unified" }}
     browseAnnotationsOnlyMode = $("#annotationsOnlyCheckbox").checkbox("is checked");
+    {{ end }}
+
     var url = '{{ .apiBaseUrl }}/v1/validations/unannotated';
     if(browseAnnotationsOnlyMode)
       url = '{{ .apiBaseUrl }}/v1/annotations';
@@ -366,6 +369,7 @@
        <input placeholder="Query..." type="text" id="annotationQuery">
       </div>
 
+      {{ if eq .annotationView "unified" }}
       <div class="inline fields">
         <label>Options</label>
         <div class="field">
@@ -387,6 +391,7 @@
           </div>
         </div>
       </div>
+      {{ end }}
 
 
       <div class="ui primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>

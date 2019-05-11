@@ -172,7 +172,7 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 
 
 func makeTrendingLabelProductive(trendingLabel string, label datastructures.LabelMeEntry,
-									labelId int64, tx *sql.Tx) error {
+									labelId int64, isMetaLabel bool, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
@@ -210,18 +210,19 @@ func makeTrendingLabelProductive(trendingLabel string, label datastructures.Labe
     labels = append(labels, label)
 
     for _, elem := range results {
-    	if elem.Annotatable {
-			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 0, tx)  
-			if err != nil {
-				return err
-			} 	
+		numNonAnnotatable := 0
+		if isMetaLabel { //metaLabels are not annotatable per default
+			numNonAnnotatable = 10
 		} else {
-			//if label is not annotatable, set num_of_not_annotatable to 10
-			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 10, tx)
-			if err != nil {
-				return err
+    		if !elem.Annotatable {
+				numNonAnnotatable = 10
 			}
 		}
+
+		_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, numNonAnnotatable, tx)  
+		if err != nil {
+			return err
+		} 	
 	}
 
 	_, err = tx.Exec(`UPDATE trending_label_suggestion t
@@ -263,7 +264,7 @@ func main() {
 
 	trendingLabel := flag.String("trendinglabel", "", "The name of the trending label that should be made productive")
 	renameTo := flag.String("renameto", "", "Rename the label")
-	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to label map")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels map")
 	dryRun := flag.Bool("dryrun", true, "Specifies whether this is a dryrun or not")
 	autoCloseIssue := flag.Bool("autoclose", true, "Automatically close issue")
@@ -275,12 +276,13 @@ func main() {
 		log.Fatal("Please set a valid repository!")
 	}
 
-
-	labelMap, _, err := commons.GetLabelMap(*wordlistPath)
+	labelRepository := commons.NewLabelRepository()
+	err := labelRepository.Load(*wordlistPath)
 	if err != nil {
 		log.Error("[Main] Couldn't read label map...terminating!")
 		return
 	}
+	labelMap := labelRepository.GetMapping()
 
 	metaLabels := commons.NewMetaLabels(*metalabelsPath)
 	err = metaLabels.Load()
@@ -359,7 +361,9 @@ func main() {
 		return
 	}
 
-	err = makeTrendingLabelProductive(*trendingLabel, labelMeEntry, labelId, tx)
+	isMetaLabel := metaLabels.Contains(labelToCheck)
+
+	err = makeTrendingLabelProductive(*trendingLabel, labelMeEntry, labelId, isMetaLabel, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't make trending label ", *trendingLabel, " productive: ", err.Error())

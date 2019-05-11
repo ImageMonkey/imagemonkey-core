@@ -498,7 +498,7 @@ func main(){
 	log.SetLevel(log.DebugLevel)
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
-	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.json", "Path to label map")
+	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to label map")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
@@ -535,11 +535,14 @@ func main(){
 	}
 
 	log.Debug("[Main] Reading Label Map")
-	labelMap, words, err := commons.GetLabelMap(*wordlistPath)
+	labelRepository := commons.NewLabelRepository()
+	err := labelRepository.Load(*wordlistPath)
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
 	}
+	labelMap := labelRepository.GetMapping()
+	words := labelRepository.GetWords()
 
 	log.Debug("[Main] Reading Metalabel Map")
 	metaLabels := commons.NewMetaLabels(*metalabelsPath)
@@ -1651,6 +1654,11 @@ func main(){
 				return
 			}
 			c.JSON(http.StatusOK, labelAccessors)
+		})
+
+		router.GET("/v1/label/plurals", func(c *gin.Context) {
+			pluralsMapping := labelRepository.GetPluralsMapping()
+			c.JSON(200, pluralsMapping)
 		})
 
 		router.GET("/v1/label/refinements", func(c *gin.Context) {
@@ -2866,6 +2874,16 @@ func main(){
 				return
 			}
 			c.JSON(200, statistics)
+		})
+
+		router.GET("/v1/statistics/donations", func(c *gin.Context) {
+			//currently only last-month is allowed as period
+			statistics, err := imageMonkeyDatabase.GetDonationsStatistics("last-month")
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, gin.H{"statistics": statistics, "period": "last-month"})
 		})
 
 

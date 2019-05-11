@@ -120,6 +120,53 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
     return annotationStatistics, nil
 }
 
+
+func (p *ImageMonkeyDatabase) GetDonationsStatistics(period string) ([]datastructures.DataPoint, error) {
+    donationStatistics := []datastructures.DataPoint{}
+
+    if period != "last-month" {
+        return donationStatistics, errors.New("Only last-month statistics are supported at the moment")
+    }
+
+    rows, err := p.db.Query(`WITH dates AS (
+                            SELECT *
+                            FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
+                           ),
+                           num_of_donations AS (
+                            SELECT sys_period FROM image i
+                            WHERE date(lower(i.sys_period)) IN (SELECT date FROM dates)
+                           )
+                          SELECT to_char(date(date), 'YYYY-MM-DD'),
+                           ( SELECT count(*) FROM num_of_donations s
+                             WHERE date(lower(s.sys_period)) = date(date) 
+                           ) as num
+                           FROM dates
+                           GROUP BY date
+                           ORDER BY date`)
+    if err != nil {
+        log.Error("[Get Statistics] Couldn't get statistics: ", err.Error())
+        raven.CaptureError(err, nil)
+        return donationStatistics, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var datapoint datastructures.DataPoint
+        err = rows.Scan(&datapoint.Date, &datapoint.Value)
+        if err != nil {
+            log.Error("[Get Statistics] Couldn't scan row: ", err.Error())
+            raven.CaptureError(err, nil)
+            return donationStatistics, err
+        }
+
+        donationStatistics = append(donationStatistics, datapoint)
+    }
+
+    return donationStatistics, nil
+}
+
+
 func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastructures.DataPoint, error) {
     validationStatistics := []datastructures.DataPoint{}
 
@@ -134,6 +181,13 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation_history h
                             WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+
+                            UNION ALL
+
+                            SELECT sys_period FROM image_validation v
+                            WHERE date(lower(v.sys_period)) IN (SELECT date FROM dates) AND 
+                            (v.num_of_valid > 0 OR v.num_of_invalid > 0)
+
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_validations s
@@ -179,6 +233,12 @@ func (p *ImageMonkeyDatabase) GetLabeledObjectsStatistics(period string) ([]data
                            num_of_validations AS (
                             SELECT sys_period FROM image_validation h
                             WHERE date(lower(h.sys_period)) IN (SELECT date FROM dates)
+                            AND (num_of_valid = 0 AND num_of_invalid = 0)
+
+                            UNION ALL
+                            SELECT sys_period FROM image_validation_history h1
+                            WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
+                            AND (num_of_valid = 0 AND num_of_invalid = 0)
 
                             UNION ALL
                             SELECT sys_period FROM image_label_suggestion s
@@ -932,9 +992,6 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
 
     return annotatedStats, nil
 }
-
-
-
 
 func (p *ImageMonkeyDatabase) GetValidatedStatistics(apiUser datastructures.APIUser) ([]datastructures.ValidatedStat, error) {
     var validatedStats []datastructures.ValidatedStat

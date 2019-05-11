@@ -5,20 +5,50 @@
     </a>
   <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
   <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
-  <div class="ui dropdown item" id="labelPointingMenuDropdown">
+  <div class="ui floating labeled dropdown item" id="labelPointingMenuDropdown">
     Label<i class="dropdown icon"></i>
     <div class="menu">
-      <div class="center aligned item" onclick="window.location='/label';">Object</div>
-      <div class="center aligned item" onclick="window.location='/label?type=image';">Image</div>
+      <div class="header" style="font-size: 15px;">
+        Label Object
+      </div>
+      <div class="center aligned item" onclick="window.location='/label?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/label?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Label Image
+      </div>
+      <div class="center aligned item" onclick="window.location='/label?type=image&mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/label?type=image&mode=browse';">Browse</div>
     </div>
   </div>
-  <a class="{{if (eq .activeMenuNr 4)}}active {{end}}item" id="annotationPointingMenuItem" href="/annotate">Annotate</a>
+  
+  <div class="ui floating labeled dropdown item" id="annotatePointingMenuDropdown">
+    Annotate<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="header" style="font-size: 15px;">
+        Simple Mode
+      </div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Expert Mode
+      </div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=default&view=unified';">Default</div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=browse&view=unified';">Browse</div>
+    </div>
+  </div>
 
-  <div class="ui dropdown item" id="validatePointingMenuDropdown">
+  <div class="ui floating labeled dropdown item" id="validatePointingMenuDropdown">
     Validate<i class="dropdown icon"></i>
     <div class="menu">
-      <div class="center aligned item" onclick="window.location='/verify';">Object</div>
-      <div class="center aligned item" onclick="window.location='/verify_annotation';">Annotation</div>
+      <div class="header" style="font-size: 15px;">
+        Validate Object
+      </div>
+      <div class="center aligned item" onclick="window.location='/verify?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/verify?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Validate Annotation
+      </div>
+      <div class="center aligned item" onclick="window.location='/verify_annotation';">Default</div>
     </div>
   </div>
   
@@ -42,7 +72,6 @@
   <div class="ui dropdown item" id="developersPointingMenuDropdown">
     Developers<i class="dropdown icon"></i>
     <div class="menu">
-      <div class="center aligned item" onclick="window.location='/api';">API</div>
       <div class="center aligned item" onclick="window.location='/libraries';">Libraries</div>
       <div class="center aligned item" onclick="window.location='/models';">Models</div>
     </div>
@@ -127,6 +156,7 @@
     $('#refinementPointingMenuDropdown').dropdown();
     $('#labelPointingMenuDropdown').dropdown();
     $('#validatePointingMenuDropdown').dropdown();
+    $('#annotatePointingMenuDropdown').dropdown();
 
     function parseJwt(token){
       var base64Url = token.split('.')[1];
@@ -156,11 +186,6 @@
       var username = parseJwt(Cookies.get("imagemonkey"))["username"]
       window.location.href = "/profile/" + username; //redirect to profile page
     });
-
-    //switch to browse mode when annotation mode is set to browse
-    var settings = new Settings();
-    if(settings.getAnnotationMode() === "browse")
-      $("#annotationPointingMenuItem").attr("href", "/annotate?mode=browse");
 
     {{ if eq .sessionInformation.IsModerator true }}
     getNumOfUnprocessedImageDescriptions();

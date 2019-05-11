@@ -24,7 +24,7 @@
 
   <script>
   $(document).ready(function(){
-      $('#labelSelector').dropdown('set selected', '{{ .randomWord }}'); //set random word as pre-selected
+      //$('#labelSelector').dropdown('set selected', '{{ .randomWord }}'); //set random word as pre-selected
       $('#successMsg').hide();
       $('#failureMsg').hide();
       $('#warningMsg').hide();
@@ -35,10 +35,10 @@
         Dropzone.forElement("#dropzone").removeAllFiles(true);
       }
 
-      function getSelectedLabel(){
+      /*function getSelectedLabel(){
         var label = $('#labelSelector' ).dropdown('get value').toString();
         return label;
-      }
+      }*/
 
       Dropzone.options.dropzone = {
         maxFiles: 1,
@@ -69,13 +69,14 @@
 
           this.on('sending', function(file, xhr, formData) {
 
-            xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"));
+          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"));
 
-            var label = getSelectedLabel();
+            /*var label = getSelectedLabel();
             if(label !== "")
               formData.append("label", label);
               formData.append("add_sublabels", false);
-          });
+            */
+        });
         }
       };
 
@@ -97,67 +98,52 @@
   <!-- Page Contents -->
   <div class="pusher">
     <div class="ui inverted vertical masthead center aligned segment">
-     {{ template "pointing_menu.html" .}}  
-     <div class="ui text container">
-      <!--<h2 class="ui inverted header">-->
-      <br><br>
+      {{ template "pointing_menu.html" .}}  
+      <div class="ui text container">
+        <h2 class="ui inverted header">Upload a photo</h2>
+        <h3>...and help to grow the dataset</h3>
+      </div>
+    </div>
+    <div class="ui vertical stripe segment">
+      <div class="ui text container">
+        <div class="row">
+          <form class="ui segment dropzone" id="dropzone"></form>
+          <div class="ui basic segment"></div>
+          <div class="ui basic segment"></div>
 
-      <div class="ui floating dropdown labeled search icon large blue button" id="labelSelector">
-        <i class="tags icon"></i>
-        <span class="text">Select Label</span>
-        <div class="menu">
-          {{range .words}}
-          <div class="item">{{.}}</div>
-          {{ end }}
-          <div class="item"></div> <!--no label -->
+          <div class="ui positive message" id="successMsg">
+            <i class="close icon"></i>
+            <div class="header">
+            Successfully uploaded picture
+            </div>
+          </div>
+
+          <div class="ui negative message" id="failureMsg">
+            <i class="close icon"></i>
+            <div class="header">
+            Couldn't upload picture - please try again later!
+            </div>
+          </div>
+
+          <div class="ui warning message" id="warningMsg">
+            <i class="close icon"></i>
+            <div class="header">
+            Couldn't upload picture - image already exists!
+            </div>
+          </div>
+
+          <h2 class="ui header">
+            <i class="creative commons icon"></i>
+            <div class="content">
+            License
+            </div>
+          </h2>
+          <p>By uploading a photo you agree that you are the owner of the photo and you are comfortable with releasing the photo under the <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 license</a>.<br><br>Please respect other people's privacy!</p>
         </div>
       </div>
     </div>
-
-    <!--</h2>-->
-    <h2>Upload a photo which represents the above.</h2>
   </div>
-  <div class="ui vertical stripe segment">
-    <div class="ui text container">
-      <div class="row">
-       <form class="ui segment dropzone" id="dropzone"></form>
-       <div class="ui basic segment"></div>
-       <div class="ui basic segment"></div>
-
-       <div class="ui positive message" id="successMsg">
-        <i class="close icon"></i>
-        <div class="header">
-          Successfully uploaded picture
-        </div>
-      </div>
-
-      <div class="ui negative message" id="failureMsg">
-        <i class="close icon"></i>
-        <div class="header">
-          Couldn't upload picture - please try again later!
-        </div>
-      </div>
-
-      <div class="ui warning message" id="warningMsg">
-        <i class="close icon"></i>
-        <div class="header">
-          Couldn't upload picture - image already exists!
-        </div>
-      </div>
-
-      <h2 class="ui header">
-        <i class="creative commons icon"></i>
-        <div class="content">
-          License
-        </div>
-      </h2>
-      <p>By uploading a photo you agree that you are the owner of the photo and you are comfortable with releasing the photo under the <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 license</a>.</p>
-    </div>
-  </div>
-</div>
-</div>
 {{ template "footer.html" .}}
-</div>
 
 </body>
 

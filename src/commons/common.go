@@ -158,30 +158,6 @@ func GetIPAddress(r *http.Request) string {
     return ""
 }
 
-func GetLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
-    var words []string
-    var labelMap datastructures.LabelMap
-
-    data, err := ioutil.ReadFile(path)
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    err = json.Unmarshal(data, &labelMap)
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    words = make([]string, len(labelMap.LabelMapEntries))
-    i := 0
-    for key := range labelMap.LabelMapEntries {
-        words[i] = key
-        i++
-    }
-
-    return labelMap.LabelMapEntries, words, nil
-}
-
 func GetLabelRefinementsMap(path string) (map[string]datastructures.LabelMapRefinementEntry, error) {
     var labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry
 

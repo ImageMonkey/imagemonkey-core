@@ -30,6 +30,26 @@ func runStatWorker(t *testing.T) {
 	}
 }
 
+type Statistics struct {
+	Statistics []datastructures.DataPoint `json:"statistics"`
+	Period string `json:"period"`
+}
+
+func testGetDonationsStatistics(t *testing.T) Statistics {
+	var statistics Statistics
+	u := BASE_URL + API_VERSION + "/statistics/donations"
+
+	req := resty.R().
+				SetResult(&statistics)
+
+	resp, err := req.Get(u)
+
+	ok(t, err)
+    equals(t, resp.StatusCode(), 200)
+
+    return statistics
+}
+
 func testGetStatistics(t *testing.T) datastructures.Statistics {
 	var statistics datastructures.Statistics
 
@@ -164,5 +184,30 @@ func TestGetPerCountryStatistics(t *testing.T) {
 	equals(t, len(statistics.AnnotationsPerCountry), 0)
 	equals(t, len(statistics.AnnotationRefinementsPerCountry), 0)
 	equals(t, statistics.ImageDescriptionsPerCountry[0].Count, int64(2))
+}
 
+func TestGetDonationsStatistics(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	statisticsBefore := testGetDonationsStatistics(t)
+
+	numDays, err := db.GetNumOfDatesFromNowTilOneMonthAgo()
+	ok(t, err)
+
+	equals(t, len(statisticsBefore.Statistics), numDays)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	statisticsAfter := testGetDonationsStatistics(t)
+	equals(t, len(statisticsAfter.Statistics), numDays)
+
+	currentTime := time.Now()
+	for _, val := range statisticsAfter.Statistics {
+		if currentTime.Format("2006-01-02") == val.Date {
+			equals(t, int(val.Value), int(1))
+		} else {
+			equals(t, int(val.Value), int(0))
+		}
+	}
 }
