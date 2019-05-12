@@ -336,7 +336,7 @@ func main() {
 		})
 
 
-		router.Static("./api", "../html/static/api")
+		//router.Static("./api", "../html/static/api")
 		router.Static("./donations", *donationsDir) //DEPRECTATED; USE /donation API endpoint 
 		router.Static("./blog", "../html/static/blog")
 		router.GET("/", func(c *gin.Context) {
