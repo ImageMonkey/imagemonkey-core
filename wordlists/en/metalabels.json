@@ -85,7 +85,7 @@
                         "accessors": ["."],
                         "uuid": "019418cf-2208-451c-ae65-b0eed74c73e5"
 		},
-		"warehourse": {
+		"warehouse": {
 			"description": "optional",
                         "accessors": ["."],
                         "uuid": "9c8f2f62-9c96-4695-9365-ccea91100474"
