@@ -172,7 +172,7 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 
 
 func makeTrendingLabelProductive(trendingLabel string, label datastructures.LabelMeEntry,
-									labelId int64, isMetaLabel bool, tx *sql.Tx) error {
+									labelId int64, tx *sql.Tx) error {
 	type Result struct {
 		ImageId string
     	Annotatable bool
@@ -211,12 +211,8 @@ func makeTrendingLabelProductive(trendingLabel string, label datastructures.Labe
 
     for _, elem := range results {
 		numNonAnnotatable := 0
-		if isMetaLabel { //metaLabels are not annotatable per default
+    	if !elem.Annotatable {
 			numNonAnnotatable = 10
-		} else {
-    		if !elem.Annotatable {
-				numNonAnnotatable = 10
-			}
 		}
 
 		_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, numNonAnnotatable, tx)  
@@ -361,9 +357,7 @@ func main() {
 		return
 	}
 
-	isMetaLabel := metaLabels.Contains(labelToCheck)
-
-	err = makeTrendingLabelProductive(*trendingLabel, labelMeEntry, labelId, isMetaLabel, tx)
+	err = makeTrendingLabelProductive(*trendingLabel, labelMeEntry, labelId, tx)
 	if err != nil {
 		tx.Rollback()
 		log.Error("[Main] Couldn't make trending label ", *trendingLabel, " productive: ", err.Error())

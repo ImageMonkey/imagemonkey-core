@@ -78,6 +78,6 @@ func TestMakeLabelsProductiveMetaLabelTest(t *testing.T) {
      for _, validationId := range validationIds {
          num, err := db.GetNumOfNotAnnotatable(validationId)
          ok(t, err)
-         equals(t, int(num), 10)
+         equals(t, int(num), 0)
      }
  }
