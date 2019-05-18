@@ -500,7 +500,7 @@ func main(){
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to label map")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
-	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
 	imageQuarantineDir := flag.String("image_quarantine_dir", "../quarantine/", "Location of the images that are put in quarantine")

@@ -422,7 +422,7 @@ func main(){
 		log.Fatal("Couldn't get label map refinements: ", err.Error())
 	}
 
-	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.jsonnet")
 	err = metalabels.Load()
 	if err != nil {
 		log.Fatal("Couldn't get meta labels: ", err.Error())

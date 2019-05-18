@@ -1137,6 +1137,42 @@ local animals = import 'animals.libsonnet';
 			"plural": "jeans",
 			"uuid": "aa947d16-4f65-4338-b814-507a2d5acac9"
 		},
+        "telephone box": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "telephone boxes",
+            "uuid": "6439a508-960c-4672-b50d-5faf3f895f17"
+        },
+        "ball": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "balls",
+            "uuid": "04c61035-a112-4834-94be-1a9bd0ef1a9f"
+        },
+        "cathedral": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "cathedrals",
+            "uuid": "85c8e7f4-c6ab-4e1c-b845-9798fc82236d"
+        },
+        "canal": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "canal",
+            "uuid": "1a506fa1-3e6b-4100-bf48-8889bca2b93e"
+        },
+        "padlock": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "padlocks",
+            "uuid": "02d71ded-3d01-421b-8ef5-4c1300300f1c"
+        },
+        "barrel": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "barrels",
+            "uuid": "07bdca85-e003-442d-9464-a82d62388aae"
+        },
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
 		"owl": animals["owl"],

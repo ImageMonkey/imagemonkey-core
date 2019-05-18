@@ -22,6 +22,9 @@ import (
     "github.com/gin-gonic/gin"
     "../datastructures"
     "strconv"
+	"github.com/google/go-jsonnet"
+	"path/filepath"
+	"os"
 )
 
 
@@ -499,12 +502,25 @@ func NewMetaLabels(path string) *MetaLabels {
 }
 
 func (p *MetaLabels) Load() error {
-    data, err := ioutil.ReadFile(p.path)
+	data, err := ioutil.ReadFile(p.path)
     if err != nil {
         return err
     }
 
-    err = json.Unmarshal(data, &p.metalabels)
+	vm := jsonnet.MakeVM()
+
+	dir, _ := filepath.Split(p.path)
+	dir = dir + string(os.PathSeparator) + "includes" + string(os.PathSeparator) + "metalabels/"
+	vm.Importer(&jsonnet.FileImporter{
+		JPaths: []string{dir},
+	})
+
+	out, err := vm.EvaluateSnippet("file", string(data))
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(out), &p.metalabels)
     if err != nil {
         return err
     }

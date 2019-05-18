@@ -63,7 +63,7 @@ func TestMetaLabelsDoNotOverlapLaps(t *testing.T) {
 	ok(t, err)
 	labels := labelRepository.GetMapping()
 
-	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.jsonnet")
 	err = metalabels.Load()
 	ok(t, err)
 

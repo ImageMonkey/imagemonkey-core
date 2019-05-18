@@ -50,7 +50,7 @@ func TestLabelAndMetalabelUuidsShouldBeUnique(t *testing.T) {
 		}
 	}
 
-	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.jsonnet")
 	err = metalabels.Load()
 	ok(t, err)
 	m := metalabels.GetMapping()
