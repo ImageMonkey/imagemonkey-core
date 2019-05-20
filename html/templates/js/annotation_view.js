@@ -276,14 +276,14 @@
         {{ if eq .annotationView "unified" }}
         for(var i = 0; i < data.length; i++) {
           if(data[i].validation.sublabel !== "")
-            unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = {annotations: data[i].annotations, 
-                                                                                                    label: data[i].validation.label, 
+            unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = {annotations: data[i].annotations,
+                                                                                                    label: data[i].validation.label,
                                                                                                     sublabel: data[i].validation.sublabel,
                                                                                                     dirty: false
                                                                                                    };
           else {
-            unifiedModeAnnotations[data[i].validation.label] = {annotations: data[i].annotations, 
-                                                                label: data[i].validation.label, 
+            unifiedModeAnnotations[data[i].validation.label] = {annotations: data[i].annotations,
+                                                                label: data[i].validation.label,
                                                                 sublabel: data[i].validation.sublabel,
                                                                 dirty: false
                                                                };
@@ -296,7 +296,7 @@
             initializeLabelsLstAftLoadDelayed = false;
             selectLabelInUnifiedLabelsLstAfterLoad();
           }
-          else { //image is not yet loaded (which we need before we can initialize the labels list), 
+          else { //image is not yet loaded (which we need before we can initialize the labels list),
                  //so we need to initialize the labels list when the image is loaded
             initializeLabelsLstAftLoadDelayed = true;
           }
@@ -341,12 +341,12 @@
 
     $("#annotationLabelsLst").children().each(function(i) {
       $(this).removeClass("grey inverted");
-    }); 
+    });
 
     setLabel($(elem).attr("data-label"), $(elem).attr("data-sublabel"), null);
     $(elem).addClass("grey inverted");
 
-    //clear existing annotations 
+    //clear existing annotations
     annotator.deleteAll();
 
     key = "";
@@ -367,10 +367,10 @@
                                         ' data-uuid="' + uuid +
                                           '" onclick="onRefinementInRefinementsLstClicked(this);"' +
                                           'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
-                                          'onmouseout="this.style.backgroundColor=\'white\';"' + 
+                                          'onmouseout="this.style.backgroundColor=\'white\';"' +
                                           'style="overflow: auto;">' +
                                           '<span class="left-floated">' +
-                                            '<p><i class="' + icon + ' icon"></i> ' + name + '</p>' + 
+                                            '<p><i class="' + icon + ' icon"></i> ' + name + '</p>' +
                                           '</span><span class="right-floated"><i class="right icon delete ui red"></i></span></div>');
   }
 
@@ -379,10 +379,10 @@
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     $("#annotationLabelsLst").append('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
                                         ' data-label="' + label + '" data-uuid="' + uuid +
-                                        '" data-sublabel="' + sublabel + 
+                                        '" data-sublabel="' + sublabel +
                                           '" onclick="onLabelInLabelLstClicked(this);"' +
                                           'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
-                                          'onmouseout="this.style.backgroundColor=\'white\';"' + 
+                                          'onmouseout="this.style.backgroundColor=\'white\';"' +
                                           'style="overflow: auto;"><p>' + displayedLabel + '</p></div>');
   }
 
@@ -402,7 +402,7 @@
             addLabelToLabelLst(data[i].label, '', data[i].uuid);
             if(data[i].sublabels !== null) {
               for(var j = 0; j < data[i].sublabels.length; j++) {
-                addLabelToLabelLst(data[i].label, data[i].sublabels[j].name, 
+                addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
                                     data[i].sublabels[j].uuid);
               }
             }
@@ -415,7 +415,7 @@
             initializeLabelsLstAftLoadDelayed = false;
             selectLabelInUnifiedLabelsLstAfterLoad();
           }
-          else { //image is not yet loaded (which we need before we can initialize the labels list), 
+          else { //image is not yet loaded (which we need before we can initialize the labels list),
                  //so we need to initialize the labels list when the image is loaded
             initializeLabelsLstAftLoadDelayed = true;
           }
@@ -435,7 +435,7 @@
         foundLabelInUnifiedModeToolbox = true;
         $(this).click();
         return false;
-      }  
+      }
     })
 
     //when label not found, select first one in list
@@ -663,7 +663,7 @@
           annotator.setSmartAnnotationData(data);
           detailedCanvas.drawAnnotations(data, $("#smartAnnotationCanvasWrapper").attr("scaleFactor"));
         }
-        
+
         numOfPendingRequests -= 1;
         if(numOfPendingRequests <= 0){
           $("#smartAnnotationCanvasWrapper").dimmer("hide");
@@ -736,7 +736,7 @@
         onCanvasBackgroundImageSet();
 
       });
-    } 
+    }
     else{
       canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, onCanvasBackgroundImageSet);
     }
@@ -799,7 +799,7 @@
       $("#label").text(("Annotate all: " + label));
       $("#bottomLabel").text(("Annotate all: " + label));
       $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + label + " objects at once");
-    } 
+    }
     else {
       $("#label").text(("Annotate all: " + sublabel + "/" + label));
       $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
@@ -867,9 +867,9 @@
     if(existingAnnotations !== null) {
       annotator.loadAnnotations(existingAnnotations, canvas.fabric().backgroundImage.scaleX);
       //drawAnnotations(canvas.fabric(), existingAnnotations, canvas.fabric().backgroundImage.scaleX);
-      existingAnnotations = annotator.toJSON(); //export JSON after loading annotations 
+      existingAnnotations = annotator.toJSON(); //export JSON after loading annotations
                                                 //due to rounding we might end up with slightly different values, so we
-                                                //export them in order to make sure that we don't accidentially detect 
+                                                //export them in order to make sure that we don't accidentially detect
                                                 //a rounding errors as changes.
     }
 
@@ -888,7 +888,7 @@
   }
 
   function isLoadingIndicatorVisible(){
-    return $("#smartAnnotationDimmer").is(":visible"); 
+    return $("#smartAnnotationDimmer").is(":visible");
   }
 
   function showHideAutoAnnotationsLoadButton(){
@@ -917,73 +917,51 @@
     else {
       var workspaceSize = annotationSettings.loadWorkspaceSize();
       {{ if eq .annotationView "unified" }}
+        var spacerWidth = "three";
         if(workspaceSize === "small"){
           w = "eight";
-          spacer = '<div class="four wide column" id="annotationColumnSpacer">' +
-                      '<h2 class="ui center aligned header">' + 
-                        '<div class="content">' +
-                          'Labels' +
-                        '</div>' + 
-                      '</h2>' +
-                      '<div class="ui basic segment">' +
-                        '<div class="ui segments">' +
-                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
-                          '</div>' + 
-                        '</div>' +
-                      '</div>' +
-                    '</div>';
+          spacerWidth = "four";
           unifiedModePropertiesLstWidth = 'four';
         }
         else if(workspaceSize === "medium"){
           w = "ten";
-          spacer = '<div class="three wide column" id="annotationColumnSpacer">' +
-                      '<h2 class="ui center aligned header">' + 
-                        '<div class="content">' +
-                          'Labels' +
-                        '</div>' + 
-                      '</h2>' +
-                      '<div class="ui basic segment">' +
-                        '<div class="ui segments">' +
-                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
-                          '</div>' + 
-                        '</div>' +
-                      '</div>' +
-                    '</div>';
+          spacerWidth = "three";
           unifiedModePropertiesLstWidth = 'three';
         }
         else if(workspaceSize === "big"){
           w = "ten";
-          spacer = '<div class="three wide column" id="annotationColumnSpacer">' +
-                      '<h2 class="ui center aligned header">' + 
-                        '<div class="content">' +
-                          'Labels' +
-                        '</div>' + 
-                      '</h2>' +
-                      '<div class="ui basic segment">' +
-                        '<div class="ui segments">' +
-                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
-                            '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
-                          '</div>' + 
-                        '</div>' + 
-                      '</div>' +
-                    '</div>';
+          spacerWidth = "three";
           unifiedModePropertiesLstWidth = 'three';
         }
 
+        spacer = '<div class="' + spacerWidth + ' wide column" id="annotationColumnSpacer">' +
+                    '<h2 class="ui center aligned header">' +
+                        '<div class="content">' +
+                            'Labels' +
+                        '</div>' +
+                    '</h2>' +
+                    '<div class="ui basic segment">' +
+                        '<div class="ui segments">' +
+                            '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
+                                '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+
 
         unifiedModePropertiesLst = '<div class="' + unifiedModePropertiesLstWidth + ' wide column" id="annotationPropertiesColumnSpacer">' +
-                                      '<h2 class="ui center aligned header">' + 
+                                      '<h2 class="ui center aligned header">' +
                                         '<div class="content">' +
                                           'Properties' +
-                                        '</div>' + 
+                                        '</div>' +
                                       '</h2>' +
                                       '<div class="ui basic segment">' +
                                         '<div class="ui segments">' +
                                          '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
                                          '</div>' +
-                                          
+
                                           '<div class="ui form">' +
                                             '<div class="field">' +
                                               '<div class="ui search">' +
@@ -999,14 +977,9 @@
                                                 '</div>' +
                                               '</div>' +
                                             '</div>' +
-                                          '</div>' + 
-                                        
+                                          '</div>' +
                                         '</div>' +
-
-                                        
-
-                                       //'<div class="ui bottom attached segment"><div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first"><div class="ui fluid disabled button" id="addRefinementButton"><i class="plus icon"></i>Add</div></div></div>' + 
-                                      '</div>' + 
+                                       '</div>' +
                                    '</div>';
 
       {{ else }}
@@ -1023,7 +996,7 @@
       {{ end }}
     }
 
- 
+
     var data =  spacer +
                 '<div class="' + w +' wide center aligned column" id="annotationColumnContent">' +
                  '<div id="annotationAreaContainer">' +
@@ -1084,7 +1057,7 @@
   }
 
   function updateAnnotations(res) {
-    
+
     if(_.isEqual(res, existingAnnotations)) {
       showHideControls(false);
       clearDetailedCanvas();
@@ -1187,12 +1160,12 @@
       }
     });
   }
-  
+
 
   $(document).ready(function(){
       var lastActiveMenuItem = "";
       $('#warningMsg').hide();
-      
+
       $('#smartAnnotation').checkbox({
         onChange : function() {
           var enabled = isSmartAnnotationEnabled();
@@ -1240,9 +1213,9 @@
         }
       });
 
-      
+
       showHideSmartAnnotationControls(false);
-      
+
 
       colorPicker = new Huebee($('#colorPicker')[0], {});
       colorPicker.on('change', function(color, hue, sat, lum) {
@@ -1251,7 +1224,7 @@
 
       $("#skipAnnotationDropdown").dropdown();
 
-      Mousetrap.bind("r", function() { 
+      Mousetrap.bind("r", function() {
         $("#rectMenuItem").trigger("click");
       });
 
@@ -1286,7 +1259,7 @@
         {{ end }}
         annotator.setRefinements(refs);
       });
-      
+
 
 
       $("#rectMenuItem").click(function(e) {
@@ -1298,7 +1271,7 @@
         }
       });
 
-      Mousetrap.bind("c", function() { 
+      Mousetrap.bind("c", function() {
         $("#circleMenuItem").trigger("click");
       });
 
@@ -1315,7 +1288,7 @@
         $("#polygonMenuItem").trigger("click");
       });
 
-      Mousetrap.bind("s", function() { 
+      Mousetrap.bind("s", function() {
         $("#selectMoveMenutItem").trigger("click");
       });
 
@@ -1337,7 +1310,7 @@
         }
       });
 
-      
+
 
        $("#freeDrawingMenuItem").click(function(e) {
         if(annotator !== undefined) {
@@ -1386,16 +1359,16 @@
           annotator.undo();
       });
 
-      Mousetrap.bind('+', function() { 
-        zoomIn(); 
+      Mousetrap.bind('+', function() {
+        zoomIn();
       });
 
       $("#zoomInMenuItem").click(function(e) {
         zoomIn();
       });
 
-      Mousetrap.bind('-', function() { 
-        zoomOut(); 
+      Mousetrap.bind('-', function() {
+        zoomOut();
       });
 
       $("#zoomOutMenuItem").click(function(e) {
@@ -1446,7 +1419,7 @@
       });
 
       Mousetrap.bind("ctrl", function(e) {
-        if(!e.repeat) { //if the ctrl key is held down, the event constantly fires. we are only interested in the first event 
+        if(!e.repeat) { //if the ctrl key is held down, the event constantly fires. we are only interested in the first event
           lastActiveMenuItem = getActiveAnnotationMenuItem(true); //remember active menu item
           $("#panMenuItem").trigger("click");
         }
@@ -1529,7 +1502,7 @@
               return false;
             }
 
-            annotationSettings.persistAll(); 
+            annotationSettings.persistAll();
             $('#annotationSettingsPopup').modal('hide');
             $('#annotationSettingsRefreshBrowserPopup').modal('show');
           }
@@ -1555,7 +1528,7 @@
         {{ end }}
 
         {{ end }}
-        
+
       });
 
       $('#blacklistAnnotationUsageDlgAcceptButton').click(function(e) {
@@ -1604,7 +1577,7 @@
         }
 
         e.preventDefault();
-        
+
         if(existingAnnotations !== null) {
           updateAnnotations(annotator.toJSON());
         }
