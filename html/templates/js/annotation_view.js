@@ -945,8 +945,27 @@
                             '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
                                 '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
                             '</div>' +
+                            '<div class="ui center aligned grid">' +
+                                '<div class="twelve wide centered column">' +
+                                    '<div class="ui form">' +
+                                        '<div class="fields">' +
+                                            '<div class="field">' +
+                                                '<div class="ui search">' +
+                                                    '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
+                                                        '<div class="ui search selection dropdown" id="addLabelToUnifiedModeListDropdown">' +
+                                                            '<div class="default text">Select Label</div>' +
+                                                            '<div class="menu" id="addLabelToUnifiedModeListDropdownMenu"></div>' +
+                                                        '</div>' +
+                                                        '<div class="ui button">Add</div>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
                         '</div>' +
-                    '</div>' +
+                    '</div>'  +
                 '</div>';
 
 
