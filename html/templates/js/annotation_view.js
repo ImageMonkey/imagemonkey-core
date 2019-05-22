@@ -971,35 +971,41 @@
 
 
         unifiedModePropertiesLst = '<div class="' + unifiedModePropertiesLstWidth + ' wide column" id="annotationPropertiesColumnSpacer">' +
-                                      '<h2 class="ui center aligned header">' +
-                                        '<div class="content">' +
-                                          'Properties' +
-                                        '</div>' +
-                                      '</h2>' +
-                                      '<div class="ui basic segment">' +
-                                        '<div class="ui segments">' +
-                                         '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
-                                         '</div>' +
-
-                                          '<div class="ui form">' +
-                                            '<div class="field">' +
-                                              '<div class="ui search">' +
-                                                '<div class="ui center aligned action input" id="addRefinementForm">' +
-                                                  '<div class="ui small search selection dropdown" id="addRefinementDropdown">' +
-                                                    '<div class="default text">Select Refinement</div>' +
-                                                    '<div class="menu" id="addRefinementDropdownMenu">' +
-                                                    '</div>' +
-                                                  '</div>' +
-                                                  '<div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first" data-position="left center">' +
-                                                    '<div class="ui disabled button" id="addRefinementButton">Add</div>' +
-                                                  '</div>' +
-                                                '</div>' +
-                                              '</div>' +
+                                        '<h2 class="ui center aligned header">' +
+                                            '<div class="content">' +
+                                                'Properties' +
                                             '</div>' +
-                                          '</div>' +
+                                        '</h2>' +
+                                        '<div class="ui basic segment">' +
+                                            '<div class="ui segments">' +
+                                                '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
+                                                '</div>' +
+
+                                                '<div class="ui center aligned grid">' +
+                                                    '<div class="twelve wide centered column">' +
+                                                        '<div class="ui form">' +
+                                                            '<div class="fields">' +
+                                                                '<div class="field">' +
+                                                                    '<div class="ui search">' +
+                                                                        '<div class="ui center aligned action input" id="addRefinementForm">' +
+                                                                            '<div class="ui small search selection dropdown" id="addRefinementDropdown">' +
+                                                                                '<div class="default text">Select Refinement</div>' +
+                                                                                '<div class="menu" id="addRefinementDropdownMenu">' +
+                                                                                '</div>' +
+                                                                            '</div>' +
+                                                                            '<div id="addRefinementButtonTooltip" data-tooltip="Select a annotation first" data-position="left center">' +
+                                                                                '<div class="ui disabled button" id="addRefinementButton">Add</div>' +
+                                                                            '</div>' +
+                                                                        '</div>' +
+                                                                    '</div>' +
+                                                                '</div>' +
+                                                            '</div>' +
+                                                        '</div>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                            '</div>' +
                                         '</div>' +
-                                       '</div>' +
-                                   '</div>';
+                                    '</div>';
 
       {{ else }}
         if(workspaceSize === "small"){
