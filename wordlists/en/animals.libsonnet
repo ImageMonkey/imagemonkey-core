@@ -415,5 +415,11 @@
 		"accessors": ["."],
 		"plural": "spiders",
 		"uuid": "f7a12c25-bc80-4f58-883b-5c237f26d893"
-	}
+	},
+    "giraffe": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "giraffes",
+        "uuid": "8b8d649e-a867-46ba-bee8-6ef007dadc45"
+    }
 }

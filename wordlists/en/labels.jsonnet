@@ -1173,6 +1173,49 @@ local animals = import 'animals.libsonnet';
             "plural": "barrels",
             "uuid": "07bdca85-e003-442d-9464-a82d62388aae"
         },
+        "salad": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "salads",
+            "uuid": "30a1e602-d453-4f99-a1c5-9b3529da09c5"
+        },
+        "tent": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "tents",
+            "uuid": "fda43d96-1c96-45f1-be67-34973ad62059"
+        },
+        "curtain": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "curtains",
+            "uuid": "90c9a7b5-d79d-4ed5-8cb7-3f41b6a150e4"
+        },
+        "washing machine": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "washing machines",
+            "uuid": "e1c0679a-f6bf-428c-85de-01853570bef6"
+        },
+        "tie": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "ties",
+            "uuid": "59d7f359-4da0-4338-abd0-1e9ae0543abb"
+        },
+        "raspberry": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "raspberries",
+            "uuid": "11a6e3be-c590-466c-b4dc-4c47e8d5c49d"
+        },
+        "parking space": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "parking space",
+            "uuid": "01c5957f-fc79-41c6-85ac-417a07667c2e"
+        },
+
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
 		"owl": animals["owl"],
@@ -1196,6 +1239,6 @@ local animals = import 'animals.libsonnet';
 		"snake": animals["snake"],
 		"jellyfish": animals["jellyfish"],
 		"spider": animals["spider"]
-
+        "giraffe": "animals"["giraffe"]
 	}
 }

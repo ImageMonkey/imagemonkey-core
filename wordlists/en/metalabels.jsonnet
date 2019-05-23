@@ -111,6 +111,11 @@ local countries = import 'countries.libsonnet';
             "accessors": ["."],
             "uuid": "cf11f750-c3ae-47bc-b1a2-208c36da1825"
         },
+        "motorsport": {
+            "description": "optional",
+            "accessors": ["."],
+            "uuid": "b42ac15b-171b-4025-985c-3e230beefe07"
+        }
 
 
 
