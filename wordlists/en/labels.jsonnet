@@ -1238,7 +1238,7 @@ local animals = import 'animals.libsonnet';
 		"frog": animals["frog"],
 		"snake": animals["snake"],
 		"jellyfish": animals["jellyfish"],
-		"spider": animals["spider"]
-        "giraffe": "animals"["giraffe"]
+		"spider": animals["spider"],
+        "giraffe": animals["giraffe"]
 	}
 }

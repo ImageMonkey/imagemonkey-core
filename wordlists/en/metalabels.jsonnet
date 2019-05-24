@@ -115,7 +115,7 @@ local countries = import 'countries.libsonnet';
             "description": "optional",
             "accessors": ["."],
             "uuid": "b42ac15b-171b-4025-985c-3e230beefe07"
-        }
+        },
 
 
 
