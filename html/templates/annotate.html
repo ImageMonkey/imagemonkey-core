@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="css/huebee.min.css"/>
   <script src="js/contextjs/context.js"></script>
   <script src="js/sentry/sentry.min.js"></script>
+  <script src="js/imagemonkey/api.js?v=2"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <style>
@@ -165,6 +166,9 @@
       </div>
 
       {{ template "annotation_refinement_dlg.html" .}}
+      {{ if eq .annotationView "unified" }}
+      {{ template "unified_mode_label_remove_dlg.html" .}}
+      {{ end  }}
 
       <div class="row" id="annotationColumn" style="display: none;">
       </div>

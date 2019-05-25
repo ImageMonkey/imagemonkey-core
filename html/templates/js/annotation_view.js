@@ -12,9 +12,12 @@
   var browserFingerprint = null;
   var deleteObjectsPopupShown = false;
   var unifiedModeAnnotations = {};
+  var unifiedModeLabels = {};
+
   var pluralAnnotations = false;
   var pluralLabels = null;
   var initializeLabelsLstAftLoadDelayed = false;
+  var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl  }}");
 
   {{ if eq .annotationMode "browse" }}
   var browseModeLastSelectedAnnotatorMenuItem = null;
@@ -120,6 +123,7 @@
 
 
     {{ if eq .annotationView "unified" }}
+      unifiedModeLabels = {};
       unifiedModeAnnotations = {};
       if(annotationInfo.imageId !== "")
         populateUnifiedModeToolbox(annotationInfo.imageId);
@@ -257,6 +261,34 @@
     unifiedModePopulated = UnifiedModeStates.uninitialized;
     getAnnotationsForImage(imageId);
     getLabelsForImage(imageId, true);
+
+    imageMonkeyApi.getAvailableLabels(true)
+        .then(function(data) {
+            for(var key in data) {
+                if(data.hasOwnProperty(key)) {
+                    var entry = ('<div class="item" data-value="' + data[key].uuid
+                                    + '" data-label="' + key + '" data-sublabel=""'
+                                    + ' data-uuid="' + data[key].uuid + '">' + key + '</div>');
+                    $("#addLabelToUnifiedModeListDropdownMenu").append(entry);
+                }
+
+                if(data[key].has) {
+                    for(var subkey in data[key].has) {
+                        if(data[key].has.hasOwnProperty(subkey)) {
+                            var entry = ('<div class="item" data-value="' + data[key].has[subkey].uuid
+                                            + '" data-label="' + key + '" data-sublabel="'
+                                            + subkey  + '" data-uuid="' + data[key].has[subkey].uuid + '">'
+                                            + subkey + "/" + key + '</div>');
+                            $("#addLabelToUnifiedModeListDropdownMenu").append(entry);
+                        }
+                    }
+
+                }
+            }
+            $("#addLabelToUnifiedModeListDropdown").dropdown();
+        }).catch(function() {
+
+        });
   }
 
   function getAnnotationsForImage(imageId) {
@@ -374,16 +406,33 @@
                                           '</span><span class="right-floated"><i class="right icon delete ui red"></i></span></div>');
   }
 
-  function addLabelToLabelLst(label, sublabel, uuid) {
+  function onLabelInLabelLstRemoveClicked(elem) {
+   $("#removeLabelFromUnifiedModeLstDlg").attr("data-to-be-removed-uuid", $(elem).parent().attr("data-uuid"));
+   $("#removeLabelFromUnifiedModeLstDlg").modal("show");
+  }
+
+  function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false) {
     var id = "labellstitem-" + uuid;
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
-    $("#annotationLabelsLst").append('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
+    if(allowRemove) {
+        displayedLabel = ('<span class="left-floated">' + displayedLabel
+                            + '</span><span class="right-floated" onclick="onLabelInLabelLstRemoveClicked(this);">'
+                            + '<i class="right icon delete ui red"></i></span>');
+    } else {
+        displayedLabel = '<p>' + displayedLabel + '</p>';
+    }
+
+
+    var elem = $('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
                                         ' data-label="' + label + '" data-uuid="' + uuid +
                                         '" data-sublabel="' + sublabel +
                                           '" onclick="onLabelInLabelLstClicked(this);"' +
                                           'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
                                           'onmouseout="this.style.backgroundColor=\'white\';"' +
-                                          'style="overflow: auto;"><p>' + displayedLabel + '</p></div>');
+                                          'style="overflow: auto;">' + displayedLabel + '</div>');
+    $("#annotationLabelsLst").append(elem);
+
+    return elem;
   }
 
   function getLabelsForImage(imageId, onlyUnlockedLabels) {
@@ -956,7 +1005,7 @@
                                                             '<div class="default text">Select Label</div>' +
                                                             '<div class="menu" id="addLabelToUnifiedModeListDropdownMenu"></div>' +
                                                         '</div>' +
-                                                        '<div class="ui button">Add</div>' +
+                                                        '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                                                     '</div>' +
                                                 '</div>' +
                                             '</div>' +
@@ -1033,6 +1082,31 @@
     $("#annotationColumn").append(data);
 
     {{ if eq .annotationView "unified" }}
+    $("#addLabelToUnifiedModeListButton").click(function (e) {
+        var selectedElem = $("#addLabelToUnifiedModeListDropdown").dropdown("get item",
+                                $("#addLabelToUnifiedModeListDropdown").dropdown("get value"));
+        var alreadyExistsInUnifiedModeLabelsLst = false;
+        var elem;
+        $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
+            if($(this).attr("data-uuid") === selectedElem.attr("data-uuid")) {
+                alreadyExistsInUnifiedModeLabelsLst = true;
+                elem = $(this);
+                return false;
+            }
+        });
+
+        if(!alreadyExistsInUnifiedModeLabelsLst) {
+            unifiedModeLabels[selectedElem.attr("data-uuid")] = true;
+            elem = addLabelToLabelLst(selectedElem.attr("data-label"), selectedElem.attr("data-sublabel"),
+                                selectedElem.attr("data-uuid"), true);
+        }
+
+        //select newly added (or already existing) label
+        onLabelInLabelLstClicked(elem);
+
+        $("#addLabelToUnifiedModeListDropdown").dropdown("restore placeholder text");
+    });
+
     $("#addRefinementButton").click(function(e) {
       var refs = annotator.getRefinementsOfSelectedItem();
       if(refs.indexOf($('#addRefinementDropdown').dropdown('get value')) == -1 ) {
@@ -1400,6 +1474,14 @@
         zoomOut();
       });
 
+      $("#removeLabelFromUnifiedModeLstDlgYesButton").click(function(e) {
+        var removedElemUuid = $("#removeLabelFromUnifiedModeLstDlg").attr("data-to-be-removed-uuid");
+        $("#labellstitem-"+removedElemUuid).remove();
+        if(removedElemUuid in unifiedModeLabels) {
+            delete unifiedModeLabels[removedElemUuid];
+        }
+      });
+
       $("#removeAnnotationRefinementsDlgYesButton").click(function(e) {
         $("#"+$("#removeAnnotationRefinementsDlg").attr("data-to-be-removed-id")).remove();
         var refs = annotator.getRefinementsOfSelectedItem();
@@ -1581,7 +1663,7 @@
 
         {{ if eq .annotationView "unified" }}
         saveCurrentSelectLabelInUnifiedModeList();
-        if(Object.keys(unifiedModeAnnotations).length === 0) {
+        if(Object.keys(unifiedModeLabels).length === 0 && Object.keys(unifiedModeAnnotations).length === 0) {
           $('#warningMsgText').text('Please annotate the image first.');
           $('#warningMsg').show(200).delay(1500).hide(200);
           return;
@@ -1620,6 +1702,7 @@
               }
             }
           }
+          unifiedModeLabels = {};
           unifiedModeAnnotations = {};
           {{ else }}
           var annotation = {};
