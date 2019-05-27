@@ -35,8 +35,8 @@ var ImageMonkeyApi = (function () {
         return new Promise(function(resolve, reject) {
             var url = inst.baseUrl + "/" + inst.apiVersion + "/donation/" + imageId + "/labelme";
             var xhr = new XMLHttpRequest();
-            xhr.setRequestHeader("Content-Type", "application/json");
             xhr.open("POST", url);
+            xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
                 resolve();
             }

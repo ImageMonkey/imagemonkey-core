@@ -1096,7 +1096,12 @@
         });
 
         if(!alreadyExistsInUnifiedModeLabelsLst) {
-            unifiedModeLabels[selectedElem.attr("data-uuid")] = true;
+            if(selectedElem.attr("data-sublabel") !== "") {
+                unifiedModeLabels[selectedElem.attr("data-uuid")] = {"label": selectedElem.attr("data-label"),
+                                                                        "sublabels": [selectedElem.attr("data-sublabel")]};
+            } else {
+                unifiedModeLabels[selectedElem.attr("data-uuid")] = {"label": selectedElem.attr("data-label")};
+            }
             elem = addLabelToLabelLst(selectedElem.attr("data-label"), selectedElem.attr("data-sublabel"),
                                 selectedElem.attr("data-uuid"), true);
         }
@@ -1259,6 +1264,24 @@
       }
     });
   }
+
+function addAnnotationsUnifiedMode() {
+    var annotations = [];
+    for(var key in unifiedModeAnnotations) {
+        if(unifiedModeAnnotations.hasOwnProperty(key)) {
+            if(unifiedModeAnnotations[key].dirty) {
+                var annotation = {};
+                annotation["annotations"] = unifiedModeAnnotations[key].annotations;
+                annotation["label"] = unifiedModeAnnotations[key].label;
+                annotation["sublabel"] = unifiedModeAnnotations[key].sublabel;
+                annotations.push(annotation);
+            }
+        }
+    }
+    unifiedModeLabels = {};
+    unifiedModeAnnotations = {};
+    addAnnotations(annotations);
+}
 
 
   $(document).ready(function(){
@@ -1689,29 +1712,31 @@
           updateAnnotations(annotator.toJSON());
         }
         else {
-          var annotations = [];
           {{ if eq .annotationView "unified" }}
-          for(var key in unifiedModeAnnotations) {
-            if(unifiedModeAnnotations.hasOwnProperty(key)) {
-              if(unifiedModeAnnotations[key].dirty) {
-                var annotation = {};
-                annotation["annotations"] = unifiedModeAnnotations[key].annotations;
-                annotation["label"] = unifiedModeAnnotations[key].label;
-                annotation["sublabel"] = unifiedModeAnnotations[key].sublabel;
-                annotations.push(annotation);
-              }
+          if(Object.keys(unifiedModeLabels).length > 0) {
+            var newlyAddedLabelsUnifiedMode = [];
+            for(key in unifiedModeLabels) {
+               newlyAddedLabelsUnifiedMode.push(unifiedModeLabels[key]);
             }
+            showHideControls(false);
+            //add missing labels first, then add annotations
+            imageMonkeyApi.labelImage(annotationInfo.imageId, newlyAddedLabelsUnifiedMode)
+              .then(function() {
+                addAnnotationsUnifiedMode();
+              }).catch(function(e) {
+              });
+          } else {
+              addAnnotationsUnifiedMode();
           }
-          unifiedModeLabels = {};
-          unifiedModeAnnotations = {};
           {{ else }}
+          var annotations = [];
           var annotation = {};
           annotation["annotations"] = res;
           annotation["label"] = $('#label').attr('label');
           annotation["sublabel"] = $('#label').attr('sublabel');
           annotations.push(annotation);
-          {{ end }}
           addAnnotations(annotations);
+          {{ end }}
         }
       });
 
