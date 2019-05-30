@@ -1215,6 +1215,19 @@ local animals = import 'animals.libsonnet';
             "plural": "parking space",
             "uuid": "01c5957f-fc79-41c6-85ac-417a07667c2e"
         },
+        "skateboard": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "skateboards",
+            "uuid": "4bdc78c2-e921-45bb-9e0b-1cb9cf879599"
+        },
+        "computer monitor": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "computer monitors",
+            "uuid": "d6a993dc-09df-4569-9416-29ce350a97e6"
+        },
+
 
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
@@ -1239,6 +1252,9 @@ local animals = import 'animals.libsonnet';
 		"snake": animals["snake"],
 		"jellyfish": animals["jellyfish"],
 		"spider": animals["spider"],
-        "giraffe": animals["giraffe"]
+        "giraffe": animals["giraffe"],
+        "parrot": animals["parrot"],
+        "wasp": animals["wasp"],
+        "ladybird": animals["ladybird"]
 	}
 }

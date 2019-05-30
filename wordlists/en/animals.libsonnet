@@ -421,5 +421,23 @@
         "accessors": ["."],
         "plural": "giraffes",
         "uuid": "8b8d649e-a867-46ba-bee8-6ef007dadc45"
+    },
+    "parrot": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "parrots":
+        "uuid": "b976951f-df87-4bfc-be87-9c3757bed400"
+    },
+    "wasp": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "wasps",
+        "uuid": "a0ea8930-071c-4680-80ce-8ec9cbbb4acd"
+    },
+    "ladybird": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "ladybirds",
+        "uuid": "3890426a-a97b-45df-8ce9-8395caeb8315"
     }
 }
