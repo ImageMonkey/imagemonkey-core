@@ -979,13 +979,13 @@
   			spacerWidth = "four";
   			unifiedModePropertiesLstWidth = 'four';
   		} else if (workspaceSize === "medium") {
-  			w = "ten";
-  			spacerWidth = "three";
-  			unifiedModePropertiesLstWidth = 'three';
+  			w = "eight";
+  			spacerWidth = "four";
+  			unifiedModePropertiesLstWidth = 'four';
   		} else if (workspaceSize === "big") {
-  			w = "ten";
-  			spacerWidth = "three";
-  			unifiedModePropertiesLstWidth = 'three';
+  			w = "eight";
+  			spacerWidth = "four";
+  			unifiedModePropertiesLstWidth = 'four';
   		}
 
   		spacer = '<div class="' + spacerWidth + ' wide column" id="annotationColumnSpacer">' +
