@@ -425,7 +425,7 @@
     "parrot": {
         "description": "optional",
         "accessors": ["."],
-        "plural": "parrots":
+        "plural": "parrots",
         "uuid": "b976951f-df87-4bfc-be87-9c3757bed400"
     },
     "wasp": {
