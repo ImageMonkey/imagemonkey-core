@@ -999,7 +999,8 @@
   			'<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
   			'<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
   			'</div>' +
-  			'<div class="ui center aligned grid">' +
+
+  			{{ if eq .annotationMode "refine" }} '<div class="ui center aligned grid">' +
   			'<div class="twelve wide centered column">' +
   			'<div class="ui form">' +
   			'<div class="fields">' +
@@ -1018,9 +1019,11 @@
   			'</div>' +
   			'</div>' +
   			'</div>' +
-  			'</div>' +
-  			'</div>' +
-  			'</div>';
+  			{{ end  }}
+
+  		'</div>' +
+  		'</div>' +
+  		'</div>';
 
 
 
