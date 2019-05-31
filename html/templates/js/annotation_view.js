@@ -1513,24 +1513,24 @@
   		var removedElemUuid = $("#removeLabelFromUnifiedModeLstDlg").attr("data-to-be-removed-uuid");
   		$("#labellstitem-" + removedElemUuid).remove();
   		if (removedElemUuid in unifiedModeLabels) {
-            var toBeRemovedAnnotationId = "";
-            if(unifiedModeLabels[removedElemUuid].sublabel !== undefined && unifiedModeLabels[removedElemUuid].sublabel !== "")
-                toBeRemovedAnnotationId = unifiedModeLabels[removedElemUuid].sublabel + "/" + unifiedModeLabels[removedElemUuid].label;
-            else
-                toBeRemovedAnnotationId = unifiedModeLabels[removedElemUuid].label;
-            if(toBeRemovedAnnotationId in unifiedModeAnnotations) {
-                delete unifiedModeAnnotations[toBeRemovedAnnotationId];
-                annotator.deleteAll();
-            }
+  			var toBeRemovedAnnotationId = "";
+  			if (unifiedModeLabels[removedElemUuid].sublabel !== undefined && unifiedModeLabels[removedElemUuid].sublabel !== "")
+  				toBeRemovedAnnotationId = unifiedModeLabels[removedElemUuid].sublabel + "/" + unifiedModeLabels[removedElemUuid].label;
+  			else
+  				toBeRemovedAnnotationId = unifiedModeLabels[removedElemUuid].label;
+  			if (toBeRemovedAnnotationId in unifiedModeAnnotations) {
+  				delete unifiedModeAnnotations[toBeRemovedAnnotationId];
+  				annotator.deleteAll();
+  			}
 
   			delete unifiedModeLabels[removedElemUuid];
 
-            //after we've deleted the label, we need to highlight another label for annotation
-            //(just pick the first one)
-            var unifiedModeToolboxChildren = $('#annotationLabelsLst').children('.labelslstitem');
-            var firstItem = unifiedModeToolboxChildren.first();
-            if (firstItem && firstItem.length === 1)
-                firstItem[0].click();
+  			//after we've deleted the label, we need to highlight another label for annotation
+  			//(just pick the first one)
+  			var unifiedModeToolboxChildren = $('#annotationLabelsLst').children('.labelslstitem');
+  			var firstItem = unifiedModeToolboxChildren.first();
+  			if (firstItem && firstItem.length === 1)
+  				firstItem[0].click();
   		}
   	});
 
