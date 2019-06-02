@@ -1000,7 +1000,7 @@
   			'<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
   			'</div>' +
 
-  			{{ if eq .annotationMode "refine" }} '<div class="ui center aligned grid">' +
+  			{{ if ne .annotationMode "refine" }} '<div class="ui center aligned grid">' +
   			'<div class="twelve wide centered column">' +
   			'<div class="ui form">' +
   			'<div class="fields">' +
