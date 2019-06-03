@@ -1227,7 +1227,24 @@ local animals = import 'animals.libsonnet';
             "plural": "computer monitors",
             "uuid": "d6a993dc-09df-4569-9416-29ce350a97e6"
         },
-
+        "picture frame": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "picture frames",
+            "uuid": "199a70a0-16d4-4eb5-a5e7-9527193477a4"
+        },
+        "blanket": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "blankets",
+            "uuid": "445d397f-5145-45ab-abe7-48980163e5ea"
+        },
+        "cushion": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "cushions",
+            "uuid": "5bea1931-d8e3-47c6-be24-8ab016694a74"
+        },
 
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
