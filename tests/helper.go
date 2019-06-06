@@ -80,14 +80,9 @@ func notEquals(tb testing.TB, exp, act interface{}) {
 func setupTestCase(t *testing.T) func(t *testing.T) {
 	t.Log("setup test case..clearing all database tables")
 	
-	db = NewImageMonkeyDatabase()
-	err := db.Initialize()
+	err := db.ClearAll()
 	ok(t, err)
 
-	err = db.Open()
-	ok(t, err)
-
-	return func(t *testing.T) {
-		db.Close()		
+	return func(t *testing.T) {		
 	}
 }

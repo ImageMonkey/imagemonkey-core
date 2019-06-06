@@ -146,6 +146,35 @@ func installTemporalTablesExtension() error {
 } 
 
 
+func installTruncateAllTablesFunction() error {
+     query := `CREATE OR REPLACE FUNCTION truncate_tables(username IN VARCHAR) RETURNS void AS $$
+				DECLARE
+   					statements CURSOR FOR
+        				SELECT tablename FROM pg_tables
+        				WHERE tableowner = username AND schemaname = 'public';
+				BEGIN
+    				FOR stmt IN statements LOOP
+        				EXECUTE 'TRUNCATE TABLE ' || quote_ident(stmt.tablename) || ' CASCADE;';
+   				END LOOP;
+			   END;
+			   $$ LANGUAGE plpgsql`
+     var out, stderr bytes.Buffer
+
+     //load defaults
+     cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+     cmd.Stdout = &out
+     cmd.Stderr = &stderr
+
+     err := cmd.Run()
+     if err != nil {
+         fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+         return err
+     }
+
+     return nil
+ }
+
+
 type ImageMonkeyDatabase struct {
     db *sql.DB
 }
@@ -232,7 +261,27 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
+	err = installTruncateAllTablesFunction()
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (p *ImageMonkeyDatabase) ClearAll() error {
+	_, err := p.db.Exec(`SELECT truncate_tables('monkey')`)
+	if err != nil {
+		return err
+	}
+
+	err = loadDefaults()
+	if err != nil {
+		return err
+	}
+
+	err = populateLabels()
+	return err
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {
