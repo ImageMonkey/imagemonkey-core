@@ -142,6 +142,10 @@ func TestDonateAndAddLabelSuggestion(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
+	imagesBefore, err := db.GetAllImageIds()
+	ok(t, err)
+	equals(t, int(len(imagesBefore)), int(0))
+	
 	testSignUp(t, "user", "user", "user@imagemonkey.io")
 	userToken := testLogin(t, "user", "user", 200)
 
@@ -150,6 +154,10 @@ func TestDonateAndAddLabelSuggestion(t *testing.T) {
 	equals(t, int(numBefore), 0)
 
 	testDonate(t, "./images/apples/apple1.jpeg", "new-label-that-doesnt-exist-yet", true, userToken, "", 200)
+
+	imagesAfter, err := db.GetAllImageIds()
+	ok(t, err)
+	equals(t, int(len(imagesAfter)), int(1))
 
 	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("new-label-that-doesnt-exist-yet")
 	ok(t, err)

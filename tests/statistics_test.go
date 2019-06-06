@@ -21,7 +21,7 @@ func runStatWorker(t *testing.T) {
 	    done <- cmd.Wait()
 	}()
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(60 * time.Second):
 	    err := cmd.Process.Kill()
 	    ok(t, err) //failed to kill process
 	    t.Errorf("process killed as timeout reached")
