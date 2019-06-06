@@ -565,12 +565,24 @@ func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64,
 	return productiveLabelIds, nil
 }
 
-func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
+func (p *ImageMonkeyDatabase) GetRandomLabelName(skipLabel string) (string, error) {
+	var queryParams []interface{}
+	skipLabelStr := ""
+	if skipLabel != "" {
+		skipLabelStr = "AND l.name != $1"
+		queryParams = append(queryParams, skipLabel)
+	}
+	
+	query := fmt.Sprintf(`SELECT l.name
+                			FROM label l
+                			WHERE l.parent_id is null AND l.label_type = 'normal'
+							%s
+                			ORDER BY random() LIMIT 1`, skipLabelStr) 
+	
+	
+	
 	var label string
-	err := p.db.QueryRow(`SELECT l.name
-						   FROM label l
-						   WHERE l.parent_id is null AND l.label_type = 'normal'
-						   ORDER BY random() LIMIT 1`).Scan(&label)
+	err := p.db.QueryRow(query, queryParams...).Scan(&label)
 	return label, err
 }
 
