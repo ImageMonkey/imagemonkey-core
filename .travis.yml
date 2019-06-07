@@ -4,6 +4,6 @@ services:
 env:
   - BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 before_install:
-  cd $TRAVIS_BUILD_DIR/env/docker/ && docker build --build-arg=$BRANCH -t imagemonkey-core .
+  cd $TRAVIS_BUILD_DIR/env/docker/ && docker build --build-arg=GIT_BRANCH_NAME=$BRANCH -t imagemonkey-core .
 script:
   docker run imagemonkey-core --run-tests
