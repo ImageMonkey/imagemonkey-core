@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	"../src/commons"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func TestAddMetaLabel(t *testing.T) {

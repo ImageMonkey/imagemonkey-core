@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"gopkg.in/resty.v1"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"strconv"
 )
 

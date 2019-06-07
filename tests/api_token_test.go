@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"gopkg.in/resty.v1"
 	"os"
 )

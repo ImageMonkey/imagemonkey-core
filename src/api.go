@@ -419,8 +419,8 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 				return
 			}
 		}
-		labelMeEntries = append(labelMeEntries, labelMeEntry)
 	}
+	labelMeEntries = append(labelMeEntries, labelMeEntry)
 
     //image doesn't already exist, so save it and add it to the database
 	u, err := uuid.NewV4()

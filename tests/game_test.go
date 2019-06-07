@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 	"gopkg.in/resty.v1"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 func testImageHuntDonate(t *testing.T, path string, label string, token string, expectedStatusCode int) {
