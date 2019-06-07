@@ -2,7 +2,7 @@ package main
 
 import (
 	"time"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/google/go-github/github"
 	"database/sql"
 	_ "github.com/lib/pq"
@@ -12,8 +12,8 @@ import (
 	"golang.org/x/oauth2"
 	"fmt"
 	"github.com/lib/pq"
-	datastructures "./datastructures"
-	imagemonkeydb "./database"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 )
 
 var db *sql.DB

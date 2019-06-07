@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"io/ioutil"
-	"../datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 type LabelRepository struct {

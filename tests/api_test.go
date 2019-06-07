@@ -687,6 +687,8 @@ func TestGetImageToAnnotateButLocked(t *testing.T) {
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
 
+	equals(t, len(validationIds), 1)
+
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)
 

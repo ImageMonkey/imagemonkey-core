@@ -2,10 +2,10 @@ package imagemonkeydb
 
 import (
     "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
-    "../datastructures"
-    "time"
-    commons "../commons"
+    log "github.com/sirupsen/logrus"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"time"
+    commons "github.com/bbernhard/imagemonkey-core/commons"
     //parser "../parser"
     /*"fmt"
     "errors"

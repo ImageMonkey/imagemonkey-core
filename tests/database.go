@@ -145,6 +145,38 @@ func installTemporalTablesExtension() error {
 	return nil
 } 
 
+func installAllTablesEmptyFunction() error {
+	query := `CREATE OR REPLACE FUNCTION tables_empty(username IN VARCHAR) RETURNS bool AS $$
+                 DECLARE
+				 	 num int;
+                     statements CURSOR FOR
+                         SELECT tablename FROM pg_tables
+                         WHERE tableowner = username AND schemaname = 'public';
+                 BEGIN
+                     FOR stmt IN statements LOOP
+                         EXECUTE 'SELECT count(*) FROM ' || quote_ident(stmt.tablename) INTO num;
+						 IF num > 0 THEN
+						 	RETURN false;
+						 END IF;
+                 	END LOOP;
+					RETURN true;
+                END;
+                $$ LANGUAGE plpgsql`
+	var out, stderr bytes.Buffer
+
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+		return err
+	}
+
+	return nil
+}
+
 
 func installTruncateAllTablesFunction() error {
      query := `CREATE OR REPLACE FUNCTION truncate_tables(username IN VARCHAR) RETURNS void AS $$
@@ -155,12 +187,11 @@ func installTruncateAllTablesFunction() error {
 				BEGIN
     				FOR stmt IN statements LOOP
         				EXECUTE 'TRUNCATE TABLE ' || quote_ident(stmt.tablename) || ' CASCADE;';
-   				END LOOP;
+   					END LOOP;
 			   END;
 			   $$ LANGUAGE plpgsql`
      var out, stderr bytes.Buffer
 
-     //load defaults
      cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
      cmd.Stdout = &out
      cmd.Stderr = &stderr
@@ -266,11 +297,24 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
+	err = installAllTablesEmptyFunction()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (p *ImageMonkeyDatabase) ClearAll() error {
 	_, err := p.db.Exec(`SELECT truncate_tables('monkey')`)
+	if err != nil {
+		return err
+	}
+
+	empty, err := p.TablesAreEmpty()
+	if !empty {
+		return errors.New("Couldn't clear database properly")
+	}
 	if err != nil {
 		return err
 	}
@@ -282,6 +326,12 @@ func (p *ImageMonkeyDatabase) ClearAll() error {
 
 	err = populateLabels()
 	return err
+}
+
+func (p *ImageMonkeyDatabase) TablesAreEmpty() (bool, error) {
+	var empty bool
+	err := p.db.QueryRow("SELECT tables_empty('monkey')").Scan(&empty)
+	return empty, err
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {

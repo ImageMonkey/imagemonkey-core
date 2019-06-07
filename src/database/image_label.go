@@ -1,16 +1,16 @@
 package imagemonkeydb
 
 import (
-    "../datastructures"
-    "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+    log "github.com/sirupsen/logrus"
     "database/sql"
     "fmt"
     "encoding/json"
     "github.com/lib/pq"
-    commons "../commons"
-    parser "../parser/v2"
-    "errors"
+    commons "github.com/bbernhard/imagemonkey-core/commons"
+    parser "github.com/bbernhard/imagemonkey-core/parser/v2" 
+	"errors"
 )
 
 func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, includeOnlyUnlockedLabels bool) (datastructures.ImageToLabel, error) {

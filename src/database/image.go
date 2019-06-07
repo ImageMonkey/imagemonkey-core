@@ -2,12 +2,12 @@ package imagemonkeydb
 
 import (
     "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
-    "../datastructures"
-    "database/sql"
-    commons "../commons"
-    parser "../parser/v2"
-    "fmt"
+    log "github.com/sirupsen/logrus"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"database/sql"
+    commons "github.com/bbernhard/imagemonkey-core/commons"
+    parser "github.com/bbernhard/imagemonkey-core/parser/v2"
+	"fmt"
     "errors"
     "encoding/json"
     "github.com/lib/pq"

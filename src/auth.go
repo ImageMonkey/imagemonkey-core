@@ -4,11 +4,11 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"errors"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"strings"
-	imagemonkeydb "./database"
-	commons "./commons"
-	datastructures "./datastructures"
+	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 type SessionInformation struct {
