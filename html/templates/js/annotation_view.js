@@ -990,7 +990,14 @@
 
         var unifiedModeLabelsLstUiElems = '';
         {{ if ne .annotationMode "refine" }}
-             if(!$("#annotationsOnlyCheckbox").checkbox("is checked")) {
+            var showUnifiedModeLabelsLstUiElems = false;
+            {{ if eq .annotationMode "default" }}
+            showUnifiedModeLabelsLstUiElems = true;
+            {{ else }}
+            if(!$("#annotationsOnlyCheckbox").checkbox("is checked"))
+                showUnifiedModeLabelsLstUiElems = true;
+            {{ end  }}
+            if(showUnifiedModeLabelsLstUiElems) {
                 unifiedModeLabelsLstUiElems = '<div class="ui center aligned grid">' +
                     '<div class="twelve wide centered column">' +
                     '<div class="ui form">' +
