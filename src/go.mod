@@ -24,7 +24,6 @@ require (
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
-	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/ugorji/go v1.1.5-pre // indirect
 	gocv.io/x/gocv v0.20.0
