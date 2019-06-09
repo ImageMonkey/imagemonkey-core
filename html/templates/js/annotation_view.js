@@ -988,6 +988,39 @@
   			unifiedModePropertiesLstWidth = 'four';
   		}
 
+        var unifiedModeLabelsLstUiElems = '';
+        {{ if ne .annotationMode "refine" }}
+            var showUnifiedModeLabelsLstUiElems = false;
+            {{ if eq .annotationMode "default" }}
+            showUnifiedModeLabelsLstUiElems = true;
+            {{ else }}
+            if(!$("#annotationsOnlyCheckbox").checkbox("is checked"))
+                showUnifiedModeLabelsLstUiElems = true;
+            {{ end  }}
+            if(showUnifiedModeLabelsLstUiElems) {
+                unifiedModeLabelsLstUiElems = '<div class="ui center aligned grid">' +
+                    '<div class="twelve wide centered column">' +
+                    '<div class="ui form">' +
+                    '<div class="fields">' +
+                    '<div class="field">' +
+                    '<div class="ui search">' +
+                    '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
+                    '<div class="ui search selection dropdown" id="addLabelToUnifiedModeListDropdown">' +
+                    '<div class="default text">Select Label</div>' +
+                    '<div class="menu" id="addLabelToUnifiedModeListDropdownMenu"></div>' +
+                    '</div>' +
+                    '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+             }
+        {{ end  }}
+
+
   		spacer = '<div class="' + spacerWidth + ' wide column" id="annotationColumnSpacer">' +
   			'<h2 class="ui center aligned header">' +
   			'<div class="content">' +
@@ -998,28 +1031,7 @@
   			'<div class="ui segments">' +
   			'<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
   			'<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
-  			'</div>' +
-
-  			{{ if ne .annotationMode "refine" }} '<div class="ui center aligned grid">' +
-  			'<div class="twelve wide centered column">' +
-  			'<div class="ui form">' +
-  			'<div class="fields">' +
-  			'<div class="field">' +
-  			'<div class="ui search">' +
-  			'<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
-  			'<div class="ui search selection dropdown" id="addLabelToUnifiedModeListDropdown">' +
-  			'<div class="default text">Select Label</div>' +
-  			'<div class="menu" id="addLabelToUnifiedModeListDropdownMenu"></div>' +
-  			'</div>' +
-  			'<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
-  			'</div>' +
-  			'</div>' +
-  			'</div>' +
-  			'</div>' +
-  			'</div>' +
-  			'</div>' +
-  			'</div>' +
-  			{{ end  }}
+  			'</div>' + unifiedModeLabelsLstUiElems +
 
   		'</div>' +
   		'</div>' +

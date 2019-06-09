@@ -1,9 +1,9 @@
 package imagemonkeydb
 
 import (
-    "../datastructures"
-    "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+    log "github.com/sirupsen/logrus"
     "time"
     "errors"
 )

@@ -2,7 +2,7 @@ package main
 
 import (
 	"time"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"database/sql"
 	_ "github.com/lib/pq"
 	"github.com/getsentry/raven-go"
@@ -11,8 +11,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"os"
 	"encoding/json"
-	"./datastructures"
-	"./commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 var db *sql.DB

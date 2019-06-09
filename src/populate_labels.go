@@ -3,10 +3,10 @@ package main
 import(
 	"database/sql"
 	_ "github.com/lib/pq"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"flag"
-	datastructures "./datastructures"
-	commons "./commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 

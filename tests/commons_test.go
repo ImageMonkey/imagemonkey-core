@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	commons "../src/commons"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func TestDatabaseEmpty(t *testing.T) {

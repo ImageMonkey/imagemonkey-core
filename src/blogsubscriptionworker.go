@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"flag"
 	"github.com/garyburd/redigo/redis"
 	"time"
 	"database/sql"
 	_ "github.com/lib/pq"
 	"encoding/json"
-	"./datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 var db *sql.DB

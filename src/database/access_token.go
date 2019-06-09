@@ -2,7 +2,7 @@ package imagemonkeydb
 
 import (
     "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
+    log "github.com/sirupsen/logrus"
     "errors"
 )
 

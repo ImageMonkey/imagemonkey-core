@@ -1,7 +1,7 @@
 package img
 
 import (
-    log "github.com/Sirupsen/logrus"
+    log "github.com/sirupsen/logrus"
     "gopkg.in/h2non/bimg.v1"
     //"os"
     //"github.com/nfnt/resize"

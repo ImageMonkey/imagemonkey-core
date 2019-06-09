@@ -4,7 +4,7 @@ import (
 	"testing"
 	"gopkg.in/resty.v1"
 	"net/url"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"encoding/json"
 	"sort"
 )

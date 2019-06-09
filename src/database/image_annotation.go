@@ -2,17 +2,17 @@ package imagemonkeydb
 
 import (
     "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
-    "../datastructures"
-    parser "../parser/v2"
-    commons "../commons"
-    "encoding/json"
+    log "github.com/sirupsen/logrus"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+    parser "github.com/bbernhard/imagemonkey-core/parser/v2"
+    commons "github.com/bbernhard/imagemonkey-core/commons" 
+	"encoding/json"
     "errors"
     "fmt"
     "database/sql"
     "github.com/lib/pq"
     "image"
-    "github.com/satori/go.uuid"
+    "github.com/gofrs/uuid"
     //"github.com/francoispqt/gojay"
     //"bytes"
 )

@@ -6,7 +6,7 @@ import (
 	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"os"
-	"../src/datastructures"
+	"github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 //const UNVERIFIED_DONATIONS_DIR string = "../unverified_donations/"
@@ -686,6 +686,8 @@ func TestGetImageToAnnotateButLocked(t *testing.T) {
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
+
+	equals(t, len(validationIds), 1)
 
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)

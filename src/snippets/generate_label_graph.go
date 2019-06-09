@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/awalterschulze/gographviz"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"strings"
 	"strconv"

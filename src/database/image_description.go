@@ -1,13 +1,13 @@
 package imagemonkeydb
 
 import (
-	"../datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"encoding/json"
 	"github.com/lib/pq"
-	"github.com/satori/go.uuid"
-	languages "../languages"
+	"github.com/gofrs/uuid"
+	languages "github.com/bbernhard/imagemonkey-core/languages"
 )
 
 type UnlockImageDescriptionErrorType int

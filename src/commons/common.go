@@ -16,12 +16,12 @@ import (
     "net/http"
     "encoding/json"
     "github.com/garyburd/redigo/redis"
-    log "github.com/Sirupsen/logrus"
+    log "github.com/sirupsen/logrus"
     "net/url"
     "errors"
     "github.com/gin-gonic/gin"
-    "../datastructures"
-    "strconv"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"strconv"
 	"github.com/google/go-jsonnet"
 	"path/filepath"
 	"os"
@@ -279,8 +279,7 @@ func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, metalabels 
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
-
-            for _, value := range sublabels {
+        	for _, value := range sublabels {
                 _, ok := availableSublabels[value.Name]
                 if !ok {
                     return false

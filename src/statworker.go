@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"flag"
 	"github.com/garyburd/redigo/redis"
 	"time"
 	"encoding/json"
 	"github.com/getsentry/raven-go"
-	"./datastructures"
-	imagemonkeydb "./database"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 )
 
 func main(){

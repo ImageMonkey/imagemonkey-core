@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"github.com/gin-gonic/gin"
 	"fmt"
-	"github.com/satori/go.uuid"
-	"gopkg.in/h2non/filetype.v1"
-	log "github.com/Sirupsen/logrus"
+	"github.com/gofrs/uuid"
+	"github.com/h2non/filetype"
+	log "github.com/sirupsen/logrus"
 	"flag"
 	"os"
 	"strconv"
@@ -23,12 +23,12 @@ import (
     "golang.org/x/crypto/bcrypt"
     "time"
     "github.com/getsentry/raven-go"
-    datastructures "./datastructures"
-    imagemonkeydb "./database"
-    commons "./commons"
-    parser "./parser/v2"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+    imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+    commons "github.com/bbernhard/imagemonkey-core/commons"
+	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
     "image"
-    img "./image"
+	img "github.com/bbernhard/imagemonkey-core/image"
 )
 
 var geoipDb *geoip2.Reader
@@ -340,7 +340,7 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 			if !commons.IsLabelValid(labelMap, metalabels, label, []datastructures.Sublabel{}) {
 				c.JSON(400, gin.H{"error": "Please provide a valid label"})
 				return
-			}
+			}		
 		}
 	}
 
@@ -400,7 +400,7 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 	}
 
 	var labelMeEntry datastructures.LabelMeEntry
-	var labelMeEntries []datastructures.LabelMeEntry
+	labelMeEntries := []datastructures.LabelMeEntry{}
 	labelMeEntry.Label = label
 
 	if label != "" {

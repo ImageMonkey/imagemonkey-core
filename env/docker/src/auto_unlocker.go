@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/fsnotify/fsnotify"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"net/http"
 	"bytes"

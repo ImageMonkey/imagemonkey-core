@@ -4,7 +4,7 @@ package tests
 import (
 	"testing"
 	"gopkg.in/resty.v1"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 func testGetAllUnverifiedDonations(t *testing.T, clientId string, clientSecret string, 

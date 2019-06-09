@@ -1,16 +1,16 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"flag"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"database/sql"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 	"context"
-	datastructures "./datastructures"
-	commons "./commons"
-	imagemonkeydb "./database"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 
 )
 
