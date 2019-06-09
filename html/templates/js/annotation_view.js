@@ -459,11 +459,11 @@
   		success: function(data) {
   			{{ if eq .annotationView "unified" }}
   			if (data !== null) {
-  				for (var i = 0; i < data.length; i++) {
+                for (var i = 0; i < data.length; i++) {
   					addLabelToLabelLst(data[i].label, '', data[i].uuid);
   					if (data[i].sublabels !== null) {
   						for (var j = 0; j < data[i].sublabels.length; j++) {
-  							addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
+                            addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
   								data[i].sublabels[j].uuid);
   						}
   					}
@@ -1117,11 +1117,13 @@
   			if (selectedElem.attr("data-sublabel") !== "") {
   				unifiedModeLabels[selectedElem.attr("data-uuid")] = {
   					"label": selectedElem.attr("data-label"),
-  					"sublabels": [selectedElem.attr("data-sublabel")]
+  					"sublabels": [{"name": selectedElem.attr("data-sublabel")}],
+                    "annotatable": true
   				};
   			} else {
   				unifiedModeLabels[selectedElem.attr("data-uuid")] = {
-  					"label": selectedElem.attr("data-label")
+  					"label": selectedElem.attr("data-label"),
+                    "annotatable": true
   				};
   			}
   			elem = addLabelToLabelLst(selectedElem.attr("data-label"), selectedElem.attr("data-sublabel"),
