@@ -344,7 +344,7 @@ var Polygon = (function () {
         x:pointer.x,
         y:pointer.y
       }
-        
+
       this.activeShape.set({
         points: points
       });
@@ -457,7 +457,7 @@ var Annotator = (function () {
     this.className= "Rectangle";
     this.isDrawing = false;
     this.overObject = false;
-    this.blocked = false; 
+    this.blocked = false;
     this.type = "Rectangle";
     this.polygon = new Polygon(this.canvas);
     this.objSelected = objSelected;
@@ -506,7 +506,7 @@ var Annotator = (function () {
     var hasControls;
     for(var i = 0; i < objects.length; i++) {
         var boundingRect = objects[i].getBoundingRect();
-        if((pointer.x >= boundingRect.left && pointer.x <= (boundingRect.left + boundingRect.width)) && 
+        if((pointer.x >= boundingRect.left && pointer.x <= (boundingRect.left + boundingRect.width)) &&
           (pointer.y >= boundingRect.top && pointer.y <= (boundingRect.top + boundingRect.height))){
           if(foundObj) { //we already have found one object that lies within the position of the cursor
             if(objects[i].isContainedWithinObject(foundObj)) { //is there another object that is even smaller? (i.e is fully contained with in existing one)
@@ -586,7 +586,7 @@ var Annotator = (function () {
       inst.disable();
 
       var p = o.target;
-      if(("isPolygonHandle" in p) && p["isPolygonHandle"]){ 
+      if(("isPolygonHandle" in p) && p["isPolygonHandle"]){
         if(inst.polygon.isInPolyEditMode()){
           var points = inst.polygon.getPaintedPolygonById(p.belongsToPolygon).points;
           points[p.index] = {x: (points[p.index].x + o.e.movementX), y: (points[p.index].y + o.e.movementY)}
@@ -604,7 +604,7 @@ var Annotator = (function () {
         }
       }
       /*else if(p.type === "polygon"){
-        var points = p.points; 
+        var points = p.points;
         for(var i = 0; i < points.length; i++){
           points[i] = {x: (points[i].x + o.e.movementX), y: (points[i].y + o.e.movementY)};
         }
@@ -694,8 +694,8 @@ var Annotator = (function () {
           this.isRedoing = false;
         });
         this.canvas.renderAll();
-        
-        
+
+
     }*/
   };
 
@@ -760,8 +760,8 @@ var Annotator = (function () {
 
       this.selectedBlocks[key] = false;
       this.canvas.add(block);
-      
-      this.selectedBlocksPoints[key] = [{"x": beginX, "y": beginY}, {"x": (beginX + this.cellSize), "y": beginY}, 
+
+      this.selectedBlocksPoints[key] = [{"x": beginX, "y": beginY}, {"x": (beginX + this.cellSize), "y": beginY},
                                         {"x": beginX, "y": (beginY + this.cellSize)}, {"x": (beginX + this.cellSize), "y": (beginY + this.cellSize)}];
       this.recentlyAddedBlocks[key] = key;
     }
@@ -815,7 +815,7 @@ var Annotator = (function () {
   };
 
 
-  
+
 
 
   Annotator.prototype.onMouseMove = function (o) {
@@ -824,42 +824,42 @@ var Annotator = (function () {
     if(!inst.isPanMode){
       if(!inst.isEnable()){ return; }
       var pointer = inst.canvas.getPointer(o.e);
-
+      var activeObj = inst.canvas.getActiveObject();
       if((inst.type === 'Rectangle') || (inst.type === 'Circle')){
-        var activeObj = inst.canvas.getActiveObject();
-        //activeObj.stroke= 'red';
-        //activeObj.strokeWidth= 5;
-        //activeObj.fill = 'transparent';
-
-        if(origX > pointer.x){
-          activeObj.set({ left: Math.abs(pointer.x) }); 
-        }
-        if(origY > pointer.y){
-          activeObj.set({ top: Math.abs(pointer.y) });
+        if(activeObj) {
+            if(origX > pointer.x){
+                activeObj.set({ left: Math.abs(pointer.x) });
+            }
+            if(origY > pointer.y){
+                activeObj.set({ top: Math.abs(pointer.y) });
+            }
         }
 
         inst.canvas.renderAll();
       }
 
       if(inst.type === 'Rectangle'){
-        activeObj.set({ width: Math.abs(origX - pointer.x) });
-        activeObj.set({ height: Math.abs(origY - pointer.y) });
+        if(activeObj) {
+            activeObj.set({ width: Math.abs(origX - pointer.x) });
+            activeObj.set({ height: Math.abs(origY - pointer.y) });
 
-        activeObj.setCoords();
-
+            activeObj.setCoords();
+        }
         inst.canvas.renderAll();
       }
-      if(inst.type === 'Circle'){   
-        activeObj.set({ rx: Math.abs(origX - pointer.x) / 2 });
-        activeObj.set({ ry: Math.abs(origY - pointer.y) / 2 });
+      if(inst.type === 'Circle'){
+        if(activeObj) {
+            activeObj.set({ rx: Math.abs(origX - pointer.x) / 2 });
+            activeObj.set({ ry: Math.abs(origY - pointer.y) / 2 });
 
-        activeObj.setCoords();
+            activeObj.setCoords();
+        }
 
         inst.canvas.renderAll();
       }
       if(inst.type === 'Polygon'){
         this.polygon.move(pointer);
-        
+
         inst.canvas.renderAll();
       }
       if(inst.type === "Blocks"){
@@ -1103,7 +1103,7 @@ var Annotator = (function () {
 
   Annotator.prototype.isSelectMoveModeEnabled = function() {
     return this.isSelectMoveMode;
-  }  
+  }
 
   Annotator.prototype.disableSelectMoveMode = function() {
     this._silenceAllObjects();
@@ -1238,7 +1238,7 @@ var Annotator = (function () {
 
     }
     else{
-      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color, 
+      var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color,
           pointX, pointY, pX, pY, strokeWidth, strokeColor, annotationId, refinements;
 
       for(var i = 0; i < objs.length; i++){
@@ -1272,7 +1272,7 @@ var Annotator = (function () {
           strokeColor = objs[i]["stroke"];
 
           if((width != 0) && (height != 0))
-            res.push({"refinements": refinements, "left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect", 
+            res.push({"refinements": refinements, "left" : left, "top": top, "width": width, "height": height, "angle": angle, "type": "rect",
                       "stroke": {"width" : strokeWidth, "color": strokeColor}});
 
         }
@@ -1285,7 +1285,7 @@ var Annotator = (function () {
           strokeColor = objs[i]["stroke"];
 
           if((rx != 0) && (ry != 0))
-            res.push({"refinements": refinements, "left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse", 
+            res.push({"refinements": refinements, "left" : left, "top": top, "rx": rx, "ry": ry, "angle": angle, "type": "ellipse",
                       "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
         else if(type === "polygon"){
@@ -1308,7 +1308,7 @@ var Annotator = (function () {
             scaledPoints.push({"x" : pX, "y": pY});
           }
 
-          res.push({"refinements": refinements, "points": scaledPoints, "angle": angle, "type": "polygon", 
+          res.push({"refinements": refinements, "points": scaledPoints, "angle": angle, "type": "polygon",
                     "stroke": {"width" : strokeWidth, "color": strokeColor}});
         }
       }
@@ -1378,7 +1378,7 @@ var Annotator = (function () {
     var oldBgColor = this.canvas.backgroundColor;
     this.canvas.backgroundColor = "black";
 
-    //remember current canvas pos 
+    //remember current canvas pos
     var oldPos = this.getAbsoluteCanvasPosition();
 
     //remember current canvas zoom
@@ -1509,7 +1509,7 @@ var AnnotationSettings = (function () {
       $("#annotationWorkspaceSizeSmallCheckbox").checkbox("set unchecked");
       $("#annotationWorkspaceSizeBigCheckbox").checkbox("set unchecked");
       $("#annotationWorkspaceSizeMediumCheckbox").checkbox("check");
-    } 
+    }
     else if(workspaceSize === "big") {
       $("#annotationWorkspaceSizeSmallCheckbox").checkbox("set unchecked");
       $("#annotationWorkspaceSizeMediumCheckbox").checkbox("set unchecked");
