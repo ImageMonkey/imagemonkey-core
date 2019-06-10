@@ -151,6 +151,32 @@ local countries = import 'countries.libsonnet';
             "accessors": ["."],
             "uuid": "4c2e0ae0-1bdc-4621-96d2-d12978493848"
         },
+        "botany": {
+            "description": "optional",
+            "accessors": ["."],
+            "uuid": "006870d6-6fa8-4d9a-a676-9a3a4c8fe436"
+        },
+        "architecture": {
+            "description": "optional",
+            "accessors": ["."],
+            "uuid": "8e548c53-3136-4b9a-a2f8-5524686cb528"
+        },
+        "industrial": {
+            "description": "optional",
+            "accessors": ["."],
+            "uuid": "74876d97-08ae-4e3d-bc04-dbe260d9634c"
+        },
+        "military": {
+            "description": "optional",
+            "accessors": ["."],
+            "uuid": "0fcccb28-7180-420b-8862-9e8b049f005a"
+        },
+        "tropical": {
+            "description": "optional",
+            "accessors": ["."],
+            "uuid": "44050e74-f76a-43ef-8ad2-e6a644ecee7f"
+        },
+
 
 
         "germany": countries["germany"],

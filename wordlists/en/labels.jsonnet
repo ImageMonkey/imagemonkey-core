@@ -1245,6 +1245,19 @@ local animals = import 'animals.libsonnet';
             "plural": "cushions",
             "uuid": "5bea1931-d8e3-47c6-be24-8ab016694a74"
         },
+        "blueberry": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "blueberries",
+            "uuid": "5c3eae85-f3f6-4572-a789-f37b9b2cc8b7"
+        },
+        "jar": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "jar",
+            "uuid": "0bcbc385-b00c-475e-b8f7-5d248da9a296"
+        },
+
 
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
