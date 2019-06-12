@@ -1,0 +1,13 @@
+FROM postgres:9.6.13
+
+ARG TEMPORAL_TABLE_VERSION=v1.2.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      sudo postgresql-9.6-postgis-2.3-scripts
+
+#RUN cd /tmp && wget https://github.com/arkhipov/temporal_tables/archive/${TEMPORAL_TABLE_VERSION}.tar.gz \
+# && mkdir -p /tmp/temporal_table \
+# && cd /tmp/temporal_table && tar xvf /tmp/v1.2.0.tar.gz \
+# && cd /tmp/temporal_table/temporal_tables-1.2.0/ && make && make install \
+# && rm /tmp/${TEMPORAL_TABLE_VERSION}.tar.gz \
+# && rm -rf /tmp/temporal_table

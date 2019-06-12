@@ -1,0 +1,22 @@
+FROM golang:1.12.5-stretch
+
+RUN mkdir -p /home/go/bin
+ENV GOPATH=/home/go
+ENV GOBIN=/home/go/bin
+
+COPY src/api.go /tmp/src/api.go
+COPY src/api_secrets.template /tmp/src/api_secrets.template
+COPY src/auth.go /tmp/src/auth.go
+COPY src/commons /tmp/src/commons
+COPY src/image /tmp/src/image
+COPY src/languages /tmp/src/languages
+COPY src/datastructures /tmp/src/datastructures
+
+RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+
+RUN cd /tmp/src \
+	&& go get -u -d gocv.io/x/gocv \
+	&& cd /home/go/src/gocv.io/x/gocv \
+	&& make install \
+	&& cd /tmp/src/ \
+	&& go get ./...
