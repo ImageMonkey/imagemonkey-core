@@ -113,7 +113,7 @@ func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 	return err
 }
 
-func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error {
+func closeGithubIssue(trendingLabel string, repository string, githubProjectOwner string, githubApiToken string, tx *sql.Tx) error {
 	rows, err := tx.Query(`SELECT t.github_issue_id, t.closed
 							FROM trending_label_suggestion t
 							JOIN label_suggestion l ON t.label_suggestion_id = l.id
@@ -136,7 +136,7 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 		//if !issueClosed {
 			ctx := context.Background()
 			ts := oauth2.StaticTokenSource(
-				&oauth2.Token{AccessToken: GITHUB_API_TOKEN},
+				&oauth2.Token{AccessToken: githubApiToken},
 			)
 			tc := oauth2.NewClient(ctx, ts)
 
@@ -151,13 +151,13 @@ func closeGithubIssue(trendingLabel string, repository string, tx *sql.Tx) error
 
 			//we do not care whether we can successfully close the github issue..if it doesn't work, one can always close it
 			//manually.
-			_, _, err = client.Issues.CreateComment(ctx, GITHUB_PROJECT_OWNER, repository, githubIssueId, commentRequest)
+			_, _, err = client.Issues.CreateComment(ctx, githubProjectOwner, repository, githubIssueId, commentRequest)
 			if err == nil { //if comment was successfully created, close issue
 				issueRequest := &github.IssueRequest{
 					State: github.String("closed"),
 				}
 
-				_, _, err = client.Issues.Edit(ctx, GITHUB_PROJECT_OWNER, repository, githubIssueId, issueRequest)
+				_, _, err = client.Issues.Edit(ctx, githubProjectOwner, repository, githubIssueId, issueRequest)
 				if err != nil {
 					log.Info("[Main] Couldn't close github issue, please close manually!")
 				}
@@ -268,6 +268,13 @@ func main() {
 
 	flag.Parse()
 
+	githubProjectOwner := ""
+	githubApiToken := ""
+	if *autoCloseIssue {
+		githubProjectOwner = commons.MustGetEnv("GITHUB_PROJECT_OWNER")
+		githubApiToken = commons.MustGetEnv("GITHUB_API_TOKEN")
+	}
+
 	if *autoCloseIssue && *githubRepository == "" {
 		log.Fatal("Please set a valid repository!")
 	}
@@ -292,7 +299,8 @@ func main() {
 		return
 	}
 
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		log.Error(err)
 		return
@@ -382,7 +390,7 @@ func main() {
     } else {
     	//only handle autoclose, in case it's not a dry run
     	if *autoCloseIssue {
-    		err := closeGithubIssue(*trendingLabel, *githubRepository, tx)
+    		err := closeGithubIssue(*trendingLabel, *githubRepository, githubProjectOwner, githubApiToken, tx)
     		if err != nil {
     			log.Error("[Main] Couldn't get github issue id to close issue!")
     			tx.Rollback()

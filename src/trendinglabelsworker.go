@@ -14,6 +14,7 @@ import (
 	"github.com/lib/pq"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 var db *sql.DB
@@ -161,10 +162,10 @@ func getNewTrendingLabels(trendingLabelTreshold int) ([]TrendingLabel, error) {
 	return trendingLabels, nil
 }
 
-func createGithubTicket(trendingLabel TrendingLabel, repository string) (TrendingLabel, error) {
+func createGithubTicket(trendingLabel TrendingLabel, repository string, githubProjectOwner string, githubApiToken string) (TrendingLabel, error) {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: GITHUB_API_TOKEN},
+		&oauth2.Token{AccessToken: githubApiToken},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
@@ -179,7 +180,7 @@ func createGithubTicket(trendingLabel TrendingLabel, repository string) (Trendin
 		Body:    github.String(body),
 	}
 
-	issue, _, err := client.Issues.Create(ctx, GITHUB_PROJECT_OWNER, repository, issueRequest)
+	issue, _, err := client.Issues.Create(ctx, githubProjectOwner, repository, issueRequest)
 
 	if err == nil {
 		trendingLabel.GithubIssue.Id = *issue.Number
@@ -189,10 +190,11 @@ func createGithubTicket(trendingLabel TrendingLabel, repository string) (Trendin
 	return trendingLabel, err
 }
 
-func addCommentToGithubTicket(trendingLabel TrendingLabel, repository string) error {
+func addCommentToGithubTicket(trendingLabel TrendingLabel, repository string, 
+		githubProjectOwner string, githubApiToken string) error {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: GITHUB_API_TOKEN},
+		&oauth2.Token{AccessToken: githubApiToken},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
@@ -205,7 +207,7 @@ func addCommentToGithubTicket(trendingLabel TrendingLabel, repository string) er
 		Body:    github.String(body),
 	}
 
-	_, _, err := client.Issues.CreateComment(ctx, GITHUB_PROJECT_OWNER, repository, trendingLabel.GithubIssue.Id, commentRequest)
+	_, _, err := client.Issues.CreateComment(ctx, githubProjectOwner, repository, trendingLabel.GithubIssue.Id, commentRequest)
 
 	return err
 }
@@ -226,16 +228,23 @@ func main() {
 	useGithub := flag.Bool("use_github", true, "Create Issue in Issues tracker")
 	flag.Parse()
 
+
+	githubProjectOwner := commons.MustGetEnv("GITHUB_PROJECT_OWNER")
+	githubApiToken := commons.MustGetEnv("GITHUB_API_TOKEN")
+
 	if *useSentry {
 		log.Info("Setting Sentry DSN")
-		raven.SetDSN(SENTRY_DSN)
+		sentryDsn := commons.MustGetEnv("SENTRY_DSN")
+		raven.SetDSN(sentryDsn)
 		raven.SetEnvironment("trending-labels")
 		raven.CaptureMessage("Starting up trending-labels worker", nil)
 	}
 	log.Info("[Main] Starting up Trending Labels Worker...")
 
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")	
+
 	var err error
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal(err)
@@ -263,7 +272,7 @@ func main() {
 					if *useGithub {
 						//there is a new trending label...create a github ticket for that
 						log.Info("[Main] Creating Github ticket for trending label: ", trendingLabel.Name)
-						t, githubErr = createGithubTicket(trendingLabel, *repository)
+						t, githubErr = createGithubTicket(trendingLabel, *repository, githubProjectOwner, githubApiToken)
 						if githubErr != nil {
 							log.Error("[Main] Couldn't create github issue for trending label: ", err.Error())
 							raven.CaptureError(err, nil)
@@ -282,7 +291,7 @@ func main() {
 				} else { //ticket exists, just add a comment
 					githubErr = nil
 					if *useGithub {
-						githubErr = addCommentToGithubTicket(trendingLabel, *repository)
+						githubErr = addCommentToGithubTicket(trendingLabel, *repository, githubProjectOwner, githubApiToken)
 						if githubErr != nil {
 							log.Error("[Main] Couldn't update trending label count for trending label: ", err.Error())
 							raven.CaptureError(err, nil)

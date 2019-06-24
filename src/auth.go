@@ -33,7 +33,7 @@ type APITokenInfo struct {
 }
 
 
-func _strToToken(tokenString string) (*jwt.Token, error) {
+func _strToToken(tokenString string, jwtSecret string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok { //is algorithm correctly set?
 	    	log.Debug("unexcpected signing method")
@@ -41,7 +41,7 @@ func _strToToken(tokenString string) (*jwt.Token, error) {
 		}
 
 	    // hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
-	    return []byte(JWT_SECRET), nil
+	    return []byte(jwtSecret), nil
 	})
 
 	return token, err
@@ -55,7 +55,7 @@ func _isAccessTokenRevoked(db *imagemonkeydb.ImageMonkeyDatabase, accessToken st
 	return true
 }
 
-func _parseAccessToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string) AccessTokenInfo {
+func _parseAccessToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string, jwtSecret string) AccessTokenInfo {
 	var accessTokenInfo AccessTokenInfo
 	accessTokenInfo.Username = ""
 	accessTokenInfo.Token = ""
@@ -68,7 +68,7 @@ func _parseAccessToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string
 	}
 
 
-	token, err := _strToToken(tokenString)
+	token, err := _strToToken(tokenString, jwtSecret)
 
 	if err == nil && token.Valid {
 		//token is valid and signed by the backend, check now if the token was revoked
@@ -84,7 +84,7 @@ func _parseAccessToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string
 	return accessTokenInfo
 }
 
-func _parseApiToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string) APITokenInfo {
+func _parseApiToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string, jwtSecret string) APITokenInfo {
 	var apiTokenInfo APITokenInfo
 	apiTokenInfo.Username = ""
 	apiTokenInfo.Token = ""
@@ -96,7 +96,7 @@ func _parseApiToken(db *imagemonkeydb.ImageMonkeyDatabase, tokenString string) A
 		apiTokenInfo.Empty = false
 	}
 
-	token, err := _strToToken(tokenString)
+	token, err := _strToToken(tokenString, jwtSecret)
 
 	if err == nil && token.Valid {
 		//token is valid and signed by the backend, check now if the token was revoked
@@ -119,11 +119,13 @@ type AuthTokenHandlerInterface interface {
 
 type SessionCookieHandler struct {
 	db *imagemonkeydb.ImageMonkeyDatabase
+	jwtSecret string
 }
 
-func NewSessionCookieHandler(db *imagemonkeydb.ImageMonkeyDatabase) *SessionCookieHandler {
+func NewSessionCookieHandler(db *imagemonkeydb.ImageMonkeyDatabase, jwtSecret string) *SessionCookieHandler {
     return &SessionCookieHandler{
     	db: db,
+		jwtSecret: jwtSecret,
     } 
 }
 
@@ -138,7 +140,7 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
     if err == nil {
     	tokenString := cookie.Value
     	if tokenString != "" {
-    		accessTokenInfo := _parseAccessToken(p.db, tokenString)
+    		accessTokenInfo := _parseAccessToken(p.db, tokenString, p.jwtSecret)
     		sessionInformation.LoggedIn = accessTokenInfo.Valid
     		sessionInformation.Username = accessTokenInfo.Username
 
@@ -166,11 +168,13 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
 
 type AuthTokenHandler struct {
 	db *imagemonkeydb.ImageMonkeyDatabase
+	jwtSecret string
 }
 
-func NewAuthTokenHandler(db *imagemonkeydb.ImageMonkeyDatabase) *AuthTokenHandler {
+func NewAuthTokenHandler(db *imagemonkeydb.ImageMonkeyDatabase, jwtSecret string) *AuthTokenHandler {
     return &AuthTokenHandler{
     	db: db,
+		jwtSecret: jwtSecret,
     } 
 }
 
@@ -186,7 +190,7 @@ func (p *AuthTokenHandler) GetAccessTokenInfo(c *gin.Context) AccessTokenInfo {
     	return accessTokenInfo
    	}
 
-   	return _parseAccessToken(p.db, auth[1])
+   	return _parseAccessToken(p.db, auth[1], p.jwtSecret)
 }
 
 func (p *AuthTokenHandler) GetAccessTokenInfoFromUrl(c *gin.Context) AccessTokenInfo {
@@ -201,11 +205,11 @@ func (p *AuthTokenHandler) GetAccessTokenInfoFromUrl(c *gin.Context) AccessToken
     	return accessTokenInfo
    	}
 
-   	return _parseAccessToken(p.db, token)
+   	return _parseAccessToken(p.db, token, p.jwtSecret)
 }
 
 func (p *AuthTokenHandler) GetAPITokenInfo(c *gin.Context) APITokenInfo {
 	apiToken := c.Request.Header.Get("X-Api-Token")
 
-	return _parseApiToken(p.db, apiToken)
+	return _parseApiToken(p.db, apiToken, p.jwtSecret)
 }

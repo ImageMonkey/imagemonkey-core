@@ -10,6 +10,7 @@ import (
 	"github.com/getsentry/raven-go"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func main(){
@@ -25,17 +26,19 @@ func main(){
 	flag.Parse()
 
 	var err error
-
+	
+	imageDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
+	err = imageMonkeyDatabase.Open(imageDbConnectionString)
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
 	defer imageMonkeyDatabase.Close()
 
 	if *useSentry {
+		sentryDsn := commons.MustGetEnv("SENTRY_DSN")
 		log.Debug("Setting Sentry DSN")
-		raven.SetDSN(SENTRY_DSN)
+		raven.SetDSN(sentryDsn)
 		raven.SetEnvironment("statworker")
 	}
 

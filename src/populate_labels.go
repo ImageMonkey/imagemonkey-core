@@ -428,8 +428,8 @@ func main(){
 		log.Fatal("Couldn't get meta labels: ", err.Error())
 	}
 
-
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+	db, err := sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		log.Fatal(err)
 	}
