@@ -1,11 +1,14 @@
 FROM golang:1.12.5-stretch
 
-ARG MONKEY_DB_PASSWORD=""
-ARG SENTRY_DSN=""
-ARG X_CLIENT_ID=""
-ARG X_CLIENT_SECRET=""
-ARG JWT_SECRET=""
-ARG IMAGE_DB_CONNECTION_STRING="user=monkey dbname=imagemonkey password=${MONKEY_DB_PASSWORD} sslmode=disable"
+ENV SENTRY_DSN=
+ENV X_CLIENT_ID=
+ENV X_CLIENT_SECRET=
+ENV JWT_SECRET=
+ENV API_BASE_URL=http://127.0.0.1:8081
+ENV PLAYGROUND_BASE_URL=
+ENV LOCAL_SENTRY_DSN=
+ENV USE_SENTRY=false
+ENV IMAGEMONKEY_DB_CONNECTION_STRING=
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       sudo lsb-release
@@ -14,8 +17,9 @@ RUN mkdir -p /home/go/bin
 ENV GOPATH=/home/go
 ENV GOBIN=/home/go/bin
 
+RUN mkdir -p /home/imagemonkey
+
 COPY src/web.go /tmp/src/web.go
-COPY src/web_secrets.template /tmp/src/web_secrets.template
 COPY src/auth.go /tmp/src/auth.go
 COPY src/commons /tmp/src/commons
 COPY src/image /tmp/src/image
@@ -25,13 +29,15 @@ COPY src/parser /tmp/src/parser
 COPY src/datastructures /tmp/src/datastructures
 COPY src/go.mod /tmp/src/go.mod
 COPY src/go.sum /tmp/src/go.sum
+COPY html /home/imagemonkey/html
+COPY js /home/imagemonkey/js
+COPY css /home/imagemonkey/css
+COPY img /home/imagemonkey/img
 
 # until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
 RUN curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash -
 
 RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
-
-RUN mv /tmp/src/web_secrets.template /tmp/src/web_secrets.go
 
 RUN cd /tmp/src \
 	&& go get -u -d gocv.io/x/gocv \
@@ -41,7 +47,14 @@ RUN cd /tmp/src \
 RUN cd /tmp/src/ \
 	&& go get -d
 
-RUN cd /tmp/src/ && go build -ldflags "-X main.SENTRY_DSN=$SENTRY_DSN -X main.IMAGE_DB_CONNECTION_STRING=$IMAGE_DB_CONNECTION_STRING -X main.X_CLIENT_SECRET=${X_CLIENT_SECRET}"
+RUN cd /tmp/src/ && go install web.go auth.go
 
-#RUN cd /tmp/src \
-#	&& go build -ldflags "-X main.SENTRY_DSN=${SENTRY_DSN} -X main.IMAGE_DB_CONNECTION_STRING=$IMAGE_DB_CONNECTION_STRING -X main.X_CLIENT_SECRET=${X_CLIENT_SECRET} -X main.X_CLIENT_ID=$X_CLIENT_ID -X main.JWT_SECRET=${JWT_SECRET}" web.go auth.go web_secrets.go
+RUN mkdir -p /home/imagemonkey/bin/ \
+	&& mv /home/go/bin/web /home/imagemonkey/bin/web
+
+WORKDIR /home/imagemonkey/bin/
+
+RUN echo "./web -api_base_url=$API_BASE_URL -playground_base_url=$PLAYGROUND_BASE_URL -use_sentry=$USE_SENTRY -local_sentry_dsn=$LOCAL_SENTRY_DSN -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_web.sh \
+	&& chmod u+rx ./run_web.sh
+
+ENTRYPOINT ["/bin/bash", "./run_web.sh"]

@@ -1,0 +1,35 @@
+FROM golang:1.12.5-stretch
+
+ENV SENTRY_DSN=
+ENV IMAGEMONKEY_DB_CONNECTION_STRING=
+ENV USE_SENTRY=true
+ENV SINGLESHOT=false
+ENV REDIS_ADDRESS=:6379
+
+RUN mkdir -p /home/go/bin
+ENV GOPATH=/home/go
+ENV GOBIN=/home/go/bin
+
+COPY src/statworker.go /tmp/src/statworker.go
+COPY src/datastructures /tmp/src/datastructures
+COPY src/database /tmp/src/database
+COPY src/languages /tmp/src/languages
+COPY src/parser /tmp/src/parser
+COPY src/commons /tmp/src/commons
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+
+RUN cd /tmp/src/ \
+	&& go get -d
+
+RUN cd /tmp/src/ && go install statworker.go
+
+RUN mkdir -p /home/imagemonkey/bin/ \
+	&& mv /home/go/bin/statworker /home/imagemonkey/bin/statworker
+
+WORKDIR /home/imagemonkey/bin/
+
+RUN echo "./statworker -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -redis_address=$REDIS_ADDRESS" > run_statworker.sh \
+	&& chmod u+rx ./run_statworker.sh
+
+ENTRYPOINT ["/bin/bash", "./run_statworker.sh"]

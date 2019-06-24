@@ -1,0 +1,45 @@
+FROM golang:1.12.5-stretch
+
+RUN mkdir -p /home/go/bin
+#ENV GOPATH=/home/go
+#ENV GOBIN=/home/go/bin
+
+COPY tests/ /tmp/tests
+COPY src/commons /tmp/src/commons
+COPY src/statworker.go /tmp/src/statworker.go
+COPY src/data_processor.go /tmp/src/data_processor.go
+COPY src/trendinglabelsworker.go /tmp/src/trendinglabelsworker.go
+COPY src/image /tmp/src/image
+COPY src/languages /tmp/src/languages
+COPY src/datastructures /tmp/src/datastructures
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+COPY src/datastructures /tmp/src/datastructures
+COPY src/populate_labels.go /tmp/src/populate_labels.go
+COPY env/postgres /tmp/env/postgres
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends python3 postgresql-client-9.6 python3-pip wget unzip \
+	&& pip3 install selenium requests \
+	&& wget https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip --directory-prefix=/tmp/ \
+	&& cd /tmp \
+	&& unzip /tmp/chromedriver_linux64.zip \ 
+	&& cp /tmp/chromedriver /tmp/tests/ui \
+	&& rm /tmp/chromedriver_linux64.zip \
+	&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
+	&& apt install -y ./google-chrome-stable_current_amd64.deb \
+	&& rm /tmp/google-chrome-stable_current_amd64.deb 
+
+
+RUN cd /tmp/tests && go get -u gopkg.in/resty.v1
+RUN cd /tmp/tests && go test -c -o test	
+
+WORKDIR /tmp/tests/
+
+RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/tmp/ \
+	&& chmod u+rx /tmp/wait-for-it.sh
+
+RUN echo "/tmp/wait-for-it.sh 127.0.0.1:5433 -- ./test -donations_dir=/tmp/data/donations/ -unverified_donations_dir=/tmp/data/unverified_donations/ -test.timeout=600m" > run_all_tests.sh \
+	&& chmod u+rx ./run_all_tests.sh
+
+ENTRYPOINT ["/bin/bash", "./run_all_tests.sh"]

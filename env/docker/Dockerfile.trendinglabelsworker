@@ -1,0 +1,39 @@
+FROM golang:1.12.5-stretch
+
+ENV USE_SENTRY=true
+ENV SINGLESHOT=false
+ENV REPOSITORY=
+ENV TRESHOLD=20
+ENV USE_GITHUB=true
+ENV GITHUB_PROJECT_OWNER=
+ENV GITHUB_API_TOKEN=
+ENV IMAGEMONKEY_DB_CONNECTION_STRING=
+ENV SENTRY_DSN=
+
+RUN mkdir -p /home/go/bin
+ENV GOPATH=/home/go
+ENV GOBIN=/home/go/bin
+
+COPY src/trendinglabelsworker.go /tmp/src/trendinglabelsworker.go
+COPY src/datastructures /tmp/src/datastructures
+COPY src/database /tmp/src/database
+COPY src/languages /tmp/src/languages
+COPY src/parser /tmp/src/parser
+COPY src/commons /tmp/src/commons
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+
+RUN cd /tmp/src/ \
+	&& go get -d
+
+RUN cd /tmp/src/ && go install trendinglabelsworker.go
+
+RUN mkdir -p /home/imagemonkey/bin/ \
+	&& mv /home/go/bin/trendinglabelsworker /home/imagemonkey/bin/trendinglabelsworker
+
+WORKDIR /home/imagemonkey/bin/
+
+RUN echo "./trendinglabelsworker -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -repository=$REPOSITORY -treshold=$TRESHOLD -use_github=$USE_GITHUB" > run_trendinglabelsworker.sh \
+	&& chmod u+rx ./run_trendinglabelsworker.sh
+
+ENTRYPOINT ["/bin/bash", "./run_trendinglabelsworker.sh"]
