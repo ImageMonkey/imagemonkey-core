@@ -54,7 +54,7 @@ RUN mkdir -p /home/imagemonkey/bin/ \
 
 WORKDIR /home/imagemonkey/bin/
 
-RUN echo "./web -api_base_url=$API_BASE_URL -playground_base_url=$PLAYGROUND_BASE_URL -use_sentry=$USE_SENTRY -local_sentry_dsn=$LOCAL_SENTRY_DSN -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_web.sh \
+RUN echo -e "#!/bin/bash\n\n./web -api_base_url=$API_BASE_URL -playground_base_url=$PLAYGROUND_BASE_URL -use_sentry=$USE_SENTRY -local_sentry_dsn=$LOCAL_SENTRY_DSN -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_web.sh \
 	&& chmod u+rx ./run_web.sh
 
-ENTRYPOINT ["/bin/bash", "./run_web.sh"]
+ENTRYPOINT ["./run_web.sh"]

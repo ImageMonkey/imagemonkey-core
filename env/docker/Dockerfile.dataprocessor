@@ -29,7 +29,7 @@ RUN mkdir -p /home/imagemonkey/bin/ \
 
 WORKDIR /home/imagemonkey/bin/
 
-RUN echo "./data_processor -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -redis_address=$REDIS_ADDRESS" > run_data_processor.sh \
+RUN echo -e "#!/bin/bash\n\n./data_processor -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -redis_address=$REDIS_ADDRESS" > run_data_processor.sh \
 	&& chmod u+rx ./run_data_processor.sh
 
-ENTRYPOINT ["/bin/bash", "./run_data_processor.sh"]
+ENTRYPOINT ["./run_data_processor.sh"]

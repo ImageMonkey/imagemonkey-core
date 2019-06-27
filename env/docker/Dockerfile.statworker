@@ -29,7 +29,7 @@ RUN mkdir -p /home/imagemonkey/bin/ \
 
 WORKDIR /home/imagemonkey/bin/
 
-RUN echo "./statworker -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -redis_address=$REDIS_ADDRESS" > run_statworker.sh \
+RUN echo -e "#!/bin/bash\n\n./statworker -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -redis_address=$REDIS_ADDRESS" > run_statworker.sh \
 	&& chmod u+rx ./run_statworker.sh
 
-ENTRYPOINT ["/bin/bash", "./run_statworker.sh"]
+ENTRYPOINT ["./run_statworker.sh"]

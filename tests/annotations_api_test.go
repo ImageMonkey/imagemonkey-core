@@ -7,12 +7,16 @@ import (
 	"time"
 	"os/exec"
 	"net/url"
+	"os"
 )
 
 
 func runDataProcessor(t *testing.T) {
 	// Start a process:
-	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "-singleshot", "true")
+	cmd := exec.Command("go", "run", "data_processor.go", "-singleshot", "true")
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	cmd.Dir = "../src"
 	err := cmd.Start()
 	ok(t, err)

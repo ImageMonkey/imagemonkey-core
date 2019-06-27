@@ -48,7 +48,10 @@ RUN mkdir -p /home/imagemonkey/bin/ \
 
 WORKDIR /home/imagemonkey/bin/
 
-RUN echo "./api -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_api.sh \
+RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/usr/bin \
+	&& chmod u+rx /usr/bin/wait-for-it.sh
+
+RUN echo -e "#!/bin/bash\n\n./api -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_api.sh \
 	&& chmod u+rx ./run_api.sh
 
-ENTRYPOINT ["/bin/bash", "./run_api.sh"]
+ENTRYPOINT ["/usr/bin/wait-for-it.sh", "127.0.0.1:5433", "--", "./run_api.sh"]

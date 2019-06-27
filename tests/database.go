@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math/rand"
 	"time"
+	"github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func random(min, max int) int {
@@ -25,7 +26,7 @@ func loadSchema() error {
 	schemaPath := "../env/postgres/schema.sql"
 
 	//load schema
-	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -43,7 +44,7 @@ func loadDefaults() error {
 	defaultsPath := "../env/postgres/defaults.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -62,7 +63,7 @@ func installTriggers() error {
 	triggersPath := "../env/postgres/triggers.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -77,7 +78,7 @@ func installTriggers() error {
 
 func populateLabels() error {
 	var out, stderr bytes.Buffer
-	cmd := exec.Command("go", "run", "populate_labels.go", "api_secrets.go", "--dryrun=false")
+	cmd := exec.Command("go", "run", "populate_labels.go", "--dryrun=false")
 	cmd.Dir = "../src/"
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
@@ -96,7 +97,7 @@ func installUuidExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -114,7 +115,7 @@ func installPostgisExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -132,7 +133,7 @@ func installTemporalTablesExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -164,7 +165,7 @@ func installAllTablesEmptyFunction() error {
                 $$ LANGUAGE plpgsql`
 	var out, stderr bytes.Buffer
 
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -192,7 +193,7 @@ func installTruncateAllTablesFunction() error {
 			   $$ LANGUAGE plpgsql`
      var out, stderr bytes.Buffer
 
-     cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+     cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
      cmd.Stdout = &out
      cmd.Stderr = &stderr
 
@@ -215,8 +216,10 @@ func NewImageMonkeyDatabase() *ImageMonkeyDatabase {
 }
 
 func (p *ImageMonkeyDatabase) Open() error {
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+	
 	var err error
-    p.db, err = sql.Open("postgres", DB_CONNECTION_STRING)
+	p.db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		return err
 	}

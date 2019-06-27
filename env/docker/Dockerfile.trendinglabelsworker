@@ -33,7 +33,7 @@ RUN mkdir -p /home/imagemonkey/bin/ \
 
 WORKDIR /home/imagemonkey/bin/
 
-RUN echo "./trendinglabelsworker -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -repository=$REPOSITORY -treshold=$TRESHOLD -use_github=$USE_GITHUB" > run_trendinglabelsworker.sh \
+RUN echo -e "#!/bin/bash\n\n./trendinglabelsworker -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -repository=$REPOSITORY -treshold=$TRESHOLD -use_github=$USE_GITHUB" > run_trendinglabelsworker.sh \
 	&& chmod u+rx ./run_trendinglabelsworker.sh
 
-ENTRYPOINT ["/bin/bash", "./run_trendinglabelsworker.sh"]
+ENTRYPOINT ["./run_trendinglabelsworker.sh"]

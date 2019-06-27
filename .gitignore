@@ -1,12 +1,11 @@
 .DS_Store
-src/web_secrets.go
-src/api_secrets.go
-src/statworker_secrets.go
+env/setup_env_production.sh
+env/env.production
 donations/*
 unverified_donations/*
 src/*.exe
 avatars/*
-src/shared_secrets.go
 quarantine/*
 tests/secrets.go
 tests/ui/__pycache__
+*.pyc

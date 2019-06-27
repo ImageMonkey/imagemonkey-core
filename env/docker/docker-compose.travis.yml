@@ -15,7 +15,7 @@ services:
     env_file:
         - ../env.travis
     volumes:
-        - db-data:/var/lib/postgresql/data
+        - dbdata:/var/lib/postgresql/data
     logging:
       driver: none
   trendinglabelsworker:
@@ -87,4 +87,4 @@ services:
       dockerfile: env/docker/Dockerfile.testing
 
 volumes:
-   db-data:
+   dbdata:
