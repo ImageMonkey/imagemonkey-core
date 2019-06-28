@@ -181,8 +181,186 @@ local countries = import 'countries.libsonnet';
 			"accessors": ["."],
 			"uuid": "0c86f9fb-cc51-4394-8347-b7d4f95dde32"
 		},
-
-
+		"garden": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "be57a229-c7a1-41e1-9912-e470101db9b6"
+		},
+		"workshop": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "da39cfbf-4990-435e-ad50-3c580b4fb60e"
+		},
+		"classroom": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c4db1918-2aa7-45b3-9e26-c33dfd544b2a"
+		},
+		"courtroom": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "9d62ceae-cef4-4aa2-bf5b-868e90db13c3"
+		},
+		"railway station": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a3a97c32-5d8f-4959-bc8a-592b729c0078"
+		},
+		"subway station": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "550847e9-22a5-4372-a8e5-72e23500ce2c"
+		},
+		"living room": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d7a086fb-17dd-401c-8a59-902322dd48dc"
+		},
+		"bedroom": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7402753e-80db-48a2-8c15-9680bb7b430b"
+		},
+		"hotel room": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "aab4c58e-18cb-4977-8c03-666d1408192c"
+		},
+		"dining room": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "bdb91018-99ee-444c-886f-c8d457a7b26f"
+		},
+		"cafe": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "ffa999a5-8a76-449a-94ad-9324ec6fe2bf"
+		},
+		"bar": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "44f3924f-837d-4a9a-b74c-9a1a47c1f7b4"
+		},
+		"retail park": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "24c02790-5f11-45f7-ac04-b39b1ccc6c14"
+		},
+		"savanna": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e6428864-3e8c-48bf-a34b-06839f6da70c"
+		},
+		"grassland": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "18ddccae-ca9e-4499-afe7-815143a06a88"
+		},
+		"highway": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c61fba3a-1a45-4806-8ed1-836a7b216a16"
+		},
+		"city centre": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "cf86ea3a-8e5b-402c-8c45-10186629f26d"
+		},
+		"city": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "085ea873-daae-4586-a5e8-022bc422177a"
+		},
+		"laboratory": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a3001d78-e9f2-403c-9f02-4e4565971498"
+		},
+		"electrical substation": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "bf845492-e177-42ae-ae07-c27395f8cc6d"
+		},
+		"power station": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "36aaddcb-fad5-48e8-9a57-3dc5f17b0cea"
+		},
+		"marina": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "84949f0c-8ccc-4a5f-a61c-032194cad1fb"
+		},
+		"dockyard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "453e27b9-7377-494f-ae4e-fbd47d58858e"
+		},
+		"shipyard": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0c566100-ee5c-4a9c-82f9-5d3080fa6a33"
+		},
+		"airfield": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "609788e5-3eea-48e9-a276-8df1ddd22ae1"
+		},
+		"airbase": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "8892d50f-6747-4ced-bdec-024a5be6f690"
+		},
+		"library": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f34c1577-591b-4e83-b955-315b65d633e0"
+		},
+		"bookshop": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "67943ab4-46fe-483a-a7c0-3d6a7a63b697"
+		},
+		"theatre": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f5936867-5e4b-4a62-95be-891c9b12f10c"
+		},
+		"concert": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c5a09aae-87e3-43a3-a547-c114f4e9b4c9"
+		},
+		"stately home": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4779a34f-1af3-404c-b879-f86f7865d57a"
+		},
+		"jungle": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "f71b281c-a7df-4316-94aa-901855fe0321"
+		},
+		"desert": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d01fc7ee-b281-4985-85ab-7c31fc6c07b5"
+		},
+		"canyon": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "7e694bd7-c433-49a1-9cae-a7e8953c209e"
+		},
+		"village": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "e4bb1148-cf5d-481d-83e0-c76bd1f22353"
+		},
+		"brownfield site": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0135cdbf-d8d4-4391-806e-1a6a93f6c224"
+		},
 
         "germany": countries["germany"],
         "poland": countries["poland"],
