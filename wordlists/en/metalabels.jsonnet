@@ -176,6 +176,11 @@ local countries = import 'countries.libsonnet';
             "accessors": ["."],
             "uuid": "44050e74-f76a-43ef-8ad2-e6a644ecee7f"
         },
+		"town": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "0c86f9fb-cc51-4394-8347-b7d4f95dde32"
+		},
 
 
 
