@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/tmp/wait-for-it.sh 127.0.0.1:5433 -- echo "Starting integration tests"
+/tmp/wait-for-it.sh $DB_HOST:$DB_PORT -- echo "Starting integration tests"
 
 ./test -test.v -test.parallel 1 -donations_dir=/tmp/data/donations/ -unverified_donations_dir=/tmp/data/unverified_donations/ -test.timeout=600m
 retVal=$?

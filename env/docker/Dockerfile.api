@@ -7,6 +7,8 @@ ENV JWT_SECRET=
 ENV USE_SENTRY=false
 ENV IMAGEMONKEY_DB_CONNECTION_STRING=
 ENV REDIS_ADDRESS=:6379
+ENV DB_HOST=127.0.0.1
+ENV DB_PORT=5433
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       sudo lsb-release
@@ -51,7 +53,7 @@ WORKDIR /home/imagemonkey/bin/
 RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/usr/bin \
 	&& chmod u+rx /usr/bin/wait-for-it.sh
 
-RUN echo -e "#!/bin/bash\n\n./api -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_api.sh \
+RUN echo -e "#!/bin/bash\n\n/usr/bin/wait-for-it.sh $DB_HOST:$DB_PORT -- ./api -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_api.sh \
 	&& chmod u+rx ./run_api.sh
 
-ENTRYPOINT ["/usr/bin/wait-for-it.sh", "127.0.0.1:5433", "--", "./run_api.sh"]
+ENTRYPOINT ["./run_api.sh"]

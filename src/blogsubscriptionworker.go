@@ -9,7 +9,9 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"encoding/json"
+	"github.com/getsentry/raven-go"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 var db *sql.DB
@@ -19,7 +21,8 @@ func subscribe(email string) error {
 	_,err := db.Exec(`INSERT INTO blog.subscription(email) VALUES ($1)
 			 		  ON CONFLICT DO NOTHING`, email)
 	if err != nil {
-		log.Debug("[Main] Couldn't add subscription", err.Error())
+		raven.CaptureError(err, nil)
+		log.Error("[Main] Couldn't add subscription", err.Error())
 		return err
 	}
 
@@ -33,13 +36,22 @@ func main(){
 
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 
 	flag.Parse()
+
+	if *useSentry {
+		sentryDsn := commons.MustGetEnv("SENTRY_DSN")
+		log.Debug("Setting Sentry DSN")
+		raven.SetDSN(sentryDsn)
+		raven.SetEnvironment("blogsubscriptionworker")
+	}
 
 	var err error
 
 	//open database and make sure that we can ping it
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		log.Fatal("[Main] Couldn't open database: ", err.Error())
 	}
@@ -77,7 +89,8 @@ func main(){
 	    	if err == nil {
 	    		subscribe(blogSubscribeRequest.Email)
 	    	} else {
-	    		log.Debug("[Main] Couldn't unmarshal request: ", err.Error())
+				raven.CaptureError(err, nil)
+	    		log.Error("[Main] Couldn't unmarshal request: ", err.Error())
 	    	}
     	}
 
