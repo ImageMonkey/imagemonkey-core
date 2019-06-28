@@ -439,5 +439,12 @@
         "accessors": ["."],
         "plural": "ladybirds",
         "uuid": "3890426a-a97b-45df-8ce9-8395caeb8315"
-    }
+    },
+	"chicken": {
+		"description": "optional",
+		"accessors": ["."],
+		"plural": "chickens",
+		"uuid": "ddbc2e8b-f8a8-498e-9a5b-fb95bbd33a2e"
+	},
+
 }
