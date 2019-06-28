@@ -43,7 +43,7 @@ services:
   api:
     restart: always
     network_mode: host
-    entrypoint: tail -f /dev/null
+    #entrypoint: tail -f /dev/null
     env_file:
       - ../env.travis
     build:
