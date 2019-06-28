@@ -9,3 +9,10 @@ quarantine/*
 tests/secrets.go
 tests/ui/__pycache__
 *.pyc
+src/api
+src/web
+src/blogsubscriptionworker
+src/data_processor
+src/trendinglabelsworker
+src/populate_labels
+src/statworker
