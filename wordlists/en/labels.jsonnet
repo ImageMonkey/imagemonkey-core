@@ -1257,7 +1257,42 @@ local animals = import 'animals.libsonnet';
             "plural": "jar",
             "uuid": "0bcbc385-b00c-475e-b8f7-5d248da9a296"
         },
-
+		"cucumber": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "cucumber",
+			"uuid": "d38f5335-91d8-40a2-a9f4-a2ddc8970132" 
+		},
+		"bucket": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "buckets",
+			"uuid": "10d32e6d-ba38-4336-a563-9c2a3ce982ee"
+		},
+		"escalator": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "escalator",
+			"uuid": "7be9984a-ef3a-49f8-a68e-1c3382831d1a"
+		},
+		"smoke": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "smoke",
+			"uuid": "1f0ebe47-b86e-4a1e-b892-e2dd60434fa3"
+		},
+		"ceiling": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "ceilings",
+			"uuid": "bc3cf624-eb9b-4c81-a2d2-693fe27ef00e"
+		},
+		"balcony": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "balcony",
+			"uuid": "fc937332-6647-4729-aa62-f4edb237639b"
+		},
 
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
@@ -1285,6 +1320,7 @@ local animals = import 'animals.libsonnet';
         "giraffe": animals["giraffe"],
         "parrot": animals["parrot"],
         "wasp": animals["wasp"],
-        "ladybird": animals["ladybird"]
+        "ladybird": animals["ladybird"],
+		"chicken": animals["chicken"]
 	}
 }
