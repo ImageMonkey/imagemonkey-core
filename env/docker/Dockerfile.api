@@ -11,7 +11,7 @@ ENV DB_HOST=127.0.0.1
 ENV DB_PORT=5433
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      sudo lsb-release
+      sudo lsb-release postgresql-client-9.6
 
 RUN mkdir -p /home/go/bin
 ENV GOPATH=/home/go
