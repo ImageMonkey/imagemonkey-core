@@ -53,7 +53,7 @@ WORKDIR /home/imagemonkey/bin/
 RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/usr/bin \
 	&& chmod u+rx /usr/bin/wait-for-it.sh
 
-RUN echo -e "#!/bin/bash\n\n/usr/bin/wait-for-it.sh $DB_HOST:$DB_PORT -- ./api -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_api.sh \
-	&& chmod u+rx ./run_api.sh
+COPY env/docker/run_api.sh /home/imagemonkey/bin/run_api.sh
+RUN chmod u+rx ./run_api.sh
 
 ENTRYPOINT ["./run_api.sh"]
