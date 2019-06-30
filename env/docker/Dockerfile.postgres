@@ -24,7 +24,5 @@ COPY env/postgres/indexes.sql /tmp/imagemonkeydb/indexes.sql
 COPY env/postgres/stored_procs /tmp/imagemonkeydb/postgres_stored_procs
 COPY env/postgres/functions /tmp/imagemonkeydb/postgres_functions
 
-RUN echo "CREATE USER monkey WITH PASSWORD '${MONKEY_DB_PASSWORD}';" >> /tmp/imagemonkeydb/create_user.sql
-
 RUN chown -R postgres:postgres /tmp/imagemonkeydb \
     && chmod -R u+rx /tmp/imagemonkeydb

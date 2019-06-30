@@ -3,20 +3,6 @@ services:
   - docker
 env:
   - BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
-  - SENTRY_DSN=""
-  - IMAGEMONKEY_DB_CONNECTION_STRING=host=127.0.0.1 port=5433 user=monkey dbname=imagemonkey password=dbRuwMUo4Nfhs5hmMxhk sslmode=disable
-  - JWT_SECRET=e0e8cb89320d6fd5b46eeb32c22cd3f5d657eb8eafcbed1cafe24a03a6ca47f7
-  - X_CLIENT_ID=de61ac57c1889941a9200ecff2c8eeeb390350c9813e13e8d439516dd389127f
-  - X_CLIENT_SECRET=ef2748970181a4d3b0e5892f755f60a1cb24980c66d880e971542e8f1aae8958
-  - GITHUB_API_TOKEN=""
-  - GITHUB_PROJECT_OWNER=""
-  - POSTGRES_DB=imagemonkey
-  - MONKEY_DB_PASSWORD=dbRuwMUo4Nfhs5hmMxhk
-  - USE_SENTRY=false
-  - REDIS_ADDRESS=:6380
-  - GIN_MODE=release
-  - DB_HOST=127.0.0.1
-  - DB_PORT=5433
 before_install:
   cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml build
 script:
