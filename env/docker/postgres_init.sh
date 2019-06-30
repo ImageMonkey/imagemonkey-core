@@ -4,6 +4,7 @@ echo "Initializing ImageMonkey database"
 
 echo "Installing temporal tables extension" \
     && echo "Creating user" \
+	&& cat /tmp/imagemonkeydb/create_user.sql \
     && psql -d imagemonkey -f /tmp/imagemonkeydb/create_user.sql \
     && psql -d imagemonkey -c "CREATE EXTENSION \"temporal_tables\";" \
     && echo "Installing Postgis extension" \

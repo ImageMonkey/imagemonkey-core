@@ -16,8 +16,8 @@ services:
         - ../env.travis
     volumes:
         - dbdata:/var/lib/postgresql/data
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
   #trendinglabelsworker:
   #  restart: always
   #  network_mode: host
