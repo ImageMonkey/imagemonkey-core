@@ -1,9 +1,9 @@
 #!/bin/bash
 
-/usr/bin/wait-for-it.sh $DB_HOST:$DB_PORT -- echo "Database is up"
+/usr/bin/wait-for-it.sh $DB_HOST:$DB_PORT -- echo "Database ($DB_HOST:$DB_PORT) is up"
 while true
 	do
-		db_initialized=$(psql -h localhost -U postgres -lqt | cut -d \| -f 1 | grep "imagemonkey" | xargs)
+		db_initialized=$(psql -h $DB_HOST -p $DB_PORT -U postgres -lqt | cut -d \| -f 1 | grep "imagemonkey" | xargs)
 		if [[ $db_initialized = "imagemonkey" ]]
 		then
 			echo "Database is initialized"
