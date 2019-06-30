@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/tmp/wait-for-it.sh $DB_HOST:$DB_PORT -- echo "Database ($DB_HOST:$DB_PORT) is up"
+/tmp/wait-for-it.sh $DB_HOST:$DB_PORT -- echo "Waiting for database...database ($DB_HOST:$DB_PORT) is up"
 while true
 	do
 		db_initialized=$(psql -h $DB_HOST -p $DB_PORT -U postgres -lqt | cut -d \| -f 1 | grep "imagemonkey" | xargs)
@@ -12,6 +12,8 @@ while true
 			echo "Waiting for the database to be initialized ($db_initialized)"
 		fi
 	done
+
+/tmp/wait-for-it.sh 127.0.0.1:8081 -- echo "Waiting for ImageMonkey API service..ImageMonkey API service is up"
 
 echo "Starting integration tests (after 5 sec delay)"
 sleep 5
