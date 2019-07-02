@@ -235,7 +235,7 @@ func (p *ImageMonkeyDatabase) Open() error {
 func (p *ImageMonkeyDatabase) Initialize() error {
 
 	//connect as user postgres, in order to drop + re-create database imagemonkey
-	localDb, err := sql.Open("postgres", "user=postgres sslmode=disable")
+	localDb, err := sql.Open("postgres", "user=postgres sslmode=disable port=", DB_PORT)
 	if err != nil {
 		return err
 	}
