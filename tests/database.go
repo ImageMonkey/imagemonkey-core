@@ -978,6 +978,42 @@ func (p *ImageMonkeyDatabase) RemoveLabel(labelName string) error {
 		return err
 	}
 
+	_, err = tx.Exec("DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM label l WHERE l.parent_id IN (SELECT id FROM label pl WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	_, err = tx.Exec("DELETE FROM label l WHERE l.name = $1 AND l.parent_id is null", labelName)
 	if err != nil {
 		tx.Rollback()
