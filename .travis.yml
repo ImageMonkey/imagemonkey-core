@@ -3,7 +3,7 @@ services:
   - docker
 env:
   - BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
-before_install:
+before_install: |
   cd $TRAVIS_BUILD_DIR \
     && echo "Creating data directory" \
   	&& mkdir -p $TRAVIS_BUILD_DIR/data/donations \
