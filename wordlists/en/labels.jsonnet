@@ -1293,6 +1293,30 @@ local animals = import 'animals.libsonnet';
 			"plural": "balcony",
 			"uuid": "fc937332-6647-4729-aa62-f4edb237639b"
 		},
+		"tool": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "tools",
+			"uuid": "21ac38ea-4c47-414d-9fc5-dd3f65d316f9"
+		},
+		"suit": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "suits",
+			"uuid": "521d4178-b144-49d2-8e5b-016c33e69c7a"
+		},
+		"dress": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "dresses",
+			"uuid": "9b572278-e0b7-47ac-b721-641fe6a9a386"
+		},
+		"shoe": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "shoes",
+			"uuid": "14c7d814-00f2-47f2-b4c5-f3f8872994bc"
+		},
 
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
@@ -1321,6 +1345,7 @@ local animals = import 'animals.libsonnet';
         "parrot": animals["parrot"],
         "wasp": animals["wasp"],
         "ladybird": animals["ladybird"],
-		"chicken": animals["chicken"]
+		"chicken": animals["chicken"],
+		"tiger": animals["tiger"]
 	}
 }
