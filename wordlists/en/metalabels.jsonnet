@@ -361,6 +361,26 @@ local countries = import 'countries.libsonnet';
 			"accessors": ["."],
 			"uuid": "0135cdbf-d8d4-4391-806e-1a6a93f6c224"
 		},
+		"gym": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "c71b9265-2ced-4db6-af1c-fa980fb71d31"
+		},
+		"summer": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "5a59a96a-cdb6-474b-bafa-97fae2c6f3d6"
+		},
+		"winter": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "1efbea75-cb12-413a-8e5c-af34dc20aef2"
+		},
+		"autumn": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "d51a4f0e-48ca-438b-88a0-49d0d142151c"
+		},
 
         "germany": countries["germany"],
         "poland": countries["poland"],
