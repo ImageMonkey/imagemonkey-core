@@ -1,4 +1,4 @@
-
+language: none
 build:
   ci:
     - echo "Creating data directory"
