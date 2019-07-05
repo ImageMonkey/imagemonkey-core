@@ -6,11 +6,12 @@ pipeline:
     commands:
       - echo "Creating data directory"
       - echo "Downloading script"
-      - wget https://raw.githubusercontent.com/docker/compose/master/script/run/run.sh
+      - wget --directory-prefix=$DRONE_BUILD_DIR https://raw.githubusercontent.com/docker/compose/master/script/run/run.sh
+      - chmod u+rx $DRONE_BUILD_DIR/run.sh
       - mkdir -p $DRONE_BUILD_DIR/data/donations
       - mkdir -p $DRONE_BUILD_DIR/data/unverified_donations 
       - mkdir -p $DRONE_BUILD_DIR/data/quarantine
-      - cd $DRONE_BUILD_DIR && ./run.sh -f env/docker/docker-compose.travis.yml build
+      - cd $DRONE_BUILD_DIR && $DRONE_BUILD_DIR/run.sh -f env/docker/docker-compose.travis.yml build
   test:
     image: docker:latest	   
     volume:
