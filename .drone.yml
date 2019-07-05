@@ -6,8 +6,8 @@ pipeline:
     commands:
       - echo "Creating data directory"
       - echo "Downloading script"
-	  - wget https://raw.githubusercontent.com/docker/compose/master/script/run/run.sh
-	  - mkdir -p $DRONE_BUILD_DIR/data/donations
+      - wget https://raw.githubusercontent.com/docker/compose/master/script/run/run.sh
+      - mkdir -p $DRONE_BUILD_DIR/data/donations
       - mkdir -p $DRONE_BUILD_DIR/data/unverified_donations 
       - mkdir -p $DRONE_BUILD_DIR/data/quarantine
       - cd $DRONE_BUILD_DIR && ./run.sh -f env/docker/docker-compose.travis.yml build
