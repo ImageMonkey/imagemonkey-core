@@ -1,0 +1,9 @@
+pipeline:
+  build:
+    commands:
+      - echo "Creating data directory"
+      - mkdir -p $DRONE_BUILD_DIR/data/donations
+      - mkdir -p $DRONE_BUILD_DIR/data/unverified_donations 
+      - mkdir -p $DRONE_BUILD_DIR/data/quarantine
+      - cd $DRONE_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml build
+      - cd $DRONE_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing 
