@@ -1,20 +1,16 @@
-pipeline:
-  build:
-    image: docker:latest
-    volume:
-      - /var/run/docker.sock:/var/run/docker.sock
-    commands:
-      - echo "Creating data directory"
-      - echo "Downloading script"
-      - wget --directory-prefix=$DRONE_BUILD_DIR https://raw.githubusercontent.com/docker/compose/master/script/run/run.sh
-      - chmod u+rx $DRONE_BUILD_DIR/run.sh
-      - mkdir -p $DRONE_BUILD_DIR/data/donations
-      - mkdir -p $DRONE_BUILD_DIR/data/unverified_donations 
-      - mkdir -p $DRONE_BUILD_DIR/data/quarantine
-      - cd $DRONE_BUILD_DIR && $DRONE_BUILD_DIR/run.sh -f env/docker/docker-compose.travis.yml build
-  test:
-    image: docker:latest	   
-    volume:
-      - /var/run/docker.sock:/var/run/docker.sock
-    commands:
-      - cd $DRONE_BUILD_DIR && ./run.sh -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing 
+kind: pipeline
+name: default
+
+steps:
+- name: test
+  image: compose:1.23.2
+  volumes:
+  - name: docker_sock
+    path: /var/run/docker.sock
+  commands:
+  - echo "Creating data directory"  
+  - mkdir -p $DRONE_BUILD_DIR/data/donations
+volumes:
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
