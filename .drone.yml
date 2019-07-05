@@ -1,9 +1,9 @@
 pipeline:
   build:
     image: docker/compose
-	volume:
-	  - /var/run/docker.sock:/var/run/docker.sock
-	commands:
+    volume:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
       - echo "Creating data directory"
       - mkdir -p $DRONE_BUILD_DIR/data/donations
       - mkdir -p $DRONE_BUILD_DIR/data/unverified_donations 
@@ -14,4 +14,4 @@ pipeline:
     volume:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
-	  - cd $DRONE_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing 
+      - cd $DRONE_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing 
