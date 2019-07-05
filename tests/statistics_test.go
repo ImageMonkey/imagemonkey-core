@@ -11,7 +11,7 @@ import (
 
 func runStatWorker(t *testing.T) {
 	// Start a process:
-	cmd := exec.Command("go", "run", "statworker.go", "-singleshot", "true")
+	cmd := exec.Command("go", "run", "statworker.go", "-singleshot", "true", "redis_address", REDIS_ADDRESS)
 	cmd.Dir = "../src"
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout

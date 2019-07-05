@@ -17,6 +17,7 @@ var DONATIONS_DIR string = "../donations/"
 var X_CLIENT_ID string
 var X_CLIENT_SECRET string
 var DB_PORT string = "5432"
+var REDIS_ADDRESS string = ":6379"
 
 func init() {
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Path to unverified donations directory")
@@ -34,6 +35,11 @@ func init() {
 		if(strings.HasPrefix(token, "port=")) {
 			DB_PORT = strings.Replace(token, "port=", "", 1)
 		}
+	}
+
+	redisAddress := commons.GetEnv("REDIS_ADDRESS")
+	if redisAddress != "" {
+		REDIS_ADDRESS = redisAddress
 	}
 
 	db = NewImageMonkeyDatabase()
