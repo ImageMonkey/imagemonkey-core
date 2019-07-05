@@ -1,12 +1,10 @@
 version: "3"
 services:
   redis:
-    restart: always
     ports:
       - 6380:6379
     image: redis
   db:
-    restart: always
     network_mode: host
     command: postgres -c port=5433
     build:
@@ -16,8 +14,8 @@ services:
         - ../env.travis
     volumes:
         - dbdata:/var/lib/postgresql/data
-    #logging:
-    #  driver: none
+    logging:
+      driver: none
   #trendinglabelsworker:
   #  restart: always
   #  network_mode: host
@@ -41,16 +39,14 @@ services:
   #    - ../../public_backups/public_backups.json:/home/imagemonkey/public_backups/public_backups.json
   #    - ../../data:/home/imagemonkey/data
   api:
-    restart: always
     network_mode: host
-    #entrypoint: tail -f /dev/null
     env_file:
       - ../env.travis
     build:
        context: "../../"
        dockerfile: env/docker/Dockerfile.api
-    #logging:
-    #  driver: none
+    logging:
+      driver: none
     volumes:
       - ../../geoip_database:/home/imagemonkey/geoip_database
       - ../../wordlists:/home/imagemonkey/wordlists
@@ -83,7 +79,6 @@ services:
   #    context: "../../"
   #    dockerfile: env/docker/Dockerfile.blogsubscriptionworker
   testing:
-    restart: always
     network_mode: host
     #entrypoint: tail -f /dev/null
     env_file:
