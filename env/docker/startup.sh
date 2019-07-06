@@ -24,7 +24,7 @@ fi
 
 echo "Starting PostgreSQL..."
 #start postgres
-/root/imagemonkey-core/env/docker/start_postgres.sh 
+/root/imagemonkey-core/env/docker/start_postgres.sh
 
 echo "Starting redis-server..."
 #start redis server
@@ -71,11 +71,11 @@ if [ "$run_tests" = true ] ; then
 		&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
 		&& dpkg -i google-chrome-stable_current_amd64.deb \
 		&& rm /tmp/google-chrome-stable_current_amd64.deb
-	apt-get install -y -f 
+	apt-get install -y -f
 
 	mkdir -p /root/imagemonkey-core/unverified_donations
 	mkdir -p /root/imagemonkey-core/donations
-	
+
 	echo "Running unittests"
 	cd /root/imagemonkey-core/src/parser/
 	supervisorctl stop all
@@ -90,8 +90,8 @@ if [ "$run_tests" = true ] ; then
 	cd /root/imagemonkey-core/tests/
 	supervisorctl stop all
 	supervisorctl start imagemonkey-api:imagemonkey-api0
-	
-	go test -v -timeout=100m -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
+
+	go test -v -p 1 -timeout=100m -donations_dir="/home/imagemonkey/donations/" -unverified_donations_dir="/home/imagemonkey/unverified_donations/"
 	retVal=$?
 	if [ $retVal -ne 0 ]; then
     	echo "Aborting due to error"
@@ -113,7 +113,7 @@ if [ "$run_stresstest" = true ] ; then
 	if [ ! -f /tmp/stresstest/imagemonkey_data.zip ]; then
 		echo "Couldn't run stresstest: /tmp/stresstest/imagemonkey_data.zip doesn't exist!"
 		exit 1
-	fi 
+	fi
 
 	cd /tmp/stresstest/
 	unzip -o /tmp/stresstest/imagemonkey_data.zip

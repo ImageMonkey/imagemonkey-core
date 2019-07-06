@@ -5,12 +5,17 @@ import (
 	//"../src/datastructures"
 	"os/exec"
 	"time"
+	"os"
 )
 
 func runTrendingLabelsWorker(t *testing.T) {
 	// Start a process
-	cmd := exec.Command("go", "run", "trendinglabelsworker.go", "api_secrets.go", "shared_secrets.go", "-singleshot=true", "-treshold=5", "-use_github=false")
+	cmd := exec.Command("go", "run", "trendinglabelsworker.go", "-singleshot=true", "-treshold=5", "-use_github=false")
 	cmd.Dir = "../src"
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	err := cmd.Start()
 	ok(t, err)
 
@@ -20,7 +25,7 @@ func runTrendingLabelsWorker(t *testing.T) {
 	    done <- cmd.Wait()
 	}()
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(60 * time.Second):
 	    err := cmd.Process.Kill()
 	    ok(t, err) //failed to kill process
 	    t.Errorf("process killed as timeout reached")
@@ -31,9 +36,13 @@ func runTrendingLabelsWorker(t *testing.T) {
 
 func runMakeTrendingLabelsProductiveScript(t *testing.T, trendingLabel string, renameTo string, shouldReturnSuccessful bool) {
 	// Start a process
-	cmd := exec.Command("go", "run", "make_labels_productive.go", "api_secrets.go", "shared_secrets.go", 
+	cmd := exec.Command("go", "run", "make_labels_productive.go", 
 						"-dryrun=false", "-trendinglabel", trendingLabel, "-renameto", renameTo, "-autoclose=false")
 	cmd.Dir = "../src"
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	err := cmd.Start()
 	ok(t, err)
 
@@ -43,7 +52,7 @@ func runMakeTrendingLabelsProductiveScript(t *testing.T, trendingLabel string, r
 	    done <- cmd.Wait()
 	}()
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(60 * time.Second):
 	    err := cmd.Process.Kill()
 	    ok(t, err) //failed to kill process
 	    t.Errorf("process killed as timeout reached")

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math/rand"
 	"time"
+	"github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func random(min, max int) int {
@@ -25,7 +26,7 @@ func loadSchema() error {
 	schemaPath := "../env/postgres/schema.sql"
 
 	//load schema
-	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-f", schemaPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -43,7 +44,7 @@ func loadDefaults() error {
 	defaultsPath := "../env/postgres/defaults.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-f", defaultsPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -62,7 +63,7 @@ func installTriggers() error {
 	triggersPath := "../env/postgres/triggers.sql"
 
 	//load defaults
-	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-f", triggersPath, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -77,7 +78,7 @@ func installTriggers() error {
 
 func populateLabels() error {
 	var out, stderr bytes.Buffer
-	cmd := exec.Command("go", "run", "populate_labels.go", "api_secrets.go", "--dryrun=false")
+	cmd := exec.Command("go", "run", "populate_labels.go", "--dryrun=false")
 	cmd.Dir = "../src/"
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
@@ -96,7 +97,7 @@ func installUuidExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -114,7 +115,7 @@ func installPostgisExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -132,7 +133,7 @@ func installTemporalTablesExtension() error {
 	var out, stderr bytes.Buffer
 
 	//load defaults
-	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1")
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -145,6 +146,66 @@ func installTemporalTablesExtension() error {
 	return nil
 } 
 
+func installAllTablesEmptyFunction() error {
+	query := `CREATE OR REPLACE FUNCTION tables_empty(username IN VARCHAR) RETURNS bool AS $$
+                 DECLARE
+				 	 num int;
+                     statements CURSOR FOR
+                         SELECT tablename FROM pg_tables
+                         WHERE tableowner = username AND schemaname = 'public';
+                 BEGIN
+                     FOR stmt IN statements LOOP
+                         EXECUTE 'SELECT count(*) FROM ' || quote_ident(stmt.tablename) INTO num;
+						 IF num > 0 THEN
+						 	RETURN false;
+						 END IF;
+                 	END LOOP;
+					RETURN true;
+                END;
+                $$ LANGUAGE plpgsql`
+	var out, stderr bytes.Buffer
+
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+		return err
+	}
+
+	return nil
+}
+
+
+func installTruncateAllTablesFunction() error {
+     query := `CREATE OR REPLACE FUNCTION truncate_tables(username IN VARCHAR) RETURNS void AS $$
+				DECLARE
+   					statements CURSOR FOR
+        				SELECT tablename FROM pg_tables
+        				WHERE tableowner = username AND schemaname = 'public';
+				BEGIN
+    				FOR stmt IN statements LOOP
+        				EXECUTE 'TRUNCATE TABLE ' || quote_ident(stmt.tablename) || ' CASCADE;';
+   					END LOOP;
+			   END;
+			   $$ LANGUAGE plpgsql`
+     var out, stderr bytes.Buffer
+
+     cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
+     cmd.Stdout = &out
+     cmd.Stderr = &stderr
+
+     err := cmd.Run()
+     if err != nil {
+         fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+         return err
+     }
+
+     return nil
+ }
+
 
 type ImageMonkeyDatabase struct {
     db *sql.DB
@@ -155,8 +216,10 @@ func NewImageMonkeyDatabase() *ImageMonkeyDatabase {
 }
 
 func (p *ImageMonkeyDatabase) Open() error {
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+	
 	var err error
-    p.db, err = sql.Open("postgres", DB_CONNECTION_STRING)
+	p.db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		return err
 	}
@@ -172,7 +235,7 @@ func (p *ImageMonkeyDatabase) Open() error {
 func (p *ImageMonkeyDatabase) Initialize() error {
 
 	//connect as user postgres, in order to drop + re-create database imagemonkey
-	localDb, err := sql.Open("postgres", "user=postgres sslmode=disable")
+	localDb, err := sql.Open("postgres", "user=postgres sslmode=disable port="+ DB_PORT)
 	if err != nil {
 		return err
 	}
@@ -232,7 +295,46 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 		return err
 	}
 
+	err = installTruncateAllTablesFunction()
+	if err != nil {
+		return err
+	}
+
+	err = installAllTablesEmptyFunction()
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (p *ImageMonkeyDatabase) ClearAll() error {
+	_, err := p.db.Exec(`SELECT truncate_tables('monkey')`)
+	if err != nil {
+		return err
+	}
+
+	empty, err := p.TablesAreEmpty()
+	if !empty {
+		return errors.New("Couldn't clear database properly")
+	}
+	if err != nil {
+		return err
+	}
+
+	err = loadDefaults()
+	if err != nil {
+		return err
+	}
+
+	err = populateLabels()
+	return err
+}
+
+func (p *ImageMonkeyDatabase) TablesAreEmpty() (bool, error) {
+	var empty bool
+	err := p.db.QueryRow("SELECT tables_empty('monkey')").Scan(&empty)
+	return empty, err
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {
@@ -565,12 +667,24 @@ func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64,
 	return productiveLabelIds, nil
 }
 
-func (p *ImageMonkeyDatabase) GetRandomLabelName() (string, error) {
+func (p *ImageMonkeyDatabase) GetRandomLabelName(skipLabel string) (string, error) {
+	var queryParams []interface{}
+	skipLabelStr := ""
+	if skipLabel != "" {
+		skipLabelStr = "AND l.name != $1"
+		queryParams = append(queryParams, skipLabel)
+	}
+	
+	query := fmt.Sprintf(`SELECT l.name
+                			FROM label l
+                			WHERE l.parent_id is null AND l.label_type = 'normal'
+							%s
+                			ORDER BY random() LIMIT 1`, skipLabelStr) 
+	
+	
+	
 	var label string
-	err := p.db.QueryRow(`SELECT l.name
-						   FROM label l
-						   WHERE l.parent_id is null AND l.label_type = 'normal'
-						   ORDER BY random() LIMIT 1`).Scan(&label)
+	err := p.db.QueryRow(query, queryParams...).Scan(&label)
 	return label, err
 }
 
@@ -859,6 +973,42 @@ func (p *ImageMonkeyDatabase) RemoveLabel(labelName string) error {
 	}
 	
 	_, err = tx.Exec("DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM label l WHERE l.parent_id IN (SELECT id FROM label pl WHERE pl.name = $1)", labelName)
 	if err != nil {
 		tx.Rollback()
 		return err

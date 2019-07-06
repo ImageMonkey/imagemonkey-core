@@ -78,6 +78,149 @@ func TestMakeLabelsProductiveMetaLabelTest(t *testing.T) {
      for _, validationId := range validationIds {
          num, err := db.GetNumOfNotAnnotatable(validationId)
          ok(t, err)
-         equals(t, int(num), 10)
+         equals(t, int(num), 0)
      }
+ }
+
+ func TestMakeLabelWithLeadingAndTrailingWhitespacesProductive(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+ 
+ 	err := db.RemoveLabel("car")
+    ok(t, err)
+
+	testMultipleDonate(t, "carpet")
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+	for i, imageId := range imageIds {
+		if i == 0 || i == 4 {
+			testSuggestLabelForImage(t, imageId, " car", true, token)
+		} else if i == 2 || i == 3 {
+			testSuggestLabelForImage(t, imageId, "car ", true, token)
+		} else {
+			testSuggestLabelForImage(t, imageId, " car ", true, token)
+		}
+	}
+
+	numCarpetBefore, err := db.GetNumberOfImagesWithLabel("carpet")
+	ok(t, err)
+	equals(t, int(numCarpetBefore), int(13))
+
+	numCarBefore, err := db.GetNumberOfImagesWithLabel("car")
+	ok(t, err)
+	equals(t, int(numCarBefore), int(0))
+
+	err = populateLabels()
+	ok(t, err)
+	
+	runMakeTrendingLabelsProductiveScript(t, "car", "car", true)
+
+	numCarAfter, err := db.GetNumberOfImagesWithLabel("car")
+	ok(t, err)
+	equals(t, int(numCarAfter), int(13))
+
+	numCarpetAfter, err := db.GetNumberOfImagesWithLabel("carpet")
+	ok(t, err)
+	equals(t, int(numCarpetAfter), int(13))
+ }
+
+ func TestMakeLabelWithLeadingAndTrailingWhitespacesProductive2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200) 
+
+	testMultipleDonate(t, "carpet")
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+	for i, imageId := range imageIds {
+		if i == 0 || i == 4 {
+			testSuggestLabelForImage(t, imageId, " car   ", true, token)
+		} else if i == 2 || i == 3 {
+			testSuggestLabelForImage(t, imageId, "  car  ", true, token)
+		} else {
+			testSuggestLabelForImage(t, imageId, " car    ", true, token)
+		}
+	}
+
+	numCarpetBefore, err := db.GetNumberOfImagesWithLabel("carpet")
+	ok(t, err)
+	equals(t, int(numCarpetBefore), int(13))
+
+	numCarBefore, err := db.GetNumberOfImagesWithLabel("car")
+	ok(t, err)
+	equals(t, int(numCarBefore), int(0))
+	
+	runMakeTrendingLabelsProductiveScript(t, "car", "car", true)
+
+	numCarAfter, err := db.GetNumberOfImagesWithLabel("car")
+	ok(t, err)
+	equals(t, int(numCarAfter), int(13))
+
+	numCarpetAfter, err := db.GetNumberOfImagesWithLabel("carpet")
+	ok(t, err)
+	equals(t, int(numCarpetAfter), int(13))
+ }
+
+ func TestMakeLabelWithLeadingAndTrailingWhitespacesProductive3(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200) 
+
+	testMultipleDonate(t, "carpet")
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+	for i, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "car seat", true, token)
+		testSuggestLabelForImage(t, imageId, " car seat", true, token)
+		testSuggestLabelForImage(t, imageId, "car seat ", true, token)
+		testSuggestLabelForImage(t, imageId, " car seat ", true, token)
+		if i == 0 || i == 4 {
+			testSuggestLabelForImage(t, imageId, " car   ", true, token)
+		} else if i == 2 || i == 3 {
+			testSuggestLabelForImage(t, imageId, "  car  ", true, token)
+		} else {
+			testSuggestLabelForImage(t, imageId, " car    ", true, token)
+		}
+	}
+
+	numCarpetBefore, err := db.GetNumberOfImagesWithLabel("carpet")
+	ok(t, err)
+	equals(t, int(numCarpetBefore), int(13))
+
+	numCarBefore, err := db.GetNumberOfImagesWithLabel("car")
+	ok(t, err)
+	equals(t, int(numCarBefore), int(0))
+	
+	runMakeTrendingLabelsProductiveScript(t, "car", "car", true)
+
+	numCarAfter, err := db.GetNumberOfImagesWithLabel("car")
+	ok(t, err)
+	equals(t, int(numCarAfter), int(13))
+
+	numCarpetAfter, err := db.GetNumberOfImagesWithLabel("carpet")
+	ok(t, err)
+	equals(t, int(numCarpetAfter), int(13))
+
+	numCarseatAfter, err := db.GetNumberOfImagesWithLabelSuggestions("car seat")
+	ok(t, err)
+	equals(t, int(numCarseatAfter), int(13))
+
+	numCarseatAfter, err = db.GetNumberOfImagesWithLabelSuggestions(" car seat")
+	ok(t, err)
+	equals(t, int(numCarseatAfter), int(13))
+
+	numCarseatAfter, err = db.GetNumberOfImagesWithLabelSuggestions("car seat ")
+	ok(t, err)
+	equals(t, int(numCarseatAfter), int(13))
+ 
+ 	numCarseatAfter, err = db.GetNumberOfImagesWithLabelSuggestions(" car seat ")
+	ok(t, err)
+	equals(t, int(numCarseatAfter), int(13))
  }

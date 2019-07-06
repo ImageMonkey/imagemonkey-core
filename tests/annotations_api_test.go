@@ -3,16 +3,20 @@ package tests
 import (
 	"testing"
 	"gopkg.in/resty.v1"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"time"
 	"os/exec"
 	"net/url"
+	"os"
 )
 
 
 func runDataProcessor(t *testing.T) {
 	// Start a process:
-	cmd := exec.Command("go", "run", "data_processor.go", "api_secrets.go", "-singleshot", "true")
+	cmd := exec.Command("go", "run", "data_processor.go", "-singleshot", "true")
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	cmd.Dir = "../src"
 	err := cmd.Start()
 	ok(t, err)
@@ -23,7 +27,7 @@ func runDataProcessor(t *testing.T) {
 	    done <- cmd.Wait()
 	}()
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(60 * time.Second):
 	    err := cmd.Process.Kill()
 	    ok(t, err) //failed to kill process
 	    t.Errorf("process killed as timeout reached")

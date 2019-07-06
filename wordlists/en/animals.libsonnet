@@ -354,7 +354,14 @@
 		"description": "optional",
 		"accessors": ["."],
 		"plural": "horses",
-		"uuid": "6cdadd8b-6dd1-4ebb-bf7e-ae388ec9cdf2"
+		"uuid": "6cdadd8b-6dd1-4ebb-bf7e-ae388ec9cdf2",
+		"has": {
+			"head": {
+				"description": "optional",
+				"uuid": "3cebcaae-dbbe-4357-9b31-f39b5cd4f8ee",
+				"accessors": [".has"]
+			}
+		}
 	},
 	"sheep": {
 		"description": "optional",
@@ -366,7 +373,14 @@
 		"description": "optional",
 		"accessors": ["."],
 		"plural": "cows",
-		"uuid": "04f9c653-b660-4471-8541-aaf0f33958a0"
+		"uuid": "04f9c653-b660-4471-8541-aaf0f33958a0",
+		"has": {
+			"head": {
+				"description": "optional",
+				"uuid": "23355225-a68e-47c3-aed1-c2840711afc3",
+				"accessors": [".has"]
+			}
+		}
 	},
 	"butterfly": {
 		"description": "optional",
@@ -415,5 +429,42 @@
 		"accessors": ["."],
 		"plural": "spiders",
 		"uuid": "f7a12c25-bc80-4f58-883b-5c237f26d893"
+	},
+    "giraffe": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "giraffes",
+        "uuid": "8b8d649e-a867-46ba-bee8-6ef007dadc45"
+    },
+    "parrot": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "parrots",
+        "uuid": "b976951f-df87-4bfc-be87-9c3757bed400"
+    },
+    "wasp": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "wasps",
+        "uuid": "a0ea8930-071c-4680-80ce-8ec9cbbb4acd"
+    },
+    "ladybird": {
+        "description": "optional",
+        "accessors": ["."],
+        "plural": "ladybirds",
+        "uuid": "3890426a-a97b-45df-8ce9-8395caeb8315"
+    },
+	"chicken": {
+		"description": "optional",
+		"accessors": ["."],
+		"plural": "chickens",
+		"uuid": "ddbc2e8b-f8a8-498e-9a5b-fb95bbd33a2e"
+	},
+	"tiger": {
+		"description": "optional",
+		"accessors": ["."],
+		"plural": "tigers",
+		"uuid": "2d6e8268-bf45-43eb-9f9c-c2dfa3ac5ba2"
 	}
+
 }

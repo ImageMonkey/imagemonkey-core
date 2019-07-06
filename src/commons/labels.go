@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"io/ioutil"
-	"../datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 type LabelRepository struct {
@@ -64,39 +64,3 @@ func (p *LabelRepository) GetPluralsMapping() map[string]string {
 func (p *LabelRepository) GetWords() []string {
 	return p.words
 }
-
-/*func GetLabelMap(path string) (map[string]datastructures.LabelMapEntry, []string, error) {
-    var words []string
-    var labelMap datastructures.LabelMap
-
-    data, err := ioutil.ReadFile(path)
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    vm := jsonnet.MakeVM()
-
-    dir, _ := filepath.Split(path)
-    vm.Importer(&jsonnet.FileImporter{
-        JPaths: []string{dir},
-    })
-
-    out, err := vm.EvaluateSnippet("file", string(data))
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    err = json.Unmarshal([]byte(out), &labelMap)
-    if err != nil {
-        return labelMap.LabelMapEntries, words, err
-    }
-
-    words = make([]string, len(labelMap.LabelMapEntries))
-    i := 0
-    for key := range labelMap.LabelMapEntries {
-        words[i] = key
-        i++
-    }
-
-    return labelMap.LabelMapEntries, words, nil
-}*/

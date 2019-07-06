@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"fmt"
 	"os"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"flag"
 	//"database/sql"
 	"math"
@@ -19,12 +19,12 @@ import (
 	"strconv"
 	"errors"
 	"net/http/httputil"
-	"./datastructures"
-	"./commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 	//"net/url"
-	imagemonkeydb "./database"
-	languages "./languages"
-	img "./image"
+	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+	languages "github.com/bbernhard/imagemonkey-core/languages"
+	img "github.com/bbernhard/imagemonkey-core/image" 
 	"github.com/NYTimes/gziphandler"
 	"github.com/bbernhard/gin-wraphh"
 	"compress/gzip"
@@ -111,7 +111,7 @@ func main() {
 
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to labels map")
-	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.json", "Path to metalabels")
+	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded and verified donations")
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081", "API Base URL")
@@ -137,9 +137,11 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	sentryDsn := ""
 	if *useSentry {
 		fmt.Printf("Setting Sentry DSN\n")
-		raven.SetDSN(SENTRY_DSN)
+		sentryDsn = commons.MustGetEnv("SENTRY_DSN")
+		raven.SetDSN(sentryDsn)
 		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up web worker", nil)
@@ -199,6 +201,9 @@ func main() {
 		},*/
 	}
 
+	clientSecret := commons.MustGetEnv("X_CLIENT_SECRET")
+	clientId := commons.MustGetEnv("X_CLIENT_ID")
+
 	log.Debug("[Main] Reading labels")
 	labelRepository := commons.NewLabelRepository()
 	err := labelRepository.Load(*wordlistPath)
@@ -231,18 +236,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	imageDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
+	err = imageMonkeyDatabase.Open(imageDbConnectionString)
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
 	defer imageMonkeyDatabase.Close()
 
 	if *useSentry {
-		imageMonkeyDatabase.InitializeSentry(SENTRY_DSN, sentryEnvironment)
+		imageMonkeyDatabase.InitializeSentry(sentryDsn, sentryEnvironment)
 	}
-
-	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase)
+	
+	jwtSecret := commons.MustGetEnv("JWT_SECRET")
+	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase, jwtSecret)
 
 	availableModels, err := commons.GetAvailableModels(*modelsPath)
 	if err != nil {
@@ -336,7 +344,7 @@ func main() {
 		})
 
 
-		router.Static("./api", "../html/static/api")
+		//router.Static("./api", "../html/static/api")
 		router.Static("./donations", *donationsDir) //DEPRECTATED; USE /donation API endpoint 
 		router.Static("./blog", "../html/static/blog")
 		router.GET("/", func(c *gin.Context) {
@@ -778,8 +786,8 @@ func main() {
 
 			c.HTML(http.StatusOK, "image_unlock.html", gin.H{
 				"title": "Unlock Image",
-				"clientSecret": X_CLIENT_SECRET, 
-				"clientId": X_CLIENT_ID, 
+				"clientSecret": clientSecret, 
+				"clientId": clientId, 
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
 				"sessionInformation": sessionInformation,
@@ -812,7 +820,7 @@ func main() {
 
 		router.POST("/api/sentry/store/", func(c *gin.Context) {
 			//parse sentry dsn
-			sentryDsnWithoutHttps := strings.Replace(SENTRY_DSN, "https://", "", 1)
+			sentryDsnWithoutHttps := strings.Replace(sentryDsn, "https://", "", 1)
 			sentryDsnParts := strings.Split(sentryDsnWithoutHttps, ":")
 			if len(sentryDsnParts) != 2 { //invalid Sentry DSN
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})

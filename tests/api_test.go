@@ -6,7 +6,7 @@ import (
 	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"os"
-	"../src/datastructures"
+	"github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 //const UNVERIFIED_DONATIONS_DIR string = "../unverified_donations/"
@@ -311,7 +311,7 @@ func testGetImageForAnnotation(t *testing.T, imageId string, token string, valid
 	equals(t, resp.StatusCode(), requiredStatusCode)
 }
 
-func testRandomLabel(t *testing.T, num int) {
+func testRandomLabel(t *testing.T, num int, skipLabel string) {
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
 
@@ -322,7 +322,8 @@ func testRandomLabel(t *testing.T, num int) {
 
 	for i := 0; i < num; i++ {
 		image := imageIds[i]
-		label, err := db.GetRandomLabelName()
+
+		label, err := db.GetRandomLabelName(skipLabel)
 		ok(t, err)
 
 		testLabelImage(t, image, label, "")
@@ -457,8 +458,12 @@ func TestRandomLabel(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
+	num, err := db.GetAllImageIds()
+	ok(t, err)
+	equals(t, int(len(num)), int(0))
+
 	testMultipleDonate(t, "apple")
-	testRandomLabel(t, 7)
+	testRandomLabel(t, 7, "apple")
 }
 
 func TestGetImageToLabel(t *testing.T) {
@@ -655,10 +660,16 @@ func TestGetImageToAnnotate(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+	equals(t, int(len(imageIds)), int(0))
+
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
+	equals(t, int(len(validationIds)), int(1))
+
 
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)
@@ -675,6 +686,8 @@ func TestGetImageToAnnotateButLocked(t *testing.T) {
 
 	validationIds, err := db.GetAllValidationIds()
 	ok(t, err)
+
+	equals(t, len(validationIds), 1)
 
 	err = db.SetValidationValid(validationIds[0], 5)
 	ok(t, err)

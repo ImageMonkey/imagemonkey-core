@@ -3,10 +3,10 @@ package main
 import(
 	"database/sql"
 	_ "github.com/lib/pq"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"flag"
-	datastructures "./datastructures"
-	commons "./commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 
@@ -422,14 +422,14 @@ func main(){
 		log.Fatal("Couldn't get label map refinements: ", err.Error())
 	}
 
-	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.jsonnet")
 	err = metalabels.Load()
 	if err != nil {
 		log.Fatal("Couldn't get meta labels: ", err.Error())
 	}
 
-
-	db, err := sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+	db, err := sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		log.Fatal(err)
 	}

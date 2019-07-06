@@ -4,10 +4,10 @@ import(
 	"unicode"
 	"errors"
 	"strconv"
-    "github.com/satori/go.uuid"
+    "github.com/gofrs/uuid"
 	"regexp"
     "strings"
-    "../commons"
+    commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 type StaticQueryAttribute struct {

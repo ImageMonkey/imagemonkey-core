@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	commons "../src/commons"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func TestDatabaseEmpty(t *testing.T) {
@@ -50,7 +50,7 @@ func TestLabelAndMetalabelUuidsShouldBeUnique(t *testing.T) {
 		}
 	}
 
-	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.json")
+	metalabels := commons.NewMetaLabels("../wordlists/en/metalabels.jsonnet")
 	err = metalabels.Load()
 	ok(t, err)
 	m := metalabels.GetMapping()

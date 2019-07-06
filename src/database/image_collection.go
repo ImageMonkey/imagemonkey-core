@@ -2,10 +2,10 @@ package imagemonkeydb
 
 import (
     "github.com/getsentry/raven-go"
-    log "github.com/Sirupsen/logrus"
-    "../datastructures"
-    "../commons"
-    "github.com/lib/pq"
+    log "github.com/sirupsen/logrus"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	"github.com/lib/pq"
 )
 
 type AddImageCollectionErrorType int

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"gopkg.in/resty.v1"
 	"encoding/json"
-	"../src/datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
 func testImageAnnotationRefinement(t *testing.T, annotationId string, annotationDataId string, labelUuid string, expectedStatusResponse int) {

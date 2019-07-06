@@ -1,0 +1,53 @@
+FROM golang:1.12.5-stretch
+
+RUN mkdir -p /home/go/bin
+#ENV GOPATH=/home/go
+#ENV GOBIN=/home/go/bin
+
+COPY tests/ /tmp/tests
+COPY src/commons /tmp/src/commons
+COPY src/statworker.go /tmp/src/statworker.go
+COPY src/data_processor.go /tmp/src/data_processor.go
+COPY src/trendinglabelsworker.go /tmp/src/trendinglabelsworker.go
+COPY src/make_labels_productive.go /tmp/src/make_labels_productive.go
+COPY src/image /tmp/src/image
+COPY src/languages /tmp/src/languages
+COPY src/datastructures /tmp/src/datastructures
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+COPY src/datastructures /tmp/src/datastructures
+COPY src/populate_labels.go /tmp/src/populate_labels.go
+COPY src/database /tmp/src/database
+COPY src/image /tmp/src/image
+COPY src/parser /tmp/src/parser
+COPY env/postgres /tmp/env/postgres
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends python3 postgresql-client-9.6 python3-pip wget unzip \
+	&& pip3 install selenium requests \
+	&& wget https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip --directory-prefix=/tmp/ \
+	&& cd /tmp \
+	&& unzip /tmp/chromedriver_linux64.zip \ 
+	&& cp /tmp/chromedriver /tmp/tests/ui \
+	&& rm /tmp/chromedriver_linux64.zip \
+	&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
+	&& apt install -y ./google-chrome-stable_current_amd64.deb \
+	&& rm /tmp/google-chrome-stable_current_amd64.deb 
+
+
+RUN cd /tmp/tests && go get -u gopkg.in/resty.v1
+RUN cd /tmp/tests && go test -c -o test	
+
+RUN cd /tmp/src/parser && go test -c -o parser_test && cp parser_test /tmp/tests/parser_test
+RUN cd /tmp/src/parser/v2 && go test -c -o parserv2_test && cp parserv2_test /tmp/tests/parserv2_test
+
+WORKDIR /tmp/tests/
+
+RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/tmp/ \
+	&& chmod u+rx /tmp/wait-for-it.sh
+
+COPY env/docker/run_all_tests.sh /tmp/tests/run_all_tests.sh
+
+RUN chmod u+rx ./run_all_tests.sh
+
+ENTRYPOINT ["./run_all_tests.sh"]

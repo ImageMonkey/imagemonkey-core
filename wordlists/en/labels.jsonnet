@@ -1137,6 +1137,187 @@ local animals = import 'animals.libsonnet';
 			"plural": "jeans",
 			"uuid": "aa947d16-4f65-4338-b814-507a2d5acac9"
 		},
+        "telephone box": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "telephone boxes",
+            "uuid": "6439a508-960c-4672-b50d-5faf3f895f17"
+        },
+        "ball": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "balls",
+            "uuid": "04c61035-a112-4834-94be-1a9bd0ef1a9f"
+        },
+        "cathedral": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "cathedrals",
+            "uuid": "85c8e7f4-c6ab-4e1c-b845-9798fc82236d"
+        },
+        "canal": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "canal",
+            "uuid": "1a506fa1-3e6b-4100-bf48-8889bca2b93e"
+        },
+        "padlock": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "padlocks",
+            "uuid": "02d71ded-3d01-421b-8ef5-4c1300300f1c"
+        },
+        "barrel": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "barrels",
+            "uuid": "07bdca85-e003-442d-9464-a82d62388aae"
+        },
+        "salad": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "salads",
+            "uuid": "30a1e602-d453-4f99-a1c5-9b3529da09c5"
+        },
+        "tent": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "tents",
+            "uuid": "fda43d96-1c96-45f1-be67-34973ad62059"
+        },
+        "curtain": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "curtains",
+            "uuid": "90c9a7b5-d79d-4ed5-8cb7-3f41b6a150e4"
+        },
+        "washing machine": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "washing machines",
+            "uuid": "e1c0679a-f6bf-428c-85de-01853570bef6"
+        },
+        "tie": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "ties",
+            "uuid": "59d7f359-4da0-4338-abd0-1e9ae0543abb"
+        },
+        "raspberry": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "raspberries",
+            "uuid": "11a6e3be-c590-466c-b4dc-4c47e8d5c49d"
+        },
+        "parking space": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "parking space",
+            "uuid": "01c5957f-fc79-41c6-85ac-417a07667c2e"
+        },
+        "skateboard": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "skateboards",
+            "uuid": "4bdc78c2-e921-45bb-9e0b-1cb9cf879599"
+        },
+        "computer monitor": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "computer monitors",
+            "uuid": "d6a993dc-09df-4569-9416-29ce350a97e6"
+        },
+        "picture frame": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "picture frames",
+            "uuid": "199a70a0-16d4-4eb5-a5e7-9527193477a4"
+        },
+        "blanket": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "blankets",
+            "uuid": "445d397f-5145-45ab-abe7-48980163e5ea"
+        },
+        "cushion": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "cushions",
+            "uuid": "5bea1931-d8e3-47c6-be24-8ab016694a74"
+        },
+        "blueberry": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "blueberries",
+            "uuid": "5c3eae85-f3f6-4572-a789-f37b9b2cc8b7"
+        },
+        "jar": {
+            "description": "optional",
+            "accessors": ["."],
+            "plural": "jar",
+            "uuid": "0bcbc385-b00c-475e-b8f7-5d248da9a296"
+        },
+		"cucumber": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "cucumber",
+			"uuid": "d38f5335-91d8-40a2-a9f4-a2ddc8970132" 
+		},
+		"bucket": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "buckets",
+			"uuid": "10d32e6d-ba38-4336-a563-9c2a3ce982ee"
+		},
+		"escalator": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "escalator",
+			"uuid": "7be9984a-ef3a-49f8-a68e-1c3382831d1a"
+		},
+		"smoke": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "smoke",
+			"uuid": "1f0ebe47-b86e-4a1e-b892-e2dd60434fa3"
+		},
+		"ceiling": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "ceilings",
+			"uuid": "bc3cf624-eb9b-4c81-a2d2-693fe27ef00e"
+		},
+		"balcony": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "balcony",
+			"uuid": "fc937332-6647-4729-aa62-f4edb237639b"
+		},
+		"tool": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "tools",
+			"uuid": "21ac38ea-4c47-414d-9fc5-dd3f65d316f9"
+		},
+		"suit": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "suits",
+			"uuid": "521d4178-b144-49d2-8e5b-016c33e69c7a"
+		},
+		"dress": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "dresses",
+			"uuid": "9b572278-e0b7-47ac-b721-641fe6a9a386"
+		},
+		"shoe": {
+			"description": "optional",
+			"accessors": ["."],
+			"plural": "shoes",
+			"uuid": "14c7d814-00f2-47f2-b4c5-f3f8872994bc"
+		},
+
 		"deer": animals["deer"],
 		"lizard": animals["lizard"],
 		"owl": animals["owl"],
@@ -1159,7 +1340,12 @@ local animals = import 'animals.libsonnet';
 		"frog": animals["frog"],
 		"snake": animals["snake"],
 		"jellyfish": animals["jellyfish"],
-		"spider": animals["spider"]
-
+		"spider": animals["spider"],
+        "giraffe": animals["giraffe"],
+        "parrot": animals["parrot"],
+        "wasp": animals["wasp"],
+        "ladybird": animals["ladybird"],
+		"chicken": animals["chicken"],
+		"tiger": animals["tiger"]
 	}
 }

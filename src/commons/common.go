@@ -16,12 +16,15 @@ import (
     "net/http"
     "encoding/json"
     "github.com/garyburd/redigo/redis"
-    log "github.com/Sirupsen/logrus"
+    log "github.com/sirupsen/logrus"
     "net/url"
     "errors"
     "github.com/gin-gonic/gin"
-    "../datastructures"
-    "strconv"
+    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"strconv"
+	"github.com/google/go-jsonnet"
+	"path/filepath"
+	"os"
 )
 
 
@@ -276,8 +279,7 @@ func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, metalabels 
     if val, ok := labelsMap[label]; ok {
         if len(sublabels) > 0 {
             availableSublabels := val.LabelMapEntries
-
-            for _, value := range sublabels {
+        	for _, value := range sublabels {
                 _, ok := availableSublabels[value.Name]
                 if !ok {
                     return false
@@ -499,12 +501,25 @@ func NewMetaLabels(path string) *MetaLabels {
 }
 
 func (p *MetaLabels) Load() error {
-    data, err := ioutil.ReadFile(p.path)
+	data, err := ioutil.ReadFile(p.path)
     if err != nil {
         return err
     }
 
-    err = json.Unmarshal(data, &p.metalabels)
+	vm := jsonnet.MakeVM()
+
+	dir, _ := filepath.Split(p.path)
+	dir = dir + string(os.PathSeparator) + "includes" + string(os.PathSeparator) + "metalabels/"
+	vm.Importer(&jsonnet.FileImporter{
+		JPaths: []string{dir},
+	})
+
+	out, err := vm.EvaluateSnippet("file", string(data))
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(out), &p.metalabels)
     if err != nil {
         return err
     }
@@ -747,4 +762,22 @@ func (p *AchievementsGenerator) GetAchievements(apiBaseUrl string) ([]datastruct
     }
 
     return achievements, nil
+}
+
+func GetEnv(name string) string {
+	val, found := os.LookupEnv(name)
+	if found {
+		return val
+	}
+
+	return ""
+}
+
+func MustGetEnv(name string) string {
+	val := GetEnv(name)
+	if val == "" {
+		log.Fatal("Couldn't get env ", name)
+	}
+
+	return val
 }

@@ -2,7 +2,7 @@ package commons
 
 import (
 	"encoding/json"
-	datastructures "../datastructures"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures" 
 	"bytes"
 	"github.com/getsentry/raven-go"
 	"errors"
