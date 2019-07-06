@@ -1,0 +1,33 @@
+FROM golang:1.12.5-stretch
+
+ENV REDIS_ADDRESS=:6379
+ENV SENTRY_DSN=
+ENV USE_SENTRY=true
+
+RUN mkdir -p /home/go/bin
+ENV GOPATH=/home/go
+ENV GOBIN=/home/go/bin
+
+COPY src/blogsubscriptionworker.go /tmp/src/blogsubscriptionworker.go
+COPY src/commons /tmp/src/commons
+COPY src/datastructures /tmp/src/datastructures
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+
+RUN cd /tmp/src/ \
+	&& go get -d
+
+RUN cd /tmp/src/ && go install blogsubscriptionworker.go
+
+RUN mkdir -p /home/imagemonkey/bin/ \
+	&& mv /home/go/bin/blogsubscriptionworker /home/imagemonkey/bin/blogsubscriptionworker
+
+RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/usr/bin \
+	&& chmod u+rx /usr/bin/wait-for-it.sh
+
+WORKDIR /home/imagemonkey/bin/
+
+RUN echo -e "#!/bin/bash\n\n/usr/bin/wait-for-it.sh $DB_HOST:$DB_PORT -- ./blogsubscriptionworker -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS" > run_blogsubscriptionworker.sh \
+	&& chmod u+rx ./run_blogsubscriptionworker.sh
+
+ENTRYPOINT ["./run_blogsubscriptionworker.sh"]

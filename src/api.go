@@ -138,7 +138,7 @@ func IsImageCollectionNameValid(s string) bool {
 }
 
 //Middleware to ensure that the correct X-Client-Id and X-Client-Secret are provided in the header
-func ClientAuthMiddleware() gin.HandlerFunc {
+func ClientAuthMiddleware(xClientId string, xClientSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var clientId string
 		var clientSecret string
@@ -153,7 +153,7 @@ func ClientAuthMiddleware() gin.HandlerFunc {
 			clientSecret = values[0]
 		}
 
-		if(!((clientSecret == X_CLIENT_SECRET) && (clientId == X_CLIENT_ID))) {
+		if(!((clientSecret == xClientSecret) && (clientId == xClientId))) {
 			c.String(401, "Please provide a valid client id and client secret")
 			c.AbortWithStatus(401)
 			return
@@ -525,10 +525,11 @@ func main(){
 		fmt.Printf("[Main] Starting gin in release mode!\n")
 		gin.SetMode(gin.ReleaseMode)
 	}
-
+	
+	sentryDsn := ""
 	if *useSentry {
 		fmt.Printf("Setting Sentry DSN\n")
-		raven.SetDSN(SENTRY_DSN)
+		sentryDsn = commons.MustGetEnv("SENTRY_DSN")
 		raven.SetEnvironment(sentryEnvironment)
 
 		raven.CaptureMessage("Starting up api worker", nil)
@@ -559,14 +560,15 @@ func main(){
 		log.Fatal(err)
 	}
 
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(IMAGE_DB_CONNECTION_STRING)
+	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
 
 	if *useSentry {
-		imageMonkeyDatabase.InitializeSentry(SENTRY_DSN, sentryEnvironment)
+		imageMonkeyDatabase.InitializeSentry(sentryDsn, sentryEnvironment)
 	}
 	defer imageMonkeyDatabase.Close()
 
@@ -603,7 +605,9 @@ func main(){
 	}
 
 	sampleExportQueries := commons.GetSampleExportQueries()
-	authTokenHandler := NewAuthTokenHandler(imageMonkeyDatabase)
+
+	jwtSecret := commons.MustGetEnv("JWT_SECRET")
+	authTokenHandler := NewAuthTokenHandler(imageMonkeyDatabase, jwtSecret)
 
 	//if file exists, start in maintenance mode
 	maintenanceMode := false
@@ -836,13 +840,15 @@ func main(){
 		})
 
 
+		clientId := commons.MustGetEnv("X_CLIENT_ID")
+		clientSecret := commons.MustGetEnv("X_CLIENT_SECRET")
 
 		//the following endpoints are secured with a client id + client secret. 
 		//that's mostly because currently each donation needs to be unlocked manually. 
 		//(as we want to make sure that we don't accidentally host inappropriate content, like nudity)
 		clientAuth := router.Group("/")
 		clientAuth.Use(RequestId())
-		clientAuth.Use(ClientAuthMiddleware())
+		clientAuth.Use(ClientAuthMiddleware(clientId, clientSecret))
 		{
 			clientAuth.Static("./v1/unverified/donation", *unverifiedDonationsDir)
 			clientAuth.GET("/v1/internal/unverified-donations", func(c *gin.Context) {
@@ -2430,7 +2436,7 @@ func main(){
 
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-				tokenString, err := token.SignedString([]byte(JWT_SECRET))
+				tokenString, err := token.SignedString([]byte(jwtSecret))
 				if err != nil {
 					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 	            	return
@@ -2767,7 +2773,7 @@ func main(){
 				return
 			}
 
-			apiToken, err := imageMonkeyDatabase.GenerateApiToken(JWT_SECRET, username, apiTokenRequest.Description)
+			apiToken, err := imageMonkeyDatabase.GenerateApiToken(jwtSecret, username, apiTokenRequest.Description)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't generate API token - please try again later"})	
 				return

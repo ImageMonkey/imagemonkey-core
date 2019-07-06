@@ -1,0 +1,35 @@
+FROM golang:1.12.5-stretch
+
+ENV USE_SENTRY=true
+ARG SINGLESHOT=false
+ENV SENTRY_DSN=
+ENV IMAGEMONKEY_DB_CONNECTION_STRING=
+ENV REDIS_ADDRESS=:6379
+
+RUN mkdir -p /home/go/bin
+ENV GOPATH=/home/go
+ENV GOBIN=/home/go/bin
+
+COPY src/data_processor.go /tmp/src/data_processor.go
+COPY src/datastructures /tmp/src/datastructures
+COPY src/database /tmp/src/database
+COPY src/languages /tmp/src/languages
+COPY src/parser /tmp/src/parser
+COPY src/commons /tmp/src/commons
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+
+RUN cd /tmp/src/ \
+	&& go get -d
+
+RUN cd /tmp/src/ && go install data_processor.go
+
+RUN mkdir -p /home/imagemonkey/bin/ \
+	&& mv /home/go/bin/data_processor /home/imagemonkey/bin/data_processor
+
+WORKDIR /home/imagemonkey/bin/
+
+RUN echo -e "#!/bin/bash\n\n./data_processor -use_sentry=$USE_SENTRY -singleshot=$SINGLESHOT -redis_address=$REDIS_ADDRESS" > run_data_processor.sh \
+	&& chmod u+rx ./run_data_processor.sh
+
+ENTRYPOINT ["./run_data_processor.sh"]

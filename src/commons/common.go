@@ -763,3 +763,21 @@ func (p *AchievementsGenerator) GetAchievements(apiBaseUrl string) ([]datastruct
 
     return achievements, nil
 }
+
+func GetEnv(name string) string {
+	val, found := os.LookupEnv(name)
+	if found {
+		return val
+	}
+
+	return ""
+}
+
+func MustGetEnv(name string) string {
+	val := GetEnv(name)
+	if val == "" {
+		log.Fatal("Couldn't get env ", name)
+	}
+
+	return val
+}

@@ -101,12 +101,14 @@ func main() {
 	flag.Parse()
 
 	if *useSentry {
-		raven.SetDSN(SENTRY_DSN)
+		sentryDsn := commons.MustGetEnv("SENTRY_DSN")
+		raven.SetDSN(sentryDsn)
 		raven.SetEnvironment("data-processor")
 	}
 
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	var err error
-	db, err = sql.Open("postgres", IMAGE_DB_CONNECTION_STRING)
+	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal(err)

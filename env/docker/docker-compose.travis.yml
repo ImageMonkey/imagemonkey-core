@@ -1,0 +1,95 @@
+version: "3"
+services:
+  redis:
+    ports:
+      - 6380:6379
+    image: redis
+  db:
+    network_mode: host
+    command: postgres -c port=5433
+    build:
+      context: "../../"
+      dockerfile: env/docker/Dockerfile.postgres
+    env_file:
+        - ../env.travis
+    volumes:
+        - dbdata:/var/lib/postgresql/data
+    logging:
+      driver: none
+  #trendinglabelsworker:
+  #  restart: always
+  #  network_mode: host
+  #  env_file:
+  #      - ../env.travis
+  #  build:
+  #    context: "../../"
+  #    dockerfile: env/docker/Dockerfile.trendinglabelsworker
+  #  entrypoint: tail -f /dev/null 
+  #web:
+  #  restart: always
+  #  network_mode: host
+  #  entrypoint: tail -f /dev/null
+  #  env_file:
+  #    - ../env.travis
+  #  build:
+  #    context: "../../"
+  #    dockerfile: env/docker/Dockerfile.web
+  #  volumes:
+  #    - ../../wordlists:/home/imagemonkey/wordlists
+  #    - ../../public_backups/public_backups.json:/home/imagemonkey/public_backups/public_backups.json
+  #    - ../../data:/home/imagemonkey/data
+  api:
+    network_mode: host
+    env_file:
+      - ../env.travis
+    build:
+       context: "../../"
+       dockerfile: env/docker/Dockerfile.api
+    logging:
+      driver: none
+    volumes:
+      - ../../geoip_database:/home/imagemonkey/geoip_database
+      - ../../wordlists:/home/imagemonkey/wordlists
+      - ../../data:/home/imagemonkey/data
+  #statworker:
+  #  restart: always
+  #  entrypoint: tail -f /dev/null
+  #  network_mode: host
+  #  env_file:
+  #    - ../env.travis
+  #  build:
+  #     context: "../../"
+  #     dockerfile: env/docker/Dockerfile.statworker
+  #dataprocessor:
+  #  restart: always
+  #  entrypoint: tail -f /dev/null
+  #  network_mode: host
+  #  env_file:
+  #    - ../env.travis
+  #  build:
+  #     context: "../../"
+  #     dockerfile: env/docker/Dockerfile.dataprocessor
+  #blogsubscriptionworker:
+  # restart: always
+  #  entrypoint: tail -f /dev/null
+  #  network_mode: host
+  #  env_file:
+  #    - ../env.travis
+  #  build:
+  #    context: "../../"
+  #    dockerfile: env/docker/Dockerfile.blogsubscriptionworker
+  testing:
+    network_mode: host
+    #entrypoint: tail -f /dev/null
+    env_file:
+      - ../env.travis
+    volumes:
+      - ../../wordlists:/tmp/wordlists
+      - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json
+      - ../../data:/tmp/data
+    build:
+      context: "../../"
+      dockerfile: env/docker/Dockerfile.testing
+
+volumes:
+   dbdata:

@@ -1,0 +1,28 @@
+FROM postgres:9.6.13
+
+ARG TEMPORAL_TABLE_VERSION=1.2.0
+ARG POSTGIS_VERSION=2.3
+ENV MONKEY_DB_PASSWORD=
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates build-essential postgresql-9.6-postgis-${POSTGIS_VERSION} postgresql-9.6-postgis-${POSTGIS_VERSION}-scripts postgresql-contrib-9.6 postgresql-server-dev-9.6 curl
+
+RUN cd /tmp && curl -o /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz -L https://github.com/arkhipov/temporal_tables/archive/v${TEMPORAL_TABLE_VERSION}.tar.gz \
+    && mkdir -p /tmp/temporal_table \
+    && mv /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz /tmp/temporal_table/v${TEMPORAL_TABLE_VERSION}.tar.gz \
+    && cd /tmp/temporal_table && tar xvf v${TEMPORAL_TABLE_VERSION}.tar.gz \
+    && cd /tmp/temporal_table/temporal_tables-${TEMPORAL_TABLE_VERSION} \
+    && make \
+    && make install \
+    && rm -rf /tmp_temporal_table
+
+RUN mkdir -p /docker-entrypoint-initdb.d/
+COPY env/docker/postgres_init.sh /docker-entrypoint-initdb.d/postgres_init.sh 
+COPY env/postgres/schema.sql /tmp/imagemonkeydb/schema.sql
+COPY env/postgres/defaults.sql /tmp/imagemonkeydb/defaults.sql
+COPY env/postgres/indexes.sql /tmp/imagemonkeydb/indexes.sql
+COPY env/postgres/stored_procs /tmp/imagemonkeydb/postgres_stored_procs
+COPY env/postgres/functions /tmp/imagemonkeydb/postgres_functions
+
+RUN chown -R postgres:postgres /tmp/imagemonkeydb \
+    && chmod -R u+rx /tmp/imagemonkeydb
