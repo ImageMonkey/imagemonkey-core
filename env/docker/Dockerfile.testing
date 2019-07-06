@@ -38,6 +38,9 @@ RUN apt-get update \
 RUN cd /tmp/tests && go get -u gopkg.in/resty.v1
 RUN cd /tmp/tests && go test -c -o test	
 
+RUN cd /tmp/src/parser && go test -c -o parser_test && cp parser_test /tmp/tests/parser_test
+RUN cd /tmp/src/parser/v2 && go test -c -o parserv2_test && cp parserv2_test /tmp/tests/parserv2_test
+
 WORKDIR /tmp/tests/
 
 RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/tmp/ \

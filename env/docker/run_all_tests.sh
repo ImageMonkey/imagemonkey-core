@@ -24,6 +24,24 @@ if [ $retVal -ne 0 ]; then
 	echo "Aborting due to error"
 	exit $retVal
 fi
+
+echo "Starting unittests"
+echo "Parser tests"
+./parser_test -test.v
+retVal=$?
+if [ $retVal -ne 0 ]; then
+	echo "Aborting due to error"
+	exit $retVal
+fi
+
+echo "Parser v2 tests"
+./parserv2_test -test.v
+retVal=$?
+if [ $retVal -ne 0 ]; then
+	echo "Aborting due to error"
+	exit $retVal
+fi
+
 echo "All tests successful"
 
 exit 0
