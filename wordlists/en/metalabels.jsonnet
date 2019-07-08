@@ -381,6 +381,26 @@ local countries = import 'countries.libsonnet';
 			"accessors": ["."],
 			"uuid": "d51a4f0e-48ca-438b-88a0-49d0d142151c"
 		},
+		"motorshow": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "4050e012-d94c-44fe-a970-73adea13888a"
+		},
+		"festival": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "44e7c27b-0556-46e6-8176-6122c2622f98"
+		},
+		"exhibition": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "a3cc8fa0-027a-4183-bfbe-c4d2241652c6"
+		},
+		"stadium": {
+			"description": "optional",
+			"accessors": ["."],
+			"uuid": "052f44c7-d319-4069-9e07-d6a416fe173e"
+		},
 
         "germany": countries["germany"],
         "poland": countries["poland"],
