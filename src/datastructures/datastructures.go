@@ -402,6 +402,7 @@ type UserPermissions struct {
     CanUnlockImageDescription bool `json:"can_unlock_image_description"`
     CanUnlockImage bool `json:"can_unlock_image"`
     CanMonitorSystem bool `json:"can_monitor_system"`
+	CanAcceptTrendingLabel bool `json:"can_accept_trending_label"`
 }
 
 type UserInfo struct {
@@ -737,4 +738,16 @@ type ImageHuntStats struct {
 
 type ApiTokenRequest struct {
     Description string `json:"description"`
+}
+
+type TrendingLabel struct {
+	Name string `json:"name"`
+	GithubIssue struct {
+		Id int `json:"id"`
+		Closed bool `json:"closed"`
+	} `json:"github_issue"`
+	Status string `json:"status"`
+	Ci struct {
+		JobUrl string `json:"job_url"`
+	} `json:"ci"`
 }

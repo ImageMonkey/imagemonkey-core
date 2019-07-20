@@ -126,6 +126,7 @@ func main() {
 								"Path to the pre-trained models")
 	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
 	localSentryDsn := flag.String("local_sentry_dsn", "http://sentry:sentry@127.0.0.1:8080/sentry", "local Sentry DSN")
+	trendingLabelsRepositoryUrl := flag.String("trendinglabels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Trending Labels Repository")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -205,8 +206,8 @@ func main() {
 	clientId := commons.MustGetEnv("X_CLIENT_ID")
 
 	log.Debug("[Main] Reading labels")
-	labelRepository := commons.NewLabelRepository()
-	err := labelRepository.Load(*wordlistPath)
+	labelRepository := commons.NewLabelRepository(*wordlistPath)
+	err := labelRepository.Load()
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read labels: %s...terminating!",*wordlistPath)
 		log.Fatal(err)
@@ -746,6 +747,16 @@ func main() {
 				"defaultLabelGraphName": labelGraphName,
 				"editorMode" : editorMode,
 				"repository": "https://github.com/bbernhard/imagemonkey-core",
+			})
+		})
+
+		router.GET("/labelrepository", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "labelrepository.html", gin.H{
+				"title": "Label Repository",
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				"trendingLabelsRepositoryUrl": *trendingLabelsRepositoryUrl,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})
 

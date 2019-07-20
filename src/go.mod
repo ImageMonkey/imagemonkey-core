@@ -23,7 +23,6 @@ require (
 	github.com/lib/pq v1.1.1
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/ugorji/go v1.1.5-pre // indirect
 	gocv.io/x/gocv v0.20.0
@@ -32,5 +31,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/h2non/bimg.v1 v1.0.19
+	gopkg.in/resty.v1 v1.12.0 // indirect
+	gopkg.in/src-d/go-git.v4 v4.12.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

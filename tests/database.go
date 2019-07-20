@@ -352,8 +352,9 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 		return err
 	}
 
-	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description) 
-							SELECT a.id, true, true FROM account a WHERE a.name = $1`, name)
+	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description, 
+														can_monitor_system, can_accept_trending_label) 
+							SELECT a.id, true, true, true, true FROM account a WHERE a.name = $1`, name)
 	if err != nil {
 		return err
 	}
@@ -1039,6 +1040,43 @@ func (p *ImageMonkeyDatabase) GetNumOfNotAnnotatable(uuid string) (int, error) {
 	}
 	return num, nil
 } 
+
+func (p *ImageMonkeyDatabase) GetTrendingLabelBotTaskState(labelSuggestion string) (string, error) {
+	rows, err := p.db.Query(`SELECT COALESCE(bt.state::text, '') 
+							 FROM trending_label_bot_task bt 
+							 RIGHT JOIN trending_label_suggestion l ON l.id = bt.trending_label_suggestion_id
+							 RIGHT JOIN label_suggestion s ON s.id = l.label_suggestion_id
+							 WHERE s.name = $1`, labelSuggestion) 
+	if err != nil {
+		return "", err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var state string
+		err = rows.Scan(&state)
+		if err != nil {
+			return "", err
+		}
+
+		return state, nil
+	}
+	return "", errors.New("nothing found")
+}
+
+func (p *ImageMonkeyDatabase) SetTrendingLabelBotTaskState(labelSuggestion string, state string) error {
+	_, err := p.db.Exec(`UPDATE trending_label_bot_task 
+							 	SET state = $2
+							 		 FROM (
+							 			SELECT l.id as lid
+										FROM trending_label_suggestion l
+							 			JOIN label_suggestion s ON s.id = l.label_suggestion_id
+										WHERE s.name = $1 
+									 ) q
+							 		 WHERE q.lid = trending_label_suggestion_id`, labelSuggestion, state)
+	return err
+}
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()

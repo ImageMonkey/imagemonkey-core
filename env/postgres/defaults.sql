@@ -15,3 +15,6 @@ CREATE TYPE state_type AS ENUM ('unknown', 'locked', 'unlocked');
 
 insert into language(name, fullname) values('en', 'English');
 insert into language(name, fullname) values('ger', 'German');
+
+
+CREATE TYPE label_bot_state_type AS ENUM ('pending', 'building', 'build-failed', 'build-success', 'waiting for moderator approval', 'accepted', 'retry', 'build-canceled');

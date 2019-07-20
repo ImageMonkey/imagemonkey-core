@@ -302,8 +302,8 @@ func main() {
 		log.Fatal("Please set a valid repository!")
 	}
 
-	labelRepository := commons.NewLabelRepository()
-	err := labelRepository.Load(*wordlistPath)
+	labelRepository := commons.NewLabelRepository(*wordlistPath)
+	err := labelRepository.Load()
 	if err != nil {
 		log.Fatal("[Main] Couldn't read label map...terminating!")
 	}

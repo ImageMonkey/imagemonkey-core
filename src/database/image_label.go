@@ -668,3 +668,115 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 
     return imageLabels, nil
 }
+
+func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabel, error) {
+	trendingLabels := []datastructures.TrendingLabel{}
+	rows, err := p.db.Query(`SELECT s.name, t.github_issue_id, t.closed, COALESCE(tb.state::text, ''), COALESCE(tb.job_url, '')
+							 FROM trending_label_suggestion t
+							 JOIN label_suggestion s ON s.id = t.label_suggestion_id
+							 LEFT JOIN trending_label_bot_task tb ON tb.trending_label_suggestion_id = t.id`)
+	if err != nil {
+		log.Error("[Get Trending Labels] Couldn't get trending labels: ", err.Error())
+		raven.CaptureError(err, nil)
+		return trendingLabels, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var trendingLabel datastructures.TrendingLabel
+		err = rows.Scan(&trendingLabel.Name, &trendingLabel.GithubIssue.Id, 
+						&trendingLabel.GithubIssue.Closed, &trendingLabel.Status, &trendingLabel.Ci.JobUrl)
+		if err != nil {
+			log.Error("[Get Trending Labels] Couldn't scan trending labels: ", err.Error())
+			raven.CaptureError(err, nil)
+			return trendingLabels, err
+		}
+		trendingLabels = append(trendingLabels, trendingLabel)
+	}
+
+	return trendingLabels, nil
+}
+
+func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, userInfo datastructures.UserInfo) error {
+	status := "waiting for moderator approval"
+	if userInfo.Permissions != nil && userInfo.Permissions.CanAcceptTrendingLabel {
+		status = "accepted"
+	}
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		log.Error("[Accept Trending Label] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	rows, err := tx.Query(`INSERT INTO trending_label_bot_task(trending_label_suggestion_id, state, try)
+								SELECT l.id, $1, 1
+								FROM trending_label_suggestion l
+								JOIN label_suggestion s ON s.id = l.label_suggestion_id 
+								WHERE s.name = $2
+							 ON CONFLICT DO NOTHING
+							 RETURNING id`, status, name)
+
+	if err != nil {
+		tx.Rollback()
+		log.Error("[Accept Trending Label] Couldn't accept trending label: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	defer rows.Close()
+	
+	success := false
+	if rows.Next() {
+		success = true	
+	}
+
+	rows.Close()
+	
+	if !success { //already exists an entry
+		rows1, err := tx.Query(`UPDATE trending_label_bot_task 
+							 		 SET state = CASE 
+									 				WHEN state = 'waiting for moderator approval' THEN $2
+									 			 	WHEN state = 'build-failed' THEN 'retry'
+													WHEN state = 'build-canceled' THEN 'retry'
+													ELSE state --do nothing
+												 END
+							 		 FROM (
+							 			SELECT l.id as lid
+										FROM trending_label_suggestion l
+							 			JOIN label_suggestion s ON s.id = l.label_suggestion_id
+										WHERE s.name = $1 
+									 ) q
+							 		 WHERE q.lid = trending_label_suggestion_id
+							 		 RETURNING id`, name, status)
+		if err != nil {
+			tx.Rollback()
+			log.Error("[Accept Trending Label] Couldn't accept trending label: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+
+		defer rows1.Close()
+
+		if rows1.Next() {
+			success = true	
+		}
+
+		rows1.Close()
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Error("[Accept Trending Label] Couldn't commit transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	if success {
+		return nil
+	}
+
+	return &InvalidTrendingLabelError{Description: "invalid trending label"}
+}

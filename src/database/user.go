@@ -14,10 +14,12 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
     var unlockImageDescriptionPermission bool
     var unlockImage bool
     var canMonitorSystem bool
+	var canAcceptTrendingLabel bool
     removeLabelPermission = false
     unlockImageDescriptionPermission = false
     unlockImage = false
     canMonitorSystem = false
+	canAcceptTrendingLabel = false
 
 
     userInfo.Name = ""
@@ -30,7 +32,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
                               COALESCE(p.can_remove_label, false) as remove_label_permission,
                               COALESCE(p.can_unlock_image_description, false) as unlock_image_description,
                               COALESCE(p.can_unlock_image, false) as unlock_image,
-                              COALESCE(p.can_monitor_system, false) as can_monitor_system
+                              COALESCE(p.can_monitor_system, false) as can_monitor_system,
+							  COALESCE(p.can_accept_trending_label, false) as can_accept_trending_label
                               FROM account a 
                               LEFT JOIN account_permission p ON p.account_id = a.id 
                               WHERE a.name = $1`, username)
@@ -45,7 +48,7 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
     if rows.Next() {
         err = rows.Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created, 
                         &userInfo.IsModerator, &removeLabelPermission, 
-                        &unlockImageDescriptionPermission, &unlockImage, &canMonitorSystem)
+                        &unlockImageDescriptionPermission, &unlockImage, &canMonitorSystem, &canAcceptTrendingLabel)
 
         if err != nil {
             log.Debug("[User Info] Couldn't scan user info: ", err.Error())
@@ -57,7 +60,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
             permissions := &datastructures.UserPermissions {CanRemoveLabel: removeLabelPermission, 
                                                             CanUnlockImageDescription: unlockImageDescriptionPermission,
                                                             CanUnlockImage: unlockImage,
-                                                            CanMonitorSystem: canMonitorSystem}
+                                                            CanMonitorSystem: canMonitorSystem,
+															CanAcceptTrendingLabel: canAcceptTrendingLabel}
             userInfo.Permissions = permissions
         }
     }

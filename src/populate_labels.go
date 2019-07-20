@@ -409,8 +409,8 @@ func main(){
 		log.Info("Populating labels...")
 	}
 
-	labelRepository := commons.NewLabelRepository()
-	err := labelRepository.Load("../wordlists/en/labels.jsonnet")
+	labelRepository := commons.NewLabelRepository("../wordlists/en/labels.jsonnet")
+	err := labelRepository.Load()
 	if err != nil {
 		log.Fatal("Couldn't get label map: ", err.Error())
 	}

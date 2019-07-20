@@ -152,6 +152,7 @@ func (p *SessionCookieHandler) GetSessionInformation(c *gin.Context) SessionInfo
     													   				   			 CanUnlockImageDescription: false,
     													   				   			 CanUnlockImage: false,
     													   				   			 CanMonitorSystem: false,
+																					 CanAcceptTrendingLabel: false,
     													  				 			}
     			} else {
     				sessionInformation.IsModerator = userInfo.IsModerator
