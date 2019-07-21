@@ -334,6 +334,10 @@ func main() {
 
 			}
 
+			if format == "svg" {
+				format = "svg+xml"
+			}
+
 			c.Writer.Header().Set("Content-Type", ("image/" + format))
 	        c.Writer.Header().Set("Content-Length", strconv.Itoa(len(imgBytes)))
 	        _, err = c.Writer.Write(imgBytes) 

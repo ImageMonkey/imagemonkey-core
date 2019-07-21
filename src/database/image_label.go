@@ -741,6 +741,7 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, userInfo datastru
 									 				WHEN state = 'waiting for moderator approval' THEN $2
 									 			 	WHEN state = 'build-failed' THEN 'retry'
 													WHEN state = 'build-canceled' THEN 'retry'
+													WHEN state is null THEN $2
 													ELSE state --do nothing
 												 END
 							 		 FROM (

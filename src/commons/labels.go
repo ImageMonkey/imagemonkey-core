@@ -58,6 +58,28 @@ func (p *LabelRepository) Load() error {
     return nil
 }
 
+func (p *LabelRepository) Contains(label string, sublabel string) bool {
+	sublabels := []datastructures.Sublabel{}
+	if sublabel != "" {
+		sublabels = append(sublabels, datastructures.Sublabel{Name: sublabel}) 
+	}
+
+	if val, ok := p.labelMap.LabelMapEntries[label]; ok {
+        if len(sublabels) > 0 {
+            availableSublabels := val.LabelMapEntries
+        	for _, value := range sublabels {
+                _, ok := availableSublabels[value.Name]
+                if !ok {
+                    return false
+                }
+            }
+            return true
+        }
+        return true
+    }
+	return false
+}
+
 func (p *LabelRepository) GetMapping() map[string]datastructures.LabelMapEntry {
 	return p.labelMap.LabelMapEntries
 }

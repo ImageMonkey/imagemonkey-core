@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/getsentry/raven-go"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	http "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -419,8 +420,8 @@ func generateLabelEntry(name string) (datastructures.LabelMapEntry, error)  {
 
 
 func main() {
-	labelsRepositoryName := flag.String("label_repository_name", "imagemonkey-trending-labels-test", "Label Repository Name")
-	labelsRepositoryOwner := flag.String("label_repository_owner", "bbernhard", "Label Repository Owner")
+	labelsRepositoryName := flag.String("labels_repository_name", "imagemonkey-trending-labels-test", "Label Repository Name")
+	labelsRepositoryOwner := flag.String("labels_repository_owner", "bbernhard", "Label Repository Owner")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
 	labelsPath := flag.String("labels", "../wordlists/en/labels.jsonnet", "Path to labels")	
 	gitCheckoutDir := flag.String("git_checkout_dir", "/tmp/labelrepository", "Git checkout directory")
@@ -466,31 +467,49 @@ func main() {
 	travisCiApi := NewTravisCiApi("bbernhard", "imagemonkey-trending-labels-test")
 	travisCiApi.SetToken(travisCiApiToken)
 
+	firstIteration := true
 	for {
+
+		if !firstIteration {
+			time.Sleep(1 * time.Second)	
+		} else {
+			firstIteration = false
+		}
+
 		log.Debug("Fetch trending labels")
 		
 		trendingLabels, err := getTrendingLabels()
 		if err != nil {
 			log.Error("Couldn't get trending labels: ", err.Error())
+			raven.CaptureError(err, nil)
 		}
 		for _, trendingLabel := range trendingLabels {
 			labelsRepository.RemoveLocal()
 
 			if trendingLabel.State == "accepted" {
 				log.Info("Got new trending label ", trendingLabel.Name)
+
+				if metaLabels.Contains(trendingLabel.Name) || labels.Contains(trendingLabel.Name, "") {
+					err = setTrendingLabelBotTaskState("already exists", trendingLabel.BranchName, "", trendingLabel.BotTaskId)
+					if err != nil {
+						log.Error("Couldn't set trending label bot task state to 'already exists': ", err.Error())
+						raven.CaptureError(err, nil)
+					}
+					continue //trendinglabel already exists
+				}
+
+
 				err = labelsRepository.Clone()
 				if err != nil {
 					log.Error(err.Error())
+					raven.CaptureError(err, nil)
 					continue
 				}
 
 				u, err := uuid.NewV4()
 				if err != nil {
 					log.Error("Couldn't create UUID: ", err.Error())
-					err = labelsRepository.RemoveLocal()
-					if err != nil {
-						log.Fatal(err.Error())
-					}
+					raven.CaptureError(err, nil)
 					continue
 				}
 				trendingLabel.Name = u.String()
@@ -498,20 +517,14 @@ func main() {
 				branchName, err := labelsRepository.AddLabelAndPushToRepo(trendingLabel)
 				if err != nil {
 					log.Error("Couldn't add label: ", err.Error())
-					err = labelsRepository.RemoveLocal()
-					if err != nil {
-						log.Fatal(err.Error())
-					}
+					raven.CaptureError(err, nil)
 					continue
 				}
 
 				err = setTrendingLabelBotTaskState("pending", branchName, "", trendingLabel.BotTaskId)
 				if err != nil {
 					log.Error("Couldn't set trending label bot task state to pending: ", err.Error())
-					err = labelsRepository.RemoveLocal()
-					if err != nil {
-						log.Fatal(err.Error())
-					}
+					raven.CaptureError(err, nil)
 					continue
 				}
 				trendingLabel.State = "pending"
@@ -520,62 +533,76 @@ func main() {
 			if trendingLabel.State == "pending" {
 				err = travisCiApi.StartBuild(trendingLabel.BranchName)
 				if err != nil {
-					log.Fatal("Couldn't start travis build: ", err.Error())
+					log.Error("Couldn't start travis build: ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
 				}
 
 				err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, "", trendingLabel.BotTaskId)
 				if err != nil {
-					log.Fatal("Couldn't set trending label bot task state to building: ", err.Error())
+					log.Error("Couldn't set trending label bot task state to building: ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
 				}
 			}
 			if trendingLabel.State == "building" {
 				travisCiBuildInfo, err := travisCiApi.GetBuildInfo(trendingLabel.BranchName)
 				if err != nil {
-					log.Fatal("Couldn't query build info for branch ", trendingLabel.BranchName, ": ", err.Error())
+					log.Error("Couldn't query build info for branch ", trendingLabel.BranchName, ": ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
 				}
 				if travisCiBuildInfo.LastBuild.State == "started" {
 					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
-						log.Fatal("Couldn't set trending label bot task state to build-success: ", err.Error())
+						log.Error("Couldn't set trending label bot task state to build-success: ", err.Error())
+						raven.CaptureError(err, nil)
+						continue
 					}
 				} else if travisCiBuildInfo.LastBuild.State == "passed" {
 					err = setTrendingLabelBotTaskState("build-success", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
-						log.Fatal("Couldn't set trending label bot task state to build-success: ", err.Error())
+						log.Error("Couldn't set trending label bot task state to build-success: ", err.Error())
+						raven.CaptureError(err, nil)
+						continue
 					}
 				} else if travisCiBuildInfo.LastBuild.State == "failed" {
 					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
-						log.Fatal("Couldn't set trending label bot task state to build-failed: ", err.Error())
+						log.Error("Couldn't set trending label bot task state to build-failed: ", err.Error())
+						raven.CaptureError(err, nil)
+						continue
 					}
 				} else if travisCiBuildInfo.LastBuild.State == "canceled" {
 					err = setTrendingLabelBotTaskState("build-canceled", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
-						log.Fatal("Couldn't set trending label bot task state to build-canceled: ", err.Error())
+						log.Error("Couldn't set trending label bot task state to build-canceled: ", err.Error())
+						raven.CaptureError(err, nil)
 					}
 				}
 			}
 			if trendingLabel.State == "build-success" {
 				err = labelsRepository.MergeRemoteBranchIntoMaster(trendingLabel.BranchName)
 				if err != nil {
-					log.Error(err.Error())
+					log.Error("Couldn't merge remote branch ", trendingLabel.BranchName, " into master: ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
 				}
 			}
 			if trendingLabel.State == "retry" {
-				log.Info("retry")
 				err = labelsRepository.RemoveRemoteBranch(trendingLabel.BranchName)
 				if err != nil {
-					log.Fatal("Couldn't remove branch ", trendingLabel.BranchName, ": ", err.Error())	
+					log.Error("Couldn't remove branch ", trendingLabel.BranchName, ": ", err.Error())	
+					raven.CaptureError(err, nil)
+					continue
 				}
 				err = resetTrendingLabelBotTaskState(trendingLabel.BotTaskId)
 				if err != nil {
-					log.Fatal("Couldn't reset trending label bot task state: ", err.Error())
+					log.Error("Couldn't reset trending label bot task state: ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
 				}
 			}
 		}
-
-
-		time.Sleep(1 * time.Second)	
 	}
-
 }

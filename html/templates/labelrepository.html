@@ -21,21 +21,46 @@
   <script src="js/tablesort/tablesort.js"></script>
 
   <script>
+    function getSelectedLabelType() {
+      var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
+      if(radioButtonId === "labelTypeNormalRadioButton"){
+        return "normal";
+      }
+      if(radioButtonId === "labelTypeSceneRadioButton"){
+        return "scene";
+      }
+      return "";
+    }
     function addTrendingLabel(elem) {
-      var url = '{{ .apiBaseUrl }}/v1/trendinglabels/' + $(elem).attr("data-label") + "/accept";
+	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
+      $("#addTrendingLabelDlg").modal("show"); 
+	}
+
+	function acceptTrendingLabel(labelName, labelType) {
+      $("#loadingIndicator").show();
+	  var url = '{{ .apiBaseUrl }}/v1/trendinglabels/' + labelName + "/accept";
       $.ajax({
         url: url,
-		type: 'POST',
-        dataType: 'json',
+	    type: 'POST',
+        data: {"label_type": labelType},
+	    dataType: 'json',
         beforeSend: function(xhr) {
           xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
         },
+        error: function(jqXHR, textStatus, errorThrown) {
+          $("#loadingIndicator").hide();
+          $("#warningMessageBoxContent").text("Couldn't accept trending label - please try again later");
+          $("#warningMessageBox").show(200).delay(1500).hide(200);
+        },
         success: function(data) { 
-          
+          $("#loadingIndicator").hide();
+          getTrendingLabels(); 
         }
-      });	
+      });
 	}
+	
 	function getTrendingLabels() {
+	  $("#labelRepositoryTableContent").empty();
       $("#loadingIndicator").show();
       var url = '{{ .apiBaseUrl }}/v1/trendinglabels';
       $.ajax({
@@ -46,8 +71,8 @@
         },
         error: function(jqXHR, textStatus, errorThrown) {
           $("#loadingIndicator").hide();
-          $('#warningMessageBoxContent').text("Couldn't get trending labels - please try again later");
-          $('#warningMessageBox').show(200).delay(1500).hide(200);
+          $("#warningMessageBoxContent").text("Couldn't get trending labels - please try again later");
+          $("#warningMessageBox").show(200).delay(1500).hide(200);
         },
         success: function(data) {
           $("#loadingIndicator").hide();
@@ -62,7 +87,7 @@
 	  {{ if eq .sessionInformation.Username "" }}
 	  $("#authenticationNeededInfoMessage").show(); 
 	  {{ end }}
-
+ 
       for(var i = 0; i < data.length; i++) {
 		var githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
 								'/issues/' + data[i].github_issue.id + '">' +
@@ -77,6 +102,7 @@
 		{{ end }}
 
 		var ciJobUrl = data[i].ci.job_url;
+		var entryId = "trendingLabel" + i;
 
 		var escapedTrendingLabel = escapeHtml(data[i].name);
 		if(status === '') {
@@ -86,21 +112,26 @@
 		} else if(status === 'waiting for moderator approval') {
 			{{ if .sessionInformation.UserPermissions }}
 			{{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
-			button = '<div class="ui fluid button" data-label="' + escapedTrendingLabel + '" onclick="addTrendingLabel(this);">Accept</div>';
+			button = '<div class="ui fluid button" data-label="' + escapedTrendingLabel + '" id="trendingLabel"+i onclick="addTrendingLabel(this);">Accept</div>';
 			{{ end }}
 			{{ end }}
 		} else if(status === 'building') {
-			status = '<a href="' + ciJobUrl + '">building</a>';	
+			status = '<a href="' + ciJobUrl + '"><img src="/img/ci-build-in-progress.svg"></img></a>';	
 		} else if(status === 'build-passed') {
-			status = '<a href="' + ciJobUrl +'"><img src="https://img.shields.io/travis/73VW/TechnicalReport.svg"></img></a>';
-		} else if((status === 'build-failed') || (status === 'build-canceled')) {
-			status = '<a href="' + ciJobUrl +'"><img src="https://img.shields.io/travis/73VW/TechnicalReport/build.svg"></img></a>';
-			button = '<div class="ui fluid ' + disabledStr + ' button" data-label="' + escapedTrendingLabel + '" onclick="addTrendingLabel(this);">Try again</div>';
+			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-passing.svg"></img></a>';
+		} else if(status === 'build-canceled') {
+			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-canceled.svg"></img></a>';
+			button = ('<div class="ui fluid ' + disabledStr + ' button"' + 
+						' data-label="' + escapedTrendingLabel + '" onclick="addTrendingLabel(this);">Try again</div>');
+	  	} else if(status === 'build-failed') {
+			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-failed.svg"></img></a>';
+			button = ('<div class="ui fluid ' + disabledStr + ' button"' +
+						' data-label="' + escapedTrendingLabel + '" onclick="addTrendingLabel(this);">Try again</div>');
 		}
 
         elem = $(('<tr>' +
                     '<td>' + escapedTrendingLabel  + '</td>' +	
-                    '<td class="center aligned">' + githubIssueUrl + '</td>' +
+					'<td class="center aligned">' + githubIssueUrl + '</td>' +
 					'<td class="center aligned" bgcolor="' + cellColor + '">' + status + '</td>' +
 					'<td class="">' + button + '</td>' +
                   '</tr>'));
@@ -111,7 +142,13 @@
     }
     $(document).ready(function() {
       getTrendingLabels();
-    });
+
+	  $("#addTrendingLabelDlgYesButton").click(function(e) {
+	    e.preventDefault();
+	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), getSelectedLabelType()); 
+
+      });
+	});
   
   </script>
 </head>
@@ -174,6 +211,41 @@
       </div>
       <div class="four wide center aligned column"></div>
     </div>
+
+
+	<div class="ui small modal" id="addTrendingLabelDlg" data-label-name="">
+	  <div class="header">
+		Add Trending Label
+	  </div>
+	  <div class="content">
+		<div class="ui form">
+		  <div class="grouped fields" id="labelTypeRadioButtons">
+			<label>Label Type</label>
+			<div class="field">
+			  <div class="ui radio checkbox">
+				<input type="radio" name="labelType" id="labelTypeNormalRadioButton" checked="checked">
+				<label>normal</label>
+			  </div>
+			</div>
+			<div class="field">
+			  <div class="ui radio checkbox">
+				<input type="radio" id="labelTypeSceneRadioButto" name="labelType">
+				<label>scene</label>
+			  </div>
+			</div>
+		  </div>
+		</div>			
+	  </div>
+	  <div class="actions">
+		<div class="ui negative button">
+		  Cancel
+		</div>
+		<div class="ui positive right labeled icon button" id="addTrendingLabelDlgYesButton">
+		  Done
+		  <i class="checkmark icon"></i>
+		</div>
+	  </div>
+	</div>
 
 
   </div>
