@@ -1,30 +1,30 @@
 package main
 
 import (
-	"github.com/getsentry/raven-go"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	http "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	log "github.com/sirupsen/logrus"
-	commons "github.com/bbernhard/imagemonkey-core/commons"
-	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	"flag"
-	"path/filepath"
+	"context"
 	"database/sql"
-	"os"
-	"time"
-	_ "github.com/lib/pq"
-	"github.com/gofrs/uuid"
-	"io/ioutil"
 	"encoding/json"
 	"errors"
-	"gopkg.in/resty.v1"
-	"github.com/google/go-github/github"
-	"golang.org/x/oauth2"
-	"context"
+	"flag"
 	"fmt"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+	"github.com/gofrs/uuid"
+	"github.com/google/go-github/github"
+	_ "github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
+	"gopkg.in/resty.v1"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	http "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 )
 
 var db *sql.DB
@@ -32,22 +32,22 @@ var db *sql.DB
 type TravisCiBuildInfo struct {
 	LastBuild struct {
 		State string `json:"state"`
-		Id int64 `json:"id"`
+		Id    int64  `json:"id"`
 	} `json:"last_build"`
 	JobUrl string `json:"job_url"`
 }
 
 type TravisCiApi struct {
 	repoOwner string
-	repo string
-	token string
+	repo      string
+	token     string
 }
 
 func NewTravisCiApi(repoOwner string, repo string) *TravisCiApi {
-    return &TravisCiApi{
+	return &TravisCiApi{
 		repoOwner: repoOwner,
-		repo: repo,
-	} 
+		repo:      repo,
+	}
 }
 
 func (p *TravisCiApi) SetToken(token string) {
@@ -55,18 +55,18 @@ func (p *TravisCiApi) SetToken(token string) {
 }
 
 func (p *TravisCiApi) GetBuildInfo(branchName string) (TravisCiBuildInfo, error) {
-	
+
 	url := "https://api.travis-ci.org/repo/" + p.repoOwner + "%2F" + p.repo + "/branch/" + branchName
 
 	var travisCiBuildInfo TravisCiBuildInfo
 
 	resp, err := resty.R().
-      SetHeader("Content-Type", "application/json").
-	  SetHeader("Accept", "application/json").
-	  SetHeader("Travis-API-Version", "3").
-	  SetHeader("Authorization", "token " + p.token).
-	  SetResult(&travisCiBuildInfo).
-      Get(url)
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeader("Travis-API-Version", "3").
+		SetHeader("Authorization", "token "+p.token).
+		SetResult(&travisCiBuildInfo).
+		Get(url)
 
 	if err != nil {
 		return travisCiBuildInfo, err
@@ -77,7 +77,7 @@ func (p *TravisCiApi) GetBuildInfo(branchName string) (TravisCiBuildInfo, error)
 	}
 	log.Info(resp.String())
 	travisCiBuildInfo.JobUrl = ("https://travis-ci.org/" + p.repoOwner + "/" + p.repo +
-								"/builds/" + strconv.FormatInt(travisCiBuildInfo.LastBuild.Id, 10))
+		"/builds/" + strconv.FormatInt(travisCiBuildInfo.LastBuild.Id, 10))
 	return travisCiBuildInfo, nil
 }
 
@@ -94,12 +94,12 @@ func (p *TravisCiApi) StartBuild(branchName string) error {
 	url := "https://api.travis-ci.org/repo/" + p.repoOwner + "%2F" + p.repo + "/requests"
 
 	resp, err := resty.R().
-      SetHeader("Content-Type", "application/json").
-	  SetHeader("Accept", "application/json").
-	  SetHeader("Travis-API-Version", "3").
-	  SetHeader("Authorization", "token " + p.token).
-	  SetBody(&req).
-      Post(url)
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeader("Travis-API-Version", "3").
+		SetHeader("Authorization", "token "+p.token).
+		SetBody(&req).
+		Post(url)
 
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (p *TravisCiApi) StartBuild(branchName string) error {
 		return errors.New(resp.String())
 	}
 	return nil
-	
+
 }
 
 type LabelsWriter struct {
@@ -117,9 +117,9 @@ type LabelsWriter struct {
 }
 
 func NewLabelsWriter(path string) *LabelsWriter {
-    return &LabelsWriter{
+	return &LabelsWriter{
 		path: path,
-	} 
+	}
 }
 
 func (p *LabelsWriter) GetFullPath() string {
@@ -131,17 +131,17 @@ func (p *LabelsWriter) GetFilename() string {
 }
 
 func (p *LabelsWriter) Add(name string, entry datastructures.LabelMapEntry) error {
-    var labelMap datastructures.LabelMap
-	
+	var labelMap datastructures.LabelMap
+
 	data, err := ioutil.ReadFile(p.path)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
 	err = json.Unmarshal([]byte(data), &labelMap)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
 	labelMap.LabelMapEntries[name] = entry
 
@@ -156,24 +156,24 @@ func (p *LabelsWriter) Add(name string, entry datastructures.LabelMapEntry) erro
 }
 
 type LabelsRepository struct {
-	projectOwner string
-	repositoryName string
-	repositoryUrl string
-	githubToken string
-	gitWorktree *git.Worktree
-	gitRepository *git.Repository
-	gitCheckoutDir string
+	projectOwner              string
+	repositoryName            string
+	repositoryUrl             string
+	githubToken               string
+	gitWorktree               *git.Worktree
+	gitRepository             *git.Repository
+	gitCheckoutDir            string
 	autoGeneratedLabelsWriter *LabelsWriter
 }
 
 func NewLabelsRepository(projectOwner string, repositoryName string, gitCheckoutDir string) *LabelsRepository {
-    return &LabelsRepository{
-		projectOwner: projectOwner,
-		repositoryName: repositoryName,
-		gitCheckoutDir: gitCheckoutDir,
-		repositoryUrl: "https://github.com/" + projectOwner + "/" + repositoryName,
-		autoGeneratedLabelsWriter : NewLabelsWriter(gitCheckoutDir + "/test.json"),
-	} 
+	return &LabelsRepository{
+		projectOwner:              projectOwner,
+		repositoryName:            repositoryName,
+		gitCheckoutDir:            gitCheckoutDir,
+		repositoryUrl:             "https://github.com/" + projectOwner + "/" + repositoryName,
+		autoGeneratedLabelsWriter: NewLabelsWriter(gitCheckoutDir + "/test.json"),
+	}
 }
 
 func (p *LabelsRepository) SetToken(token string) {
@@ -183,10 +183,10 @@ func (p *LabelsRepository) SetToken(token string) {
 func (p *LabelsRepository) Clone() error {
 	if _, err := os.Stat(p.gitCheckoutDir); os.IsNotExist(err) {
 		p.gitRepository, err = git.PlainClone(p.gitCheckoutDir, false, &git.CloneOptions{
-			URL: p.repositoryUrl,
+			URL:      p.repositoryUrl,
 			Progress: os.Stdout,
 		})
-		
+
 		if err != nil {
 			return errors.New("Couldn't clone " + p.repositoryUrl + ": " + err.Error())
 		}
@@ -210,13 +210,12 @@ func (p *LabelsRepository) Clone() error {
 	return nil
 }
 
-
-func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (string, error) {	
+func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (string, error) {
 	branchNameUuid, err := uuid.NewV4()
 	if err != nil {
 		return "", errors.New("Couldn't create branch name: " + err.Error())
 	}
-		
+
 	err = createGitBranch(p.gitWorktree, branchNameUuid.String())
 	if err != nil {
 		return "", errors.New("Couldn't create git branch " + branchNameUuid.String() + ": " + err.Error())
@@ -238,7 +237,7 @@ func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (s
 		return "", errors.New("Couldn't add file: " + err.Error())
 	}
 
-	err = gitCommit(p.gitWorktree, "added label " + trendingLabel.Name)
+	err = gitCommit(p.gitWorktree, "added label "+trendingLabel.Name)
 	if err != nil {
 		return "", errors.New("Couldn't commit: " + err.Error())
 	}
@@ -247,7 +246,7 @@ func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (s
 	if err != nil {
 		return "", errors.New("Couldn't push: " + err.Error())
 	}
-	
+
 	return branchNameUuid.String(), nil
 }
 
@@ -263,17 +262,17 @@ func (p *LabelsRepository) MergeRemoteBranchIntoMaster(branchName string) error 
 	//create a new comment
 	newPullRequest := &github.NewPullRequest{
 		Title: github.String("test"),
-		Head: github.String(branchName),
-		Base: github.String("master"),
+		Head:  github.String(branchName),
+		Base:  github.String("master"),
 	}
 
 	pullRequest, _, err := client.PullRequests.Create(ctx, p.projectOwner, p.repositoryName, newPullRequest)
 	if err != nil {
 		return err
 	}
-	
+
 	_, _, err = client.PullRequests.Merge(ctx, p.projectOwner, p.repositoryName, *pullRequest.Number, "merged", &github.PullRequestOptions{})
-	
+
 	return err
 }
 
@@ -295,7 +294,7 @@ func (p *LabelsRepository) RemoveRemoteBranch(branchName string) error {
 	return err
 }
 
-func (p *LabelsRepository) RemoveLocal() error {	
+func (p *LabelsRepository) RemoveLocal() error {
 	return os.RemoveAll(p.gitCheckoutDir)
 }
 
@@ -364,13 +363,13 @@ func resetTrendingLabelBotTaskState(id int64) error {
 						SET state = 'accepted', branch_name = null, job_url = null,
 						try = try + 1
 						WHERE id = $1`, id)
-	return err	
+	return err
 }
 
 type TrendingLabel struct {
-	Name string `json:"name"`
-	BotTaskId int64 `json:"bot_task_id"`
-	State string `json:"state"`
+	Name       string `json:"name"`
+	BotTaskId  int64  `json:"bot_task_id"`
+	State      string `json:"state"`
 	BranchName string `json:"branch_name"`
 }
 
@@ -385,7 +384,7 @@ func getTrendingLabels() ([]TrendingLabel, error) {
 						   (b.state = 'accepted' OR b.state='pending' OR b.state='building' 
 						   	OR b.state='build-success' OR b.state='retry')`)
 	if err != nil {
-		return trendingLabels, err	
+		return trendingLabels, err
 	}
 
 	defer rows.Close()
@@ -403,7 +402,7 @@ func getTrendingLabels() ([]TrendingLabel, error) {
 	return trendingLabels, nil
 }
 
-func generateLabelEntry(name string) (datastructures.LabelMapEntry, error)  {
+func generateLabelEntry(name string) (datastructures.LabelMapEntry, error) {
 	var labelMapEntry datastructures.LabelMapEntry
 	labelMapEntry.Description = ""
 	labelMapEntry.Accessors = append(labelMapEntry.Accessors, ".")
@@ -418,18 +417,17 @@ func generateLabelEntry(name string) (datastructures.LabelMapEntry, error)  {
 	return labelMapEntry, nil
 }
 
-
 func main() {
 	labelsRepositoryName := flag.String("labels_repository_name", "imagemonkey-trending-labels-test", "Label Repository Name")
 	labelsRepositoryOwner := flag.String("labels_repository_owner", "bbernhard", "Label Repository Owner")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
-	labelsPath := flag.String("labels", "../wordlists/en/labels.jsonnet", "Path to labels")	
+	labelsPath := flag.String("labels", "../wordlists/en/labels.jsonnet", "Path to labels")
 	gitCheckoutDir := flag.String("git_checkout_dir", "/tmp/labelrepository", "Git checkout directory")
-	
+
 	flag.Parse()
 
 	log.SetLevel(log.DebugLevel)
-	log.Info("Starting ImageMonkey Bot")	
+	log.Info("Starting ImageMonkey Bot")
 
 	imageMonkeyBotGithubApiToken := commons.MustGetEnv("IMAGEMONKEY_BOT_GITHUB_API_TOKEN")
 	travisCiApiToken := commons.MustGetEnv("IMAGEMONKEY_TRAVIS_CI_TOKEN")
@@ -471,13 +469,13 @@ func main() {
 	for {
 
 		if !firstIteration {
-			time.Sleep(1 * time.Second)	
+			time.Sleep(1 * time.Second)
 		} else {
 			firstIteration = false
 		}
 
 		log.Debug("Fetch trending labels")
-		
+
 		trendingLabels, err := getTrendingLabels()
 		if err != nil {
 			log.Error("Couldn't get trending labels: ", err.Error())
@@ -497,7 +495,6 @@ func main() {
 					}
 					continue //trendinglabel already exists
 				}
-
 
 				err = labelsRepository.Clone()
 				if err != nil {
@@ -528,8 +525,8 @@ func main() {
 					continue
 				}
 				trendingLabel.State = "pending"
-				trendingLabel.BranchName = branchName 
-			} 
+				trendingLabel.BranchName = branchName
+			}
 			if trendingLabel.State == "pending" {
 				err = travisCiApi.StartBuild(trendingLabel.BranchName)
 				if err != nil {
@@ -592,7 +589,7 @@ func main() {
 			if trendingLabel.State == "retry" {
 				err = labelsRepository.RemoveRemoteBranch(trendingLabel.BranchName)
 				if err != nil {
-					log.Error("Couldn't remove branch ", trendingLabel.BranchName, ": ", err.Error())	
+					log.Error("Couldn't remove branch ", trendingLabel.BranchName, ": ", err.Error())
 					raven.CaptureError(err, nil)
 					continue
 				}
