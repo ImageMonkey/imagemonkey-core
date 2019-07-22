@@ -2367,6 +2367,20 @@ func main(){
 				return
 			}
 
+			type LabelType struct {
+				Type string `json:"label_type"`
+			}
+			var labelType LabelType
+			err := c.BindJSON(&labelType)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
+				return
+			}
+			if (labelType.Type != "normal") && (labelType.Type != "scene") {
+				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
+				return
+			}
+
 			var apiUser datastructures.APIUser
 			apiUser.ClientFingerprint = getBrowserFingerprint(c)
 			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
@@ -2382,7 +2396,7 @@ func main(){
 				return
 			}
 
-			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, userInfo)
+			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelType.Type, userInfo)
 			if err != nil {
 				switch err.(type) {
 					case *imagemonkeydb.InvalidTrendingLabelError:

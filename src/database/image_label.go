@@ -690,7 +690,7 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 	return trendingLabels, nil
 }
 
-func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, userInfo datastructures.UserInfo) error {
+func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string, userInfo datastructures.UserInfo) error {
 	status := "waiting for moderator approval"
 	if userInfo.Permissions != nil && userInfo.Permissions.CanAcceptTrendingLabel {
 		status = "accepted"
@@ -703,13 +703,13 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, userInfo datastru
 		return err
 	}
 
-	rows, err := tx.Query(`INSERT INTO trending_label_bot_task(trending_label_suggestion_id, state, try)
-								SELECT l.id, $1, 1
+	rows, err := tx.Query(`INSERT INTO trending_label_bot_task(trending_label_suggestion_id, state, try, label_type)
+								SELECT l.id, $1, 1, $3
 								FROM trending_label_suggestion l
 								JOIN label_suggestion s ON s.id = l.label_suggestion_id 
 								WHERE s.name = $2
 							 ON CONFLICT DO NOTHING
-							 RETURNING id`, status, name)
+							 RETURNING id`, status, name, labelType)
 
 	if err != nil {
 		tx.Rollback()

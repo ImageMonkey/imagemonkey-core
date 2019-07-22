@@ -42,7 +42,7 @@
       $.ajax({
         url: url,
 	    type: 'POST',
-        data: {"label_type": labelType},
+        data: JSON.stringify({"label_type": labelType}),
 	    dataType: 'json',
         beforeSend: function(xhr) {
           xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
