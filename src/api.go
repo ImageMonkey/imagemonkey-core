@@ -2376,7 +2376,7 @@ func main(){
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
 				return
 			}
-			if (labelType.Type != "normal") && (labelType.Type != "scene") {
+			if (labelType.Type != "normal") && (labelType.Type != "meta") {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
 				return
 			}

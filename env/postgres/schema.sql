@@ -5,7 +5,7 @@
 -- Dumped from database version 9.6.12
 -- Dumped by pg_dump version 9.6.12
 
--- Started on 2019-07-22 21:53:16 CEST
+-- Started on 2019-07-23 18:48:48 CEST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -166,12 +166,12 @@ CREATE TYPE public.geomvaltxt AS (
 ALTER TYPE public.geomvaltxt OWNER TO postgres;
 
 --
--- TOC entry 2216 (class 1247 OID 4431888)
+-- TOC entry 2216 (class 1247 OID 4431908)
 -- Name: label_bot_label_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE public.label_bot_label_type AS ENUM (
-    'scene',
+    'meta',
     'normal'
 );
 
@@ -6101,7 +6101,7 @@ REVOKE ALL ON SCHEMA public FROM postgres;
 GRANT ALL ON SCHEMA public TO monkey;
 
 
--- Completed on 2019-07-22 21:53:17 CEST
+-- Completed on 2019-07-23 18:48:50 CEST
 
 --
 -- PostgreSQL database dump complete

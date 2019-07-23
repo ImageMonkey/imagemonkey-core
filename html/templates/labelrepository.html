@@ -19,67 +19,56 @@
   <script src="/js/common.js"></script> 
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
   <script src="js/tablesort/tablesort.js"></script>
+  <script src="js/imagemonkey/api.js?v=2"></script>
 
   <script>
+    var imageMonkeyApi = null; 
+
     function getSelectedLabelType() {
       var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
       if(radioButtonId === "labelTypeNormalRadioButton"){
         return "normal";
       }
       if(radioButtonId === "labelTypeSceneRadioButton"){
-        return "scene";
+        return "meta";
       }
       return "";
     }
-    function addTrendingLabel(elem) {
+    function onAddTrendingLabel(elem) {
 	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
       $("#addTrendingLabelDlg").modal("show"); 
 	}
 
+	function onAcceptTrendingLabel(elem) {
+	  acceptTrendingLabel($(elem).attr("data-label"), $(elem).attr("data-label-type"));	
+	}
+
 	function acceptTrendingLabel(labelName, labelType) {
-      $("#loadingIndicator").show();
-	  var url = '{{ .apiBaseUrl }}/v1/trendinglabels/' + labelName + "/accept";
-      $.ajax({
-        url: url,
-	    type: 'POST',
-        data: JSON.stringify({"label_type": labelType}),
-	    dataType: 'json',
-        beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-          $("#loadingIndicator").hide();
+	  $("#loadingIndicator").show();
+	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType)
+	    .then(function() {
+		  $("#loadingIndicator").hide();
+          getTrendingLabels();
+		}).catch(function() {
+		  $("#loadingIndicator").hide();
           $("#warningMessageBoxContent").text("Couldn't accept trending label - please try again later");
           $("#warningMessageBox").show(200).delay(1500).hide(200);
-        },
-        success: function(data) { 
-          $("#loadingIndicator").hide();
-          getTrendingLabels(); 
-        }
-      });
+		});
 	}
-	
+
 	function getTrendingLabels() {
+	  $("#loadingIndicator").show();
 	  $("#labelRepositoryTableContent").empty();
-      $("#loadingIndicator").show();
-      var url = '{{ .apiBaseUrl }}/v1/trendinglabels';
-      $.ajax({
-        url: url,
-        dataType: 'json',
-        beforeSend: function(xhr) {
-          xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-          $("#loadingIndicator").hide();
-          $("#warningMessageBoxContent").text("Couldn't get trending labels - please try again later");
-          $("#warningMessageBox").show(200).delay(1500).hide(200);
-        },
-        success: function(data) {
-          $("#loadingIndicator").hide();
+	  imageMonkeyApi.getTrendingLabels()
+	    .then(function(data) {
+		  $("#loadingIndicator").hide();
           populateLabelRepositoryTable(data);
-        }
-      });
-    }
+		}).catch(function() {
+		  $("#loadingIndicator").hide();
+          $("#warningMessageBoxContent").text("Couldn't get trending label - please try again later");
+          $("#warningMessageBox").show(200).delay(1500).hide(200);
+		});
+	}
 
     function populateLabelRepositoryTable(data) {
       $("#loadingIndicator").show();
@@ -108,11 +97,13 @@
 		if(status === '') {
 			status = 'open';	
 			button = ('<div class="ui fluid ' + disabledStr + 'button" data-label="' + 
-						 escapedTrendingLabel+ '" onclick="addTrendingLabel(this);">Add</div>');
+						 escapedTrendingLabel+ '" onclick="onAddTrendingLabel(this);">Add</div>');
 		} else if(status === 'waiting for moderator approval') {
+			var labelType = data[i].label.type;
 			{{ if .sessionInformation.UserPermissions }}
 			{{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
-			button = '<div class="ui fluid button" data-label="' + escapedTrendingLabel + '" id="trendingLabel"+i onclick="addTrendingLabel(this);">Accept</div>';
+			button = ('<div class="ui fluid button" data-label-type="' + labelType + '" data-label="' 
+						+ escapedTrendingLabel + '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
 			{{ end }}
 			{{ end }}
 		} else if(status === 'building') {
@@ -122,11 +113,11 @@
 		} else if(status === 'build-canceled') {
 			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-canceled.svg"></img></a>';
 			button = ('<div class="ui fluid ' + disabledStr + ' button"' + 
-						' data-label="' + escapedTrendingLabel + '" onclick="addTrendingLabel(this);">Try again</div>');
+						' data-label="' + escapedTrendingLabel + '" onclick="onAddTrendingLabel(this);">Try again</div>');
 	  	} else if(status === 'build-failed') {
 			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-failed.svg"></img></a>';
 			button = ('<div class="ui fluid ' + disabledStr + ' button"' +
-						' data-label="' + escapedTrendingLabel + '" onclick="addTrendingLabel(this);">Try again</div>');
+						' data-label="' + escapedTrendingLabel + '" onclick="onAddTrendingLabel(this);">Try again</div>');
 		}
 
         elem = $(('<tr>' +
@@ -141,7 +132,9 @@
       $("#loadingIndicator").hide();
     }
     $(document).ready(function() {
-      getTrendingLabels();
+      imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
+	  imageMonkeyApi.setToken(getCookie("imagemonkey"));
+	  getTrendingLabels();
 
 	  $("#addTrendingLabelDlgYesButton").click(function(e) {
 	    e.preventDefault();
@@ -230,7 +223,7 @@
 			<div class="field">
 			  <div class="ui radio checkbox">
 				<input type="radio" id="labelTypeSceneRadioButto" name="labelType">
-				<label>scene</label>
+				<label>meta</label>
 			  </div>
 			</div>
 		  </div>

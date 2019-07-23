@@ -742,6 +742,9 @@ type ApiTokenRequest struct {
 
 type TrendingLabel struct {
 	Name string `json:"name"`
+	Label struct {
+		Type string `json:"type"`
+	} `json:"label"`
 	GithubIssue struct {
 		Id int `json:"id"`
 		Closed bool `json:"closed"`
