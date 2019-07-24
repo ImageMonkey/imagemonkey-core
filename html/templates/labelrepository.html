@@ -79,9 +79,12 @@
  
       for(var i = 0; i < data.length; i++) {
 		var githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
-								'/issues/' + data[i].github_issue.id + '">' +
-								'#' +  data[i].github_issue.id + '</a>');
-		var cellColor = data[i].github_issue.closed ? "#76ff03" : "#ffffff";
+								'/issues/' + data[i].github.issue.id + '">' +
+								'#' +  data[i].github.issue.id + '</a>');
+		var githubBranchUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
+								'/branches/' + data[i].github.branch_name + '">' +
+									data[i].github.branch_name + '</a>');
+		var cellColor = data[i].github.issue.closed ? "#76ff03" : "#ffffff";
 		var status = data[i].status;
 		var button = '';
 
@@ -123,6 +126,7 @@
         elem = $(('<tr>' +
                     '<td>' + escapedTrendingLabel  + '</td>' +	
 					'<td class="center aligned">' + githubIssueUrl + '</td>' +
+					'<td class="center aligned">' + githubBranchUrl + '</td>' +
 					'<td class="center aligned" bgcolor="' + cellColor + '">' + status + '</td>' +
 					'<td class="">' + button + '</td>' +
                   '</tr>'));
@@ -191,7 +195,8 @@
             <thead>
               <tr>
                 <th>Name</th>
-                <th class="center aligned"><i class="github icon"></i>Github</th>
+                <th class="center aligned"><i class="github icon"></i>Github Issue</th>
+				<th class="center aligned"><i class="github icon"></i>Github Branch</th>
 				<th class="center aligned"><i class="question circle icon"></i>Status</th>
 				<th class=""></th>
               </tr>

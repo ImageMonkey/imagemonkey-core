@@ -743,12 +743,15 @@ type ApiTokenRequest struct {
 type TrendingLabel struct {
 	Name string `json:"name"`
 	Label struct {
-		Type string `json:"type"`
+		Type string `json:"type"`	
 	} `json:"label"`
-	GithubIssue struct {
-		Id int `json:"id"`
-		Closed bool `json:"closed"`
-	} `json:"github_issue"`
+	Github struct {
+		Issue struct {
+			Id int `json:"id"`
+			Closed bool `json:"closed"`
+		} `json:"issue"`
+		BranchName string `json:"branch_name"`
+	} `json:"github"`
 	Status string `json:"status"`
 	Ci struct {
 		JobUrl string `json:"job_url"`
