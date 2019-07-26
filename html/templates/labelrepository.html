@@ -24,6 +24,10 @@
   <script>
     var imageMonkeyApi = null; 
 
+	function getLabelDescription() {
+      return "";
+	}
+
     function getSelectedLabelType() {
       var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
       if(radioButtonId === "labelTypeNormalRadioButton"){
@@ -40,12 +44,20 @@
 	}
 
 	function onAcceptTrendingLabel(elem) {
-	  acceptTrendingLabel($(elem).attr("data-label"), $(elem).attr("data-label-type"));	
+      $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
+      $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
+      var labelType = $(elem).attr("data-label-type");
+      if(labelType === "normal")
+        $("#labelTypeNormalRadioButton").checkbox("set checked"); 
+      else
+        $("#labelTypeSceneRadioButton").checkbox("set checked");
+	    
+      $("#addTrendingLabelDlg").modal("show");	
 	}
 
-	function acceptTrendingLabel(labelName, labelType) {
+	function acceptTrendingLabel(labelName, labelType, labelDescription) {
 	  $("#loadingIndicator").show();
-	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType)
+	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription)
 	    .then(function() {
 		  $("#loadingIndicator").hide();
           getTrendingLabels();
@@ -78,7 +90,9 @@
 	  {{ end }}
  
       for(var i = 0; i < data.length; i++) {
-		var githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
+		var githubIssueUrl = '';
+		if(data[i].github.issue.id !== -1)
+			githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
 								'/issues/' + data[i].github.issue.id + '">' +
 								'#' +  data[i].github.issue.id + '</a>');
 		var githubBranchUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
@@ -97,6 +111,7 @@
 		var entryId = "trendingLabel" + i;
 
 		var escapedTrendingLabel = escapeHtml(data[i].name);
+		var escapedTrendingLabelDescription = escapeHtml(data[i].description);
 		if(status === '') {
 			status = 'open';	
 			button = ('<div class="ui fluid ' + disabledStr + 'button" data-label="' + 
@@ -105,8 +120,9 @@
 			var labelType = data[i].label.type;
 			{{ if .sessionInformation.UserPermissions }}
 			{{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
-			button = ('<div class="ui fluid button" data-label-type="' + labelType + '" data-label="' 
-						+ escapedTrendingLabel + '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
+			button = ('<div class="ui fluid button" data-label-description="' +  escapedTrendingLabelDescription 
+						+ '" data-label-type="' + labelType + '" data-label="' + escapedTrendingLabel 
+						+ '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
 			{{ end }}
 			{{ end }}
 		} else if(status === 'building') {
@@ -142,7 +158,7 @@
 
 	  $("#addTrendingLabelDlgYesButton").click(function(e) {
 	    e.preventDefault();
-	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), getSelectedLabelType()); 
+	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), getSelectedLabelType(), getLabelDescription()); 
 
       });
 	});
@@ -215,7 +231,7 @@
 	  <div class="header">
 		Add Trending Label
 	  </div>
-	  <div class="content">
+	  <div class="content">	
 		<div class="ui form">
 		  <div class="grouped fields" id="labelTypeRadioButtons">
 			<label>Label Type</label>
@@ -232,7 +248,15 @@
 			  </div>
 			</div>
 		  </div>
-		</div>			
+		</div>
+		
+		<br>	
+		<b>(Optional) Label Description</b>
+		<br>
+		<div class="ui input">
+          <input type="text" placeholder="Enter an optional description" id="addTrendingLabelDlgDescriptionInput">
+        </div>			
+	  
 	  </div>
 	  <div class="actions">
 		<div class="ui negative button">

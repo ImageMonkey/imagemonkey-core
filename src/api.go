@@ -2367,16 +2367,19 @@ func main(){
 				return
 			}
 
-			type LabelType struct {
-				Type string `json:"label_type"`
-			}
-			var labelType LabelType
-			err := c.BindJSON(&labelType)
+			type LabelDetails struct {
+				Label struct {
+					Type string `json:"type"`
+					Description string `json:"description"`
+				} `json:"label"`
+			} 
+			var labelDetails LabelDetails
+			err := c.BindJSON(&labelDetails)
 			if err != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
 				return
 			}
-			if (labelType.Type != "normal") && (labelType.Type != "meta") {
+			if (labelDetails.Label.Type != "normal") && (labelDetails.Label.Type != "meta") {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
 				return
 			}
@@ -2396,7 +2399,7 @@ func main(){
 				return
 			}
 
-			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelType.Type, userInfo)
+			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelDetails.Label.Type, labelDetails.Label.Description, userInfo)
 			if err != nil {
 				switch err.(type) {
 					case *imagemonkeydb.InvalidTrendingLabelError:

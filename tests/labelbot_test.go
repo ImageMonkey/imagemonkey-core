@@ -8,7 +8,7 @@ import (
 
 func testGetTrendingLabels(t *testing.T, token string, requiredStatusCode int) []datastructures.TrendingLabel {
 	var trendingLabels []datastructures.TrendingLabel
-	
+
 	url := BASE_URL + API_VERSION + "/trendinglabels"
 	req := resty.R().
      	SetResult(&trendingLabels)
@@ -25,9 +25,21 @@ func testGetTrendingLabels(t *testing.T, token string, requiredStatusCode int) [
     return trendingLabels
 }
 
-func testAcceptTrendingLabel(t *testing.T, name string, token string, requiredStatusCode int) {
-	url := BASE_URL + API_VERSION + "/trendinglabels/" + name + "/accept" 
-	req := resty.R()
+func testAcceptTrendingLabel(t *testing.T, name string, token string, labelType string, requiredStatusCode int) {
+	url := BASE_URL + API_VERSION + "/trendinglabels/" + name + "/accept" 	
+
+	type TrendingLabelType struct {
+		Label struct {
+			Type string `json:"type"`
+			Description string `json:"description"`
+		} `json:"label"`
+	}
+
+	var trendingLabelType TrendingLabelType
+	trendingLabelType.Label.Type = labelType
+
+	req := resty.R().
+			SetBody(&trendingLabelType)	
 	
 	if token != "" {
 		req.SetAuthToken(token)	
@@ -82,7 +94,7 @@ func TestAcceptTrendingLabelForBot(t *testing.T) {
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 }
 
 func TestAcceptTrendingLabelForBot2(t *testing.T) {
@@ -110,7 +122,7 @@ func TestAcceptTrendingLabelForBot2(t *testing.T) {
 	ok(t, err)
 	equals(t, beforeState, "")
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -145,7 +157,7 @@ func TestAcceptTrendingLabelForBotWithModeratorPermissions(t *testing.T) {
 	err = db.GiveUserModeratorRights("testuser")
 	ok(t, err)
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -173,7 +185,7 @@ func TestCouldntAcceptTrendingLabelForBotAsNotAuthenticated(t *testing.T) {
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "invalid token", 401)
+	testAcceptTrendingLabel(t, "hallowelt 1", "invalid token", "normal", 401)
 }
 
 func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
@@ -198,7 +210,7 @@ func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
 	equals(t, len(trendingLabels), 2)
 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 
 	err = db.SetTrendingLabelBotTaskState("hallowelt 1", "build-failed")
 	ok(t, err)
@@ -207,7 +219,7 @@ func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
 	ok(t, err)
 	equals(t, beforeState, "build-failed") 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -235,7 +247,7 @@ func TestCouldntAcceptTrendingLabelForBotAsWrongLabelName(t *testing.T) {
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
 
-	testAcceptTrendingLabel(t, "not-existing", token, 404)
+	testAcceptTrendingLabel(t, "not-existing", token, "normal", 404)
 }
 
 
@@ -261,7 +273,7 @@ func TestCannotChangeTrendingLabelBotTaskStateWhileBuilding(t *testing.T) {
 	equals(t, len(trendingLabels), 2)
 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 
 	err = db.SetTrendingLabelBotTaskState("hallowelt 1", "building")
 	ok(t, err)
@@ -270,7 +282,7 @@ func TestCannotChangeTrendingLabelBotTaskStateWhileBuilding(t *testing.T) {
 	ok(t, err)
 	equals(t, beforeState, "building") 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", token, 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)

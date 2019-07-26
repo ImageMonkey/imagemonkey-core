@@ -49,7 +49,7 @@ var ImageMonkeyApi = (function () {
         });
     }
 
-	ImageMonkeyApi.prototype.acceptTrendingLabel = function(labelName, labelType) {
+	ImageMonkeyApi.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription) {
 		var inst = this;
 		return new Promise(function(resolve, reject) {
 			var url = inst.baseUrl + "/" + inst.apiVersion + "/trendinglabels/" + labelName + "/accept";
@@ -61,7 +61,7 @@ var ImageMonkeyApi = (function () {
                 resolve();
             }
             xhr.onerror = reject;
-            xhr.send(JSON.stringify({"label_type": labelType}));
+            xhr.send(JSON.stringify({"label": {"type": labelType, "description": labelDescription}}));
 		});
 	}
 
