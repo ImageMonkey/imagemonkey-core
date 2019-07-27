@@ -657,10 +657,17 @@ func main() {
 					raven.CaptureError(err, nil)
 					continue
 				}
-				if travisCiBuildInfo.LastBuild.State == "started" {
+				if travisCiBuildInfo.LastBuild.State == "created" {
 					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
-						log.Error("Couldn't set trending label bot task state to build-success: ", err.Error())
+						log.Error("Couldn't set trending label bot task state to buildings: ", err.Error())
+						raven.CaptureError(err, nil)
+						continue
+					}
+				} else if travisCiBuildInfo.LastBuild.State == "started" {
+					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+					if err != nil {
+						log.Error("Couldn't set trending label bot task state to building: ", err.Error())
 						raven.CaptureError(err, nil)
 						continue
 					}
