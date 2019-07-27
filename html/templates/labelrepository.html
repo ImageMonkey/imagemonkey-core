@@ -34,10 +34,10 @@
 
     function getSelectedLabelType() {
       var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
-      if(radioButtonId === "labelTypeNormalRadioButton"){
+      if(radioButtonId === "labelTypeNormalRadioButtonInput"){
         return "normal";
       }
-      if(radioButtonId === "labelTypeMetaRadioButton"){
+      if(radioButtonId === "labelTypeMetaRadioButtonInput"){
         return "meta";
       }
       return "";
@@ -45,18 +45,30 @@
     function onAddTrendingLabel(elem) {
 	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
 	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label") + "s");
-      $("#addTrendingLabelDlg").modal("show"); 
+      var labelType = getSelectedLabelType(); 
+	  if(labelType === "normal") {
+        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
+      }
+	  else {
+        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", true);
+	  } 
+	  
+	  $("#addTrendingLabelDlg").modal("show"); 
 	}
 
 	function onAcceptTrendingLabel(elem) {
-      $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
-      $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
+      $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label")); 
+	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label-plural"));
+	  $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
       var labelType = $(elem).attr("data-label-type");
-      if(labelType === "normal")
-        $("#labelTypeNormalRadioButton").checkbox("set checked"); 
-      else
+      if(labelType === "normal") {
+        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
+		$("#labelTypeNormalRadioButton").checkbox("set checked"); 
+      }
+	  else {
+        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", true);
         $("#labelTypeMetaRadioButton").checkbox("set checked");
-	    
+	  }  
       $("#addTrendingLabelDlg").modal("show");	
 	}
 
@@ -116,8 +128,8 @@
 		var entryId = "trendingLabel" + i;
 
 		var escapedTrendingLabel = escapeHtml(data[i].name);
-		var escapedTrendingLabelDescription = escapeHtml(data[i].description);
-		var escapedTrendingLabelPlural = escapeHtml(data[i].plural);
+		var escapedTrendingLabelDescription = escapeHtml(data[i].label.description);
+		var escapedTrendingLabelPlural = escapeHtml(data[i].label.plural);
 		if(status === '') {
 			status = 'open';	
 			button = ('<div class="ui fluid ' + disabledStr + 'button" data-label="' + 
@@ -168,6 +180,14 @@
 							getSelectedLabelType(), getLabelDescription(), getLabelPlural()); 
 
       });
+
+	  $("#labelTypeNormalRadioButton").click(function(e) {
+		$("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
+	  });
+	  $("#labelTypeMetaRadioButton").click(function(e) {
+		$("#addTrendingLabelDlgPluralFormInput").prop("disabled", true);
+	  });
+
 	});
   
   </script>
@@ -243,14 +263,14 @@
 		  <div class="grouped fields" id="labelTypeRadioButtons">
 			<label>label type</label>
 			<div class="field">
-			  <div class="ui radio checkbox">
-				<input type="radio" name="labelType" id="labelTypeNormalRadioButton" checked="checked">
+			  <div class="ui radio checkbox" id="labelTypeNormalRadioButton">
+				<input type="radio" name="labelType" id="labelTypeNormalRadioButtonInput" checked="checked">
 				<label>normal</label>
 			  </div>
 			</div>
 			<div class="field">
-			  <div class="ui radio checkbox">
-				<input type="radio" id="labelTypeMetaRadioButton" name="labelType">
+			  <div class="ui radio checkbox" id="labelTypeMetaRadioButton">
+				<input type="radio" id="labelTypeMetaRadioButtonInput" name="labelType">
 				<label>meta</label>
 			  </div>
 			</div>
