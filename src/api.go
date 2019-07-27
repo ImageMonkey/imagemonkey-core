@@ -2371,6 +2371,8 @@ func main(){
 				Label struct {
 					Type string `json:"type"`
 					Description string `json:"description"`
+					Plural string `json:"plural"`
+
 				} `json:"label"`
 			} 
 			var labelDetails LabelDetails
@@ -2399,7 +2401,8 @@ func main(){
 				return
 			}
 
-			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelDetails.Label.Type, labelDetails.Label.Description, userInfo)
+			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelDetails.Label.Type, 
+						labelDetails.Label.Description, labelDetails.Label.Plural, userInfo)
 			if err != nil {
 				switch err.(type) {
 					case *imagemonkeydb.InvalidTrendingLabelError:

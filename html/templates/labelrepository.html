@@ -25,7 +25,11 @@
     var imageMonkeyApi = null; 
 
 	function getLabelDescription() {
-      return "";
+      return $("#addTrendingLabelDlgDescriptionInput").val();
+	}
+
+	function getLabelPlural() {
+	  return $("#addTrendingLabelDlgPluralFormInput").val(); 
 	}
 
     function getSelectedLabelType() {
@@ -33,13 +37,14 @@
       if(radioButtonId === "labelTypeNormalRadioButton"){
         return "normal";
       }
-      if(radioButtonId === "labelTypeSceneRadioButton"){
+      if(radioButtonId === "labelTypeMetaRadioButton"){
         return "meta";
       }
       return "";
     }
     function onAddTrendingLabel(elem) {
 	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
+	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label") + "s");
       $("#addTrendingLabelDlg").modal("show"); 
 	}
 
@@ -50,14 +55,14 @@
       if(labelType === "normal")
         $("#labelTypeNormalRadioButton").checkbox("set checked"); 
       else
-        $("#labelTypeSceneRadioButton").checkbox("set checked");
+        $("#labelTypeMetaRadioButton").checkbox("set checked");
 	    
       $("#addTrendingLabelDlg").modal("show");	
 	}
 
-	function acceptTrendingLabel(labelName, labelType, labelDescription) {
+	function acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural) {
 	  $("#loadingIndicator").show();
-	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription)
+	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural)
 	    .then(function() {
 		  $("#loadingIndicator").hide();
           getTrendingLabels();
@@ -112,6 +117,7 @@
 
 		var escapedTrendingLabel = escapeHtml(data[i].name);
 		var escapedTrendingLabelDescription = escapeHtml(data[i].description);
+		var escapedTrendingLabelPlural = escapeHtml(data[i].plural);
 		if(status === '') {
 			status = 'open';	
 			button = ('<div class="ui fluid ' + disabledStr + 'button" data-label="' + 
@@ -122,7 +128,7 @@
 			{{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
 			button = ('<div class="ui fluid button" data-label-description="' +  escapedTrendingLabelDescription 
 						+ '" data-label-type="' + labelType + '" data-label="' + escapedTrendingLabel 
-						+ '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
+						+ '" data-label-plural="' + escapedTrendingLabelPlural + '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
 			{{ end }}
 			{{ end }}
 		} else if(status === 'building') {
@@ -158,7 +164,8 @@
 
 	  $("#addTrendingLabelDlgYesButton").click(function(e) {
 	    e.preventDefault();
-	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), getSelectedLabelType(), getLabelDescription()); 
+	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), 
+							getSelectedLabelType(), getLabelDescription(), getLabelPlural()); 
 
       });
 	});
@@ -234,7 +241,7 @@
 	  <div class="content">	
 		<div class="ui form">
 		  <div class="grouped fields" id="labelTypeRadioButtons">
-			<label>Label Type</label>
+			<label>label type</label>
 			<div class="field">
 			  <div class="ui radio checkbox">
 				<input type="radio" name="labelType" id="labelTypeNormalRadioButton" checked="checked">
@@ -243,19 +250,27 @@
 			</div>
 			<div class="field">
 			  <div class="ui radio checkbox">
-				<input type="radio" id="labelTypeSceneRadioButto" name="labelType">
+				<input type="radio" id="labelTypeMetaRadioButton" name="labelType">
 				<label>meta</label>
 			  </div>
 			</div>
 		  </div>
 		</div>
 		
+		<br>
+		<b>plural form</b>
+		<br>
+		<div class="ui input">
+          <input type="text" placeholder="The plural form of the label" id="addTrendingLabelDlgPluralFormInput">
+        </div>	
+
 		<br>	
-		<b>(Optional) Label Description</b>
+		<br>
+		<b>(optional) label description</b>
 		<br>
 		<div class="ui input">
           <input type="text" placeholder="Enter an optional description" id="addTrendingLabelDlgDescriptionInput">
-        </div>			
+        </div>				
 	  
 	  </div>
 	  <div class="actions">

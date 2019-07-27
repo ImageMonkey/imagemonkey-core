@@ -270,7 +270,7 @@ func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (s
 
 
 	if trendingLabel.LabelType == "normal" {
-		labelEntry, err := generateLabelEntry(trendingLabel.Name)
+		labelEntry, err := generateLabelEntry(trendingLabel.Name, trendingLabel.Plural, trendingLabel.Description)
 		if err != nil {
 			return "", errors.New("Couldn't generate label entry: " + err.Error())
 		}
@@ -285,7 +285,7 @@ func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (s
 			return "", errors.New("Couldn't add file: " + err.Error())
 		}
 	} else if trendingLabel.LabelType == "meta" {
-		metaLabelEntry, err := generateMetaLabelEntry(trendingLabel.Name)
+		metaLabelEntry, err := generateMetaLabelEntry(trendingLabel.Name, trendingLabel.Plural, trendingLabel.Description)
 		if err != nil {
 			return "", errors.New("Couldn't generate label entry: " + err.Error())
 		}
@@ -438,12 +438,15 @@ type TrendingLabel struct {
 	State      string `json:"state"`
 	BranchName string `json:"branch_name"`
 	LabelType string `json:"label_type"`
+	Plural string `json:"plural"`
+	Description string `json:"description"`
 }
 
 func getTrendingLabels() ([]TrendingLabel, error) {
 	trendingLabels := []TrendingLabel{}
 
-	rows, err := db.Query(`SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), label_type
+	rows, err := db.Query(`SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), label_type,
+						   COALESCE(b.plural) as plural, COALESCE(b.description, '')
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
 					  	   JOIN label_suggestion s ON s.id = t.label_suggestion_id
@@ -459,7 +462,8 @@ func getTrendingLabels() ([]TrendingLabel, error) {
 	for rows.Next() {
 		var trendingLabel TrendingLabel
 		err = rows.Scan(&trendingLabel.Name, &trendingLabel.BotTaskId, &trendingLabel.State, 
-							&trendingLabel.BranchName, &trendingLabel.LabelType)
+							&trendingLabel.BranchName, &trendingLabel.LabelType, &trendingLabel.Plural,
+							&trendingLabel.Description)
 		if err != nil {
 			return trendingLabels, err
 		}
@@ -490,11 +494,11 @@ func getUuidV4() (string, error) {
 	return "", errors.New("Couldn't get UUID")
 }
 
-func generateLabelEntry(name string) (datastructures.LabelMapEntry, error) {
+func generateLabelEntry(name string, plural string, description string) (datastructures.LabelMapEntry, error) {
 	var labelMapEntry datastructures.LabelMapEntry
-	labelMapEntry.Description = ""
+	labelMapEntry.Plural = plural
+	labelMapEntry.Description = description
 	labelMapEntry.Accessors = append(labelMapEntry.Accessors, ".")
-	labelMapEntry.Plural = name + "s"
 
 	var err error
 	labelMapEntry.Uuid, err = getUuidV4() 
@@ -505,9 +509,9 @@ func generateLabelEntry(name string) (datastructures.LabelMapEntry, error) {
 	return labelMapEntry, nil
 }
 
-func generateMetaLabelEntry(name string) (datastructures.MetaLabelMapEntry, error) {
+func generateMetaLabelEntry(name string, plural string, description string) (datastructures.MetaLabelMapEntry, error) {
 	var metaLabelMapEntry datastructures.MetaLabelMapEntry
-	metaLabelMapEntry.Description = ""
+	metaLabelMapEntry.Description = description
 	metaLabelMapEntry.Accessors = append(metaLabelMapEntry.Accessors, ".")	
 
 	var err error

@@ -665,7 +665,8 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 	trendingLabels := []datastructures.TrendingLabel{}
 	rows, err := p.db.Query(`SELECT s.name, t.github_issue_id, t.closed, COALESCE(tb.state::text, ''), 
 									COALESCE(tb.job_url, ''), COALESCE(tb.label_type::text, ''),
-									COALESCE(tb.branch_name, ''), COALESCE(tb.description, '')
+									COALESCE(tb.branch_name, ''), COALESCE(tb.description, ''),
+									COALESCE(tb.plural, '')
 							 FROM trending_label_suggestion t
 							 JOIN label_suggestion s ON s.id = t.label_suggestion_id
 							 LEFT JOIN trending_label_bot_task tb ON tb.trending_label_suggestion_id = t.id`)
@@ -681,7 +682,8 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 		var trendingLabel datastructures.TrendingLabel
 		err = rows.Scan(&trendingLabel.Name, &trendingLabel.Github.Issue.Id,
 			&trendingLabel.Github.Issue.Closed, &trendingLabel.Status, &trendingLabel.Ci.JobUrl,
-			&trendingLabel.Label.Type, &trendingLabel.Github.BranchName, &trendingLabel.Label.Description)
+			&trendingLabel.Label.Type, &trendingLabel.Github.BranchName, &trendingLabel.Label.Description,
+			&trendingLabel.Label.Plural)
 		if err != nil {
 			log.Error("[Get Trending Labels] Couldn't scan trending labels: ", err.Error())
 			raven.CaptureError(err, nil)
@@ -694,7 +696,7 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 }
 
 func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string, labelDescription string, 
-													userInfo datastructures.UserInfo) error {
+													labelPlural string, userInfo datastructures.UserInfo) error {
 	status := "waiting for moderator approval"
 	if userInfo.Permissions != nil && userInfo.Permissions.CanAcceptTrendingLabel {
 		status = "accepted"
@@ -707,13 +709,13 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string,
 		return err
 	}
 
-	rows, err := tx.Query(`INSERT INTO trending_label_bot_task(trending_label_suggestion_id, state, try, label_type, description)
-								SELECT l.id, $1, 1, $3, $4
+	rows, err := tx.Query(`INSERT INTO trending_label_bot_task(trending_label_suggestion_id, state, try, label_type, description, plural)
+								SELECT l.id, $1, 1, $3, $4, $5
 								FROM trending_label_suggestion l
 								JOIN label_suggestion s ON s.id = l.label_suggestion_id 
 								WHERE s.name = $2
 							 ON CONFLICT DO NOTHING
-							 RETURNING id`, status, name, labelType, labelDescription)
+							 RETURNING id`, status, name, labelType, labelDescription, labelPlural)
 
 	if err != nil {
 		tx.Rollback()

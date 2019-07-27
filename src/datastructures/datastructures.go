@@ -745,6 +745,7 @@ type TrendingLabel struct {
 	Label struct {
 		Type string `json:"type"`	
 		Description string `json:"description"`
+		Plural string `json:"plural"`
 	} `json:"label"`
 	Github struct {
 		Issue struct {
