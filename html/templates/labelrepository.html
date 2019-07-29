@@ -113,7 +113,7 @@
 								'/issues/' + data[i].github.issue.id + '">' +
 								'#' +  data[i].github.issue.id + '</a>');
 		var githubBranchUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
-								'/branches/' + data[i].github.branch_name + '">' +
+								'/tree/' + data[i].github.branch_name + '">' +
 									data[i].github.branch_name + '</a>');
 		var cellColor = data[i].github.issue.closed ? "#76ff03" : "#ffffff";
 		var status = data[i].status;

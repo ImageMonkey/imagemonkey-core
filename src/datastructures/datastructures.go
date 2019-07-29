@@ -540,9 +540,9 @@ type LabelMapQuizEntry struct {
 
 type LabelMapEntry struct {
     Description string  `json:"description"`
-    LabelMapEntries map[string]LabelMapEntry  `json:"has"`
+    LabelMapEntries map[string]LabelMapEntry  `json:"has,omitempty"`
     Accessors []string `json:"accessors"`
-    Quiz []LabelMapQuizEntry `json:"quiz"`
+    Quiz []LabelMapQuizEntry `json:"quiz,omitempty"`
     Uuid string `json:"uuid"`
     Plural string `json:"plural,omitempty"`
 }

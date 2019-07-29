@@ -75,7 +75,7 @@ func (p *TravisCiApi) GetBuildInfo(branchName string) (TravisCiBuildInfo, error)
 	if !((resp.StatusCode() >= 200) && (resp.StatusCode() <= 209)) {
 		return travisCiBuildInfo, errors.New(resp.String())
 	}
-	log.Info(resp.String())
+	//log.Info(resp.String())
 	travisCiBuildInfo.JobUrl = ("https://travis-ci.org/" + p.repoOwner + "/" + p.repo +
 		"/builds/" + strconv.FormatInt(travisCiBuildInfo.LastBuild.Id, 10))
 	return travisCiBuildInfo, nil
@@ -690,6 +690,7 @@ func main() {
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to build-canceled: ", err.Error())
 						raven.CaptureError(err, nil)
+						continue
 					}
 				}
 			}
@@ -697,6 +698,12 @@ func main() {
 				err = labelsRepository.MergeRemoteBranchIntoMaster(trendingLabel.BranchName)
 				if err != nil {
 					log.Error("Couldn't merge remote branch ", trendingLabel.BranchName, " into master: ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
+				}
+				err = setTrendingLabelBotTaskState("merged", trendingLabel.BranchName, "", trendingLabel.BotTaskId)
+				if err != nil {
+					log.Error("Couldn't set trending label bot task state to merged: ", err.Error())
 					raven.CaptureError(err, nil)
 					continue
 				}
