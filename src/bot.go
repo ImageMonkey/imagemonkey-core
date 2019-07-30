@@ -270,7 +270,7 @@ func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (s
 
 
 	if trendingLabel.LabelType == "normal" {
-		labelEntry, err := generateLabelEntry(trendingLabel.Name, trendingLabel.Plural, trendingLabel.Description)
+		labelEntry, err := generateLabelEntry(trendingLabel.RenameTo, trendingLabel.Plural, trendingLabel.Description)
 		if err != nil {
 			return "", errors.New("Couldn't generate label entry: " + err.Error())
 		}
@@ -285,7 +285,7 @@ func (p *LabelsRepository) AddLabelAndPushToRepo(trendingLabel TrendingLabel) (s
 			return "", errors.New("Couldn't add file: " + err.Error())
 		}
 	} else if trendingLabel.LabelType == "meta" {
-		metaLabelEntry, err := generateMetaLabelEntry(trendingLabel.Name, trendingLabel.Plural, trendingLabel.Description)
+		metaLabelEntry, err := generateMetaLabelEntry(trendingLabel.RenameTo, trendingLabel.Plural, trendingLabel.Description)
 		if err != nil {
 			return "", errors.New("Couldn't generate label entry: " + err.Error())
 		}
@@ -440,13 +440,14 @@ type TrendingLabel struct {
 	LabelType string `json:"label_type"`
 	Plural string `json:"plural"`
 	Description string `json:"description"`
+	RenameTo string `json:"rename_to"`
 }
 
 func getTrendingLabels() ([]TrendingLabel, error) {
 	trendingLabels := []TrendingLabel{}
 
 	rows, err := db.Query(`SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), label_type,
-						   COALESCE(b.plural) as plural, COALESCE(b.description, '')
+						   COALESCE(b.plural) as plural, COALESCE(b.description, ''), COALESCE(b.rename_to, '')
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
 					  	   JOIN label_suggestion s ON s.id = t.label_suggestion_id
@@ -463,7 +464,7 @@ func getTrendingLabels() ([]TrendingLabel, error) {
 		var trendingLabel TrendingLabel
 		err = rows.Scan(&trendingLabel.Name, &trendingLabel.BotTaskId, &trendingLabel.State, 
 							&trendingLabel.BranchName, &trendingLabel.LabelType, &trendingLabel.Plural,
-							&trendingLabel.Description)
+							&trendingLabel.Description, &trendingLabel.RenameTo)
 		if err != nil {
 			return trendingLabels, err
 		}
@@ -595,7 +596,7 @@ func main() {
 			if trendingLabel.State == "accepted" {
 				log.Info("Got new trending label ", trendingLabel.Name)
 
-				if metaLabels.Contains(trendingLabel.Name) || labels.Contains(trendingLabel.Name, "") {
+				if metaLabels.Contains(trendingLabel.RenameTo) || labels.Contains(trendingLabel.RenameTo, "") {
 					err = setTrendingLabelBotTaskState("already exists", trendingLabel.BranchName, "", trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to 'already exists': ", err.Error())

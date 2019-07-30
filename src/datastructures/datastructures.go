@@ -742,6 +742,7 @@ type ApiTokenRequest struct {
 
 type TrendingLabel struct {
 	Name string `json:"name"`
+	RenameTo string `json:"rename_to"`
 	Label struct {
 		Type string `json:"type"`	
 		Description string `json:"description"`

@@ -5,7 +5,7 @@
 -- Dumped from database version 9.6.12
 -- Dumped by pg_dump version 9.6.12
 
--- Started on 2019-07-27 16:46:59 CEST
+-- Started on 2019-07-29 22:15:50 CEST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -192,7 +192,8 @@ CREATE TYPE public.label_bot_state_type AS ENUM (
     'accepted',
     'retry',
     'build-canceled',
-    'already exists'
+    'already exists',
+    'merged'
 );
 
 
@@ -4157,7 +4158,8 @@ CREATE TABLE public.trending_label_bot_task (
     try integer,
     label_type public.label_bot_label_type NOT NULL,
     description text,
-    plural text
+    plural text,
+    rename_to text
 );
 
 
@@ -6103,7 +6105,7 @@ REVOKE ALL ON SCHEMA public FROM postgres;
 GRANT ALL ON SCHEMA public TO monkey;
 
 
--- Completed on 2019-07-27 16:47:00 CEST
+-- Completed on 2019-07-29 22:15:51 CEST
 
 --
 -- PostgreSQL database dump complete

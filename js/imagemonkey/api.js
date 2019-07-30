@@ -49,7 +49,7 @@ var ImageMonkeyApi = (function () {
         });
     }
 
-	ImageMonkeyApi.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription, labelPlural) {
+	ImageMonkeyApi.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription, labelPlural, labelRenameTo) {
 		var inst = this;
 		return new Promise(function(resolve, reject) {
 			var url = inst.baseUrl + "/" + inst.apiVersion + "/trendinglabels/" + labelName + "/accept";
@@ -61,7 +61,8 @@ var ImageMonkeyApi = (function () {
                 resolve();
             }
             xhr.onerror = reject;
-            xhr.send(JSON.stringify({"label": {"type": labelType, "description": labelDescription, "plural": labelPlural}}));
+            xhr.send(JSON.stringify({"label": {"type": labelType, "description": labelDescription, "plural": labelPlural, 
+												"rename_to": labelRenameTo}}));
 		});
 	}
 

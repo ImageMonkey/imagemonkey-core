@@ -24,6 +24,10 @@
   <script>
     var imageMonkeyApi = null; 
 
+    function getRenameToLabel() {
+	  return $("#addTrendingLabelDlgRenameToLabelInput").val();
+	}
+
 	function getLabelDescription() {
       return $("#addTrendingLabelDlgDescriptionInput").val();
 	}
@@ -45,6 +49,7 @@
     function onAddTrendingLabel(elem) {
 	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
 	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label") + "s");
+	  $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label"));
       var labelType = getSelectedLabelType(); 
 	  if(labelType === "normal") {
         $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
@@ -60,7 +65,8 @@
       $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label")); 
 	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label-plural"));
 	  $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
-      var labelType = $(elem).attr("data-label-type");
+      $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label-renameto"));
+	  var labelType = $(elem).attr("data-label-type");
       if(labelType === "normal") {
         $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
 		$("#labelTypeNormalRadioButton").checkbox("set checked"); 
@@ -72,9 +78,9 @@
       $("#addTrendingLabelDlg").modal("show");	
 	}
 
-	function acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural) {
+	function acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo) {
 	  $("#loadingIndicator").show();
-	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural)
+	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo)
 	    .then(function() {
 		  $("#loadingIndicator").hide();
           getTrendingLabels();
@@ -130,6 +136,7 @@
 		var escapedTrendingLabel = escapeHtml(data[i].name);
 		var escapedTrendingLabelDescription = escapeHtml(data[i].label.description);
 		var escapedTrendingLabelPlural = escapeHtml(data[i].label.plural);
+		var escapedTrendingLabelRenameTo = escapeHtml(data[i].rename_to);
 		if(status === '') {
 			status = 'open';	
 			button = ('<div class="ui fluid ' + disabledStr + 'button" data-label="' + 
@@ -140,7 +147,9 @@
 			{{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
 			button = ('<div class="ui fluid button" data-label-description="' +  escapedTrendingLabelDescription 
 						+ '" data-label-type="' + labelType + '" data-label="' + escapedTrendingLabel 
-						+ '" data-label-plural="' + escapedTrendingLabelPlural + '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
+						+ '" data-label-plural="' + escapedTrendingLabelPlural 
+						+ '" data-label-renameto="' + escapedTrendingLabelRenameTo
+						+ '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
 			{{ end }}
 			{{ end }}
 		} else if(status === 'building') {
@@ -177,7 +186,8 @@
 	  $("#addTrendingLabelDlgYesButton").click(function(e) {
 	    e.preventDefault();
 	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), 
-							getSelectedLabelType(), getLabelDescription(), getLabelPlural()); 
+							getSelectedLabelType(), getLabelDescription(), getLabelPlural(), 
+							getRenameToLabel()); 
 
       });
 
@@ -276,7 +286,15 @@
 			</div>
 		  </div>
 		</div>
-		
+
+		<br>
+		<b>label name</b>
+		<br>
+		<div class="ui input">
+          <input type="text" placeholder="label name" id="addTrendingLabelDlgRenameToLabelInput">
+        </div>	
+	
+		<br>	
 		<br>
 		<b>plural form</b>
 		<br>

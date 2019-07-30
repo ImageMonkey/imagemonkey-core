@@ -2372,7 +2372,7 @@ func main(){
 					Type string `json:"type"`
 					Description string `json:"description"`
 					Plural string `json:"plural"`
-
+					RenameTo string `json:"rename_to"`
 				} `json:"label"`
 			} 
 			var labelDetails LabelDetails
@@ -2383,6 +2383,16 @@ func main(){
 			}
 			if (labelDetails.Label.Type != "normal") && (labelDetails.Label.Type != "meta") {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
+				return
+			}
+
+			if labelDetails.Label.RenameTo == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - rename_to cannot be empty!"})
+				return
+			}
+
+			if labelDetails.Label.Type == "normal" && labelDetails.Label.Plural == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - plural cannot be empty!"})
 				return
 			}
 
@@ -2402,7 +2412,8 @@ func main(){
 			}
 
 			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelDetails.Label.Type, 
-						labelDetails.Label.Description, labelDetails.Label.Plural, userInfo)
+						labelDetails.Label.Description, labelDetails.Label.Plural, 
+						labelDetails.Label.RenameTo, userInfo)
 			if err != nil {
 				switch err.(type) {
 					case *imagemonkeydb.InvalidTrendingLabelError:
