@@ -760,3 +760,14 @@ type TrendingLabel struct {
 		JobUrl string `json:"job_url"`
 	} `json:"ci"`
 }
+
+type TrendingLabelBotTask struct {
+	Name       string `json:"name"`
+	BotTaskId  int64  `json:"bot_task_id"`
+	State      string `json:"state"`
+	BranchName string `json:"branch_name"`
+	LabelType string `json:"label_type"`
+	Plural string `json:"plural"`
+	Description string `json:"description"`
+	RenameTo string `json:"rename_to"`
+}

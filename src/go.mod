@@ -32,6 +32,6 @@ require (
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/h2non/bimg.v1 v1.0.19
 	gopkg.in/resty.v1 v1.12.0 // indirect
-	gopkg.in/src-d/go-git.v4 v4.12.0 // indirect
+	gopkg.in/src-d/go-git.v4 v4.12.0
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
