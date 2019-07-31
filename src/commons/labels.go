@@ -166,3 +166,91 @@ func IsLabelValid(labelsMap map[string]datastructures.LabelMapEntry, metalabels 
 
     return false
 }
+
+type LabelsWriter struct {
+	path string
+}
+
+func NewLabelsWriter(path string) *LabelsWriter {
+	return &LabelsWriter{
+		path: path,
+	}
+}
+
+func (p *LabelsWriter) GetFullPath() string {
+	return p.path
+}
+
+func (p *LabelsWriter) GetFilename() string {
+	return filepath.Base(p.path)
+}
+
+func (p *LabelsWriter) Add(name string, entry datastructures.LabelMapEntry) error {
+	var labelMap datastructures.LabelMap
+
+	data, err := ioutil.ReadFile(p.path)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(data), &labelMap)
+	if err != nil {
+		return err
+	}
+
+	labelMap.LabelMapEntries[name] = entry
+
+	out, err := json.Marshal(&labelMap)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(p.path, out, 0644)
+
+	return err
+}
+
+
+type MetaLabelsWriter struct {
+	path string
+}
+
+func NewMetaLabelsWriter(path string) *MetaLabelsWriter {
+	return &MetaLabelsWriter{
+		path: path,
+	}
+}
+
+func (p *MetaLabelsWriter) GetFullPath() string {
+	return p.path
+}
+
+func (p *MetaLabelsWriter) GetFilename() string {
+	return filepath.Base(p.path)
+}
+
+func (p *MetaLabelsWriter) Add(name string, entry datastructures.MetaLabelMapEntry) error {
+	var labelMap datastructures.MetaLabelMap
+
+	data, err := ioutil.ReadFile(p.path)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(data), &labelMap)
+	if err != nil {
+		return err
+	}
+
+	labelMap.MetaLabelMapEntries[name] = entry
+
+	out, err := json.Marshal(&labelMap)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(p.path, out, 0644)
+
+	return err
+}
+
