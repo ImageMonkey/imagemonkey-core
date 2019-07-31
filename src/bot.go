@@ -15,7 +15,6 @@ import (
 
 var db *sql.DB
 
-
 func setTrendingLabelBotTaskState(status string, branchName string, jobUrl string, id int64) error {
 	var queryValues []interface{}
 	queryValues = append(queryValues, status)

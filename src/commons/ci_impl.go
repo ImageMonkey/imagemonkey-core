@@ -1,28 +1,12 @@
+// +build !dev
+
 package commons
 
-type CiBuildInfo struct {
-	LastBuild struct {
-		State string `json:"state"`
-		Id    int64  `json:"id"`
-	} `json:"last_build"`
-	JobUrl string `json:"job_url"`
-}
-
-type CiApi interface {
-	SetToken(token string)
-	GetBuildInfo(branchName string) (CiBuildInfo, error) 
-	StartBuild(branchName string) error 
-}
-
-
-
-/*type TravisCiBuildInfo struct {
-	LastBuild struct {
-		State string `json:"state"`
-		Id    int64  `json:"id"`
-	} `json:"last_build"`
-	JobUrl string `json:"job_url"`
-}
+import (
+	"gopkg.in/resty.v1"
+	"errors"
+	"strconv"
+)
 
 type TravisCiApi struct {
 	repoOwner string
@@ -41,11 +25,11 @@ func (p *TravisCiApi) SetToken(token string) {
 	p.token = token
 }
 
-func (p *TravisCiApi) GetBuildInfo(branchName string) (TravisCiBuildInfo, error) {
+func (p *TravisCiApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
 
 	url := "https://api.travis-ci.org/repo/" + p.repoOwner + "%2F" + p.repo + "/branch/" + branchName
 
-	var travisCiBuildInfo TravisCiBuildInfo
+	var travisCiBuildInfo CiBuildInfo
 
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
@@ -98,4 +82,4 @@ func (p *TravisCiApi) StartBuild(branchName string) error {
 	return nil
 
 }
-*/
+
