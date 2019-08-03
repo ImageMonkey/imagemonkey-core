@@ -3,72 +3,15 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
-	_ "github.com/lib/pq"
-	"gopkg.in/src-d/go-git.v4"
+	clients "github.com/bbernhard/imagemonkey-core/clients"
+	_ "github.com/lib/pq"	
 	"time"
 	"database/sql"
 	"flag"
 	"os"
-	"os/exec"
-	"strconv"
 )
 
 var db *sql.DB
-
-type LabelsDownloader struct {
-	repositoryUrl string
-	downloadLocation string
-}
-
-func NewLabelsDownloader(repositoryUrl string, downloadLocation string) *LabelsDownloader {
-	return &LabelsDownloader{
-		repositoryUrl: repositoryUrl,
-		downloadLocation: downloadLocation,
-	}
-}
-
-func (p *LabelsDownloader) Download() error {
-	os.RemoveAll(p.downloadLocation)
-	_, err := git.PlainClone(p.downloadLocation, false, &git.CloneOptions{
-		URL:      p.repositoryUrl,
-		Progress: os.Stdout,
-	})
-	return err
-}
-
-type CommandsRunner struct {
-	directory string
-}
-
-func NewCommandsRunner(directory string) *CommandsRunner {
-	return &CommandsRunner{
-		directory: directory,
-	}
-}
-
-
-func (p *CommandsRunner) MakeTrendingLabelsProductive(name string, renameTo string, dryRun bool, autoCloseGithubIssue bool) error {
-	cmd := exec.Command("./make_trending_labels_productive", "-trendinglabel", name, "-renameto", renameTo, 
-							"-dryrun=" +strconv.FormatBool(dryRun), "autoclose="+strconv.FormatBool(autoCloseGithubIssue))
-	cmd.Dir = p.directory
-	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	// Wait for the process to finish
-	done := make(chan error, 1)
-	go func() {
-	    done <- cmd.Wait()
-	}()
-	select {
-	case err := <-done:
-	    return err
-	}
-}
 
 func createBackup(from string, to string) error {
 	return os.Rename(from, to)
@@ -95,9 +38,7 @@ func getTrendingLabelsForDeployment() ([]TrendingLabel, error) {
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
 					  	   JOIN label_suggestion s ON s.id = t.label_suggestion_id
-						   WHERE t.closed = false AND 
-						   (b.state = 'accepted' OR b.state='pending' OR b.state='building' 
-						   	OR b.state='merged')`)
+						   WHERE t.closed = false AND b.state='merged'`)
 	if err != nil {
 		return trendingLabels, err
 	}
@@ -118,10 +59,9 @@ func getTrendingLabelsForDeployment() ([]TrendingLabel, error) {
 }
 
 func main() {
-	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Labels Repository URL")
+	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-labels-test", "Labels Repository URL")
 	labelsLocation := flag.String("labels_dir", "/tmp/labels", "Labels Location")
 	backupLocation := flag.String("backup_dir", "/tmp/labels.bak", "Backup Location")
-	binariesLocation := flag.String("binaries_dir", "./", "Binaries Location")
 	autoCloseGithubIssue := flag.Bool("autoclose_github_issue" , false, "automatically close trending label github issue")
 	singleshot := flag.Bool("singleshot", true, "singleshot")
 
@@ -141,14 +81,19 @@ func main() {
 	}
 	defer db.Close()
 	
-	labelsDownloader := NewLabelsDownloader(*labelsRepositoryUrl, *labelsLocation)
-	commandsRunner := NewCommandsRunner(*binariesLocation)
+	labelsDownloader := clients.NewLabelsDownloader(*labelsRepositoryUrl, *labelsLocation)
 	
 	labelsPath := *labelsLocation + "/en/labels.jsonnet"
 	labelRefinementsPath := *labelsLocation + "/en/label-refinements.json"
 	metalabelsPath := *labelsLocation + "/en/metalabels.jsonnet" 
-	labelsPopulator := commons.NewLabelsPopulator(imageMonkeyDbConnectionString, labelsPath, labelRefinementsPath, metalabelsPath) 
+	labelsPopulator := clients.NewLabelsPopulatorClient(imageMonkeyDbConnectionString, labelsPath, labelRefinementsPath, metalabelsPath) 
 	err = labelsPopulator.Load()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	makeLabelsProductive := clients.NewMakeLabelsProductiveClient(imageMonkeyDbConnectionString, labelsPath, metalabelsPath, false, *autoCloseGithubIssue)
+	err = makeLabelsProductive.Load()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -211,7 +156,7 @@ func main() {
 					dryRun = false
 				}
 				for _, trendingLabel := range trendingLabelsForDeployment {
-					err = commandsRunner.MakeTrendingLabelsProductive(trendingLabel.Name, trendingLabel.RenameTo, dryRun, *autoCloseGithubIssue)
+					err = makeLabelsProductive.DoIt(trendingLabel.Name, trendingLabel.RenameTo, dryRun)
 					if err != nil {
 						log.Error("Couldn't make trending label productive: ", err.Error()) 
 						return

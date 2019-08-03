@@ -7,7 +7,7 @@ import (
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	"github.com/gofrs/uuid"
+	//"github.com/gofrs/uuid"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -74,13 +74,17 @@ func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 }
 
 func main() {
-	labelsRepositoryName := flag.String("labels_repository_name", "imagemonkey-trending-labels-test", "Label Repository Name")
+	labelsRepositoryName := flag.String("labels_repository_name", "imagemonkey-labels-test", "Label Repository Name")
 	labelsRepositoryOwner := flag.String("labels_repository_owner", "bbernhard", "Label Repository Owner")
-	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
-	labelsPath := flag.String("labels", "../wordlists/en/labels.jsonnet", "Path to labels")
+	//metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
+	//labelsPath := flag.String("labels", "../wordlists/en/labels.jsonnet", "Path to labels")
 	gitCheckoutDir := flag.String("git_checkout_dir", "/tmp/labelrepository", "Git checkout directory")
+	singleshot := flag.Bool("singleshot", false, "singleshot")
 
 	flag.Parse()
+
+	metalabelsPath := *gitCheckoutDir + "/en/metalabels.jsonnet"
+	labelsPath := *gitCheckoutDir + "/en/labels.jsonnet"
 
 	log.SetLevel(log.DebugLevel)
 	log.Info("Starting ImageMonkey Bot")
@@ -88,21 +92,8 @@ func main() {
 	imageMonkeyBotGithubApiToken := commons.MustGetEnv("IMAGEMONKEY_BOT_GITHUB_API_TOKEN")
 	travisCiApiToken := commons.MustGetEnv("IMAGEMONKEY_TRAVIS_CI_TOKEN")
 
-	log.Debug("Reading Metalabels")
-	metaLabels := commons.NewMetaLabels(*metalabelsPath)
-	err := metaLabels.Load()
-	if err != nil {
-		log.Fatal("Couldn't read metalabel map...terminating! ", err.Error())
-	}
-
-	log.Debug("Reading Labels")
-	labels := commons.NewLabelRepository(*labelsPath)
-	err = labels.Load()
-	if err != nil {
-		log.Fatal("Couldn't read label map...terminating!", err.Error())
-	}
-
 	//open database and make sure that we can ping it
+	var err error
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
@@ -125,6 +116,9 @@ func main() {
 	for {
 
 		if !firstIteration {
+			if *singleshot {
+				return
+			}
 			time.Sleep(1 * time.Second)
 		} else {
 			firstIteration = false
@@ -143,6 +137,31 @@ func main() {
 			if trendingLabel.State == "accepted" {
 				log.Info("Got new trending label ", trendingLabel.Name)
 
+				err = labelsRepository.Clone()
+				if err != nil {
+					log.Error(err.Error())
+					raven.CaptureError(err, nil)
+					continue
+				}
+
+				log.Debug("Reading Metalabels")
+				metaLabels := commons.NewMetaLabels(metalabelsPath)
+				err := metaLabels.Load()
+				if err != nil {
+					log.Error("Couldn't read metalabel map...terminating! ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
+				}
+
+				log.Debug("Reading Labels")
+				labels := commons.NewLabelRepository(labelsPath)
+				err = labels.Load()
+				if err != nil {
+					log.Error("Couldn't read label map...terminating!", err.Error())
+					raven.CaptureError(err, nil)
+					continue
+				}
+
 				if metaLabels.Contains(trendingLabel.RenameTo) || labels.Contains(trendingLabel.RenameTo, "") {
 					err = setTrendingLabelBotTaskState("already exists", trendingLabel.BranchName, "", trendingLabel.BotTaskId)
 					if err != nil {
@@ -152,20 +171,13 @@ func main() {
 					continue //trendinglabel already exists
 				}
 
-				err = labelsRepository.Clone()
-				if err != nil {
-					log.Error(err.Error())
-					raven.CaptureError(err, nil)
-					continue
-				}
-
-				u, err := uuid.NewV4()
+				/*u, err := uuid.NewV4()
 				if err != nil {
 					log.Error("Couldn't create UUID: ", err.Error())
 					raven.CaptureError(err, nil)
 					continue
 				}
-				trendingLabel.Name = u.String()
+				trendingLabel.Name = u.String()*/
 
 				branchName, err := labelsRepository.AddLabelAndPushToRepo(trendingLabel)
 				if err != nil {
@@ -197,6 +209,7 @@ func main() {
 					raven.CaptureError(err, nil)
 					continue
 				}
+				trendingLabel.State = "building"
 			}
 			if trendingLabel.State == "building" {
 				travisCiBuildInfo, err := travisCiApi.GetBuildInfo(trendingLabel.BranchName)
@@ -212,6 +225,7 @@ func main() {
 						raven.CaptureError(err, nil)
 						continue
 					}
+					trendingLabel.State = "building"
 				} else if travisCiBuildInfo.LastBuild.State == "started" {
 					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
@@ -219,6 +233,7 @@ func main() {
 						raven.CaptureError(err, nil)
 						continue
 					}
+					trendingLabel.State = "building"
 				} else if travisCiBuildInfo.LastBuild.State == "passed" {
 					err = setTrendingLabelBotTaskState("build-success", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
@@ -226,6 +241,7 @@ func main() {
 						raven.CaptureError(err, nil)
 						continue
 					}
+					trendingLabel.State = "build-success"
 				} else if travisCiBuildInfo.LastBuild.State == "failed" {
 					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
@@ -233,6 +249,7 @@ func main() {
 						raven.CaptureError(err, nil)
 						continue
 					}
+					trendingLabel.State = "build-failed"
 				} else if travisCiBuildInfo.LastBuild.State == "canceled" {
 					err = setTrendingLabelBotTaskState("build-canceled", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
@@ -240,6 +257,7 @@ func main() {
 						raven.CaptureError(err, nil)
 						continue
 					}
+					trendingLabel.State = "build-canceled"
 				}
 			}
 			if trendingLabel.State == "build-success" {

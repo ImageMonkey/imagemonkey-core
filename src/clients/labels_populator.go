@@ -1,26 +1,27 @@
-package commons
+package clients
 
 import (
 	"errors"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 	"database/sql"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
-type LabelsPopulator struct {
+type LabelsPopulatorClient struct {
 	labelsPath string
 	labelRefinementsPath string
 	metalabelsPath string
-	labels *LabelRepository
+	labels *commons.LabelRepository
 	labelRefinements map[string]datastructures.LabelMapRefinementEntry
-	metalabels *MetaLabels
+	metalabels *commons.MetaLabels
 	dbConnectionString string
 	db *sql.DB
 }
 
-func NewLabelsPopulator(dbConnectionString string, labelsPath string, labelRefinementsPath string, metalabelsPath string) *LabelsPopulator {
-	return &LabelsPopulator{
+func NewLabelsPopulatorClient(dbConnectionString string, labelsPath string, labelRefinementsPath string, metalabelsPath string) *LabelsPopulatorClient {
+	return &LabelsPopulatorClient {
 		labelsPath: labelsPath,	
 		labelRefinementsPath: labelRefinementsPath,
 		metalabelsPath: metalabelsPath,
@@ -28,19 +29,19 @@ func NewLabelsPopulator(dbConnectionString string, labelsPath string, labelRefin
 	}
 }
 
-func (p *LabelsPopulator) Load() error {
-	p.labels = NewLabelRepository(p.labelsPath)
+func (p *LabelsPopulatorClient) Load() error {
+	p.labels = commons.NewLabelRepository(p.labelsPath)
 	err := p.labels.Load()
 	if err != nil {
 		return errors.New("Couldn't get label map: " + err.Error())
 	}
 
-	p.labelRefinements, err = GetLabelRefinementsMap(p.labelRefinementsPath)
+	p.labelRefinements, err = commons.GetLabelRefinementsMap(p.labelRefinementsPath)
 	if err != nil {
 		return errors.New("Couldn't get label map refinements: " + err.Error())
 	}
 
-	p.metalabels = NewMetaLabels(p.metalabelsPath)
+	p.metalabels = commons.NewMetaLabels(p.metalabelsPath)
 	err = p.metalabels.Load()
 	if err != nil {
 		return errors.New("Couldn't get meta labels: " + err.Error())
@@ -55,7 +56,7 @@ func (p *LabelsPopulator) Load() error {
 	return nil
 }
 
-func (p *LabelsPopulator) Populate(dryRun bool) error {
+func (p *LabelsPopulatorClient) Populate(dryRun bool) error {
 	tx, err := p.db.Begin()
     if err != nil {
     	return errors.New("Couldn't start transaction: " + err.Error())

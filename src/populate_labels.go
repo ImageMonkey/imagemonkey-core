@@ -1,12 +1,13 @@
 package main
 
-import(
-	log "github.com/sirupsen/logrus"
+import (
 	"flag"
+	clients "github.com/bbernhard/imagemonkey-core/clients"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
+	log "github.com/sirupsen/logrus"
 )
 
-func main(){
+func main() {
 	dryRun := flag.Bool("dryrun", true, "dry run")
 	debug := flag.Bool("debug", false, "debug")
 
@@ -18,13 +19,16 @@ func main(){
 
 	if *dryRun {
 		log.Info("Populating labels (dry run)...")
-	} else{
+	} else {
 		log.Info("Populating labels...")
 	}
 
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
-	
-	labelsPopulator := commons.NewLabelsPopulator(imageMonkeyDbConnectionString, "../wordlists/en/labels.jsonnet", "../wordlists/en/label-refinements.json", "../wordlists/en/metalabels.jsonnet")
+
+	labelsPopulator := clients.NewLabelsPopulatorClient(imageMonkeyDbConnectionString,
+		"../wordlists/en/labels.jsonnet",
+		"../wordlists/en/label-refinements.json",
+		"../wordlists/en/metalabels.jsonnet")
 	err := labelsPopulator.Load()
 	if err != nil {
 		log.Fatal(err.Error())

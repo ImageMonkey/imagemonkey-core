@@ -2367,15 +2367,8 @@ func main(){
 				return
 			}
 
-			type LabelDetails struct {
-				Label struct {
-					Type string `json:"type"`
-					Description string `json:"description"`
-					Plural string `json:"plural"`
-					RenameTo string `json:"rename_to"`
-				} `json:"label"`
-			} 
-			var labelDetails LabelDetails
+			
+			var labelDetails datastructures.AcceptTrendingLabel
 			err := c.BindJSON(&labelDetails)
 			if err != nil {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})

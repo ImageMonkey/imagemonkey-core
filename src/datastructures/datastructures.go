@@ -771,3 +771,13 @@ type TrendingLabelBotTask struct {
 	Description string `json:"description"`
 	RenameTo string `json:"rename_to"`
 }
+
+type AcceptTrendingLabel struct {
+	Label struct {
+		Type string `json:"type"`
+		Description string `json:"description"`
+		Plural string `json:"plural"`
+		RenameTo string `json:"rename_to"`
+	} `json:"label"`
+} 
+

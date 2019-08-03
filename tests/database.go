@@ -380,6 +380,16 @@ func (p *ImageMonkeyDatabase) GetNumberOfImages() (int32, error) {
 	return numOfImages, err
 }
 
+func (p *ImageMonkeyDatabase) GetNumberOfLabels() (int32, error) {
+	var numOfLabels int32
+	err := p.db.QueryRow("SELECT count(*) FROM label").Scan(&numOfLabels)
+	if err != nil {
+		return 0, err
+	}
+
+	return numOfLabels, err
+}
+
 func (p *ImageMonkeyDatabase) GetNumberOfUsers() (int32, error) {
 	var numOfUsers int32
 	err := p.db.QueryRow("SELECT count(*) FROM account").Scan(&numOfUsers)
@@ -1080,4 +1090,27 @@ func (p *ImageMonkeyDatabase) SetTrendingLabelBotTaskState(labelSuggestion strin
 
 func (p *ImageMonkeyDatabase) Close() {
 	p.db.Close()
+}
+
+func (p *ImageMonkeyDatabase) AddDummyTrendingLabelBotTask(trendingLabelName string, renameTo string, 
+											branchName string, labelType string, state string) (int64, error) {
+	var trendingLabelBotTaskId int64
+	
+	rows, err := p.db.Query(`INSERT INTO trending_label_bot_task (trending_label_suggestion_id, branch_name, state, label_type, rename_to)
+							SELECT t.id, $1, $2 , $3, $4
+							FROM trending_label_suggestion t
+							JOIN label_suggestion l ON t.label_suggestion_id = l.id
+							RETURNING id`, branchName, state, labelType, renameTo)
+	if err != nil {
+		return trendingLabelBotTaskId, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() { 
+		err = rows.Scan(&trendingLabelBotTaskId)
+		return trendingLabelBotTaskId, err
+	}
+
+	return trendingLabelBotTaskId, errors.New("nothing found")
 }
