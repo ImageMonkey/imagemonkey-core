@@ -35,7 +35,7 @@ RUN apt-get update \
 	&& cp /tmp/chromedriver /tmp/tests/ui \
 	&& rm /tmp/chromedriver_linux64.zip \
 	&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
-	&& apt install -y ./google-chrome-stable_current_amd64.deb \
+	&& apt install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
 	&& rm /tmp/google-chrome-stable_current_amd64.deb 
 
 
