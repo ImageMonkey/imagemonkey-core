@@ -8,10 +8,11 @@ import (
 )
 
 func runLabelsDownloader(t *testing.T) {
-	os.RemoveAll("/tmp/labels-unittest.bak")
+	os.RemoveAll("/tmp/labels-unittest-backups")
+	os.Mkdir("/tmp/labels-unittest-backups", 0777)
 	// Start a process
 	cmd := exec.Command("go", "run", "-tags", "dev", "labels_downloader.go", "-autoclose_github_issue=false", 
-						"-singleshot=true", "-labels_dir=/tmp/labels-unittest", "-backup_dir=/tmp/labels-unittest.bak")
+						"-singleshot=true", "-labels_dir=/tmp/labels-unittest", "-backup_dir=/tmp/labels-unittest-backups")
 	cmd.Dir = "../src"
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
