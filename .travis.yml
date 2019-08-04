@@ -9,6 +9,6 @@ before_install: |
   && mkdir -p $TRAVIS_BUILD_DIR/data/donations \
   && mkdir -p $TRAVIS_BUILD_DIR/data/quarantine \
   && mkdir -p $TRAVIS_BUILD_DIR/data/unverified_donations \
-  && docker-compose -f env/docker/docker-compose.travis.yml build
+  && docker-compose -f env/docker/docker-compose.travis.yml build --parallel
 script:
   cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
