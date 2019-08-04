@@ -3,16 +3,11 @@ services:
   - docker
 env:
   - BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
-  - DOCKER_COMPOSE_VERSION=1.24.1
 before_install: |
-  echo "Updating docker-compose" \
-  && sudo rm /usr/local/bin/docker-compose \
-  && curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose \
-  && chmod +x docker-compose \
-  && sudo mv docker-compose /usr/local/bin
-
-before_script: |
-  cd $TRAVIS_BUILD_DIR \
+  echo "Updating docker-compose to version 1.24.1" \
+  && curl -L https://github.com/docker/compose/releases/download/1.24.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
+  && chmod +x /usr/local/bin/docker-compose \
+  && cd $TRAVIS_BUILD_DIR \
   && echo "Creating data directory" \
   && mkdir -p $TRAVIS_BUILD_DIR/data/donations \
   && mkdir -p $TRAVIS_BUILD_DIR/data/quarantine \
