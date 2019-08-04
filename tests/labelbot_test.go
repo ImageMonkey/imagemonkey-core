@@ -358,6 +358,45 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExists(t *testing.T) {
 
 	beforeState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
-	equals(t, beforeState, "already exists") 
+	equals(t, beforeState, "already exists")
+}
 
+func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExistsButNotProductive(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for _, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
+		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
+	}
+	runTrendingLabelsWorker(t)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 2)
+
+
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	runLabelBot(t, "cisuccess")
+
+	state, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
+	ok(t, err)
+	equals(t, state, "merged")
+
+	testAcceptTrendingLabel(t, "hallowelt", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	runLabelBot(t, "cisuccess")
+
+	state, err = db.GetTrendingLabelBotTaskState("hallowelt")
+	ok(t, err)
+	equals(t, state, "already exists")
 }

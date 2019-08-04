@@ -11,6 +11,7 @@ import (
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"time"
+	"errors"
 )
 
 var db *sql.DB
@@ -71,6 +72,33 @@ func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 	}
 
 	return trendingLabels, nil
+}
+
+func labelAlreadyExistsInPipeline(label string, trendingLabelBotTaskId int64) (bool, error) {
+	rows, err := db.Query(`SELECT count(*)
+			  				FROM trending_label_suggestion t
+			  				JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id
+			  				WHERE b.rename_to = $1 AND b.id != $2`, label, trendingLabelBotTaskId)
+	if err != nil {
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var num int
+		err = rows.Scan(&num)
+		if err != nil {
+			return false, err
+		}
+		
+		if num > 0 {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	return false, errors.New("missing result set")
 }
 
 func main() {
@@ -171,7 +199,14 @@ func main() {
 					continue
 				}
 
-				if metaLabels.Contains(trendingLabel.RenameTo) || labels.Contains(trendingLabel.RenameTo, "") {
+				labelAlreadyExistsInPipeline, err := labelAlreadyExistsInPipeline(trendingLabel.RenameTo, trendingLabel.BotTaskId)
+				if err != nil {
+					log.Error("Couldn't check whether trending label exists in pipeline: ", err.Error())
+					raven.CaptureError(err, nil)
+					continue
+				}
+
+				if labelAlreadyExistsInPipeline || metaLabels.Contains(trendingLabel.RenameTo) || labels.Contains(trendingLabel.RenameTo, "") {
 					err = setTrendingLabelBotTaskState("already exists", trendingLabel.BranchName, "", trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to 'already exists': ", err.Error())
