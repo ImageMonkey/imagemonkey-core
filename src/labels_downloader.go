@@ -4,11 +4,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	clients "github.com/bbernhard/imagemonkey-core/clients"
+	"github.com/getsentry/raven-go"
 	_ "github.com/lib/pq"	
 	"time"
 	"database/sql"
 	"flag"
 	"os"
+	"strconv"
 )
 
 var db *sql.DB
@@ -60,41 +62,54 @@ func getTrendingLabelsForDeployment() ([]TrendingLabel, error) {
 
 func main() {
 	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-labels-test", "Labels Repository URL")
-	labelsLocation := flag.String("labels_dir", "/tmp/labels", "Labels Location")
-	backupLocation := flag.String("backup_dir", "/tmp/labels.bak", "Backup Location")
+	labelsDir := flag.String("labels_dir", "/tmp/labels", "Labels Location")
+	backupDir := flag.String("backup_dir", "/tmp/labels-backup", "Backup Location")
 	autoCloseGithubIssue := flag.Bool("autoclose_github_issue" , false, "automatically close trending label github issue")
 	singleshot := flag.Bool("singleshot", true, "singleshot")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
 
 	flag.Parse()
+
+	if *useSentry {
+		log.Info("Setting Sentry DSN")
+		raven.SetDSN(commons.MustGetEnv("SENTRY_DSN"))
+		raven.SetEnvironment("labels-downloader")
+
+		raven.CaptureMessage("Starting up labels downloader", nil)
+	}
 	
 	var err error
 	//open database and make sure that we can ping it
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
+		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't open database: ", err.Error())
 	}
 
 	err = db.Ping()
 	if err != nil {
+		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't ping database: ", err.Error())
 	}
 	defer db.Close()
 	
-	labelsDownloader := clients.NewLabelsDownloader(*labelsRepositoryUrl, *labelsLocation)
+	labelsDownloader := clients.NewLabelsDownloader(*labelsRepositoryUrl, *labelsDir)
 	
-	labelsPath := *labelsLocation + "/en/labels.jsonnet"
-	labelRefinementsPath := *labelsLocation + "/en/label-refinements.json"
-	metalabelsPath := *labelsLocation + "/en/metalabels.jsonnet" 
+	labelsPath := *labelsDir + "/en/labels.jsonnet"
+	labelRefinementsPath := *labelsDir + "/en/label-refinements.json"
+	metalabelsPath := *labelsDir + "/en/metalabels.jsonnet" 
 	labelsPopulator := clients.NewLabelsPopulatorClient(imageMonkeyDbConnectionString, labelsPath, labelRefinementsPath, metalabelsPath) 
 	err = labelsPopulator.Load()
 	if err != nil {
+		raven.CaptureError(err, nil)
 		log.Fatal(err.Error())
 	}
 
 	makeLabelsProductive := clients.NewMakeLabelsProductiveClient(imageMonkeyDbConnectionString, labelsPath, metalabelsPath, false, *autoCloseGithubIssue)
 	err = makeLabelsProductive.Load()
 	if err != nil {
+		raven.CaptureError(err, nil)
 		log.Fatal(err.Error())
 	}
 
@@ -112,24 +127,30 @@ func main() {
 		trendingLabelsForDeployment, err := getTrendingLabelsForDeployment()
 		if err != nil {
 			log.Error("Couldn't get trending labels for deployment: ", err.Error())
+			raven.CaptureError(err, nil)
 			return
 		}
 
 		if len(trendingLabelsForDeployment) > 0 {
-			err := createBackup(*labelsLocation, *backupLocation)
+			backupPath := *backupDir + "/" + strconv.FormatInt(time.Now().Unix(), 10)
+			
+			err := createBackup(*labelsDir, backupPath)
 			if err != nil {
 				log.Error("Couldn't create backup: ", err.Error())
+				raven.CaptureError(err, nil)
 				return
 			}
 
 			log.Info("Downloading")
 			err = labelsDownloader.Download()
 			if err != nil {
+				raven.CaptureError(err, nil)
 				log.Error("Couldn't download labels: ", err.Error())
 				log.Info("Restoring backup again..")
-				os.RemoveAll(*labelsLocation)
-				err = restoreBackup(*backupLocation, *labelsLocation)
+				os.RemoveAll(*labelsDir)
+				err = restoreBackup(backupPath, *labelsDir)
 				if err != nil {
+					raven.CaptureError(err, nil)
 					log.Error("Couldn't restore backup: ", err.Error())	
 				}
 				return
@@ -138,11 +159,13 @@ func main() {
 			log.Info("Populating labels...")
 			err = labelsPopulator.Populate(false)
 			if err != nil {
+				raven.CaptureError(err, nil)
 				log.Error("Couldn't populate labels: ", err.Error())
 				log.Info("Restoring backup again..")
-				os.RemoveAll(*labelsLocation)
-				err = restoreBackup(*backupLocation, *labelsLocation)
+				os.RemoveAll(*labelsDir)
+				err = restoreBackup(backupPath, *labelsDir)
 				if err != nil {
+					raven.CaptureError(err, nil)
 					log.Error("Couldn't restore backup: ", err.Error())	
 				}
 				return
@@ -158,6 +181,7 @@ func main() {
 				for _, trendingLabel := range trendingLabelsForDeployment {
 					err = makeLabelsProductive.DoIt(trendingLabel.Name, trendingLabel.RenameTo, dryRun)
 					if err != nil {
+						raven.CaptureError(err, nil)
 						log.Error("Couldn't make trending label productive: ", err.Error()) 
 						return
 					}
@@ -165,8 +189,9 @@ func main() {
 			}
 
 			log.Info("All done...removing backup")
-			err = removeBackup(*backupLocation)
+			err = removeBackup(backupPath)
 			if err != nil {
+				raven.CaptureError(err, nil)
 				log.Error("Couldn't remove backup: ", err.Error())
 				return
 			}

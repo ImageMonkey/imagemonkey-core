@@ -217,5 +217,5 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 	equals(t, trendingLabels[0].Status, "merged")
-
 }
+

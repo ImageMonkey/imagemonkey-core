@@ -531,6 +531,7 @@ func main(){
 		fmt.Printf("Setting Sentry DSN\n")
 		sentryDsn = commons.MustGetEnv("SENTRY_DSN")
 		raven.SetEnvironment(sentryEnvironment)
+		raven.SetDSN(sentryDsn)
 
 		raven.CaptureMessage("Starting up api worker", nil)
 	}

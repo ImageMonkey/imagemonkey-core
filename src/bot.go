@@ -76,12 +76,19 @@ func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 func main() {
 	labelsRepositoryName := flag.String("labels_repository_name", "imagemonkey-labels-test", "Label Repository Name")
 	labelsRepositoryOwner := flag.String("labels_repository_owner", "bbernhard", "Label Repository Owner")
-	//metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
-	//labelsPath := flag.String("labels", "../wordlists/en/labels.jsonnet", "Path to labels")
 	gitCheckoutDir := flag.String("git_checkout_dir", "/tmp/labelrepository", "Git checkout directory")
 	singleshot := flag.Bool("singleshot", false, "singleshot")
+	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
 
 	flag.Parse()
+
+	if *useSentry {
+		log.Info("Setting Sentry DSN")
+		raven.SetDSN(commons.MustGetEnv("SENTRY_DSN"))
+		raven.SetEnvironment("bot")
+
+		raven.CaptureMessage("Starting up bot", nil)
+	}
 
 	metalabelsPath := *gitCheckoutDir + "/en/metalabels.jsonnet"
 	labelsPath := *gitCheckoutDir + "/en/labels.jsonnet"
@@ -97,11 +104,13 @@ func main() {
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
 	if err != nil {
+		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't open database: ", err.Error())
 	}
 
 	err = db.Ping()
 	if err != nil {
+		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't ping database: ", err.Error())
 	}
 	defer db.Close()

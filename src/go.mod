@@ -18,7 +18,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-jsonnet v0.13.0
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/h2non/filetype v1.0.8 // indirect
+	github.com/h2non/filetype v1.0.8
 	github.com/justinas/nosurf v0.0.0-20190416172904-05988550ea18 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/oschwald/geoip2-golang v1.3.0

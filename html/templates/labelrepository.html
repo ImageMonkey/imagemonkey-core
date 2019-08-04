@@ -84,9 +84,9 @@
 	    .then(function() {
 		  $("#loadingIndicator").hide();
           getTrendingLabels();
-		}).catch(function() {
+		}).catch(function(msg="Couldn't accept trending label - please try again later") {
 		  $("#loadingIndicator").hide();
-          $("#warningMessageBoxContent").text("Couldn't accept trending label - please try again later");
+          $("#warningMessageBoxContent").text(msg);
           $("#warningMessageBox").show(200).delay(1500).hide(200);
 		});
 	}
@@ -263,6 +263,12 @@
       <div class="four wide center aligned column"></div>
     </div>
 
+
+	<div hidden class="ui warning message" hidden id="warningMessageBox">
+      <i class="close icon"></i>
+      <div class="header" id="warningMessageBoxContent">
+      </div>
+    </div>
 
 	<div class="ui small modal" id="addTrendingLabelDlg" data-label-name="">
 	  <div class="header">

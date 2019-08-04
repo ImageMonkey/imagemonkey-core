@@ -6,6 +6,8 @@ RUN mkdir -p /home/go/bin
 
 COPY tests/ /tmp/tests
 COPY src/commons /tmp/src/commons
+COPY src/clients /tmp/src/clients
+COPY src/ioutils /tmp/src/ioutils
 COPY src/statworker.go /tmp/src/statworker.go
 COPY src/data_processor.go /tmp/src/data_processor.go
 COPY src/trendinglabelsworker.go /tmp/src/trendinglabelsworker.go

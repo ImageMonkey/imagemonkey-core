@@ -126,7 +126,7 @@ func main() {
 								"Path to the pre-trained models")
 	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
 	localSentryDsn := flag.String("local_sentry_dsn", "http://sentry:sentry@127.0.0.1:8080/sentry", "local Sentry DSN")
-	trendingLabelsRepositoryUrl := flag.String("trendinglabels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Trending Labels Repository")
+	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-labels-test", "Labels Repository")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -759,7 +759,7 @@ func main() {
 				"title": "Label Repository",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
-				"trendingLabelsRepositoryUrl": *trendingLabelsRepositoryUrl,
+				"labelsRepositoryUrl": *labelsRepositoryUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
 		})

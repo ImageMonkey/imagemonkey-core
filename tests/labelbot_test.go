@@ -22,7 +22,8 @@ func runLabelBot(t *testing.T, runType string) {
 	getLabelFiles(t)
 
 	// Start a process
-	cmd := exec.Command("go", "run", "-tags", "dev " + runType, "bot.go", "-singleshot=true", "-git_checkout_dir=/tmp/labels-unittest")
+	cmd := exec.Command("go", "run", "-tags", "dev " + runType, "bot.go", "-singleshot=true", 
+						"-git_checkout_dir=/tmp/labels-unittest", "-use_sentry=false")
 	cmd.Dir = "../src"
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout

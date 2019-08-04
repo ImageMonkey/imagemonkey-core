@@ -60,7 +60,14 @@ var ImageMonkeyApi = (function () {
             xhr.onload = function() {
                 resolve();
             }
-            xhr.onerror = reject;
+            xhr.onerror = function() {
+				reject();
+			}
+			xhr.onreadystatechange = function() {
+				if(xhr.status >= 400) {
+					reject();
+				}
+			}
             xhr.send(JSON.stringify({"label": {"type": labelType, "description": labelDescription, "plural": labelPlural, 
 												"rename_to": labelRenameTo}}));
 		});
