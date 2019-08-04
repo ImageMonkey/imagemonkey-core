@@ -11,6 +11,7 @@ before_install: |
   && chmod +x docker-compose \
   && sudo mv docker-compose /usr/local/bin
 
+before_script: |
   cd $TRAVIS_BUILD_DIR \
   && echo "Creating data directory" \
   && mkdir -p $TRAVIS_BUILD_DIR/data/donations \
