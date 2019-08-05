@@ -146,7 +146,7 @@ func main() {
 	labelsRepository := commons.NewLabelsRepository(*labelsRepositoryOwner, *labelsRepositoryName, *gitCheckoutDir)
 	labelsRepository.SetToken(imageMonkeyBotGithubApiToken)
 
-	travisCiApi := commons.NewTravisCiApi("bbernhard", "imagemonkey-trending-labels-test")
+	travisCiApi := commons.NewTravisCiApi(*labelsRepositoryOwner, *labelsRepositoryName)
 	travisCiApi.SetToken(travisCiApiToken)
 
 	firstIteration := true
@@ -302,6 +302,14 @@ func main() {
 						continue
 					}
 					trendingLabel.State = "build-canceled"
+				} else if travisCiBuildInfo.LastBuild.State == "errored" {
+					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+					if err != nil {
+						log.Error("Couldn't set trending label bot task state to build-failed: ", err.Error())
+						raven.CaptureError(err, nil)
+						continue
+					}
+					trendingLabel.State = "build-failed"
 				}
 			}
 			if trendingLabel.State == "build-success" {

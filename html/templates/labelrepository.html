@@ -50,6 +50,7 @@
 	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
 	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label") + "s");
 	  $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label"));
+	  $("#addTrendingLabelDlgDescriptionInput").val("");
       var labelType = getSelectedLabelType(); 
 	  if(labelType === "normal") {
         $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
@@ -115,10 +116,10 @@
       for(var i = 0; i < data.length; i++) {
 		var githubIssueUrl = '';
 		if(data[i].github.issue.id !== -1)
-			githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
+			githubIssueUrl = ('<a href="' + {{ .labelsRepositoryUrl }} + 
 								'/issues/' + data[i].github.issue.id + '">' +
 								'#' +  data[i].github.issue.id + '</a>');
-		var githubBranchUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
+		var githubBranchUrl = ('<a href="' + {{ .labelsRepositoryUrl }} + 
 								'/tree/' + data[i].github.branch_name + '">' +
 									data[i].github.branch_name + '</a>');
 		var cellColor = data[i].github.issue.closed ? "#76ff03" : "#ffffff";
