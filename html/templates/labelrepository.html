@@ -48,9 +48,9 @@
     }
     function onAddTrendingLabel(elem) {
 	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
-	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label") + "s");
-	  $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label"));
-	  $("#addTrendingLabelDlgDescriptionInput").val("");
+	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label-plural"));
+	  $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label-renameto"));
+	  $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
       var labelType = getSelectedLabelType(); 
 	  if(labelType === "normal") {
         $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
@@ -140,8 +140,12 @@
 		var escapedTrendingLabelRenameTo = escapeHtml(data[i].rename_to);
 		if(status === '') {
 			status = 'open';	
-			button = ('<div class="ui fluid ' + disabledStr + 'button" data-label="' + 
-						 escapedTrendingLabel+ '" onclick="onAddTrendingLabel(this);">Add</div>');
+			button = ('<div class="ui fluid ' + disabledStr 
+						+ 'button" data-label="' + escapedTrendingLabel 
+						+ '" data-label-plural="' + escapedTrendingLabelPlural + 's' 
+						+ '" data-label-description="' + '' 
+						+ '" data-label-renameto="' + escapedTrendingLabel
+						+ '" onclick="onAddTrendingLabel(this);">Add</div>');
 		} else if(status === 'waiting for moderator approval') {
 			var labelType = data[i].label.type;
 			{{ if .sessionInformation.UserPermissions }}
@@ -159,12 +163,21 @@
 			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-passing.svg"></img></a>';
 		} else if(status === 'build-canceled') {
 			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-canceled.svg"></img></a>';
-			button = ('<div class="ui fluid ' + disabledStr + ' button"' + 
-						' data-label="' + escapedTrendingLabel + '" onclick="onAddTrendingLabel(this);">Try again</div>');
+			button = ('<div class="ui fluid ' + disabledStr + ' button"' 
+						+ ' data-label="' + escapedTrendingLabel 
+						+ '" data-label-plural="' + escapedTrendingLabelPlural
+						+ '" data-label-description="' + escapedTrendingLabelDescription
+						+ '" data-label-renameto="' + escapedTrendingLabelRenameTo
+
+						+ '" onclick="onAddTrendingLabel(this);">Try again</div>');
 	  	} else if(status === 'build-failed') {
 			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-failed.svg"></img></a>';
-			button = ('<div class="ui fluid ' + disabledStr + ' button"' +
-						' data-label="' + escapedTrendingLabel + '" onclick="onAddTrendingLabel(this);">Try again</div>');
+			button = ('<div class="ui fluid ' + disabledStr + ' button"' 
+						+ ' data-label="' + escapedTrendingLabel 
+						+ '" data-label-plural="' + escapedTrendingLabelPlural
+						+ '" data-label-description="' + escapedTrendingLabelDescription
+						+ '" data-label-renameto="' + escapedTrendingLabelRenameTo
+						+ '" onclick="onAddTrendingLabel(this);">Try again</div>');
 		}
 
         elem = $(('<tr>' +
