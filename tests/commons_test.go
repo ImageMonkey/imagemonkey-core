@@ -28,8 +28,8 @@ func TestLabelAndMetalabelUuidsShouldBeUnique(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
-	labelRepository := commons.NewLabelRepository()
-	err := labelRepository.Load("../wordlists/en/labels.jsonnet")
+	labelRepository := commons.NewLabelRepository("../wordlists/en/labels.jsonnet")
+	err := labelRepository.Load()
 	ok(t, err)
 	labels := labelRepository.GetMapping()
 

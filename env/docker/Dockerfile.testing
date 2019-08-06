@@ -6,8 +6,12 @@ RUN mkdir -p /home/go/bin
 
 COPY tests/ /tmp/tests
 COPY src/commons /tmp/src/commons
+COPY src/clients /tmp/src/clients
+COPY src/ioutils /tmp/src/ioutils
 COPY src/statworker.go /tmp/src/statworker.go
 COPY src/data_processor.go /tmp/src/data_processor.go
+COPY src/bot.go /tmp/src/bot.go
+COPY src/labels_downloader.go /tmp/src/labels_downloader.go
 COPY src/trendinglabelsworker.go /tmp/src/trendinglabelsworker.go
 COPY src/make_labels_productive.go /tmp/src/make_labels_productive.go
 COPY src/image /tmp/src/image
@@ -31,7 +35,7 @@ RUN apt-get update \
 	&& cp /tmp/chromedriver /tmp/tests/ui \
 	&& rm /tmp/chromedriver_linux64.zip \
 	&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
-	&& apt install -y ./google-chrome-stable_current_amd64.deb \
+	&& apt install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
 	&& rm /tmp/google-chrome-stable_current_amd64.deb 
 
 
