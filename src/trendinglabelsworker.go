@@ -229,8 +229,16 @@ func main() {
 	flag.Parse()
 
 
-	githubProjectOwner := commons.MustGetEnv("GITHUB_PROJECT_OWNER")
-	githubApiToken := commons.MustGetEnv("GITHUB_API_TOKEN")
+	githubProjectOwner := ""
+	githubApiToken := ""
+	
+	if *useGithub {
+		githubProjectOwner = commons.MustGetEnv("GITHUB_PROJECT_OWNER")
+		githubApiToken = commons.MustGetEnv("GITHUB_API_TOKEN")
+	} else {
+		githubProjectOwner = commons.GetEnv("GITHUB_PROJECT_OWNER")
+		githubApiToken = commons.GetEnv("GITHUB_API_TOKEN")
+	}
 
 	if *useSentry {
 		log.Info("Setting Sentry DSN")

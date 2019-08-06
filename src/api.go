@@ -531,13 +531,14 @@ func main(){
 		fmt.Printf("Setting Sentry DSN\n")
 		sentryDsn = commons.MustGetEnv("SENTRY_DSN")
 		raven.SetEnvironment(sentryEnvironment)
+		raven.SetDSN(sentryDsn)
 
 		raven.CaptureMessage("Starting up api worker", nil)
 	}
 
 	log.Debug("[Main] Reading Label Map")
-	labelRepository := commons.NewLabelRepository()
-	err := labelRepository.Load(*wordlistPath)
+	labelRepository := commons.NewLabelRepository(*wordlistPath)
+	err := labelRepository.Load()
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read label map...terminating!")
 		log.Fatal(err)
@@ -2348,6 +2349,76 @@ func main(){
 			}
 			pushCountryContributionToRedis(redisPool, contributionsPerCountryRequest)
 
+			c.JSON(201, nil)
+		})
+
+		router.GET("/v1/trendinglabels", func(c *gin.Context) {
+			trendingLabels, err := imageMonkeyDatabase.GetTrendingLabels()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(200, trendingLabels)
+		})
+
+		router.POST("/v1/trendinglabels/:trendinglabel/accept", func(c *gin.Context) {
+			trendingLabel := c.Param("trendinglabel")
+			if trendingLabel == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid trending label"})
+				return
+			}
+
+			
+			var labelDetails datastructures.AcceptTrendingLabel
+			err := c.BindJSON(&labelDetails)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
+				return
+			}
+			if (labelDetails.Label.Type != "normal") && (labelDetails.Label.Type != "meta") {
+				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
+				return
+			}
+
+			if labelDetails.Label.RenameTo == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - rename_to cannot be empty!"})
+				return
+			}
+
+			if labelDetails.Label.Type == "normal" && labelDetails.Label.Plural == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - plural cannot be empty!"})
+				return
+			}
+
+			var apiUser datastructures.APIUser
+			apiUser.ClientFingerprint = getBrowserFingerprint(c)
+			apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+			if apiUser.Name == "" {
+				c.JSON(401, gin.H{"error": "Please authenticate first"})
+				return
+			}
+
+			userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelDetails.Label.Type, 
+						labelDetails.Label.Description, labelDetails.Label.Plural, 
+						labelDetails.Label.RenameTo, userInfo)
+			if err != nil {
+				switch err.(type) {
+					case *imagemonkeydb.InvalidTrendingLabelError:
+						c.JSON(404, gin.H{"error": "Couldn't accept trending label - please provide a valid trending label"})
+						return
+					default:
+						c.JSON(500, gin.H{"error": "Couldn't accept trending label - please try again later"})
+						return
+				}
+
+			}
 			c.JSON(201, nil)
 		})
 

@@ -1,34 +1,33 @@
 package imagemonkeydb
 
 import (
-    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	"github.com/getsentry/raven-go"
-    log "github.com/sirupsen/logrus"
-    "database/sql"
-    "fmt"
-    "encoding/json"
-    "github.com/lib/pq"
-    commons "github.com/bbernhard/imagemonkey-core/commons"
-    parser "github.com/bbernhard/imagemonkey-core/parser/v2" 
+	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
+	"github.com/getsentry/raven-go"
+	"github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 )
 
 func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, includeOnlyUnlockedLabels bool) (datastructures.ImageToLabel, error) {
-    var image datastructures.ImageToLabel
-    var labelMeEntries []datastructures.LabelMeEntry
-    image.Provider = "donation"
+	var image datastructures.ImageToLabel
+	var labelMeEntries []datastructures.LabelMeEntry
+	image.Provider = "donation"
 
-    tx, err := p.db.Begin()
-    if err != nil {
-        log.Debug("[Get Image to Label] Couldn't begin transaction: ", err.Error())
-        raven.CaptureError(err, nil)
-        return image, err
-    }
+	tx, err := p.db.Begin()
+	if err != nil {
+		log.Debug("[Get Image to Label] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return image, err
+	}
 
-
-    includeOwnImageDonations := ""
-    if username != "" {
-        includeOwnImageDonations = `OR (
+	includeOwnImageDonations := ""
+	if username != "" {
+		includeOwnImageDonations = `OR (
                                         EXISTS 
                                             (
                                                 SELECT 1 
@@ -42,13 +41,12 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
                                                 FROM image_quarantine q 
                                                 WHERE q.image_id = i.id 
                                             )
-                                       )` 
-    }
+                                       )`
+	}
 
-
-    var unlabeledRows *sql.Rows 
-    if imageId == "" {
-        q := fmt.Sprintf(`SELECT i.key, i.unlocked, i.width, i.height
+	var unlabeledRows *sql.Rows
+	if imageId == "" {
+		q := fmt.Sprintf(`SELECT i.key, i.unlocked, i.width, i.height
                             FROM image i 
                             WHERE (i.unlocked = true %s)
 
@@ -58,57 +56,57 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
                                 SELECT image_id FROM image_label_suggestion
                             ) LIMIT 1`, includeOwnImageDonations)
 
-        if username == "" {
-            unlabeledRows, err = tx.Query(q)
-        } else {
-            unlabeledRows, err = tx.Query(q, username)
-        }
+		if username == "" {
+			unlabeledRows, err = tx.Query(q)
+		} else {
+			unlabeledRows, err = tx.Query(q, username)
+		}
 
-        if err != nil {
-            tx.Rollback()
-            raven.CaptureError(err, nil)
-            log.Debug("[Get Image to Label] Couldn't get unlabeled image: ", err.Error())
-            return image, err
-        }
+		if err != nil {
+			tx.Rollback()
+			raven.CaptureError(err, nil)
+			log.Debug("[Get Image to Label] Couldn't get unlabeled image: ", err.Error())
+			return image, err
+		}
 
-        defer unlabeledRows.Close()
-    }
+		defer unlabeledRows.Close()
+	}
 
-    if imageId != "" || !unlabeledRows.Next() {
-        q1 := ""
-        if imageId == "" {
-            //either get a random image or image with specific id
-            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, 
+	if imageId != "" || !unlabeledRows.Next() {
+		q1 := ""
+		if imageId == "" {
+			//either get a random image or image with specific id
+			q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, 
                               i.unlocked as image_unlocked, i.width as image_width, i.height as image_height
                                FROM image i WHERE (i.unlocked = true %s)
                                OFFSET floor(random() * (
                                                         SELECT count(*) FROM image i WHERE (unlocked = true %s)
                                                        )
                                            ) LIMIT 1`, includeOwnImageDonations, includeOwnImageDonations)
-        } else {
-            paramPos := 1
-            if username != "" {
-                paramPos = 2
-            }
+		} else {
+			paramPos := 1
+			if username != "" {
+				paramPos = 2
+			}
 
-            q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, 
+			q1 = fmt.Sprintf(`SELECT i.id as id, i.key as key, 
                               i.unlocked as image_unlocked, i.width as image_width, i.height as image_height
                               FROM image i 
                               WHERE (i.unlocked = true %s) AND i.key = $%d`, includeOwnImageDonations, paramPos)
-        } 
+		}
 
-        q2 := ""
-        if !includeOnlyUnlockedLabels {
-            q2  = `UNION ALL
+		q2 := ""
+		if !includeOnlyUnlockedLabels {
+			q2 = `UNION ALL
 
                    SELECT ils.image_id as image_id, s.name as label, 
                    '' as parent_label, false as unlocked, ils.annotatable as annotatable,
                    '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
                    FROM image_label_suggestion ils
                    JOIN label_suggestion s on ils.label_suggestion_id = s.id`
-        }
+		}
 
-        q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
+		q := fmt.Sprintf(`SELECT q.key, COALESCE(label, ''), COALESCE(parent_label, '') as parent_label, 
                           COALESCE(q1.unlocked, false) as label_unlocked, COALESCE(q1.annotatable, false) as annotatable, 
                           COALESCE(q1.label_uuid, '') as label_uuid, COALESCE(q1.validation_uuid, '') as validation_uuid, 
                           COALESCE(q1.num_of_valid, 0) as num_of_valid, COALESCE(q1.num_of_invalid, 0) as num_of_invalid, q.image_unlocked,
@@ -141,311 +139,306 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
                                                                       -- otherwise, the below logic won't work correctly
                                 `, q2, q1)
 
-        var rows *sql.Rows
-        if imageId == "" {
-            if username == ""  {
-                rows, err = tx.Query(q)
-            } else {
-                rows, err = tx.Query(q, username)
-            }
-        } else {
-            if username == "" {
-                rows, err = tx.Query(q, imageId)
-            } else {
-                rows, err = tx.Query(q, username, imageId)
-            }
-        }
+		var rows *sql.Rows
+		if imageId == "" {
+			if username == "" {
+				rows, err = tx.Query(q)
+			} else {
+				rows, err = tx.Query(q, username)
+			}
+		} else {
+			if username == "" {
+				rows, err = tx.Query(q, imageId)
+			} else {
+				rows, err = tx.Query(q, username, imageId)
+			}
+		}
 
-        if err != nil {
-            tx.Rollback()
-            raven.CaptureError(err, nil)
-            log.Debug("[Get Image to Label] Couldn't get image: ", err.Error())
-            return image, err
-        }
+		if err != nil {
+			tx.Rollback()
+			raven.CaptureError(err, nil)
+			log.Debug("[Get Image to Label] Couldn't get image: ", err.Error())
+			return image, err
+		}
 
-        defer rows.Close()
+		defer rows.Close()
 
-        //store in temporary map for faster access
-        var label string
-        var parentLabel string
-        var baseLabel string
-        var labelUnlocked bool
-        var labelAnnotatable bool
-        var labelUuid string
-        var validationUuid string
-        var numOfValid int32
-        var numOfInvalid int32
-        var imageDescriptions []byte
-        temp := make(map[string]datastructures.LabelMeEntry) 
-        for rows.Next() {
-            err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid, 
-                            &validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked, &image.Width, &image.Height,
-                            &imageDescriptions)
+		//store in temporary map for faster access
+		var label string
+		var parentLabel string
+		var baseLabel string
+		var labelUnlocked bool
+		var labelAnnotatable bool
+		var labelUuid string
+		var validationUuid string
+		var numOfValid int32
+		var numOfInvalid int32
+		var imageDescriptions []byte
+		temp := make(map[string]datastructures.LabelMeEntry)
+		for rows.Next() {
+			err = rows.Scan(&image.Id, &label, &parentLabel, &labelUnlocked, &labelAnnotatable, &labelUuid,
+				&validationUuid, &numOfValid, &numOfInvalid, &image.Unlocked, &image.Width, &image.Height,
+				&imageDescriptions)
 
-            if err != nil {
-                tx.Rollback()
-                raven.CaptureError(err, nil)
-                log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
-                return image, err
-            }
+			if err != nil {
+				tx.Rollback()
+				raven.CaptureError(err, nil)
+				log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
+				return image, err
+			}
 
-            //can happen if we are selecting an image by id and that image has no labels yet
-            if label == "" {
-                continue
-            }
+			//can happen if we are selecting an image by id and that image has no labels yet
+			if label == "" {
+				continue
+			}
 
-            err := json.Unmarshal(imageDescriptions, &image.ImageDescriptions)
-            if err != nil {
-                log.Debug("[Get Image to Label] Couldn't unmarshal image descriptions: ", err.Error())
-                raven.CaptureError(err, nil)
-                return image, err
-            }
+			err := json.Unmarshal(imageDescriptions, &image.ImageDescriptions)
+			if err != nil {
+				log.Debug("[Get Image to Label] Couldn't unmarshal image descriptions: ", err.Error())
+				raven.CaptureError(err, nil)
+				return image, err
+			}
 
+			baseLabel = parentLabel
+			if parentLabel == "" {
+				baseLabel = label
+			}
 
-            baseLabel = parentLabel
-            if parentLabel == "" {
-                baseLabel = label
-            }
+			if val, ok := temp[baseLabel]; ok {
+				if parentLabel != "" {
+					var validation *datastructures.LabelMeValidation
+					validation = nil
+					if validationUuid != "" {
+						validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+					}
 
-            if val, ok := temp[baseLabel]; ok {
-                if parentLabel != "" {
-                    var validation *datastructures.LabelMeValidation
-                    validation = nil
-                    if validationUuid != "" {
-                        validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
-                    }
+					val.Sublabels = append(val.Sublabels, datastructures.Sublabel{Name: label, Unlocked: labelUnlocked,
+						Annotatable: labelAnnotatable, Uuid: labelUuid,
+						Validation: validation})
+				}
+				temp[baseLabel] = val
+			} else {
+				var labelMeEntry datastructures.LabelMeEntry
+				labelMeEntry.Label = baseLabel
+				labelMeEntry.Unlocked = labelUnlocked
+				labelMeEntry.Annotatable = labelAnnotatable
+				labelMeEntry.Uuid = labelUuid
+				labelMeEntry.Validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+				if parentLabel != "" {
+					var validation *datastructures.LabelMeValidation
+					validation = nil
+					if validationUuid != "" {
+						validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
+					}
 
-                    val.Sublabels = append(val.Sublabels, datastructures.Sublabel {Name: label, Unlocked: labelUnlocked, 
-                                                                    Annotatable: labelAnnotatable, Uuid: labelUuid,
-                                                                    Validation: validation})
-                }
-                temp[baseLabel] = val
-            } else {
-                var labelMeEntry datastructures.LabelMeEntry
-                labelMeEntry.Label = baseLabel
-                labelMeEntry.Unlocked = labelUnlocked
-                labelMeEntry.Annotatable = labelAnnotatable
-                labelMeEntry.Uuid = labelUuid
-                labelMeEntry.Validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
-                if parentLabel != "" {
-                    var validation *datastructures.LabelMeValidation
-                    validation = nil
-                    if validationUuid != "" {
-                        validation = &datastructures.LabelMeValidation{Uuid: validationUuid, NumOfValid: numOfValid, NumOfInvalid: numOfInvalid}
-                    }
+					labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: label, Unlocked: labelUnlocked,
+						Annotatable: labelAnnotatable, Uuid: labelUuid,
+						Validation: validation})
+				}
+				temp[baseLabel] = labelMeEntry
+			}
+		}
 
+		rows.Close()
 
-                    labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel {Name: label, Unlocked: labelUnlocked, 
-                                                                                      Annotatable: labelAnnotatable, Uuid: labelUuid,
-                                                                                      Validation: validation})
-                }
-                temp[baseLabel] = labelMeEntry 
-            }
-        }
+		//map -> list
+		for _, value := range temp {
+			labelMeEntries = append(labelMeEntries, value)
+		}
 
-        rows.Close()
+	} else {
+		err = unlabeledRows.Scan(&image.Id, &image.Unlocked, &image.Width, &image.Height)
+		if err != nil {
+			tx.Rollback()
+			raven.CaptureError(err, nil)
+			log.Debug("[Get Image to Label] Couldn't scan row: ", err.Error())
+			return image, err
+		}
+		unlabeledRows.Close()
+	}
 
-        //map -> list
-        for  _, value := range temp {
-            labelMeEntries = append(labelMeEntries, value)
-        }
+	image.AllLabels = labelMeEntries
 
-    } else {
-        err = unlabeledRows.Scan(&image.Id, &image.Unlocked, &image.Width, &image.Height)
-        if err != nil {
-            tx.Rollback()
-            raven.CaptureError(err, nil)
-            log.Debug("[Get Image to Label] Couldn't scan row: ", err.Error())
-            return image, err
-        }
-        unlabeledRows.Close()
-    }
+	err = tx.Commit()
+	if err != nil {
+		raven.CaptureError(err, nil)
+		log.Debug("[Get Image to Label] Couldn't commit changes: ", err.Error())
+		return image, err
+	}
 
-    image.AllLabels = labelMeEntries
-
-    err = tx.Commit()
-    if err != nil {
-        raven.CaptureError(err, nil)
-        log.Debug("[Get Image to Label] Couldn't commit changes: ", err.Error())
-        return image, err
-    }
-
-    return image, nil
+	return image, nil
 }
 
+func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry,
+	metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry) error {
+	tx, err := p.db.Begin()
+	if err != nil {
+		log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
-                                                metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry) error {
-    tx, err := p.db.Begin()
-    if err != nil {
-        log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
+	_, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageId, labels, 0, 0)
+	if err != nil { //tx already rolled back in case of error, so we can just return here
+		log.Debug("[Adding image labels] Couldn't add labels: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-    _, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageId, labels, 0, 0)
-    if err != nil { //tx already rolled back in case of error, so we can just return here 
-        log.Debug("[Adding image labels] Couldn't add labels: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
-
-    
-    err = tx.Commit()
-    if err != nil {
-        log.Debug("[Adding image labels] Couldn't commit changes: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err 
-    }
-    return err
+	err = tx.Commit()
+	if err != nil {
+		log.Debug("[Adding image labels] Couldn't commit changes: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+	return err
 }
 
+func _addLabelsAndLabelSuggestionsToImageInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry,
+	metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry,
+	numOfValid int, numOfNotAnnotatable int) ([]int64, error) {
+	var insertedValidationIds []int64
+	var err error
+	var knownLabels []datastructures.LabelMeEntry
+	for _, item := range labels {
+		if !commons.IsLabelValid(labelMap, metalabels, item.Label, item.Sublabels) { //if its a label that is not known to us
+			if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
+				err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
+				if err != nil {
+					return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here
+				}
+			} else {
+				tx.Rollback()
+				log.Debug("you need to be authenticated")
+				return insertedValidationIds, errors.New("you need to be authenticated to perform this action")
+			}
+		} else {
+			knownLabels = append(knownLabels, item)
+		}
+	}
 
-func _addLabelsAndLabelSuggestionsToImageInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, labelMap map[string]datastructures.LabelMapEntry, 
-                                                        metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry,
-                                                        numOfValid int, numOfNotAnnotatable int) ([]int64, error) {
-    var insertedValidationIds []int64
-    var err error
-    var knownLabels []datastructures.LabelMeEntry
-    for _, item := range labels {
-        if !commons.IsLabelValid(labelMap, metalabels, item.Label, item.Sublabels) { //if its a label that is not known to us
-            if apiUser.Name != "" { //and request is coming from a authenticated user, add it to the label suggestions
-                err := _addLabelSuggestionToImage(apiUser, item.Label, imageId, item.Annotatable, tx)
-                if err != nil {
-                    return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here 
-                }
-            } else {
-                tx.Rollback()
-                log.Debug("you need to be authenticated")
-                return insertedValidationIds, errors.New("you need to be authenticated to perform this action") 
-            }
-        } else {
-            knownLabels = append(knownLabels, item)
-        }
-    }
+	if len(knownLabels) > 0 {
+		insertedValidationIds, err = AddLabelsToImageInTransaction(apiUser.ClientFingerprint, imageId, knownLabels, numOfValid, numOfNotAnnotatable, tx)
+		if err != nil {
+			return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here
+		}
+	}
 
-    if len(knownLabels) > 0 {
-        insertedValidationIds, err = AddLabelsToImageInTransaction(apiUser.ClientFingerprint, imageId, knownLabels, numOfValid, numOfNotAnnotatable, tx)
-        if err != nil { 
-            return insertedValidationIds, err //tx already rolled back in case of error, so we can just return here 
-        }
-    }
-
-    return insertedValidationIds, nil
+	return insertedValidationIds, nil
 }
 
 func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, imageId string, annotatable bool, tx *sql.Tx) error {
-    var labelSuggestionId int64
+	var labelSuggestionId int64
 
-    labelSuggestionId = -1
-    rows, err := tx.Query("SELECT id FROM label_suggestion WHERE name = $1", label)
-    if err != nil {
-        tx.Rollback()
-        log.Debug("[Adding suggestion label] Couldn't get label: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
+	labelSuggestionId = -1
+	rows, err := tx.Query("SELECT id FROM label_suggestion WHERE name = $1", label)
+	if err != nil {
+		tx.Rollback()
+		log.Debug("[Adding suggestion label] Couldn't get label: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-    if !rows.Next() { //label does not exist yet, insert it
-        rows.Close()
+	if !rows.Next() { //label does not exist yet, insert it
+		rows.Close()
 
-        err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by) 
+		err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by) 
                             SELECT $1, id FROM account a WHERE a.name = $2 
                             ON CONFLICT (name) DO NOTHING RETURNING id`, label, apiUser.Name).Scan(&labelSuggestionId)
-        if err != nil {
-            tx.Rollback()
-            log.Debug("[Adding suggestion label] Couldn't add label: ", err.Error())
-            raven.CaptureError(err, nil)
-            return err
-        }
-    } else {
-        err = rows.Scan(&labelSuggestionId)
-        rows.Close()
-        if err != nil {
-            tx.Rollback()
-            log.Debug("[Adding suggestion label] Couldn't scan label: ", err.Error())
-            raven.CaptureError(err, nil)
-            return err
-        }
-    }
+		if err != nil {
+			tx.Rollback()
+			log.Debug("[Adding suggestion label] Couldn't add label: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+	} else {
+		err = rows.Scan(&labelSuggestionId)
+		rows.Close()
+		if err != nil {
+			tx.Rollback()
+			log.Debug("[Adding suggestion label] Couldn't scan label: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+	}
 
-    _, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period) 
+	_, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period) 
                         SELECT $1, id, $3, $4, '["now()",]'::tstzrange FROM image WHERE key = $2
                         ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
-    if err != nil {
-        tx.Rollback()
-        log.Debug("[Adding image label suggestion] Couldn't add image label suggestion: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
+	if err != nil {
+		tx.Rollback()
+		log.Debug("[Adding image label suggestion] Couldn't add image label suggestion: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-    return nil
+	return nil
 }
 
-func AddLabelsToImageInTransaction(clientFingerprint string, imageId string, labels []datastructures.LabelMeEntry, 
-        numOfValid int, numOfNotAnnotatable int, tx *sql.Tx) ([]int64, error) {
-    var insertedIds []int64
-    for _, item := range labels {
-        rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
-        if err != nil {
-            tx.Rollback()
-            log.Debug("[Adding image labels] Couldn't get image ", err.Error())
-            raven.CaptureError(err, nil)
-            return insertedIds, err
-        }
+func AddLabelsToImageInTransaction(clientFingerprint string, imageId string, labels []datastructures.LabelMeEntry,
+	numOfValid int, numOfNotAnnotatable int, tx *sql.Tx) ([]int64, error) {
+	var insertedIds []int64
+	for _, item := range labels {
+		rows, err := tx.Query(`SELECT i.id FROM image i WHERE i.key = $1`, imageId)
+		if err != nil {
+			tx.Rollback()
+			log.Debug("[Adding image labels] Couldn't get image ", err.Error())
+			raven.CaptureError(err, nil)
+			return insertedIds, err
+		}
 
-        defer rows.Close()
+		defer rows.Close()
 
-        var imageId int64
-        if rows.Next() {
-            err = rows.Scan(&imageId)
-            if err != nil {
-                tx.Rollback()
-                log.Debug("[Adding image labels] Couldn't scan image image entry: ", err.Error())
-                raven.CaptureError(err, nil)
-                return insertedIds, err
-            }
-        }
+		var imageId int64
+		if rows.Next() {
+			err = rows.Scan(&imageId)
+			if err != nil {
+				tx.Rollback()
+				log.Debug("[Adding image labels] Couldn't scan image image entry: ", err.Error())
+				raven.CaptureError(err, nil)
+				return insertedIds, err
+			}
+		}
 
-        rows.Close()
+		rows.Close()
 
-        //add sublabels
-        if len(item.Sublabels) > 0 {
-            rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
+		//add sublabels
+		if len(item.Sublabels) > 0 {
+			rows, err = tx.Query(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, label_id, uuid, num_of_not_annotatable) 
                                   SELECT $1, $2, $3, $4, l.id, uuid_generate_v4(), $7 FROM label l LEFT JOIN label cl ON cl.id = l.parent_id WHERE (cl.name = $5 AND l.name = ANY($6))
                                   ON CONFLICT DO NOTHING
                                   RETURNING id`,
-                                  imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(sublabelsToStringlist(item.Sublabels)), numOfNotAnnotatable)
-            if err != nil {
-                if err != sql.ErrNoRows { //handle no rows gracefully (can happen if label already exists)
-                    pqErr := err.(*pq.Error)
-                    if pqErr.Code.Name() != "unique_violation" {
-                        tx.Rollback()
-                        log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
-                        raven.CaptureError(err, nil)
-                        return insertedIds, err
-                    }
-                }
-            } else {
-                for rows.Next() {
-                    var insertedSublabelId int64
-                    err = rows.Scan(&insertedSublabelId)
-                    if err != nil {
-                        rows.Close()
-                        tx.Rollback()
-                        log.Debug("[Adding image labels] Couldn't scan sublabels: ", err.Error())
-                        raven.CaptureError(err, nil)
-                        return insertedIds, err
-                    }
-                    insertedIds = append(insertedIds, insertedSublabelId)
-                }
-                rows.Close()
-            }
-        }
+				imageId, numOfValid, 0, clientFingerprint, item.Label, pq.Array(sublabelsToStringlist(item.Sublabels)), numOfNotAnnotatable)
+			if err != nil {
+				if err != sql.ErrNoRows { //handle no rows gracefully (can happen if label already exists)
+					pqErr := err.(*pq.Error)
+					if pqErr.Code.Name() != "unique_violation" {
+						tx.Rollback()
+						log.Debug("[Adding image labels] Couldn't insert image validation entries for sublabels: ", err.Error())
+						raven.CaptureError(err, nil)
+						return insertedIds, err
+					}
+				}
+			} else {
+				for rows.Next() {
+					var insertedSublabelId int64
+					err = rows.Scan(&insertedSublabelId)
+					if err != nil {
+						rows.Close()
+						tx.Rollback()
+						log.Debug("[Adding image labels] Couldn't scan sublabels: ", err.Error())
+						raven.CaptureError(err, nil)
+						return insertedIds, err
+					}
+					insertedIds = append(insertedIds, insertedSublabelId)
+				}
+				rows.Close()
+			}
+		}
 
-        //add base label
-        var insertedLabelId int64
-        err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, 
+		//add base label
+		var insertedLabelId int64
+		err = tx.QueryRow(`INSERT INTO image_validation(image_id, num_of_valid, num_of_invalid, fingerprint_of_last_modification, 
                                                             label_id, uuid, num_of_not_annotatable) 
                               SELECT $1, $2, $3, $4, id, uuid_generate_v4(), $6 from label l WHERE id NOT IN 
                               (
@@ -453,64 +446,64 @@ func AddLabelsToImageInTransaction(clientFingerprint string, imageId string, lab
                               ) AND l.name = $5 AND l.parent_id IS NULL
                               ON CONFLICT DO NOTHING
                               RETURNING id`,
-                              imageId, numOfValid, 0, clientFingerprint, item.Label, numOfNotAnnotatable).Scan(&insertedLabelId)
-        if err != nil {
-            if err != sql.ErrNoRows { //handle no rows gracefully (can happen if label already exists)
-                pqErr := err.(*pq.Error)
-                if pqErr.Code.Name() != "unique_violation" {
-                    tx.Rollback()
-                    log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
-                    raven.CaptureError(err, nil)
-                    return insertedIds, err
-                }
-            }
-        } else {
-            insertedIds = append(insertedIds, insertedLabelId)
-        }
-    }
+			imageId, numOfValid, 0, clientFingerprint, item.Label, numOfNotAnnotatable).Scan(&insertedLabelId)
+		if err != nil {
+			if err != sql.ErrNoRows { //handle no rows gracefully (can happen if label already exists)
+				pqErr := err.(*pq.Error)
+				if pqErr.Code.Name() != "unique_violation" {
+					tx.Rollback()
+					log.Debug("[Adding image labels] Couldn't insert image validation entry for label: ", err.Error())
+					raven.CaptureError(err, nil)
+					return insertedIds, err
+				}
+			}
+		} else {
+			insertedIds = append(insertedIds, insertedLabelId)
+		}
+	}
 
-    return insertedIds, nil
+	return insertedIds, nil
 }
 
 func (p *ImageMonkeyDatabase) GetAllImageLabels() ([]string, error) {
-    var labels []string
+	var labels []string
 
-    rows, err := p.db.Query(`SELECT l.name FROM label l`)
-    if err != nil {
-        log.Debug("[Getting all image labels] Couldn't get image labels: ", err.Error())
-        raven.CaptureError(err, nil)
-        return labels, err
-    }
+	rows, err := p.db.Query(`SELECT l.name FROM label l`)
+	if err != nil {
+		log.Debug("[Getting all image labels] Couldn't get image labels: ", err.Error())
+		raven.CaptureError(err, nil)
+		return labels, err
+	}
 
-    defer rows.Close()
+	defer rows.Close()
 
-    for rows.Next() {
-        var label string
-        err = rows.Scan(&label)
-        if err != nil {
-            log.Debug("[Getting all image labels] Couldn't scan row: ", err.Error())
-            raven.CaptureError(err, nil)
-            return labels, err 
-        }
+	for rows.Next() {
+		var label string
+		err = rows.Scan(&label)
+		if err != nil {
+			log.Debug("[Getting all image labels] Couldn't scan row: ", err.Error())
+			raven.CaptureError(err, nil)
+			return labels, err
+		}
 
-        labels = append(labels, label)
-    }
+		labels = append(labels, label)
+	}
 
-    return labels, nil
+	return labels, nil
 }
 
-func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, parseResult parser.ParseResult, 
-        apiBaseUrl string, shuffle bool) ([]datastructures.ImageLabel, error) {
-    var imageLabels []datastructures.ImageLabel
+func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, parseResult parser.ParseResult,
+	apiBaseUrl string, shuffle bool) ([]datastructures.ImageLabel, error) {
+	var imageLabels []datastructures.ImageLabel
 
-    shuffleStr := ""
-    if shuffle {
-        shuffleStr = "ORDER BY RANDOM()"
-    }
+	shuffleStr := ""
+	if shuffle {
+		shuffleStr = "ORDER BY RANDOM()"
+	}
 
-    includeOwnImageDonations := ""
-    if apiUser.Name != "" {
-        includeOwnImageDonations = fmt.Sprintf(`OR (
+	includeOwnImageDonations := ""
+	if apiUser.Name != "" {
+		includeOwnImageDonations = fmt.Sprintf(`OR (
                                                 EXISTS 
                                                     (
                                                         SELECT 1 
@@ -524,10 +517,10 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                                         FROM image_quarantine q 
                                                         WHERE q.image_id = i.id 
                                                     )
-                                               )`, len(parseResult.QueryValues) + 1)
-    }
+                                               )`, len(parseResult.QueryValues)+1)
+	}
 
-    q := fmt.Sprintf(`WITH 
+	q := fmt.Sprintf(`WITH 
                         image_productive_labels AS (
                                            SELECT i.id as image_id, a.accessor as accessor, a.label_id as label_id
                                                                 FROM image_validation v 
@@ -617,54 +610,173 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                         ) q4
                         LEFT JOIN img_descriptions imgdsc ON imgdsc.image_id = q4.image_id
                         GROUP BY image_key, image_width, image_height, image_unlocked, imgdsc.descriptions
-                        %s`, 
-                      includeOwnImageDonations, includeOwnImageDonations, parseResult.Query, shuffleStr)
+                        %s`,
+		includeOwnImageDonations, includeOwnImageDonations, parseResult.Query, shuffleStr)
 
-    var rows *sql.Rows
-    if apiUser.Name != "" {
-        parseResult.QueryValues = append(parseResult.QueryValues, apiUser.Name)
-    }
+	var rows *sql.Rows
+	if apiUser.Name != "" {
+		parseResult.QueryValues = append(parseResult.QueryValues, apiUser.Name)
+	}
 
-    rows, err := p.db.Query(q, parseResult.QueryValues...)
-    if err != nil {
-        log.Debug("[Get Image Labels] Couldn't get image labels: ", err.Error())
-        raven.CaptureError(err, nil)
-        return imageLabels, err
-    }
+	rows, err := p.db.Query(q, parseResult.QueryValues...)
+	if err != nil {
+		log.Debug("[Get Image Labels] Couldn't get image labels: ", err.Error())
+		raven.CaptureError(err, nil)
+		return imageLabels, err
+	}
 
-    defer rows.Close()
+	defer rows.Close()
 
+	for rows.Next() {
+		var imageLabel datastructures.ImageLabel
+		var labels []byte
+		var imageDescriptionBytes []byte
+		err = rows.Scan(&imageLabel.Image.Id, &imageLabel.Image.Width, &imageLabel.Image.Height,
+			&imageLabel.Image.Unlocked, &labels, &imageDescriptionBytes)
+		if err != nil {
+			log.Debug("[Get Image Labels] Couldn't scan rows: ", err.Error())
+			raven.CaptureError(err, nil)
+			return imageLabels, err
+		}
 
-    for rows.Next() {
-        var imageLabel datastructures.ImageLabel
-        var labels []byte
-        var imageDescriptionBytes []byte
-        err = rows.Scan(&imageLabel.Image.Id, &imageLabel.Image.Width, &imageLabel.Image.Height, 
-                            &imageLabel.Image.Unlocked, &labels, &imageDescriptionBytes)
-        if err != nil {
-            log.Debug("[Get Image Labels] Couldn't scan rows: ", err.Error())
-            raven.CaptureError(err, nil)
-            return imageLabels, err
-        }
+		err := json.Unmarshal(labels, &imageLabel.Labels)
+		if err != nil {
+			log.Debug("[Get Image Labels] Couldn't unmarshal image labels: ", err.Error())
+			raven.CaptureError(err, nil)
+			return nil, err
+		}
 
-        err := json.Unmarshal(labels, &imageLabel.Labels)
-        if err != nil {
-            log.Debug("[Get Image Labels] Couldn't unmarshal image labels: ", err.Error())
-            raven.CaptureError(err, nil)
-            return nil, err
-        }
+		err = json.Unmarshal(imageDescriptionBytes, &imageLabel.Image.Descriptions)
+		if err != nil {
+			log.Debug("[Get Image Labels] Couldn't unmarshal image descriptions: ", err.Error())
+			raven.CaptureError(err, nil)
+			return nil, err
+		}
 
-        err = json.Unmarshal(imageDescriptionBytes, &imageLabel.Image.Descriptions)
-        if err != nil {
-            log.Debug("[Get Image Labels] Couldn't unmarshal image descriptions: ", err.Error())
-            raven.CaptureError(err, nil)
-            return nil, err
-        }
+		imageLabel.Image.Url = commons.GetImageUrlFromImageId(apiBaseUrl, imageLabel.Image.Id, imageLabel.Image.Unlocked)
 
-        imageLabel.Image.Url = commons.GetImageUrlFromImageId(apiBaseUrl, imageLabel.Image.Id, imageLabel.Image.Unlocked)
+		imageLabels = append(imageLabels, imageLabel)
+	}
 
-        imageLabels = append(imageLabels, imageLabel)
-    }
+	return imageLabels, nil
+}
 
-    return imageLabels, nil
+func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabel, error) {
+	trendingLabels := []datastructures.TrendingLabel{}
+	rows, err := p.db.Query(`SELECT s.name, t.github_issue_id, t.closed, COALESCE(tb.state::text, ''), 
+									COALESCE(tb.job_url, ''), COALESCE(tb.label_type::text, ''),
+									COALESCE(tb.branch_name, ''), COALESCE(tb.description, ''),
+									COALESCE(tb.plural, ''), COALESCE(tb.rename_to, '')
+							 FROM trending_label_suggestion t
+							 JOIN label_suggestion s ON s.id = t.label_suggestion_id
+							 LEFT JOIN trending_label_bot_task tb ON tb.trending_label_suggestion_id = t.id`)
+	if err != nil {
+		log.Error("[Get Trending Labels] Couldn't get trending labels: ", err.Error())
+		raven.CaptureError(err, nil)
+		return trendingLabels, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var trendingLabel datastructures.TrendingLabel
+		err = rows.Scan(&trendingLabel.Name, &trendingLabel.Github.Issue.Id,
+			&trendingLabel.Github.Issue.Closed, &trendingLabel.Status, &trendingLabel.Ci.JobUrl,
+			&trendingLabel.Label.Type, &trendingLabel.Github.BranchName, &trendingLabel.Label.Description,
+			&trendingLabel.Label.Plural, &trendingLabel.RenameTo)
+		if err != nil {
+			log.Error("[Get Trending Labels] Couldn't scan trending labels: ", err.Error())
+			raven.CaptureError(err, nil)
+			return trendingLabels, err
+		}
+		trendingLabels = append(trendingLabels, trendingLabel)
+	}
+
+	return trendingLabels, nil
+}
+
+func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string, labelDescription string, 
+													labelPlural string, labelRenameTo string, 
+													userInfo datastructures.UserInfo) error {
+	status := "waiting for moderator approval"
+	if userInfo.Permissions != nil && userInfo.Permissions.CanAcceptTrendingLabel {
+		status = "accepted"
+	}
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		log.Error("[Accept Trending Label] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	rows, err := tx.Query(`INSERT INTO trending_label_bot_task(trending_label_suggestion_id, state, try, label_type, description, plural, rename_to)
+								SELECT l.id, $1, 1, $3, $4, $5, $6
+								FROM trending_label_suggestion l
+								JOIN label_suggestion s ON s.id = l.label_suggestion_id 
+								WHERE s.name = $2
+							 ON CONFLICT DO NOTHING
+							 RETURNING id`, status, name, labelType, labelDescription, labelPlural, labelRenameTo)
+
+	if err != nil {
+		tx.Rollback()
+		log.Error("[Accept Trending Label] Couldn't accept trending label: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	defer rows.Close()
+
+	success := false
+	if rows.Next() {
+		success = true
+	}
+
+	rows.Close()
+
+	if !success { //already exists an entry
+		rows1, err := tx.Query(`UPDATE trending_label_bot_task 
+							 		 SET state = CASE 
+									 				WHEN state = 'waiting for moderator approval' THEN $2
+									 			 	WHEN state = 'build-failed' THEN 'retry'
+													WHEN state = 'build-canceled' THEN 'retry'
+													WHEN state is null THEN $2
+													ELSE state --do nothing
+												 END
+							 		 FROM (
+							 			SELECT l.id as lid
+										FROM trending_label_suggestion l
+							 			JOIN label_suggestion s ON s.id = l.label_suggestion_id
+										WHERE s.name = $1 
+									 ) q
+							 		 WHERE q.lid = trending_label_suggestion_id
+							 		 RETURNING id`, name, status)
+		if err != nil {
+			tx.Rollback()
+			log.Error("[Accept Trending Label] Couldn't accept trending label: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+
+		defer rows1.Close()
+
+		if rows1.Next() {
+			success = true
+		}
+
+		rows1.Close()
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Error("[Accept Trending Label] Couldn't commit transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	if success {
+		return nil
+	}
+
+	return &InvalidTrendingLabelError{Description: "invalid trending label"}
 }

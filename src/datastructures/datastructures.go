@@ -402,6 +402,7 @@ type UserPermissions struct {
     CanUnlockImageDescription bool `json:"can_unlock_image_description"`
     CanUnlockImage bool `json:"can_unlock_image"`
     CanMonitorSystem bool `json:"can_monitor_system"`
+	CanAcceptTrendingLabel bool `json:"can_accept_trending_label"`
 }
 
 type UserInfo struct {
@@ -539,9 +540,9 @@ type LabelMapQuizEntry struct {
 
 type LabelMapEntry struct {
     Description string  `json:"description"`
-    LabelMapEntries map[string]LabelMapEntry  `json:"has"`
+    LabelMapEntries map[string]LabelMapEntry  `json:"has,omitempty"`
     Accessors []string `json:"accessors"`
-    Quiz []LabelMapQuizEntry `json:"quiz"`
+    Quiz []LabelMapQuizEntry `json:"quiz,omitempty"`
     Uuid string `json:"uuid"`
     Plural string `json:"plural,omitempty"`
 }
@@ -738,3 +739,45 @@ type ImageHuntStats struct {
 type ApiTokenRequest struct {
     Description string `json:"description"`
 }
+
+type TrendingLabel struct {
+	Name string `json:"name"`
+	RenameTo string `json:"rename_to"`
+	Label struct {
+		Type string `json:"type"`	
+		Description string `json:"description"`
+		Plural string `json:"plural"`
+	} `json:"label"`
+	Github struct {
+		Issue struct {
+			Id int `json:"id"`
+			Closed bool `json:"closed"`
+		} `json:"issue"`
+		BranchName string `json:"branch_name"`
+	} `json:"github"`
+	Status string `json:"status"`
+	Ci struct {
+		JobUrl string `json:"job_url"`
+	} `json:"ci"`
+}
+
+type TrendingLabelBotTask struct {
+	Name       string `json:"name"`
+	BotTaskId  int64  `json:"bot_task_id"`
+	State      string `json:"state"`
+	BranchName string `json:"branch_name"`
+	LabelType string `json:"label_type"`
+	Plural string `json:"plural"`
+	Description string `json:"description"`
+	RenameTo string `json:"rename_to"`
+}
+
+type AcceptTrendingLabel struct {
+	Label struct {
+		Type string `json:"type"`
+		Description string `json:"description"`
+		Plural string `json:"plural"`
+		RenameTo string `json:"rename_to"`
+	} `json:"label"`
+} 
+
