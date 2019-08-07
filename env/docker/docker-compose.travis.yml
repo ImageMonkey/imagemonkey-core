@@ -1,4 +1,4 @@
-version: "3"
+version: "3.2"
 services:
   redis:
     ports:
@@ -10,6 +10,8 @@ services:
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.postgres
+      cache_from:
+        - bbernhard/imagemonkey-db:latest
     env_file:
         - ../env.travis
     volumes:
@@ -45,6 +47,8 @@ services:
     build:
        context: "../../"
        dockerfile: env/docker/Dockerfile.api
+       cache_from:
+         - bbernhard/imagemonkey-api:latest
     logging:
       driver: none
     volumes:
@@ -90,6 +94,8 @@ services:
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.testing
+      cache_from:
+        - bbernhard/imagemonkey-testing:latest
 
 volumes:
    dbdata:
