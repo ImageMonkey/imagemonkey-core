@@ -1,0 +1,39 @@
+version: "3.2"
+services:
+  redis:
+    ports:
+      - 6380:6379
+    image: redis
+  db:
+    network_mode: host
+    command: postgres -c port=5433
+    image: bbernhard/imagemonkey-db:latest 
+    env_file:
+        - ../env.travis
+    volumes:
+        - dbdata:/var/lib/postgresql/data
+    logging:
+      driver: none
+  api:
+    network_mode: host
+    env_file:
+      - ../env.travis
+    image: bbernhard/imagemonkey-api:latest 
+    logging:
+      driver: none
+    volumes:
+      - ../../geoip_database:/home/imagemonkey/geoip_database
+      - ../../wordlists:/home/imagemonkey/wordlists
+      - ../../data:/home/imagemonkey/data
+  testing:
+    network_mode: host
+    env_file:
+      - ../env.travis
+    volumes:
+      - ../../wordlists:/tmp/wordlists
+      - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json
+      - ../../data:/tmp/data
+    image: bbernhard/imagemonkey-testing:latest 
+
+volumes:
+   dbdata:
