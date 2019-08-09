@@ -10,6 +10,9 @@ before_install: |
   && sudo mv /tmp/docker-compose /usr/local/bin/docker-compose \
   && chmod +x /usr/local/bin/docker-compose \
   && cd $TRAVIS_BUILD_DIR \
+  && echo "Cloning imagemonkey-labels" \
+  && git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists \
+  && rm -f $TRAVIS_BUILD_DIR/wordlists/.travis.yml \
   && echo "Creating data directory" \
   && mkdir -p $TRAVIS_BUILD_DIR/data/donations \
   && mkdir -p $TRAVIS_BUILD_DIR/data/quarantine \

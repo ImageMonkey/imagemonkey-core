@@ -31,7 +31,7 @@ func (p *LabelRepository) Load() error {
     vm := jsonnet.MakeVM()
 
 	dir, _ := filepath.Split(p.path)
-	dir = dir + string(os.PathSeparator) + "includes" + string(os.PathSeparator) + "labels/"
+	dir = dir + string(os.PathSeparator) + "includes" + string(os.PathSeparator) + "labels" + string(os.PathSeparator)
     vm.Importer(&jsonnet.FileImporter{
         JPaths: []string{dir},
     })
@@ -113,7 +113,7 @@ func (p *MetaLabels) Load() error {
 	vm := jsonnet.MakeVM()
 
 	dir, _ := filepath.Split(p.path)
-	dir = dir + string(os.PathSeparator) + "includes" + string(os.PathSeparator) + "metalabels/"
+	dir = dir + string(os.PathSeparator) + "includes" + string(os.PathSeparator) + "metalabels" + string(os.PathSeparator)
 	vm.Importer(&jsonnet.FileImporter{
 		JPaths: []string{dir},
 	})
@@ -253,4 +253,113 @@ func (p *MetaLabelsWriter) Add(name string, entry datastructures.MetaLabelMapEnt
 
 	return err
 }
+
+
+
+type LabelsDirectoryMerger struct {
+	dir string
+	outputPath string
+}
+
+func NewLabelsDirectoryMerger(dir string, outputPath string) *LabelsDirectoryMerger {
+	return &LabelsDirectoryMerger {
+		dir: dir,
+		outputPath: outputPath,
+	}
+}
+
+
+func (p *LabelsDirectoryMerger) Merge() error {
+	files, err := ioutil.ReadDir(p.dir)
+    if err != nil {
+        return err
+    }
+
+	var labelMap datastructures.LabelMap
+	labelMap.LabelMapEntries = map[string]datastructures.LabelMapEntry{}
+	for _, file := range files {
+		if filepath.Ext(file.Name()) != ".json" && filepath.Ext(file.Name()) != ".libsonnet" {
+			continue 
+		}
+		
+		data, err := ioutil.ReadFile(p.dir + string(os.PathSeparator) + file.Name())
+		if err != nil {
+			return err
+		}
+
+		var labelMapEntry map[string]datastructures.LabelMapEntry
+		err = json.Unmarshal([]byte(data), &labelMapEntry)
+    	if err != nil {
+        	return err
+    	}
+
+		for k, v := range labelMapEntry {
+			labelMap.LabelMapEntries[k] = v
+		}
+
+	}
+
+	out, err := json.Marshal(&labelMap)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(p.outputPath, out, 0644)
+	return err
+}
+
+
+
+type MetaLabelsDirectoryMerger struct {
+	dir string
+	outputPath string
+}
+
+func NewMetaLabelsDirectoryMerger(dir string, outputPath string) *MetaLabelsDirectoryMerger {
+	return &MetaLabelsDirectoryMerger {
+		dir: dir,
+		outputPath: outputPath,
+	}
+}
+
+
+func (p *MetaLabelsDirectoryMerger) Merge() error {
+	files, err := ioutil.ReadDir(p.dir)
+    if err != nil {
+        return err
+    }
+
+	var metaLabelMap datastructures.MetaLabelMap
+	metaLabelMap.MetaLabelMapEntries = map[string]datastructures.MetaLabelMapEntry{}
+	for _, file := range files {
+		if filepath.Ext(file.Name()) != ".json" && filepath.Ext(file.Name()) != ".libsonnet" {
+			continue 
+		}
+		
+		data, err := ioutil.ReadFile(p.dir + string(os.PathSeparator) + file.Name())
+		if err != nil {
+			return err
+		}
+
+		var metaLabelMapEntry map[string]datastructures.MetaLabelMapEntry
+		err = json.Unmarshal([]byte(data), &metaLabelMapEntry)
+    	if err != nil {
+        	return err
+    	}
+
+		for k, v := range metaLabelMapEntry {
+			metaLabelMap.MetaLabelMapEntries[k] = v
+		}
+
+	}
+
+	out, err := json.Marshal(&metaLabelMap)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(p.outputPath, out, 0644)
+	return err
+}
+
 
