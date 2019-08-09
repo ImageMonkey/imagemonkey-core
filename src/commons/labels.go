@@ -187,20 +187,11 @@ func (p *LabelsWriter) GetFilename() string {
 
 func (p *LabelsWriter) Add(name string, entry datastructures.LabelMapEntry) error {
 	var labelMap datastructures.LabelMap
-
-	data, err := ioutil.ReadFile(p.path)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal([]byte(data), &labelMap)
-	if err != nil {
-		return err
-	}
+	labelMap.LabelMapEntries = map[string]datastructures.LabelMapEntry{}
 
 	labelMap.LabelMapEntries[name] = entry
 
-	out, err := json.Marshal(&labelMap)
+	out, err := json.MarshalIndent(&labelMap, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -230,21 +221,12 @@ func (p *MetaLabelsWriter) GetFilename() string {
 }
 
 func (p *MetaLabelsWriter) Add(name string, entry datastructures.MetaLabelMapEntry) error {
-	var labelMap datastructures.MetaLabelMap
+	var metaLabelMap datastructures.MetaLabelMap
+	metaLabelMap.MetaLabelMapEntries = map[string]datastructures.MetaLabelMapEntry{}
 
-	data, err := ioutil.ReadFile(p.path)
-	if err != nil {
-		return err
-	}
+	metaLabelMap.MetaLabelMapEntries[name] = entry
 
-	err = json.Unmarshal([]byte(data), &labelMap)
-	if err != nil {
-		return err
-	}
-
-	labelMap.MetaLabelMapEntries[name] = entry
-
-	out, err := json.Marshal(&labelMap)
+	out, err := json.MarshalIndent(&metaLabelMap, "", "  ")
 	if err != nil {
 		return err
 	}
