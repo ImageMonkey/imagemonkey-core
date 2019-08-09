@@ -151,7 +151,6 @@ func main() {
 		if len(trendingLabelsForDeployment) > 0 {
 			backupPath := *backupDir
 			if *useBackupTimestamp {
-				log.Info("AA")
 				backupPath = backupPath + "/" + strconv.FormatInt(time.Now().Unix(), 10)
 
 			}
