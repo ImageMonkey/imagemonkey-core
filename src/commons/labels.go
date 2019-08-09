@@ -186,12 +186,11 @@ func (p *LabelsWriter) GetFilename() string {
 }
 
 func (p *LabelsWriter) Add(name string, entry datastructures.LabelMapEntry) error {
-	var labelMap datastructures.LabelMap
-	labelMap.LabelMapEntries = map[string]datastructures.LabelMapEntry{}
+	var e = map[string]datastructures.LabelMapEntry{}
 
-	labelMap.LabelMapEntries[name] = entry
+	e[name] = entry
 
-	out, err := json.MarshalIndent(&labelMap, "", "  ")
+	out, err := json.MarshalIndent(&e, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -221,12 +220,11 @@ func (p *MetaLabelsWriter) GetFilename() string {
 }
 
 func (p *MetaLabelsWriter) Add(name string, entry datastructures.MetaLabelMapEntry) error {
-	var metaLabelMap datastructures.MetaLabelMap
-	metaLabelMap.MetaLabelMapEntries = map[string]datastructures.MetaLabelMapEntry{}
+	var e = map[string]datastructures.MetaLabelMapEntry{}
 
-	metaLabelMap.MetaLabelMapEntries[name] = entry
+	e[name] = entry
 
-	out, err := json.MarshalIndent(&metaLabelMap, "", "  ")
+	out, err := json.MarshalIndent(&e, "", "  ")
 	if err != nil {
 		return err
 	}

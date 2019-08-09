@@ -77,6 +77,7 @@ func main() {
 	autoCloseGithubIssue := flag.Bool("autoclose_github_issue" , false, "automatically close trending label github issue")
 	singleshot := flag.Bool("singleshot", true, "singleshot")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
+	useBackupTimestamp := flag.Bool("use_backup_timestamp", true, "Create backups with unix timestamps")
 
 	flag.Parse()
 
@@ -148,8 +149,13 @@ func main() {
 		}
 
 		if len(trendingLabelsForDeployment) > 0 {
-			backupPath := *backupDir + "/" + strconv.FormatInt(time.Now().Unix(), 10)
-			
+			backupPath := *backupDir
+			if *useBackupTimestamp {
+				log.Info("AA")
+				backupPath = backupPath + "/" + strconv.FormatInt(time.Now().Unix(), 10)
+
+			}
+
 			err := createBackup(*labelsDir, backupPath)
 			if err != nil {
 				log.Error("Couldn't create backup: ", err.Error())
