@@ -4,7 +4,6 @@ package clients
 
 import (
 	ioutils "github.com/bbernhard/imagemonkey-core/ioutils"
-	"fmt"
 )
 
 func NewLabelsDownloader(repository string, downloadLocation string) *LabelsDownloader {
