@@ -20,8 +20,8 @@ services:
       - ../env.travis
     image: bbernhard/imagemonkey-api:latest 
     entrypoint: ./run_api.sh --merge-labels-before-start
-    #logging:
-    #  driver: none
+    logging:
+      driver: none
     volumes:
       - ../../geoip_database:/home/imagemonkey/geoip_database
       - ../../wordlists:/home/imagemonkey/wordlists
