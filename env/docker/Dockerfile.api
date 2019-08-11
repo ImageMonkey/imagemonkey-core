@@ -47,14 +47,16 @@ COPY src/languages /tmp/src/languages
 COPY src/database /tmp/src/database
 COPY src/parser /tmp/src/parser
 COPY src/datastructures /tmp/src/datastructures
+COPY src/labels_merger.go /tmp/src/labels_merger.go
 
-COPY src/datastructures /tmp/src/datastructures
 
-
-RUN cd /tmp/src/ && go install api.go label_graph.go auth.go
+RUN cd /tmp/src/ \
+	&& go install api.go label_graph.go auth.go \
+	&& go install labels_merger.go
 
 RUN mkdir -p /home/imagemonkey/bin/ \
-	&& mv /home/go/bin/api /home/imagemonkey/bin/api
+	&& mv /home/go/bin/api /home/imagemonkey/bin/api \
+	&& mv /home/go/bin/labels_merger /home/imagemonkey/bin/labels_merger 
 
 WORKDIR /home/imagemonkey/bin/
 
