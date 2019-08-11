@@ -16,4 +16,15 @@ while true
 echo "Starting api (after 5 sec delay)"
 sleep 5
 
+merge_labels=false
+if [ "$1" ]; then
+	if [ "$1" == "--merge-labels-before-start" ]; then
+		merge_labels=true
+	fi
+fi
+
+if [ "$merge_labels" = true ] ; then
+./labels_merger
+fi
+
 ./api -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/
