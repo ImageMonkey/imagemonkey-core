@@ -49,8 +49,8 @@ services:
        dockerfile: env/docker/Dockerfile.api
        cache_from:
          - bbernhard/imagemonkey-api:latest
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
     volumes:
       - ../../geoip_database:/home/imagemonkey/geoip_database
       - ../../wordlists:/home/imagemonkey/wordlists
