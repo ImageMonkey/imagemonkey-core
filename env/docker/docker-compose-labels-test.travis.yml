@@ -19,6 +19,7 @@ services:
     env_file:
       - ../env.travis
     image: bbernhard/imagemonkey-api:latest 
+    entrypoint: ./run_api.sh --merge-labels-before-start
     logging:
       driver: none
     volumes:
