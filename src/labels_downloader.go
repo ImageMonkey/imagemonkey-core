@@ -86,6 +86,7 @@ func main() {
 	singleshot := flag.Bool("singleshot", true, "singleshot")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
 	useBackupTimestamp := flag.Bool("use_backup_timestamp", true, "Create backups with unix timestamps")
+	pollingInterval := flag.Int("polling_interval", 1, "Polling Interval")
 
 	flag.Parse()
 
@@ -129,7 +130,7 @@ func main() {
 			if *singleshot {
 				return
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Duration(*pollingInterval) * time.Second)
 		} else {	
 			firstIteration = false
 		}
