@@ -108,6 +108,7 @@
 
     function populateLabelRepositoryTable(data) {
       $("#loadingIndicator").show();
+	  $("#labelRepositoryTable").hide();
 
 	  {{ if eq .sessionInformation.Username "" }}
 	  $("#authenticationNeededInfoMessage").show(); 
@@ -194,6 +195,7 @@
       }
       $("#labelRepositoryTable").tablesort();
       $("#loadingIndicator").hide();
+	  $("#labelRepositoryTable").show();
     }
     $(document).ready(function() {
       imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");

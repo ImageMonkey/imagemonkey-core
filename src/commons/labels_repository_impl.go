@@ -143,7 +143,7 @@ func (p *LabelsRepository) MergeRemoteBranchIntoMaster(branchName string) error 
 
 	//create a new comment
 	newPullRequest := &github.NewPullRequest{
-		Title: github.String("test"),
+		Title: github.String("add label"),
 		Head:  github.String(branchName),
 		Base:  github.String("master"),
 	}

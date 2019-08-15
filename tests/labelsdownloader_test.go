@@ -12,7 +12,8 @@ func runLabelsDownloader(t *testing.T) {
 	// Start a process
 	cmd := exec.Command("go", "run", "-tags", "dev", "labels_downloader.go", "-autoclose_github_issue=false", 
 						"-singleshot=true", "-labels_dir=/tmp/labels-unittest", "-backup_dir=/tmp/labels-unittest-backups", 
-						"-labels_repository_url=/tmp/labels-unittest-backups", "-use_backup_timestamp=false")
+						"-labels_repository_url=/tmp/labels-unittest", "-use_backup_timestamp=false",
+						"-download_dir=/tmp/labels-unittest-backups")
 	cmd.Dir = "../src"
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
@@ -217,6 +218,6 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
-	equals(t, trendingLabels[0].Status, "merged")
+	equals(t, trendingLabels[0].Status, "productive")
 }
 
