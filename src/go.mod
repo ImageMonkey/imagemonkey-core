@@ -15,6 +15,7 @@ require (
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.3.0
 	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-jsonnet v0.13.0
 	github.com/google/go-querystring v1.0.0 // indirect

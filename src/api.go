@@ -11,7 +11,7 @@ import (
 	"os"
 	"strconv"
 	"github.com/oschwald/geoip2-golang"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"encoding/json"
 	"net"
 	"errors"
@@ -598,6 +598,56 @@ func main(){
 		return c, err
 	}, *redisMaxConnections)
 	defer redisPool.Close()
+
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+
+	psc := redis.PubSubConn{Conn: redisConn}
+	defer psc.Close()
+
+	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"reloadlabels"})...); err != nil {
+        log.Fatal("Couldn't subscribe to topic 'reloadlabels': ", err.Error())
+    }
+
+    done := make(chan error, 1)
+	
+	go func() {
+        for {
+            switch n := psc.Receive().(type) {
+            case error:
+                done <- n
+                return
+            case redis.Message:
+				log.Info("[Main] Reloading labels")
+				err := labelRepository.Load()
+				if err != nil {
+					log.Error("Couldn't read label map: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+				labelMap = labelRepository.GetMapping()
+				words = labelRepository.GetWords()
+
+				err = metaLabels.Load()
+				if err != nil {
+					log.Error("Couldn't read metalabels map: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+
+				labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
+				if err != nil {
+					log.Error("Couldn't read label refinements: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+            case redis.Subscription:
+                switch n.Count {
+                case 0:
+                    // Return from the goroutine when all channels are unsubscribed.
+                    done <- nil
+                    return
+                }
+            }
+        }
+    }()
 
 	statisticsPusher := commons.NewStatisticsPusher(redisPool)
 	err = statisticsPusher.Load()

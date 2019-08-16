@@ -5,6 +5,7 @@ import (
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	clients "github.com/bbernhard/imagemonkey-core/clients"
 	"github.com/getsentry/raven-go"
+	"github.com/gomodule/redigo/redis"
 	_ "github.com/lib/pq"	
 	"time"
 	"database/sql"
@@ -79,6 +80,8 @@ func setTrendingLabelBotTaskStateProductive(id int64) error {
 
 func main() {
 	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-labels-test", "Labels Repository URL")
+	trendingLabelsRepositoryName := flag.String("trending_labels_repository_name" , "", "Trending Labels Repository Name")
+	trendingLabelsRepositoryOwner := flag.String("trending_labels_repository_owner", "", "Trending Labels Repository Owner")
 	labelsDir := flag.String("labels_dir", "/tmp/labels", "Labels Location")
 	downloadDir := flag.String("download_dir", "/tmp/labels", "Download Location")
 	backupDir := flag.String("backup_dir", "/tmp/labels-backup", "Backup Location")
@@ -87,8 +90,18 @@ func main() {
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
 	useBackupTimestamp := flag.Bool("use_backup_timestamp", true, "Create backups with unix timestamps")
 	pollingInterval := flag.Int("polling_interval", 1, "Polling Interval")
+	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
+	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
 
 	flag.Parse()
+
+	log.SetLevel(log.DebugLevel)
+	log.Info("Starting ImageMonkey labels downloader")
+
+	githubApiToken := ""
+	if *trendingLabelsRepositoryName != "" {
+		githubApiToken = commons.MustGetEnv("IMAGEMONKEY_BOT_GITHUB_API_TOKEN")
+	}
 
 	if *useSentry {
 		log.Info("Setting Sentry DSN")
@@ -97,6 +110,19 @@ func main() {
 
 		raven.CaptureMessage("Starting up labels downloader", nil)
 	}
+
+	//create redis pool
+	redisPool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", *redisAddress)
+
+		if err != nil {
+			log.Fatal("[Main] Couldn't dial redis: ", err.Error())
+		}
+
+		return c, err
+	}, *redisMaxConnections)
+	defer redisPool.Close()
+
 	
 	var err error
 	//open database and make sure that we can ping it
@@ -135,6 +161,7 @@ func main() {
 			firstIteration = false
 		}
 		
+		log.Debug("Checking for trending labels in merged state")
 		trendingLabelsForDeployment, err := getTrendingLabelsForDeployment()
 		if err != nil {
 			log.Error("Couldn't get trending labels for deployment: ", err.Error())
@@ -215,6 +242,11 @@ func main() {
 			log.Info("Making trending labels productive...dryrun")
 			makeLabelsProductive := clients.NewMakeLabelsProductiveClient(imageMonkeyDbConnectionString, labelsPath, 
 											metalabelsPath, false, *autoCloseGithubIssue)
+
+			makeLabelsProductive.SetGithubRepository(*trendingLabelsRepositoryName)
+			makeLabelsProductive.SetGithubRepositoryOwner(*trendingLabelsRepositoryOwner)
+			makeLabelsProductive.SetGithubApiToken(githubApiToken)
+
 			err = makeLabelsProductive.Load()
 			if err != nil {
 				raven.CaptureError(err, nil)
@@ -252,6 +284,14 @@ func main() {
 				raven.CaptureError(err, nil)
 				log.Error("Couldn't remove backup: ", err.Error())
 			}
+			
+			redisConn := redisPool.Get()
+			_, err = redisConn.Do("PUBLISH", "reloadlabels", "reloadlabels")
+			if err != nil {
+				raven.CaptureError(err, nil)
+				log.Error("Couldn't publish message: ", err.Error())
+			}
+			redisConn.Close()
 		}
 	}
 }

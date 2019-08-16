@@ -341,10 +341,10 @@ func closeGithubIssue(trendingLabel string, repository string, githubProjectOwne
 
 				_, _, err = client.Issues.Edit(ctx, githubProjectOwner, repository, githubIssueId, issueRequest)
 				if err != nil {
-					log.Info("[Main] Couldn't close github issue, please close manually!")
+					log.Info("[Main] Couldn't close github issue, please close manually. ", err.Error())
 				}
 			} else {
-				log.Info("[Main] Couldn't close github issue, please close manually!")
+				log.Info("[Main] Couldn't close github issue, please close manually. ", err.Error())
 			}
 		//}
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/getsentry/raven-go"
 	"flag"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"os"
 	"encoding/json"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
