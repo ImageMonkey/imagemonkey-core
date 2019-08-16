@@ -30,6 +30,7 @@ import (
 	"compress/gzip"
 	"net/url"
 	"io/ioutil"
+	"github.com/gomodule/redigo/redis"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -128,6 +129,8 @@ func main() {
 	localSentryDsn := flag.String("local_sentry_dsn", "http://sentry:sentry@127.0.0.1:8080/sentry", "local Sentry DSN")
 	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-labels-test", "Labels Repository")
 	trendingLabelsRepositoryUrl := flag.String("trending_labels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Trending Labels Repository")
+	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
+	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -196,11 +199,6 @@ func main() {
 		    }
 		    return arr
         },
-		/*"executeTemplate": func(name string) string {
-    		buf := &bytes.Buffer{}
-    		_ = tmpl.ExecuteTemplate(buf, name, nil)
-    		return buf.String()
-		},*/
 	}
 
 	clientSecret := commons.MustGetEnv("X_CLIENT_SECRET")
@@ -237,6 +235,68 @@ func main() {
 		fmt.Printf("[Main] Couldn't read public backups: %s...terminating!", *publicBackupsPath)
 		log.Fatal(err)
 	}
+
+
+	//create redis pool
+	redisPool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", *redisAddress)
+
+		if err != nil {
+			log.Fatal("[Main] Couldn't dial redis: ", err.Error())
+		}
+
+		return c, err
+	}, *redisMaxConnections)
+	defer redisPool.Close()
+
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+
+	psc := redis.PubSubConn{Conn: redisConn}
+	defer psc.Close()
+
+	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"reloadlabels"})...); err != nil {
+        log.Fatal("Couldn't subscribe to topic 'reloadlabels': ", err.Error())
+    }
+
+    done := make(chan error, 1)
+	
+	go func() {
+        for {
+            switch n := psc.Receive().(type) {
+            case error:
+                done <- n
+                return
+            case redis.Message:
+				log.Info("[Main] Reloading labels")
+				err := labelRepository.Load()
+				if err != nil {
+					log.Error("Couldn't read label map: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+				words = labelRepository.GetWords()
+
+				err = metaLabels.Load()
+				if err != nil {
+					log.Error("Couldn't read metalabels map: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+
+				labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
+				if err != nil {
+					log.Error("Couldn't read label refinements: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+            case redis.Subscription:
+                switch n.Count {
+                case 0:
+                    // Return from the goroutine when all channels are unsubscribed.
+                    done <- nil
+                    return
+                }
+            }
+        }
+    }()
 
 	imageDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 

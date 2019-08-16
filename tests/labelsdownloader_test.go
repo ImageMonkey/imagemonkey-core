@@ -5,15 +5,21 @@ import (
 	"os/exec"	
 	"time"
 	"os"
+	"github.com/bbernhard/imagemonkey-core/commons"
 )
 
 func runLabelsDownloader(t *testing.T) {
+	redisAddress := ":6379"
+	if commons.GetEnv("REDIS_ADDRESS") != "" {
+		redisAddress = commons.GetEnv("REDIS_ADDRESS")
+	}
+
 	os.RemoveAll("/tmp/labels-unittest-backups")
 	// Start a process
 	cmd := exec.Command("go", "run", "-tags", "dev", "labels_downloader.go", "-autoclose_github_issue=false", 
 						"-singleshot=true", "-labels_dir=/tmp/labels-unittest", "-backup_dir=/tmp/labels-unittest-backups", 
 						"-labels_repository_url=/tmp/labels-unittest", "-use_backup_timestamp=false",
-						"-download_dir=/tmp/labels-unittest-backups")
+						"-download_dir=/tmp/labels-unittest-backups", "-redis_address="+redisAddress)
 	cmd.Dir = "../src"
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
