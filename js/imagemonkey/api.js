@@ -89,5 +89,23 @@ var ImageMonkeyApi = (function () {
 			xhr.send();
 		});
 	}
+
+	ImageMonkeyApi.prototype.getImageCollections = function(username) {
+		var inst = this;
+		return new Promise(function(resolve, reject) {
+			var url = inst.baseUrl + "/" + inst.apiVersion + "/user/" + username + "/imagecollections";
+			var xhr = new XMLHttpRequest();
+			xhr.responseType = "json";
+			xhr.open("GET", url);
+			xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+			xhr.onload = function() {
+				var jsonResponse = xhr.response;
+				resolve(jsonResponse);
+			}
+			xhr.onerror = reject;
+			xhr.send();
+		});
+	}
+
     return ImageMonkeyApi;
 }());

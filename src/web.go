@@ -39,6 +39,40 @@ func ShowErrorPage(c *gin.Context) {
 	})
 }
 
+func ShowProfilePage(c *gin.Context, imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase, 
+						sessionCookieHandler *SessionCookieHandler, apiBaseUrl string) {
+	username := c.Param("username")
+	tab := c.Param("tab")
+
+	userInfo, _ := imageMonkeyDatabase.GetUserInfo(username)
+	if userInfo.Name == "" {
+		c.String(404, "404 page not found")
+		return
+	}
+
+	sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+	
+	var err error
+	var apiTokens []datastructures.APIToken
+	if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
+		apiTokens, err = imageMonkeyDatabase.GetApiTokens(username)
+		if err != nil {
+			c.String(500, "Internal server error - please try again later")
+			return
+		}
+	}
+
+	c.HTML(http.StatusOK, "profile.html", gin.H{
+		"title": "Profile",
+		"apiBaseUrl": apiBaseUrl,
+		"activeMenuNr": -1,
+		"statistics": commons.Pick(imageMonkeyDatabase.GetUserStatistics(username))[0],
+		"userInfo": userInfo,
+		"sessionInformation": sessionInformation,
+		"apiTokens": apiTokens,
+		"tab": tab,
+	})
+}
 
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
     templ := template.New("main").Funcs(funcMap)
@@ -737,34 +771,11 @@ func main() {
 		})
 
 		router.GET("/profile/:username", func(c *gin.Context) {
-			username := c.Param("username")
+			ShowProfilePage(c, imageMonkeyDatabase, sessionCookieHandler, *apiBaseUrl)
+		})
 
-			userInfo, _ := imageMonkeyDatabase.GetUserInfo(username)
-			if userInfo.Name == "" {
-				c.String(404, "404 page not found")
-				return
-			}
-
-			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-
-			var apiTokens []datastructures.APIToken
-			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
-				apiTokens, err = imageMonkeyDatabase.GetApiTokens(username)
-				if err != nil {
-					c.String(500, "Internal server error - please try again later")
-					return
-				}
-			}
-
-			c.HTML(http.StatusOK, "profile.html", gin.H{
-				"title": "Profile",
-				"apiBaseUrl": apiBaseUrl,
-				"activeMenuNr": -1,
-				"statistics": commons.Pick(imageMonkeyDatabase.GetUserStatistics(username))[0],
-				"userInfo": userInfo,
-				"sessionInformation": sessionInformation,
-				"apiTokens": apiTokens,
-			})
+		router.GET("/profile/:username/:tab", func(c *gin.Context) {
+			ShowProfilePage(c, imageMonkeyDatabase, sessionCookieHandler, *apiBaseUrl)
 		})
 
 		router.GET("/libraries", func(c *gin.Context) {
