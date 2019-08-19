@@ -1,0 +1,28 @@
+FROM golang:1.12.5-stretch
+
+ENV GOPATH=/home/go
+ENV GOBIN=/home/go/bin
+
+COPY src/go.mod /tmp/src/go.mod
+COPY src/go.sum /tmp/src/go.sum
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	sudo lsb-release \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/usr/bin \
+	&& chmod u+rx /usr/bin/wait-for-it.sh
+
+# until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
+RUN curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash -
+
+RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+
+RUN mkdir -p /home/go/bin \
+	&& cd /tmp/src \
+	&& go get -u -d gocv.io/x/gocv \
+	&& cd /home/go/pkg/mod/gocv.io/x/gocv\@v0.20.0/ \
+	&& make install \
+	&& rm -rf /tmp/src \
+	&& rm -rf /home/go/bin
+ 
