@@ -35,7 +35,7 @@ services:
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.web
-    entrypoint: ./run_web.sh
+    entrypoint: ./run_web.sh --start-after-api
     volumes:
       - ../../wordlists:/home/imagemonkey/wordlists
       - ../../public_backups/public_backups.json:/home/imagemonkey/public_backups/public_backups.json

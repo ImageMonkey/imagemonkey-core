@@ -16,4 +16,16 @@ while true
 echo "Starting web (after 5 sec delay)"
 sleep 5
 
+
+start_after_api=false
+if [ "$1" ]; then
+	if [ "$1" == "--start-after-api" ]; then
+		start_after_api=true
+	fi
+fi
+
+if [ "$start_after_api" = true ] ; then
+	/usr/bin/wait-for-it.sh $API_HOST:$API_PORT -- echo "API ($API_HOST:$API_PORT) is up"		
+fi
+
 ./web -use_sentry=$USE_SENTRY -redis_address=$REDIS_ADDRESS -donations_dir=/home/imagemonkey/data/donations/ 
