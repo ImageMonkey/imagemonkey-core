@@ -27,19 +27,19 @@ services:
   #    context: "../../"
   #    dockerfile: env/docker/Dockerfile.trendinglabelsworker
   #  entrypoint: tail -f /dev/null 
-  #web:
-  #  restart: always
-  #  network_mode: host
-  #  entrypoint: tail -f /dev/null
-  #  env_file:
-  #    - ../env.travis
-  #  build:
-  #    context: "../../"
-  #    dockerfile: env/docker/Dockerfile.web
-  #  volumes:
-  #    - ../../wordlists:/home/imagemonkey/wordlists
-  #    - ../../public_backups/public_backups.json:/home/imagemonkey/public_backups/public_backups.json
-  #    - ../../data:/home/imagemonkey/data
+  web:
+    network_mode: host
+    #entrypoint: tail -f /dev/null
+    env_file:
+      - ../env.travis
+    build:
+      context: "../../"
+      dockerfile: env/docker/Dockerfile.web
+    entrypoint: ./run_web.sh
+    volumes:
+      - ../../wordlists:/home/imagemonkey/wordlists
+      - ../../public_backups/public_backups.json:/home/imagemonkey/public_backups/public_backups.json
+      - ../../data:/home/imagemonkey/data
   api:
     network_mode: host
     env_file:
