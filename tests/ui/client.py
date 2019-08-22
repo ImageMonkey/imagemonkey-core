@@ -85,11 +85,11 @@ class ImageMonkeyWebClient(object):
 		wait.until(EC.visibility_of_element_located(locator))
 
 	@check_for_errors
-	def donate(self, file_path, label, should_succeed):
+	def donate(self, file_path, should_succeed):
 		self._driver.get(BASE_URL + "/donate")
 		time.sleep(0.5)
 
-		self._driver.execute_script("$('#labelSelector').dropdown('set selected', '%s');" %(label,))
+		#self._driver.execute_script("$('#labelSelector').dropdown('set selected', '%s');" %(label,))
 
 		elm = self._driver.find_element_by_xpath("//input[@type='file']")
 		elm.send_keys(file_path)
