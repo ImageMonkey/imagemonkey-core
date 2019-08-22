@@ -18,9 +18,9 @@ class TestLabelImage(unittest.TestCase):
 		self._driver.quit()
 
 	def test_label_image_should_succeed(self):
-		self._client.donate(os.path.abspath(".." + os.path.sep + "images" + os.path.sep + "apples" + os.path.sep + "apple2.jpeg"), "apple", True)
+		self._client.donate(os.path.abspath(".." + os.path.sep + "images" + os.path.sep + "apples" + os.path.sep + "apple2.jpeg"), True)
 		self._client.login("moderator", "moderator", True)
 		self._client.unlock_image()
 		self._client.label_image(["floor", "wall"])
 		image_labels = self._client.image_labels()
-		self.assertListEqual(sorted(image_labels), sorted(["apple", "wall", "floor"]))
+		self.assertListEqual(sorted(image_labels), sorted(["wall", "floor"]))

@@ -154,9 +154,9 @@ class ImageMonkeyWebClient(object):
 		wait.until(EC.invisibility_of_element_located(locator))
 
 		#wait for intro text + dismiss it
-		locator = (By.CLASS_NAME, "shepherd-button-secondary")
-		wait.until(EC.visibility_of_element_located(locator))
-		self._driver.find_element_by_class_name("shepherd-button-secondary").click()
+		#locator = (By.CLASS_NAME, "shepherd-button-secondary")
+		#wait.until(EC.visibility_of_element_located(locator))
+		#self._driver.find_element_by_class_name("shepherd-button-secondary").click()
 
 		#get all direct children (no grandchildren!) of div with id = 'label' 
 		num_of_labels_before = len(self._driver.find_elements_by_xpath('//div[@id="labels"]/div'))
@@ -210,6 +210,7 @@ class ImageMonkeyWebClient(object):
 		drawing.perform()
 
 		self._driver.find_element_by_id("doneButton").click()
+
 
 	""" 
 	    Returns the labels from the /label page

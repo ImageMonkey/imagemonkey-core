@@ -22,7 +22,7 @@ class TestUnlockMultipleImage(unittest.TestCase):
 		for img in os.listdir(path):
 			p = path + os.path.sep + img
 			print("Donate image %s" %(p,))
-			self._client.donate(p, "apple", True)
+			self._client.donate(p, True)
 
 		self._client.login("moderator", "moderator", True)
 		self._client.unlock_multiple_images()
