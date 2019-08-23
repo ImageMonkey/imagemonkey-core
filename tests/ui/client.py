@@ -55,6 +55,7 @@ def _wait_until_cookie_is_set(driver, max_wait):
 class ImageMonkeyWebClient(object):
     def __init__(self, driver):
         self._driver = driver
+        self._username = None
 
     @property
     def driver(self):
@@ -72,6 +73,7 @@ class ImageMonkeyWebClient(object):
             self._driver.add_cookie(cookie)
             wait = WebDriverWait(self._driver, 10)
             wait.until(EC.url_changes(BASE_URL))
+            self._username = username
 
     @check_for_errors
     def signup(self, username, email, password):
@@ -88,9 +90,13 @@ class ImageMonkeyWebClient(object):
         wait.until(EC.visibility_of_element_located(locator))
 
     @check_for_errors
-    def donate(self, file_path, should_succeed):
+    def donate(self, file_path, should_succeed, image_collection=None):
         self._driver.get(BASE_URL + "/donate")
         time.sleep(0.5)
+
+        if image_collection is not None:
+            self._driver.find_element_by_id("additionalOptionsContainer").click()
+            self._driver.execute_script("$('#imageCollectionSelectionDropdown').dropdown('set selected', '%s');" %(image_collection,))
 
         # self._driver.execute_script("$('#labelSelector').dropdown('set selected', '%s');" %(label,))
 
@@ -236,3 +242,42 @@ class ImageMonkeyWebClient(object):
             res.append(label.text)
 
         return res
+    
+    @check_for_errors
+    def create_image_collection(self, name):
+        print(BASE_URL + "/profile/" + self._username)
+        self._driver.get(BASE_URL + "/profile/" + self._username)
+
+        wait = WebDriverWait(self._driver, 10)
+        
+        locator = (By.ID, "userProfileMenuImageCollectionsTab")
+        wait.until(EC.visibility_of_element_located(locator))
+
+        table = self._driver.find_element_by_id("imageCollectionsTableContent")
+        before_rows = table.find_elements(By.TAG_NAME, "tr")
+        
+        self._driver.find_element_by_id("userProfileMenuImageCollectionsTab").click()
+
+        locator = (By.ID, "addImageCollectionButton")
+        wait.until(EC.visibility_of_element_located(locator)) 
+        
+        self._driver.find_element_by_id("addImageCollectionButton").click()
+
+        locator = (By.ID, "addImageCollectionDlg")
+        wait.until(EC.visibility_of_element_located(locator)) 
+
+        self._driver.find_element_by_id("newImageCollectionName").send_keys(name)
+
+        self._driver.find_element_by_id("addImageCollectionDlgDoneButton").click()
+
+        table = self._driver.find_element_by_id("imageCollectionsTableContent")
+        after_rows = table.find_elements(By.TAG_NAME, "tr")
+        
+        failed = False
+        i = 0
+        while i < 5 and failed:
+            failed = (len(before_rows)+1 == len(after_rows))
+            time.sleep(0.5)
+            i += 1
+
+        assert not failed, "table entry not appearing"
