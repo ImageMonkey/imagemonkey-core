@@ -111,6 +111,7 @@
 				if(data && data.length > 0) {
 					$("#noImageCollections").hide();
 					$("#imageCollectionsDropdownLst").empty();
+					$("#imageCollectionsDropdownLst").append('<div class="item" data-value=""></div>');
 					for(var i = 0; i < data.length; i++) {
 						$("#imageCollectionsDropdownLst").append('<div class="item" data-value="' 
 																+ escapeHtml(data[i].name) + '">' + escapeHtml(data[i].name) + '</div>');
