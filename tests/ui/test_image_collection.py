@@ -7,7 +7,7 @@ from webdriver import ImageMonkeyChromeWebDriver
 
 class TestImageCollection(unittest.TestCase):
     def setUp(self):
-        self._driver = ImageMonkeyChromeWebDriver(headless=False)
+        self._driver = ImageMonkeyChromeWebDriver()
         self._client = ImageMonkeyWebClient(self._driver)
 
     @classmethod
