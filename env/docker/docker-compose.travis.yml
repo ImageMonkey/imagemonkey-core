@@ -40,6 +40,7 @@ services:
       - ../../wordlists:/home/imagemonkey/wordlists
       - ../../public_backups/public_backups.json:/home/imagemonkey/public_backups/public_backups.json
       - ../../data:/home/imagemonkey/data
+      - ../../avatars:/home/imagemonkey/avatars
   api:
     network_mode: host
     env_file:

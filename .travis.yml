@@ -13,6 +13,9 @@ before_install: |
   && echo "Cloning imagemonkey-labels" \
   && git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists \
   && rm -f $TRAVIS_BUILD_DIR/wordlists/.travis.yml \
+  && echo "Creating avatars directory" \
+  && mkdir -p $TRAVIS_BUILD_DIR/avatars \
+  && cp $TRAVIS_BUILD_DIR/img/default.png $TRAVIS_BUILD_DIR/avatars/default.png \
   && echo "Creating data directory" \
   && mkdir -p $TRAVIS_BUILD_DIR/data/donations \
   && mkdir -p $TRAVIS_BUILD_DIR/data/quarantine \
