@@ -13,7 +13,7 @@ class TestDonateImage(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        helper.clear_database()
+        helper.initialize_with_moderator()
 
     def test_donate_image_should_succeed(self):
         self._client.donate(os.path.abspath(".." + os.path.sep + "images" +
