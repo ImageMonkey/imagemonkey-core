@@ -8,12 +8,9 @@ from webdriver import ImageMonkeyChromeWebDriver
 
 class TestDonateImage(unittest.TestCase):
     def setUp(self):
-        self._driver = ImageMonkeyChromeWebDriver()
-        self._client = ImageMonkeyWebClient(self._driver)
-
-    @classmethod
-    def setUpClass(cls):
         helper.initialize_with_moderator()
+        self._driver = ImageMonkeyChromeWebDriver()
+        self._client = ImageMonkeyWebClient(self._driver) 
 
     def test_donate_image_should_succeed(self):
         self._client.donate(os.path.abspath(".." + os.path.sep + "images" +
@@ -24,6 +21,11 @@ class TestDonateImage(unittest.TestCase):
         self._client.create_image_collection("mycollection")
         self._client.donate(os.path.abspath(".." + os.path.sep + "images" +
                                             os.path.sep + "apples" + os.path.sep + "apple2.jpeg"), True, image_collection="mycollection")
+    
+
+    def test_donate_image_with_labels_should_succeed(self):
+        self._client.donate(os.path.abspath(".." + os.path.sep + "images" +
+                                            os.path.sep + "apples" + os.path.sep + "apple2.jpeg"), True, labels=["apple"])
 
     def test_donate_image_should_fail(self):
         try:

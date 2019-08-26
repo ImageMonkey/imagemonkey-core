@@ -90,13 +90,16 @@ class ImageMonkeyWebClient(object):
         wait.until(EC.visibility_of_element_located(locator))
 
     @check_for_errors
-    def donate(self, file_path, should_succeed, image_collection=None):
+    def donate(self, file_path, should_succeed, image_collection=None, labels=None):
         self._driver.get(BASE_URL + "/donate")
         time.sleep(0.5)
 
         if image_collection is not None:
             self._driver.find_element_by_id("additionalOptionsContainer").click()
             self._driver.execute_script("$('#imageCollectionSelectionDropdown').dropdown('set selected', '%s');" %(image_collection,))
+
+        if labels is not None:
+            self._driver.execute_script("$('#labelsDropdown').dropdown('set selected', '%s');" %(','.join(labels),))
 
         # self._driver.execute_script("$('#labelSelector').dropdown('set selected', '%s');" %(label,))
 

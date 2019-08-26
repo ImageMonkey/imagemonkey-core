@@ -22,7 +22,13 @@
     <script src="js/dropzone.js"></script>
     <link rel="stylesheet" href="css/dropzone.css">
     <script src="js/fingerprint2.min.js"></script>
-	<script src="js/imagemonkey/api.js"></script>
+	<script src="js/imagemonkey/api.js?v=1"></script>
+
+	<style>
+		.equal-width label{
+  			min-width: 120px /* set to label max width */
+		}	
+	</style>
 
     <script>
 		var imageMonkeyApi = null;
@@ -33,6 +39,7 @@
 			$("#imageCollectionsDropdownLst").hide();
 			$("#noImageCollections").hide();	
 			$("#imageCollectionSelectionDropdown").dropdown();
+			$("#labelsDropdown").dropdown();
             $("#additionalOptionsContainer").accordion();
             //$('#labelSelector').dropdown('set selected', '{{ .randomWord }}'); //set random word as pre-selected
             $('#successMsg').hide();
@@ -64,8 +71,24 @@
                     this.on("maxfilesexceeded", function(file) {
                         alert("No more files please!");
                     });
-                    this.on("success", function(file, responseText) {
-                        $('#successMsg').show(200).delay(1500).hide(200);
+                    this.on("success", function(file, response) {
+                        var selectedLabels = $("#labelsDropdown").dropdown("get value").split(",");
+						if(selectedLabels != "") {
+							var labels = [];
+							for(var i = 0; i < selectedLabels.length; i++) {
+								var labelsObj = $("#labelsDropdown").dropdown("get item", selectedLabels[i]);
+								if(labelsObj.attr("data-sublabel") !== "")
+									labels.push({"label": labelsObj.attr("data-label"), "sublabels": [{"name": labelsObj.attr("data-sublabel")}]});
+								else
+									labels.push({"label": labelsObj.attr("data-label")});
+							}	
+							imageMonkeyApi.labelImage(response.uuid, labels)
+							.then(function() {	
+							}).catch(function(e) {
+							});
+						}
+						
+						$('#successMsg').show(200).delay(1500).hide(200);
                         setTimeout(clearDropzone, 700);
                     });
 
@@ -125,7 +148,38 @@
 				$("#warningMsgBoxContent").text("Couldn't fetch image collections - please try again later");
           		$("#warningMsg").show(200).delay(1500).hide(200);
 			});
+			{{ else }}
+			$("#noImageCollections").show();
+			$("#imageCollectionSelectionDropdown").hide();
 			{{ end }}
+
+
+			imageMonkeyApi.getAvailableLabels()
+			.then(function(data) {
+				for (var key in data) {
+					if (data.hasOwnProperty(key)) {
+						var entry = ('<div class="item" data-value="' + data[key].uuid +
+							'" data-label="' + key + '" data-sublabel=""' +
+							' data-uuid="' + data[key].uuid + '">' + key + '</div>');
+						$("#labelsDropdownMenu").append(entry);
+					}
+
+					if (data[key].has) {
+						for (var subkey in data[key].has) {
+							if (data[key].has.hasOwnProperty(subkey)) {
+								var entry = ('<div class="item" data-value="' + data[key].has[subkey].uuid +
+									'" data-label="' + key + '" data-sublabel="' +
+									subkey + '" data-uuid="' + data[key].has[subkey].uuid + '">' +
+									subkey + "/" + key + '</div>');
+								$("#labelsDropdownMenu").append(entry);
+							}
+						}
+
+					}
+				}
+			}).catch(function() {
+
+			});
 
         });
     </script>
@@ -155,7 +209,7 @@
                             Additional Options
                         </div>
                         <div class="content">
-                            <div class="ui form">
+                            <div class="ui form equal-width">
                                 <div class="inline fields">
                                     <div class="field">
                                         <label data-tooltip="Assign image to an existing Image Collection.">Image Collection <i class="help circle outline icon"></i></label>
@@ -172,8 +226,22 @@
 										<p hidden id="noImageCollections"><a href="/profile/{{ .sessionInformation.Username }}/imagecollections">No Image Collections found - create one</a></p>
 										{{ end }}
 
-                                    </div>
+                                    </div>	
                                 </div>
+								<div class="inline fields">
+									<div class="field">
+										<label>Labels </label>
+									</div>
+									<div class="field">
+										<div hidden class="ui multiple search selection dropdown" id="labelsDropdown">
+                                            <input type="hidden" name="labels">
+                                            <i class="dropdown icon"></i>
+                                            <div class="default text">Labels</div>
+                                            <div class="menu" id="labelsDropdownMenu"> 
+                                            </div>
+                                        </div>
+									</div>
+								</div>
                             </div>
                         </div>
                         <div class="ui basic segment"></div>

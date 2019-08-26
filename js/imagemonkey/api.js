@@ -42,9 +42,14 @@ var ImageMonkeyApi = (function () {
             xhr.open("POST", url);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
-                resolve();
+				if (xhr.status >= 400)
+					reject();
+				else 
+					resolve();
             }
-            xhr.onerror = reject;
+            xhr.onerror = function() {
+				reject();
+			}
             xhr.send(JSON.stringify(data));
         });
     }
