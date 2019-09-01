@@ -1097,9 +1097,12 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
         queryValues = append(queryValues, imageId)
     }
 
+	q2 := "acc.name is null"
     includeOwnImageDonations := ""
     if apiUser.Name != "" {
-        includeOwnImageDonations = fmt.Sprintf(`OR (
+        q2 = fmt.Sprintf(`acc.name = $%d`, len(queryValues) + 1)
+		
+		includeOwnImageDonations = fmt.Sprintf(`OR (
                                                 EXISTS 
                                                     (
                                                         SELECT 1 
@@ -1130,17 +1133,25 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
                              q1.image_width as image_width, q1.image_height as image_height, q1.image_unlocked as image_unlocked
                                    FROM (
                                      SELECT key, image_id, q.label_id, entry_id, annotation_uuid, num_of_valid,
-                                     num_of_invalid, image_width, image_height, image_unlocked, annotated_percentage
+                                     num_of_invalid, image_width, image_height, image_unlocked, annotated_percentage, image_collection
                                      FROM
                                      (
                                          SELECT i.key as key, i.id as image_id, an.label_id as label_id, 
                                          an.id as entry_id, an.uuid as annotation_uuid, an.num_of_valid as num_of_valid, 
                                          an.num_of_invalid as num_of_invalid, i.width as image_width, i.height as image_height,
-                                         i.unlocked as image_unlocked, qq.annotated_percentage
+                                         i.unlocked as image_unlocked, qq.annotated_percentage, coll.image_collection_name as image_collection
                                          FROM image i
                                          JOIN image_annotation an ON i.id = an.image_id
                                          JOIN image_provider p ON i.image_provider_id = p.id
                                          LEFT JOIN image_annotation_coverage qq ON qq.image_id = i.id
+										 LEFT JOIN 
+										 (
+											SELECT ui.name as image_collection_name, c.image_id as image_id
+											FROM image_collection_image c
+											JOIN user_image_collection ui ON c.user_image_collection_id = ui.id
+											JOIN account acc ON acc.id = ui.account_id
+											WHERE %s
+										 ) coll ON coll.image_id = i.id
                                          WHERE (i.unlocked = true %s) AND p.name = 'donation'
                                          AND an.auto_generated = false
                                      ) q
@@ -1166,7 +1177,7 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
                       ) q2
                       GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
                             q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
-                      `, includeOwnImageDonations, q1)
+                      `, q2, includeOwnImageDonations, q1)
 
     rows, err := p.db.Query(q, queryValues...)
     if err != nil {
@@ -1246,14 +1257,23 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
     }
 
     q2 := ""
-    if apiUser.Name != "" {
-        q2 = fmt.Sprintf(` AND NOT EXISTS
+    q3 := "acc.name is null"
+	if apiUser.Name != "" {	
+		q2 = fmt.Sprintf(` AND NOT EXISTS
                            (
                                 SELECT 1 FROM user_annotation_blacklist bl 
                                 JOIN account acc ON acc.id = bl.account_id
                                 WHERE bl.image_validation_id = v.id AND acc.name = $%d
                            )`, len(parseResult.QueryValues) + 1)
-    }
+    
+		q3 = fmt.Sprintf(`acc.name = $%d`, len(parseResult.QueryValues) + 1)
+	}
+
+	//in case no subquery is provided, set 1=1 to "catch all". if we won't do that, the query
+	//breaks due to a syntax error
+	if parseResult.Subquery == "" {
+		parseResult.Subquery = "1 = 1"
+	}
 
     q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid, qqq.image_unlocked, 
                       acc.accessor
@@ -1263,20 +1283,28 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                         unnest(string_to_array(qq.validation_uuids, ',')) as validation_uuid, qq.image_unlocked
                         FROM
                         (    
-                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids, q.image_unlocked
+                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids, q.image_unlocked, image_collection
                               FROM
                               (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
                                   array_to_string(array_agg(CASE WHEN (%s) THEN v.uuid ELSE NULL END), ',') as validation_uuids, 
                                   array_agg(a.accessor)::text[] as accessors, COALESCE(c.annotated_percentage, 0) as annotated_percentage, 
-                                  i.unlocked as image_unlocked
+                                  i.unlocked as image_unlocked, coll.image_collection as image_collection
                                   FROM image i 
                                   JOIN image_validation v ON v.image_id = i.id 
                                   JOIN label l ON l.id = v.label_id
                                   JOIN label_accessor a ON l.id = a.label_id
                                   LEFT JOIN image_annotation_coverage c ON c.image_id = i.id
-                                  WHERE (i.unlocked = true %s)
+                                  LEFT JOIN 
+									(
+										SELECT ui.name as image_collection, c.image_id as image_id
+										FROM image_collection_image c
+										JOIN user_image_collection ui ON c.user_image_collection_id = ui.id
+										JOIN account acc ON acc.id = ui.account_id
+										WHERE %s
+									) coll ON coll.image_id = i.id
+								  WHERE (i.unlocked = true %s)
 
-                                  GROUP BY i.key, i.width, i.height, i.unlocked, c.annotated_percentage
+                                  GROUP BY i.key, i.width, i.height, i.unlocked, c.annotated_percentage, image_collection
                               ) q WHERE %s
                         )qq
                       ) qqq
@@ -1285,7 +1313,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                       WHERE NOT EXISTS (
                         SELECT 1 FROM image_annotation a 
                         WHERE a.label_id = v.label_id AND a.image_id = v.image_id
-                      )%s%s`, parseResult.Subquery, includeOwnImageDonations, parseResult.Query, q2, q1)
+                      )%s%s`, parseResult.Subquery, q3, includeOwnImageDonations, parseResult.Query, q2, q1)
 
     //first item in query value is the label we want to annotate
     //parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)

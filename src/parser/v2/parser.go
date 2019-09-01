@@ -14,6 +14,7 @@ type QueryParser struct {
 	allowStaticQueryAttributes bool
 	version int
 	allowOrderByValidation bool
+	allowImageCollections bool
 }
 
 type ResultOrderType int
@@ -51,11 +52,16 @@ func NewQueryParser(query string) *QueryParser {
         allowStaticQueryAttributes: true,
         version: 2,
         allowOrderByValidation: false,
+		allowImageCollections: false,
     } 
 }
 
 func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
     p.allowStaticQueryAttributes = allow
+}
+
+func (p *QueryParser) AllowImageCollections(allow bool) {
+	p.allowImageCollections = allow
 }
 
 func (p *QueryParser) AllowOrderByValidation(allow bool) {
@@ -80,6 +86,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		pos: p.offset,
 		allowStaticQueryAttributes: p.allowStaticQueryAttributes,
 		allowOrderByValidation: p.allowOrderByValidation,
+		allowImageCollections: p.allowImageCollections,
 		numOfLabels: 0,
 		version: p.version,
 		isUuidQuery: true,

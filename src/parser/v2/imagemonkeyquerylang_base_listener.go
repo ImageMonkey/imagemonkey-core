@@ -1,4 +1,4 @@
-// Code generated from ..\grammar\ImagemonkeyQueryLang.g4 by ANTLR 4.7.1. DO NOT EDIT.
+// Code generated from ../grammar/ImagemonkeyQueryLang.g4 by ANTLR 4.7.1. DO NOT EDIT.
 
 package imagemonkeyquerylang // ImagemonkeyQueryLang
 import "github.com/antlr/antlr4/runtime/Go/antlr"

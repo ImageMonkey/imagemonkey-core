@@ -502,3 +502,32 @@ func TestOrderByValidationFunctionalityShouldFailBecauseDeactivated(t *testing.T
 	notOk(t, err)
 }
 
+func TestQueryImageCollection(t *testing.T) {
+	queryParser := NewQueryParser("image.collection='abc'")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageCollections(true)
+	queryParser.AllowOrderByValidation(false)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "image_collection = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"abc"})
+}
+
+func TestQueryImageCollection1(t *testing.T) {
+	queryParser := NewQueryParser("image.collection='abc with spaces'")
+	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageCollections(true)
+	queryParser.AllowOrderByValidation(false)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "image_collection = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"abc with spaces"})
+}
+
+func TestQueryImageCollectionShouldFailBecauseDeactivated(t *testing.T) {
+	queryParser := NewQueryParser("image.collection='abc'")
+	queryParser.AllowImageCollections(false)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+

@@ -20,6 +20,16 @@ func NewCustomErrorListener() *CustomErrorListener {
     } 
 }
 
+func trimQuotes(s string) string {
+    if len(s) >= 2 {
+        if c := s[len(s)-1]; s[0] == c && (c == '"' || c == '\'') {
+            return s[1 : len(s)-1]
+        }
+    }
+    return s
+}
+
+
 func underlineError(input, msg string, offendingSymbolStart int, offendingSymbolEnd int, column int) string {
 	out := input + "\n"
 	for i := 0; i < column; i++ {
@@ -44,6 +54,7 @@ type imagemonkeyQueryLangListener struct {
 	pos int
 	allowStaticQueryAttributes bool
 	allowOrderByValidation bool
+	allowImageCollections bool
 	numOfLabels int
 	version int
 	typeOfQueryKnown bool
@@ -309,9 +320,19 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 		beforePart := strings.TrimSpace(assignmentVal[: equalSignPos])
 		afterPart := strings.TrimSpace(assignmentVal[equalSignPos + 1 :])
 
-		assignmentVal = beforePart + "=" + afterPart
-		subval := "a.accessor = $" + strconv.Itoa(l.pos)
-
+		subval := ""
+		if beforePart == "image.collection" {
+			if !l.allowImageCollections {
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				return
+			}
+			assignmentVal = trimQuotes(afterPart)
+			val = "image_collection = $" + strconv.Itoa(l.pos) 
+		} else {
+			assignmentVal = beforePart + "=" + afterPart
+			subval = "a.accessor = $" + strconv.Itoa(l.pos)
+		}
 		stackEntry := ParseResult{Query: val}
 		stackEntry.QueryValues = append(stackEntry.QueryValues, assignmentVal)
 		stackEntry.Subquery = subval
