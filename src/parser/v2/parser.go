@@ -11,10 +11,12 @@ type Parser interface {
 type QueryParser struct {
 	query string
 	offset int
-	allowStaticQueryAttributes bool
+	allowImageWidth bool
+	allowImageHeight bool
+	allowAnnotationCoverage bool
 	version int
 	allowOrderByValidation bool
-	allowImageCollections bool
+	allowImageCollection bool
 }
 
 type ResultOrderType int
@@ -49,19 +51,28 @@ func NewQueryParser(query string) *QueryParser {
     return &QueryParser {
         query: query,
         offset: 1,
-        allowStaticQueryAttributes: true,
+        allowImageWidth: true,
+		allowImageHeight: true,
+		allowAnnotationCoverage: true,
         version: 2,
         allowOrderByValidation: false,
-		allowImageCollections: false,
+		allowImageCollection: false,
     } 
 }
 
-func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
-    p.allowStaticQueryAttributes = allow
+func (p *QueryParser) AllowImageHeight(allow bool) {
+    p.allowImageHeight = allow
 }
 
-func (p *QueryParser) AllowImageCollections(allow bool) {
-	p.allowImageCollections = allow
+func (p *QueryParser) AllowImageWidth(allow bool) {
+	p.allowImageWidth = allow
+}
+
+func (p *QueryParser) AllowAnnotationCoverage(allow bool) {
+	p.allowAnnotationCoverage = allow
+}
+func (p *QueryParser) AllowImageCollection(allow bool) {
+	p.allowImageCollection = allow
 }
 
 func (p *QueryParser) AllowOrderByValidation(allow bool) {
@@ -84,9 +95,11 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 
 	listener := imagemonkeyQueryLangListener{
 		pos: p.offset,
-		allowStaticQueryAttributes: p.allowStaticQueryAttributes,
+		allowImageWidth: p.allowImageWidth,
+		allowImageHeight: p.allowImageHeight,
+		allowAnnotationCoverage: p.allowAnnotationCoverage,
 		allowOrderByValidation: p.allowOrderByValidation,
-		allowImageCollections: p.allowImageCollections,
+		allowImageCollection: p.allowImageCollection,
 		numOfLabels: 0,
 		version: p.version,
 		isUuidQuery: true,

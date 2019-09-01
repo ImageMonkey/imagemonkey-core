@@ -52,9 +52,11 @@ func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offending
 type imagemonkeyQueryLangListener struct {
 	*BaseImagemonkeyQueryLangListener
 	pos int
-	allowStaticQueryAttributes bool
+	allowImageHeight bool
+	allowImageWidth bool
+	allowAnnotationCoverage bool
 	allowOrderByValidation bool
-	allowImageCollections bool
+	allowImageCollection bool
 	numOfLabels int
 	version int
 	typeOfQueryKnown bool
@@ -173,7 +175,7 @@ func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *Annot
 		if _, err := strconv.Atoi(annotationCoverageVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowStaticQueryAttributes {
+				if l.allowAnnotationCoverage {
 					operator := tokens[0].GetText()
 					val := "q.annotated_percentage" + operator + annotationCoverageVal
 
@@ -196,7 +198,7 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 		if _, err := strconv.Atoi(imageWidthVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowStaticQueryAttributes {
+				if l.allowImageWidth {
 					operator := tokens[0].GetText()
 					val := "image_width" + operator + imageWidthVal
 
@@ -220,7 +222,7 @@ func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightE
 		if _, err := strconv.Atoi(imageHeightVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowStaticQueryAttributes {
+				if l.allowImageHeight {
 					operator := tokens[0].GetText()
 					val := "q.image_height" + operator + imageHeightVal
 
@@ -322,7 +324,7 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 
 		subval := ""
 		if beforePart == "image.collection" {
-			if !l.allowImageCollections {
+			if !l.allowImageCollection {
 				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
 														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return

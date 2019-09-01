@@ -1518,7 +1518,9 @@ func main(){
 		    }
 
 			queryParser := parser.NewQueryParser(query)
-			queryParser.AllowStaticQueryAttributes(true)
+			queryParser.AllowImageWidth(true)
+			queryParser.AllowImageHeight(true)
+			queryParser.AllowAnnotationCoverage(true)
 	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
@@ -1883,7 +1885,9 @@ func main(){
 		        }
 
 		        queryParser := parser.NewQueryParser(query)
-		        queryParser.AllowStaticQueryAttributes(true)
+		        queryParser.AllowImageHeight(true)
+				queryParser.AllowImageWidth(true)
+				queryParser.AllowAnnotationCoverage(true)
 		        parseResult, err := queryParser.Parse()
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
@@ -1928,8 +1932,10 @@ func main(){
 		        }
 
 		        queryParser := parser.NewQueryParser(query)
-		        queryParser.AllowStaticQueryAttributes(true)
-				queryParser.AllowImageCollections(true)
+		        queryParser.AllowImageWidth(true)
+				queryParser.AllowImageHeight(true)
+				queryParser.AllowAnnotationCoverage(true)
+				queryParser.AllowImageCollection(true)
 		        parseResult, err := queryParser.Parse()
 		        if err != nil {
 		            c.JSON(422, gin.H{"error": err.Error()})
@@ -2235,8 +2241,10 @@ func main(){
 
 			queryParser := parser.NewQueryParser(query)
 			queryParser.SetVersion(1)
-			queryParser.AllowStaticQueryAttributes(true)
-			queryParser.AllowImageCollections(true)
+			queryParser.AllowImageHeight(true)
+			queryParser.AllowImageWidth(true)
+			queryParser.AllowAnnotationCoverage(true)
+			queryParser.AllowImageCollection(true)
 	        parseResult, err := queryParser.Parse()
 	        if err != nil {
 	            c.JSON(422, gin.H{"error": err.Error()})
