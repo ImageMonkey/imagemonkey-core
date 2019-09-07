@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"errors"
-	"net/http/httputil"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	//"net/url"
@@ -110,35 +109,6 @@ func GetImages(p string) (map[string]string, error) {
 	return files, nil
 }
 
-
-func ReverseProxy(target string, sessionCookieHandler *SessionCookieHandler, 
-					imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase) gin.HandlerFunc {
-    return func(c *gin.Context) {
-    	sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-
-    	hasPermission := false
-		if sessionInformation.LoggedIn {
-			userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
-			if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanMonitorSystem {
-				hasPermission = true
-			}
-		}
-
-		if hasPermission {
-	        director := func(req *http.Request) {
-	            req.URL.Scheme = "http"
-	            req.URL.Host = target
-	            req.Host = ""
-	            req.URL.Path = ""
-	        }
-	        proxy := &httputil.ReverseProxy{Director: director}
-	        proxy.ServeHTTP(c.Writer, c.Request)
-	    } else {
-	    	ShowErrorPage(c)
-	    }
-    }
-}
-
 func main() {
 	fmt.Printf("Starting Web Service...\n")
 
@@ -156,7 +126,6 @@ func main() {
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	listenPort := flag.Int("listen_port", 8080, "Specify the listen port")
 	publicBackupsPath := flag.String("public_backups_path", "../public_backups/public_backups.json", "Path to public backups")
-	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL")
 	modelsPath :=   flag.String("models_path", "https://raw.githubusercontent.com/bbernhard/imagemonkey-models/master/models.json", 
 								"Path to the pre-trained models")
 	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
@@ -893,9 +862,6 @@ func main() {
 				"models": availableModels,
 			})
 		})
-
-
-		router.GET("/monitoring/", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
 
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{
