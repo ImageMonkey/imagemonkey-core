@@ -317,6 +317,17 @@
       }
     }
 
+    {{ if ne .sessionInformation.Username "" }}
+    imageMonkeyApi.setToken(getCookie("imagemonkey"));
+    imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }})
+      .then(function(data) {
+        for(var i = 0; i < data.length; i++) {
+          availableLabels.push("image.collection='" + escapeHtml(data[i].name) + "'");	
+		}
+	  }).catch(function(e) {
+	  });
+    {{ end }}
+
     $('#annotatedStatisticsButton').click(function(e){
       $('#annotatedStatisticsPopup').modal('show');
     });
