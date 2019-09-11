@@ -303,12 +303,9 @@
     $("#label").attr("label", "");
     $("#sublabel").attr("sublabel", "");
 
+    imageMonkeyApi.setToken(getCookie("imagemonkey"));
+
     var availableLabels = [];
-    var labelAccessors = {{ .labelAccessors }};
-    for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i].accessor);
-      labelAccessorsLookupTable[labelAccessors[i].accessor] = labelAccessors[i].parent_accessor;
-    }
 
     var staticQueryAttributes = {{ .queryAttributes }};
     for(var key in staticQueryAttributes) {
@@ -316,17 +313,28 @@
         availableLabels.push(staticQueryAttributes[key].name);
       }
     }
-
+   
+    var promises = [imageMonkeyApi.getLabelAccessors(true)];
     {{ if ne .sessionInformation.Username "" }}
-    imageMonkeyApi.setToken(getCookie("imagemonkey"));
-    imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }})
-      .then(function(data) {
-        for(var i = 0; i < data.length; i++) {
-          availableLabels.push("image.collection='" + escapeHtml(data[i].name) + "'");	
-		}
-	  }).catch(function(e) {
-	  });
+    promises.push(imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }}));
     {{ end }}
+    
+    Promise.all(promises)
+      .then(function(data) {
+        for(var i = 0; i < data[0].length; i++) {
+          availableLabels.push(data[0][i].accessor);
+          labelAccessorsLookupTable[data[0][i].accessor] = data[0][i].parent_accessor;
+        }
+			
+        if(data.length > 1) {
+          for(var i = 0; i < data[1].length; i++) {
+            availableLabels.push("image.collection='" + escapeHtml(data[1][i].name) + "'");	
+          }
+        }
+        $("#browseAnnotationsGoButton").removeClass("disabled");
+      }).catch(function(e) {
+        Raven.captureException(e);
+      });
 
     $('#annotatedStatisticsButton').click(function(e){
       $('#annotatedStatisticsPopup').modal('show');
@@ -364,7 +372,7 @@
         this.value = terms.join(" ");
         return false;
       }
-    });
+    });	
 
     getAnnotatedStatistics();
   });
@@ -405,7 +413,7 @@
       {{ end }}
 
 
-      <div class="ui primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui disabled primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>
       <div class="ui right aligned disabled button" id="annotatedStatisticsButton">
         <i class="chart bar icon"></i>
         Statistics
