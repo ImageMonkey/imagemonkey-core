@@ -243,18 +243,6 @@
 
   $(document).ready(function(){
     var availableLabels = [];
-    var labelAccessors = {{ .labelAccessors }};
-    for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i]);
-    }
-
-    labelSuggestions = {{ .labelSuggestions }};
-    if(labelSuggestions !== null) {
-      for(var i = 0; i < labelSuggestions.length; i++) {
-        availableLabels.push(labelSuggestions[i]);
-      }
-    }
-
 
     var staticQueryAttributes = {{ .queryAttributes }};
     for(var key in staticQueryAttributes) {
@@ -262,6 +250,25 @@
         availableLabels.push(staticQueryAttributes[key].name);
       }
     }
+    var imageMonkeyApi = new ImageMonkeyApi({{ .apiBaseUrl }});
+    imageMonkeyApi.setToken(getCookie("imagemonkey"));
+    var promises = [imageMonkeyApi.getLabelAccessors(true), imageMonkeyApi.getLabelSuggestions()];
+
+    Promise.all(promises)
+      .then(function(data) {
+        for(var i = 0; i < data[0].length; i++) {
+          availableLabels.push(data[0][i].accessor);
+        }
+
+        if(data[1] !== null) {
+          for(var i = 0; i < data[1].length; i++) {
+            availableLabels.push(escapeHtml(data[1][i]));	
+          }
+        }
+        $("#browseLabelsGoButton").removeClass("disabled");
+      }).catch(function(e) {
+        Raven.captureException(e);
+      });
 
 
     $("#labelQuery")
@@ -311,7 +318,7 @@
        <input placeholder="Query..." type="text" id="labelQuery">
       </div>
 
-      <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
+      <div class="ui primary disabled submit button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>
     </form>
     <p id="numberOfQueryResults"></p>
 

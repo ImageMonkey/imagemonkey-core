@@ -485,10 +485,8 @@ func main() {
 				"activeMenuNr": activeMenuNr,
 				"apiBaseUrl": apiBaseUrl,
 				"languages": languages.GetAllSupported(),
-				"labelSuggestions": commons.Pick(imageMonkeyDatabase.GetLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
-				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
@@ -556,7 +554,6 @@ func main() {
 				"onlyOnce": onlyOnce,
 				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
