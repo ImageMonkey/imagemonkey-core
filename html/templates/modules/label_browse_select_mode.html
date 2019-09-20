@@ -253,6 +253,9 @@
     var imageMonkeyApi = new ImageMonkeyApi({{ .apiBaseUrl }});
     imageMonkeyApi.setToken(getCookie("imagemonkey"));
     var promises = [imageMonkeyApi.getLabelAccessors(true), imageMonkeyApi.getLabelSuggestions()];
+    {{ if ne .sessionInformation.Username "" }}
+    promises.push(imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }}));
+    {{ end }}
 
     Promise.all(promises)
       .then(function(data) {
@@ -263,6 +266,12 @@
         if(data[1] !== null) {
           for(var i = 0; i < data[1].length; i++) {
             availableLabels.push(escapeHtml(data[1][i]));	
+          }
+        }
+        
+        if(data.length > 2) {
+          for(var i = 0; i < data[2].length; i++) {
+            availableLabels.push("image.collection='" + escapeHtml(data[2][i].name) + "'");	
           }
         }
         $("#browseLabelsGoButton").removeClass("disabled");

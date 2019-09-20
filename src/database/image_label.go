@@ -501,8 +501,10 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 		shuffleStr = "ORDER BY RANDOM()"
 	}
 
+	q2 := "acc.name is null"
 	includeOwnImageDonations := ""
 	if apiUser.Name != "" {
+		q2 = fmt.Sprintf(`acc.name = $%d`, len(parseResult.QueryValues) + 1)
 		includeOwnImageDonations = fmt.Sprintf(`OR (
                                                 EXISTS 
                                                     (
@@ -524,23 +526,23 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                         image_productive_labels AS (
                                            SELECT i.id as image_id, a.accessor as accessor, a.label_id as label_id
                                                                 FROM image_validation v 
-                                                                JOIN label_accessor a ON v.label_id = a.label_id
+                                                                LEFT JOIN label_accessor a ON v.label_id = a.label_id
                                                                 JOIN image i ON v.image_id = i.id
                                                                 WHERE (i.unlocked = true %s)
                         ),image_trending_labels AS (
 
                                                             SELECT i.id as image_id, s.name as label
                                                                 FROM image_label_suggestion ils
-                                                                JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                                                LEFT JOIN label_suggestion s on ils.label_suggestion_id = s.id
                                                                 JOIN image i ON ils.image_id = i.id
                                                                 WHERE (i.unlocked = true %s)
                         ),
                         image_ids AS (
-                            SELECT image_id, annotated_percentage, image_width, image_height, image_key, image_unlocked
+                            SELECT image_id, annotated_percentage, image_width, image_height, image_key, image_unlocked, image_collection
                             FROM
                             (
-                                SELECT image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
-                                i.unlocked as image_unlocked, i.key as image_key
+                                SELECT q2.image_id as image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
+                                i.unlocked as image_unlocked, i.key as image_key, coll.image_collection as image_collection
                                 FROM
                                 (
                                     SELECT q1.image_id, array_agg(label)::text[] as accessors, 
@@ -555,10 +557,18 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                         SELECT image_id, label as label
                                         FROM image_trending_labels t
                                     ) q1
-                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id
+                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id	
                                     GROUP BY q1.image_id, c.annotated_percentage
                                 ) q2
                                 JOIN image i ON i.id = q2.image_id
+                                LEFT JOIN 
+                                (
+                                    SELECT ui.name as image_collection, c.image_id as image_id
+                                    FROM image_collection_image c
+                                    JOIN user_image_collection ui ON c.user_image_collection_id = ui.id
+                                    JOIN account acc ON acc.id = ui.account_id
+                                    WHERE %s
+                                ) coll ON coll.image_id = i.id
                             ) q
                             WHERE %s
                         ),
@@ -611,7 +621,7 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                         LEFT JOIN img_descriptions imgdsc ON imgdsc.image_id = q4.image_id
                         GROUP BY image_key, image_width, image_height, image_unlocked, imgdsc.descriptions
                         %s`,
-		includeOwnImageDonations, includeOwnImageDonations, parseResult.Query, shuffleStr)
+		includeOwnImageDonations, includeOwnImageDonations, q2, parseResult.Query, shuffleStr)
 
 	var rows *sql.Rows
 	if apiUser.Name != "" {
