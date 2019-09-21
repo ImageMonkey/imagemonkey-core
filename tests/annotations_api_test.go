@@ -314,11 +314,11 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	ok(t, err)
 
 	//give first image the labels cat and dog
-	testLabelImage(t, imageIds[0], "dog", "")
-	testLabelImage(t, imageIds[0], "cat", "")
+	testLabelImage(t, imageIds[0], "dog", "", "")
+	testLabelImage(t, imageIds[0], "cat", "", "")
 
 	//add label 'cat' to second image
-	testLabelImage(t, imageIds[1], "cat", "")
+	testLabelImage(t, imageIds[1], "cat", "", "")
 
 	testBrowseAnnotation(t, "cat&dog", 2, "")
 	testBrowseAnnotation(t, "cat|dog", 3, "")
@@ -432,7 +432,7 @@ func TestBrowseAnnotationQueryAnnotationCoverage(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "")
+	testLabelImage(t, imageId, "orange", "", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
@@ -451,7 +451,7 @@ func TestBrowseAnnotationQueryImageDimensions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "")
+	testLabelImage(t, imageId, "orange", "", "")
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
@@ -576,7 +576,7 @@ func TestBrowseAnnotationBelongingToImageCollection2(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "")
+	testLabelImage(t, imageId, "orange", "", "")
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 2, token)
 }
@@ -596,7 +596,7 @@ func TestBrowseAnnotationBelongingToImageCollection3(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "")
+	testLabelImage(t, imageId, "orange", "", "")
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 2, token)
 }
@@ -619,7 +619,7 @@ func TestBrowseAnnotationBelongingToOtherImageCollection(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "")
+	testLabelImage(t, imageId, "orange", "", "")
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 0, token2)
 }

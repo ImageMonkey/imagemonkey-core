@@ -525,16 +525,16 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 	q := fmt.Sprintf(`WITH 
                         image_productive_labels AS (
                                            SELECT i.id as image_id, a.accessor as accessor, a.label_id as label_id
-                                                                FROM image_validation v 
+                                                                FROM image i
+                                                                LEFT JOIN image_validation v ON v.image_id = i.id
                                                                 LEFT JOIN label_accessor a ON v.label_id = a.label_id
-                                                                JOIN image i ON v.image_id = i.id
                                                                 WHERE (i.unlocked = true %s)
                         ),image_trending_labels AS (
 
                                                             SELECT i.id as image_id, s.name as label
-                                                                FROM image_label_suggestion ils
+                                                                FROM image i
+                                                                LEFT JOIN image_label_suggestion ils ON ils.image_id = i.id
                                                                 LEFT JOIN label_suggestion s on ils.label_suggestion_id = s.id
-                                                                JOIN image i ON ils.image_id = i.id
                                                                 WHERE (i.unlocked = true %s)
                         ),
                         image_ids AS (
@@ -584,8 +584,9 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 
 
                         SELECT image_key, image_width, image_height, image_unlocked,
-                        json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels)),
-                        coalesce(imgdsc.descriptions, '[]'::jsonb)
+                        COALESCE(json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels))
+                        FILTER (WHERE q4.label is not null), '[]'::json),
+						COALESCE(imgdsc.descriptions, '[]'::jsonb)
                         FROM
                         (
                             SELECT q3.image_id, q3.label, q3.num_of_valid, q3.num_of_invalid,
@@ -601,10 +602,10 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                        ii.image_unlocked as image_unlocked
                                 FROM
                                 image_ids ii
-                                JOIN image_productive_labels p on p.image_id = ii.image_id
-                                JOIN label l on l.id = p.label_id
+                                LEFT JOIN image_productive_labels p on p.image_id = ii.image_id
+                                LEFT JOIN label l on l.id = p.label_id
                                 LEFT JOIN label pl on pl.id = l.parent_id
-                                JOIN image_validation v ON ii.image_id = v.image_id AND v.label_id = l.id
+                                LEFT JOIN image_validation v ON ii.image_id = v.image_id AND v.label_id = l.id
 
                                 UNION ALL
 
@@ -613,8 +614,8 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                 ii.image_key as image_key, ii.image_width as image_width, ii.image_height as image_height,
                                 ii.image_unlocked as image_unlocked
                                 FROM image_ids ii
-                                JOIN image_label_suggestion ils on ii.image_id = ils.image_id
-                                JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                LEFT JOIN image_label_suggestion ils on ii.image_id = ils.image_id
+                                LEFT JOIN label_suggestion s on ils.label_suggestion_id = s.id
                             ) q3
                             GROUP BY image_id, image_key, image_width, image_height, image_unlocked, label, num_of_valid, num_of_invalid
                         ) q4

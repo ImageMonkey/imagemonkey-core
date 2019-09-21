@@ -197,7 +197,8 @@
       for(var j = 0; j < labels.length; j++) {
         var labelName = (isLabelValid(labels[j]["num_yes"], labels[j]["num_no"]) 
                           ? escapeHtml(labels[j]["name"]) : strikethroughText(escapeHtml(labels[j]["name"])));
-        tooltipText += labelName + ", ";
+        if(labelName !== "")
+          tooltipText += labelName + ", ";
         var sublabels = labels[j]["sublabels"];
         for(k = 0; k < sublabels.length; k++) {
           tooltipText += (isLabelValid(sublabels[k]["num_yes"], sublabels[k]["num_no"]) 

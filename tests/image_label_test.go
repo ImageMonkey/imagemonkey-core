@@ -9,6 +9,74 @@ import (
 	"sort"
 )
 
+func testLabelImage(t *testing.T, imageId string, label string, sublabel string, token string) {
+	oldNum, err := db.GetNumberOfImagesWithLabel(label)
+	ok(t, err)
+
+	var labelMeEntries []datastructures.LabelMeEntry
+	labelMeEntry := datastructures.LabelMeEntry{Label: label}
+
+	if sublabel != "" {
+		labelMeEntry.Sublabels = append(labelMeEntry.Sublabels, datastructures.Sublabel{Name: sublabel})
+	}
+
+	labelMeEntries = append(labelMeEntries, labelMeEntry)
+
+	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
+	req := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetBody(labelMeEntries)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+			
+	resp, err := req.Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
+
+	newNum, err := db.GetNumberOfImagesWithLabel(label)
+	ok(t, err)
+
+	equals(t, oldNum+1, newNum)
+}
+
+
+func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string) {
+	type LabelMeEntry struct {
+		Label string `json:"label"`
+		Annotatable bool `json:"annotatable"`
+	}
+
+	oldNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
+	ok(t, err)
+
+	var labelMeEntries []LabelMeEntry
+	labelMeEntry := LabelMeEntry{Label: label}
+	labelMeEntry.Annotatable = annotatable
+	labelMeEntries = append(labelMeEntries, labelMeEntry)
+
+	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
+	req := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetBody(labelMeEntries)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+			
+	resp, err := req.Post(url)
+
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
+
+	newNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
+	ok(t, err)
+
+	equals(t, oldNum+1, newNum)
+}
+
 func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResults int, 
 		requiredStatusCode int) []datastructures.ImageLabel {
 	u := BASE_URL + API_VERSION + "/donations/labels"
@@ -79,7 +147,7 @@ func TestBrowseLabel1(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "egg", "")
+	testLabelImage(t, imageId, "egg", "", "")
 
 	testBrowseLabel(t, "apple&egg", "", 1, 200)
 	testBrowseLabel(t, "apple|egg", "", 1, 200)
@@ -357,7 +425,7 @@ func TestGetLabelsForImageMultipleLabels(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "table", "")
+	testLabelImage(t, imageId, "table", "", "")
 
 	labels := testGetLabelsForImage(t, imageId, "", false, 200)
 	equals(t, len(labels), 2)
@@ -390,7 +458,7 @@ func TestGetLabelsForImageMultipleLabelsIncludingNonProductiveOnes(t *testing.T)
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "table", "")
+	testLabelImage(t, imageId, "table", "", "")
 	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken)
 
 	labels := testGetLabelsForImage(t, imageId, "", false, 200)
@@ -429,7 +497,7 @@ func TestGetLabelsForImageMultipleLabelsWithoutNonProductiveOnes(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "table", "")
+	testLabelImage(t, imageId, "table", "", "")
 	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken)
 
 	labels := testGetLabelsForImage(t, imageId, "", true, 200)
@@ -455,3 +523,177 @@ func TestGetLabelsForImageMultipleLabelsWithoutNonProductiveOnes(t *testing.T) {
 	equals(t, labels[1].Validation.NumOfValid, int32(0))
 	equals(t, labels[1].Validation.NumOfInvalid, int32(0))
 }
+
+
+func TestGetImagesToLabelByImageCollectionName(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageCollection(t, "user", token, "mycoll", "my-new-image-collection", 201)
+
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	imgs := testBrowseLabel(t, "image.collection='mycoll'", token, 1, 200)
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(1132))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 1)	
+	equals(t, imgs[0].Labels[0].Name, "apple")
+}
+
+func TestGetImagesToLabelByImageCollectionNameNoLabel(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageCollection(t, "user", token, "mycoll", "my-new-image-collection", 201)
+
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	imgs := testBrowseLabel(t, "image.collection='mycoll'", token, 1, 200)
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(1132))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 0)	
+}
+
+func TestGetImagesToLabelByImageCollectionNameButForeignCollection(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAddImageCollection(t, "user", token, "mycoll", "my-new-image-collection", 201)
+
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	testBrowseLabel(t, "image.collection='mycoll'", "", 0, 200)
+}
+
+func TestGetImagesToLabelByImageCollectionNameMultipleImages(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testAddImageCollection(t, "user", token, "mycoll", "my-new-image-collection", 201)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", true, "", "", 200)
+	imageId, err = db.GetLatestDonatedImageId()
+	ok(t, err)
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	testDonate(t, "./images/apples/apple3.jpeg", "", true, "", "", 200)
+	imageId, err = db.GetLatestDonatedImageId()
+	ok(t, err)
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	imgs := testBrowseLabel(t, "image.collection='mycoll'", token, 3, 200)
+
+	sort.SliceStable(imgs, func(i, j int) bool { return imgs[i].Image.Width < imgs[j].Image.Width })
+
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(750))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 0)
+
+	equals(t, imgs[1].Image.Unlocked, true)
+	equals(t, int(imgs[1].Image.Width), int(1125))
+	equals(t, int(imgs[1].Image.Height), int(750))
+	equals(t, len(imgs[1].Labels), 1)
+	equals(t, imgs[1].Labels[0].Name, "apple")
+	equals(t, len(imgs[1].Labels[0].Sublabels), 0)
+
+
+	equals(t, imgs[2].Image.Unlocked, true)
+	equals(t, int(imgs[2].Image.Width), int(1132))
+	equals(t, int(imgs[2].Image.Height), int(750))
+	equals(t, len(imgs[2].Labels), 1)
+	equals(t, imgs[2].Labels[0].Name, "apple")
+	equals(t, len(imgs[2].Labels[0].Sublabels), 0)
+}
+
+func TestGetImagesToLabelByImageCollectionNameMultipleImagesWithSublabels(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testAddImageCollection(t, "user", token, "mycoll", "my-new-image-collection", 201)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+	testLabelImage(t, imageId, "dog", "ear", "")
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, "", "", 200)
+	imageId, err = db.GetLatestDonatedImageId()
+	ok(t, err)
+	testLabelImage(t, imageId, "dog", "mouth", "")
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	testDonate(t, "./images/apples/apple3.jpeg", "", true, "", "", 200)
+	imageId, err = db.GetLatestDonatedImageId()
+	ok(t, err)
+	testLabelImage(t, imageId, "dog", "eye", "")
+	addImageToImageCollection(t, "user", token, "mycoll", imageId, 201)
+
+	imgs := testBrowseLabel(t, "image.collection='mycoll'", token, 3, 200)
+
+	sort.SliceStable(imgs, func(i, j int) bool { return imgs[i].Image.Width < imgs[j].Image.Width })
+
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(750))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 1)
+	equals(t, imgs[0].Labels[0].Name, "dog")
+	equals(t, len(imgs[0].Labels[0].Sublabels), 1)
+	equals(t, imgs[0].Labels[0].Sublabels[0].Name, "eye")
+
+	equals(t, imgs[1].Image.Unlocked, true)
+	equals(t, int(imgs[1].Image.Width), int(1125))
+	equals(t, int(imgs[1].Image.Height), int(750))
+	equals(t, len(imgs[1].Labels), 1)
+	equals(t, imgs[1].Labels[0].Name, "dog")
+	equals(t, len(imgs[1].Labels[0].Sublabels), 1)
+	equals(t, imgs[1].Labels[0].Sublabels[0].Name, "mouth")
+
+
+	equals(t, imgs[2].Image.Unlocked, true)
+	equals(t, int(imgs[2].Image.Width), int(1132))
+	equals(t, int(imgs[2].Image.Height), int(750))
+	equals(t, len(imgs[2].Labels), 1)
+	equals(t, imgs[2].Labels[0].Name, "dog")
+	equals(t, len(imgs[2].Labels[0].Sublabels), 1)
+	equals(t, imgs[2].Labels[0].Sublabels[0].Name, "ear")
+}
+

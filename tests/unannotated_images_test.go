@@ -46,8 +46,8 @@ func TestMultipleGetUnannotatedValidations(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "dog", "")
-	testLabelImage(t, imageId, "cat", "")
+	testLabelImage(t, imageId, "dog", "", "")
+	testLabelImage(t, imageId, "cat", "", "")
 
 	testGetUnannotatedValidations(t, imageId, "", 200, 3)
 }
@@ -61,8 +61,8 @@ func TestMultipleGetUnannotatedValidations2(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "dog", "")
-	testLabelImage(t, imageId, "cat", "")
+	testLabelImage(t, imageId, "dog", "", "")
+	testLabelImage(t, imageId, "cat", "", "")
 
 	testAnnotate(t, imageId, "dog", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
