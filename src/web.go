@@ -20,7 +20,7 @@ import (
 	"errors"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
-	//"net/url"
+	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 	languages "github.com/bbernhard/imagemonkey-core/languages"
 	img "github.com/bbernhard/imagemonkey-core/image" 
@@ -488,7 +488,7 @@ func main() {
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
 				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
-				"queryAttributes": commons.GetStaticQueryAttributes(),
+				"queryAttributes": parser.GetStaticQueryAttributes(parser.LabelView),
 			})
 		})
 

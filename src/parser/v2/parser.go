@@ -17,6 +17,7 @@ type QueryParser struct {
 	version int
 	allowOrderByValidation bool
 	allowImageCollection bool
+	allowImageHasLabels bool
 }
 
 type ResultOrderType int
@@ -57,6 +58,7 @@ func NewQueryParser(query string) *QueryParser {
         version: 2,
         allowOrderByValidation: false,
 		allowImageCollection: false,
+		allowImageHasLabels: false,
     } 
 }
 
@@ -77,6 +79,10 @@ func (p *QueryParser) AllowImageCollection(allow bool) {
 
 func (p *QueryParser) AllowOrderByValidation(allow bool) {
 	p.allowOrderByValidation = allow
+}
+
+func (p *QueryParser) AllowImageHasLabels(allow bool) {
+	p.allowImageHasLabels = allow
 }
 
 func (p *QueryParser) SetOffset(offset int) {
@@ -100,6 +106,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		allowAnnotationCoverage: p.allowAnnotationCoverage,
 		allowOrderByValidation: p.allowOrderByValidation,
 		allowImageCollection: p.allowImageCollection,
+		allowImageHasLabels: p.allowImageHasLabels,
 		numOfLabels: 0,
 		version: p.version,
 		isUuidQuery: true,

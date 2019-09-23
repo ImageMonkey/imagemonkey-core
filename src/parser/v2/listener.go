@@ -57,6 +57,7 @@ type imagemonkeyQueryLangListener struct {
 	allowAnnotationCoverage bool
 	allowOrderByValidation bool
 	allowImageCollection bool
+	allowImageHasLabels bool
 	numOfLabels int
 	version int
 	typeOfQueryKnown bool
@@ -331,6 +332,20 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 			}
 			assignmentVal = trimQuotes(afterPart)
 			val = "image_collection = $" + strconv.Itoa(l.pos) 
+		} else if beforePart == "image.unlabeled" {
+			if !l.allowImageHasLabels {
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				return
+			}
+
+			assignmentVal = trimQuotes(afterPart)
+			if assignmentVal != "true" && assignmentVal != "false" {
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				return
+			}
+			val = "is_unlabeled = $" + strconv.Itoa(l.pos)
 		} else {
 			assignmentVal = beforePart + "=" + afterPart
 			subval = "a.accessor = $" + strconv.Itoa(l.pos)

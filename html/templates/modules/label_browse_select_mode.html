@@ -246,11 +246,8 @@
     var availableLabels = [];
 
     var staticQueryAttributes = {{ .queryAttributes }};
-    for(var key in staticQueryAttributes) {
-      if(staticQueryAttributes.hasOwnProperty(key)) {
-        availableLabels.push(staticQueryAttributes[key].name);
-      }
-    }
+    var availableLabels = staticQueryAttributes;
+    
     var imageMonkeyApi = new ImageMonkeyApi({{ .apiBaseUrl }});
     imageMonkeyApi.setToken(getCookie("imagemonkey"));
     var promises = [imageMonkeyApi.getLabelAccessors(true), imageMonkeyApi.getLabelSuggestions()];
