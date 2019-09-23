@@ -573,3 +573,34 @@ func TestQueryImageCollectionShouldFailBecauseDeactivated(t *testing.T) {
 	notOk(t, err)
 }
 
+func TestQueryImageUnlabeledShouldFailBecauseDeactivated(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='true'")
+	queryParser.AllowImageHasLabels(false)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestQueryImageUnlabeledShouldFailBecauseInvalidValue(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='notexisting'")
+	queryParser.AllowImageHasLabels(true)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestQueryImageUnlabeledShouldSucceedTrue(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='true'")
+	queryParser.AllowImageHasLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "is_unlabeled = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"true"})
+}
+
+func TestQueryImageUnlabeledShouldSucceedFalse(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='false'")
+	queryParser.AllowImageHasLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "is_unlabeled = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"false"})
+}
