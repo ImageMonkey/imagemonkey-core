@@ -697,3 +697,53 @@ func TestGetImagesToLabelByImageCollectionNameMultipleImagesWithSublabels(t *tes
 	equals(t, imgs[2].Labels[0].Sublabels[0].Name, "ear")
 }
 
+func TestGetImagesToLabelUnlabeledImages(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
+
+	imgs := testBrowseLabel(t, "image.unlabeled='true'", "", 1, 200)
+
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(1132))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 0)
+}
+
+func TestGetImagesToLabelUnlabeledAndLabeledImages(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", true, "", "", 200)
+
+	imgs := testBrowseLabel(t, "image.unlabeled='true'", "", 1, 200)
+
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(1132))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 0)
+}
+
+func TestGetImagesToLabelMultipleUnlabeledImages(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "", true, "", "", 200)
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, "", "", 200)
+
+	imgs := testBrowseLabel(t, "image.unlabeled='true'", "", 2, 200)
+
+	sort.SliceStable(imgs, func(i, j int) bool { return imgs[i].Image.Width < imgs[j].Image.Width })
+
+	equals(t, imgs[0].Image.Unlocked, true)
+	equals(t, int(imgs[0].Image.Width), int(1125))
+	equals(t, int(imgs[0].Image.Height), int(750))
+	equals(t, len(imgs[0].Labels), 0)
+
+	equals(t, imgs[1].Image.Unlocked, true)
+	equals(t, int(imgs[1].Image.Width), int(1132))
+	equals(t, int(imgs[1].Image.Height), int(750))
+	equals(t, len(imgs[1].Labels), 0)
+}
