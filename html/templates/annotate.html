@@ -34,6 +34,7 @@
   <script src="js/contextjs/context.js"></script>
   <script src="js/sentry/sentry.min.js"></script>
   <script src="js/imagemonkey/api.js?v=6"></script>
+  <script src="js/imagemonkey/views/annotation.min.js?v=2"></script>  
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <style>
@@ -83,6 +84,9 @@
   </style>
 
   <script>
+    var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
+    var annotationView = null;
+
     try{
       Sentry.init({
         dsn: '{{ .sentryDsn }}',
@@ -90,9 +94,11 @@
     } catch(e) {
     } 
 
-
-
-    {{ template "annotation_view.js" .}}
+    $(document).ready(function() {
+      annotationView = new AnnotationView("{{ .apiBaseUrl }}", "{{ .playgroundBaseUrl }}", 
+                                          "{{ .annotationMode }}", "{{ .annotationView }}", {{ .sessionInformation.LoggedIn }});
+	  annotationView.exec();
+    });
   </script>
 </head>
 <body>

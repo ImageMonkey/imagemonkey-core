@@ -187,7 +187,7 @@
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    getUnannotatedImage(validationId);
+    annotationView.getUnannotatedImage(validationId);
   }
 
   function onImageGridCanvasClicked(data) {
@@ -196,7 +196,7 @@
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    getAnnotatedImage(annotationId, -1);
+    annotationView.getAnnotatedImage(annotationId, -1);
   }
 
   function newImageItem(id, url, validationId, top, left, width, height){
@@ -243,7 +243,7 @@
     var item;
     var currentDateTime = new Date().getTime();
     for(var i = from; i < (from + n); i++){
-      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
+      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"], "{{ .annotationMode }}", labelAccessorsLookupTable) 
                                   + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
                                   Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
                                   "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
