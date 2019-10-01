@@ -7,13 +7,18 @@ var UnifiedModeStates = {
 
 
 var AnnotationView = (function() {
-    function AnnotationView(apiBaseUrl, playgroundBaseUrl, annotationMode, annotationView, loggedIn) {
+    function AnnotationView(apiBaseUrl, playgroundBaseUrl, annotationMode, annotationView, annotationId, annotationRevision, validationId, loggedIn) {
         this.annotationMode = annotationMode;
         this.annotationView = annotationView;
         this.loggedIn = loggedIn;
         this.apiBaseUrl = apiBaseUrl;
         this.playgroundBaseUrl = playgroundBaseUrl;
+        this.annotationRevision = annotationRevision;
+        this.validationId = validationId;
+        this.annotationId = annotationId;
+
         this.imageMonkeyApi = new ImageMonkeyApi(this.apiBaseUrl);
+        this.imageMonkeyApi.setToken(getCookie("imagemonkey"));
 
         this.canvas = null;
         this.annotator = null;
@@ -35,6 +40,7 @@ var AnnotationView = (function() {
         this.initializeLabelsLstAftLoadDelayed = false;
         this.browseModeLastSelectedAnnotatorMenuItem = null;
         this.annotationRefinementsContextMenu = {};
+        this.labelAccessorsLookupTable = {};
     }
 
 
@@ -53,33 +59,12 @@ var AnnotationView = (function() {
         }
     }
 
-
-    AnnotationView.prototype.getPluralLabels = function(onDoneCallback) {
-        if (this.annotationMode === "browse")
-            $("#loadingSpinner").show();
-
-        var url = this.apiBaseUrl + "/v1/label/plurals";
-		var inst = this;
-        $.ajax({
-            url: url,
-            type: 'GET',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-            },
-            success: function(data) {
-                inst.pluralLabels = data;
-
-                onDoneCallback();
-            }
-        });
-    }
-
     AnnotationView.prototype.onCanvasBackgroundImageSet = function() {
         if (isSmartAnnotationEnabled())
             this.populateDetailedCanvas();
 
-        if (this.existingAnnotations !== null) {	
-			this.annotator.loadAnnotations(this.existingAnnotations, this.canvas.fabric().backgroundImage.scaleX);
+        if (this.existingAnnotations !== null) {
+            this.annotator.loadAnnotations(this.existingAnnotations, this.canvas.fabric().backgroundImage.scaleX);
             this.existingAnnotations = this.annotator.toJSON(); //export JSON after loading annotations
             //due to rounding we might end up with slightly different values, so we
             //export them in order to make sure that we don't accidentially detect
@@ -102,30 +87,19 @@ var AnnotationView = (function() {
         }
     }
 
-    AnnotationView.prototype.getAnnotatedImage = function(annotationId, annotationRevision) {
-        var url = this.apiBaseUrl + '/v1/annotation?annotation_id=' + annotationId;
-
-        if (annotationRevision !== -1)
-            url += '&rev=' + annotationRevision;
-
+    AnnotationView.prototype.loadAnnotatedImage = function(annotationId, annotationRevision) {
         showHideControls(false, this.annotationInfo.imageUnlocked);
-		
-		var inst = this;
-        $.ajax({
-            url: url,
-            dataType: 'json',
-            type: 'GET',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-            },
-            success: function(data) {
+        var inst = this;
+        this.imageMonkeyApi.getAnnotatedImage(annotationId, annotationRevision)
+            .then(function(data) {
                 inst.handleAnnotatedImageResponse(data);
 
                 //if there are already annotations, do not show blacklist or unannotatable button
                 $("#blacklistButton").hide();
                 $("#notAnnotableButton").hide();
-            }
-        });
+            }).catch(function(e) {
+                Raven.captureException(e);
+            });
     }
 
     AnnotationView.prototype.onAnnotatorObjectDeselected = function() {
@@ -179,9 +153,9 @@ var AnnotationView = (function() {
         else {
             this.canvas = new CanvasDrawer("annotationArea");
             this.canvas.fabric().selection = false;
-            this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this), 
-											this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
-		}
+            this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
+                this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
+        }
 
         var scaleFactor = getCanvasScaleFactor(this.annotationInfo);
 
@@ -209,7 +183,7 @@ var AnnotationView = (function() {
         showHideControls(false, this.annotationInfo.imageUnlocked);
         var url = this.apiBaseUrl + '/v1/validation/' + validationId + '/not-annotatable';
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: url,
             type: 'POST',
             beforeSend: function(xhr) {
@@ -217,7 +191,7 @@ var AnnotationView = (function() {
             },
             success: function(data, status, xhr) {
                 if (inst.annotationMode === "default")
-                    inst.getUnannotatedImage();
+                    inst.loadUnannotatedImage();
                 else {
                     $("#loadingSpinner").hide();
                     clearDetailedCanvas(inst.detailedCanvas);
@@ -254,7 +228,7 @@ var AnnotationView = (function() {
 
         var url = this.apiBaseUrl + "/v1/annotation/" + this.annotationInfo.annotationId;
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: url,
             type: 'PUT',
             data: JSON.stringify(postData),
@@ -305,7 +279,7 @@ var AnnotationView = (function() {
 
         var url = this.apiBaseUrl + "/v1/donation/" + this.annotationInfo.imageId + "/annotate";
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: url,
             type: 'POST',
             data: JSON.stringify(annotations),
@@ -321,7 +295,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.onAddAnnotationsDone = function() {
         if (this.annotationMode === "default")
-            this.getUnannotatedImage();
+            this.loadUnannotatedImage();
         else {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
@@ -339,7 +313,7 @@ var AnnotationView = (function() {
         showHideControls(false, this.annotationInfo.imageUnlocked);
         var url = this.apiBaseUrl + '/v1/validation/' + validationId + '/blacklist-annotation';
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: url,
             type: 'POST',
             beforeSend: function(xhr) {
@@ -347,7 +321,7 @@ var AnnotationView = (function() {
             },
             success: function(data, status, xhr) {
                 if (inst.annotationMode === "default")
-                    inst.getUnannotatedImage();
+                    inst.loadUnannotatedImage();
                 else {
                     $("#loadingSpinner").hide();
                     clearDetailedCanvas(inst.detailedCanvas);
@@ -358,51 +332,53 @@ var AnnotationView = (function() {
         });
     }
 
-    AnnotationView.prototype.getUnannotatedImage = function(validationId) {
-        var url = '';
-
-        if (validationId === undefined)
-            url = this.apiBaseUrl + '/v1/annotate?add_auto_annotations=true' + ((this.labelId === null) ? "" : ("&label_id=" + this.labelId));
-        else
-            url = this.apiBaseUrl + '/v1/annotate?validation_id=' + validationId;
-
+    AnnotationView.prototype.loadUnannotatedImage = function(validationId) {
         showHideControls(false, this.annotationInfo.imageUnlocked);
-		
-		var inst = this;
-        $.ajax({
-            url: url,
-            dataType: 'json',
-            type: 'GET',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
-            },
-            success: function(data) {
+        var inst = this;
+        this.imageMonkeyApi.getUnannotatedImage(validationId, inst.labelId)
+            .then(function(data) {
                 inst.handleUnannotatedImageResponse(data);
-            },
-            error: function(xhr, options, err) {
+            }).catch(function() {
                 inst.handleUnannotatedImageResponse(null);
-            }
-        });
+            });
+
     }
 
-    AnnotationView.prototype.populatePluralsAndLoadData = function() {
+    AnnotationView.prototype.getAnnotationInfo = function() {
+        return this.annotationInfo;
+    }
+
+    AnnotationView.prototype.populateDefaultsAndLoadData = function() {
+        if (this.annotationMode === "browse")
+            $("#loadingSpinner").show();
+
         var inst = this;
-        this.getPluralLabels(function() {
-            if (inst.annotationMode === "default") {
-                if (inst.validationId === "")
-                    inst.getUnannotatedImage();
-                else
-                    inst.getUnannotatedImage(inst.validationId);
-            }
+        Promise.all([this.imageMonkeyApi.getPluralLabels(), this.imageMonkeyApi.getLabelAccessors(true)])
+            .then(function(data) {
+                inst.pluralLabels = data[0];
 
-            if (inst.annotationMode === "refine") {
-                if (inst.annotationId !== "")
-                    inst.getAnnotatedImage(inst.annotationId, inst.annotationRevision);
-            }
+                for (var i = 0; i < data[1].length; i++) {
+                    inst.labelAccessorsLookupTable[data[1][i].accessor] = data[1][i].parent_accessor;
+                }
 
-            if (inst.annotationMode === "browse")
-                $("#loadingSpinner").hide();
-        });
+                if (inst.annotationMode === "default") {
+                    if (inst.validationId === "")
+                        inst.loadUnannotatedImage();
+                    else
+                        inst.loadUnannotatedImage(inst.validationId);
+                }
+
+                if (inst.annotationMode === "refine") {
+                    if (inst.annotationId !== "")
+                        inst.loadAnnotatedImage(inst.annotationId, inst.annotationRevision);
+                }
+
+                if (inst.annotationMode === "browse")
+                    $("#loadingSpinner").hide();
+
+            }).catch(function(e) {
+                Raven.captureException(e);
+            });
     }
 
 
@@ -497,7 +473,7 @@ var AnnotationView = (function() {
         formData.append('image', blob);
         formData.append('uuid', this.annotationInfo.imageId);
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: inst.playgroundBaseUrl + '/v1/grabcut',
             processData: false,
             contentType: false,
@@ -512,7 +488,7 @@ var AnnotationView = (function() {
     AnnotationView.prototype.getLabelsForImage = function(imageId, onlyUnlockedLabels) {
         var url = this.apiBaseUrl + '/v1/donation/' + imageId + "/labels?only_unlocked_labels=" + (onlyUnlockedLabels ? "true" : "false");
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: url,
             dataType: 'json',
             type: 'GET',
@@ -556,7 +532,7 @@ var AnnotationView = (function() {
         else
             url = this.apiBaseUrl + '/v1/unverified-donation/' + imageId + "/annotations" + "?token=" + getCookie("imagemonkey");
         var inst = this;
-		$.ajax({
+        $.ajax({
             url: url,
             dataType: 'json',
             type: 'GET',
@@ -641,7 +617,7 @@ var AnnotationView = (function() {
             this.annotator.reset();
         }
         this.addMainCanvas();
-        this.populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked, this.annotationMode, labelAccessorsLookupTable), false);
+        this.populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked, this.annotationMode, this.labelAccessorsLookupTable), false);
         changeControl(this.annotator, this.annotationInfo.imageId);
         this.numOfPendingRequests = 0;
         showHideControls(true, this.annotationInfo.imageUnlocked);
@@ -710,12 +686,12 @@ var AnnotationView = (function() {
 
     }
 
-    
+
 
     AnnotationView.prototype.pollUntilProcessed = function(uuid) {
         var url = this.playgroundBaseUrl + "/v1/grabcut/" + uuid;
         var inst = this;
-		$.getJSON(url, function(response) {
+        $.getJSON(url, function(response) {
             if (jQuery.isEmptyObject(response))
                 setTimeout(inst.pollUntilProcessed(uuid), 1000);
             else {
@@ -743,7 +719,7 @@ var AnnotationView = (function() {
         $("#annotationColumnContent").remove();
 
         var spacer = '';
-		var inst = this;
+        var inst = this;
         var unifiedModePropertiesLst = '';
         var w = "sixteen";
         if (isSmartAnnotationEnabled()) {
@@ -986,7 +962,8 @@ var AnnotationView = (function() {
             this.annotator.reset();
         }
         this.addMainCanvas();
-        this.populateCanvas(getUrlFromImageUrl(this.annotationInfo.imageUrl, this.annotationInfo.imageUnlocked, this.annotationMode, labelAccessorsLookupTable), false);
+        this.populateCanvas(getUrlFromImageUrl(this.annotationInfo.imageUrl, this.annotationInfo.imageUnlocked, this.annotationMode,
+            this.labelAccessorsLookupTable), false);
         changeControl(this.annotator, this.annotationInfo.imageId);
         this.numOfPendingRequests = 0;
 
@@ -1053,18 +1030,18 @@ var AnnotationView = (function() {
                     }
                 }
                 $("#addLabelToUnifiedModeListDropdown").dropdown();
-            }).catch(function() {
-
+            }).catch(function(e) {
+                Raven.captureException(e);
             });
     }
 
     AnnotationView.prototype.exec = function() {
-		var inst = this;
+        var inst = this;
         var lastActiveMenuItem = "";
         $('#warningMsg').hide();
 
-        $('#smartAnnotation').checkbox({ 
-			onChange: function() {
+        $('#smartAnnotation').checkbox({
+            onChange: function() {
                 var enabled = isSmartAnnotationEnabled();
                 if (enabled) {
                     inst.annotator.enableSmartAnnotation();
@@ -1090,7 +1067,8 @@ var AnnotationView = (function() {
                 }
 
                 inst.addMainCanvas();
-                inst.populateCanvas(inst.getUrlFromImageUrl(inst.annotationInfo.imageUrl, inst.annotationInfo.imageUnlocked, this.annotationMode, labelAccessorsLookupTable), false);
+                inst.populateCanvas(inst.getUrlFromImageUrl(inst.annotationInfo.imageUrl, inst.annotationInfo.imageUnlocked, this.annotationMode,
+                    this.labelAccessorsLookupTable), false);
 
                 showHideSmartAnnotationControls(enabled);
                 showHideAutoAnnotationsLoadButton(inst.autoAnnotations);
@@ -1519,7 +1497,9 @@ var AnnotationView = (function() {
                         inst.imageMonkeyApi.labelImage(inst.annotationInfo.imageId, newlyAddedLabelsUnifiedMode)
                             .then(function() {
                                 inst.addAnnotationsUnifiedMode();
-                            }).catch(function(e) {});
+                            }).catch(function(e) {
+                                Raven.captureException(e);
+                            });
                     } else {
                         inst.addAnnotationsUnifiedMode();
                     }
@@ -1537,7 +1517,7 @@ var AnnotationView = (function() {
 
         changeNavHeader(inst.annotationMode);
 
-        inst.populatePluralsAndLoadData(inst.annotationMode, inst.validationId, inst.annotationRevision);
+        inst.populateDefaultsAndLoadData(inst.annotationMode, inst.validationId, inst.annotationRevision);
 
         try {
             //can fail in case someone uses uBlock origin or Co.

@@ -187,7 +187,7 @@
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    annotationView.getUnannotatedImage(validationId);
+    annotationView.loadUnannotatedImage(validationId);
   }
 
   function onImageGridCanvasClicked(data) {
@@ -196,7 +196,7 @@
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    annotationView.getAnnotatedImage(annotationId, -1);
+    annotationView.loadAnnotatedImage(annotationId, -1);
   }
 
   function newImageItem(id, url, validationId, top, left, width, height){

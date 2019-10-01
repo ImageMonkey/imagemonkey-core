@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="css/huebee.min.css"/>
   <script src="js/contextjs/context.js"></script>
   <script src="js/sentry/sentry.min.js"></script>
-  <script src="js/imagemonkey/api.js?v=6"></script>
-  <script src="js/imagemonkey/views/annotation.min.js?v=2"></script>  
+  <script src="js/imagemonkey/api.js?v=9"></script>
+  <script src="js/imagemonkey/views/annotation.min.js?v=6"></script>  
   <link rel="stylesheet" href="css/contextjs/context.standalone.css">
 
   <style>
@@ -96,7 +96,8 @@
 
     $(document).ready(function() {
       annotationView = new AnnotationView("{{ .apiBaseUrl }}", "{{ .playgroundBaseUrl }}", 
-                                          "{{ .annotationMode }}", "{{ .annotationView }}", {{ .sessionInformation.LoggedIn }});
+                                          "{{ .annotationMode }}", "{{ .annotationView }}", 
+                                          "{{ .annotationId }}", {{ .annotationRevision }}, "{{ .validationId }}", {{ .sessionInformation.LoggedIn }});
 	  annotationView.exec();
     });
   </script>

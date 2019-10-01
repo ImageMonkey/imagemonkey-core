@@ -167,7 +167,89 @@ var ImageMonkeyApi = (function() {
             }
             xhr.send();
         });
-	}
+    }
+
+    ImageMonkeyApi.prototype.getPluralLabels = function() {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/label/plurals";
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+
+    ImageMonkeyApi.prototype.getAnnotatedImage = function(annotationId, annotationRevision) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/annotation?annotation_id=" + annotationId;
+            if (annotationRevision !== -1)
+                url += '&rev=' + annotationRevision;
+
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getUnannotatedImage = function(validationId, labelId) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = "";
+            if (validationId === undefined)
+                url = (inst.baseUrl + "/" + inst.apiVersion + "/annotate?add_auto_annotations=true" +
+                    ((labelId === null) ? "" : ("&label_id=" + labelId)));
+            else
+                url = inst.baseUrl + "/" + inst.apiVersion + "/annotate?validation_id=" + validationId;
+
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
 
     return ImageMonkeyApi;
 }());

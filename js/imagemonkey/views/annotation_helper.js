@@ -79,30 +79,29 @@ function getCanvasScaleFactor(annotationInfo) {
 }
 
 
-function getUrlFromImageUrl(imageUrl, imageUnlocked, annotationMode, labelAccessorsLookupTable) {
-        var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
+function getUrlFromImageUrl(imageUrl, imageUnlocked, annotationMode, lookupTable) {
+    var url = (imageUrl === "" ? "img/oops-no-annotation-left.png" : imageUrl);
 
-        if (imageUrl !== "") {
-            if (!imageUnlocked) {
-                url += "?token=" + getCookie("imagemonkey");
-            }
+    if (imageUrl !== "") {
+        if (!imageUnlocked) {
+            url += "?token=" + getCookie("imagemonkey");
+        }
 
-            if (annotationMode === "browse") {
-                if ($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
-                    var labelToAnnotate = $("#label").attr("accessor");
-                    if (labelToAnnotate in labelAccessorsLookupTable) {
-                        if (!imageUnlocked) {
-                            url += "&highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
-                        } else {
-                            url += "?highlight=" + encodeURIComponent(labelAccessorsLookupTable[labelToAnnotate]);
-                        }
+        if (annotationMode === "browse") {
+            if ($("#highlightParentAnnotationsCheckbox").checkbox("is checked")) {
+                var labelToAnnotate = $("#label").attr("accessor");
+                if (labelToAnnotate in lookupTable) {
+                    if (!imageUnlocked) {
+                        url += "&highlight=" + encodeURIComponent(lookupTable[labelToAnnotate]);
+                    } else {
+                        url += "?highlight=" + encodeURIComponent(lookupTable[labelToAnnotate]);
                     }
                 }
             }
         }
-
-        return url;
     }
+    return url;
+}
 
 function showHideControls(show, imageUnlocked) {
     if (show) {
@@ -184,7 +183,7 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false) {
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     if (allowRemove) {
         displayedLabel = ('<span class="left-floated">' + displayedLabel +
-            '</span><span class="right-floated" onclick="annotationView.onLabelInLabelLstRemoveClicked(this);">' +
+            '</span><span class="right-floated" onclick="onLabelInLabelLstRemoveClicked(this);">' +
             '<i class="right icon delete ui red"></i></span>');
     } else {
         displayedLabel = '<p>' + displayedLabel + '</p>';
