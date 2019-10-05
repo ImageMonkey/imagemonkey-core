@@ -328,15 +328,18 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	testAnnotate(t, imageIds[0], "dog", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
-	//now we expect just one result 
-	testBrowseAnnotation(t, "cat&dog", 1, "")
+	//dog is already annotated, so cat&dog should return 0
+	testBrowseAnnotation(t, "cat&dog", 0, "")
 	testBrowseAnnotation(t, "cat", 2, "")
+
+	//but dog|cat should return 2
+	testBrowseAnnotation(t, "cat|dog", 2, "")
 
 	//annotate image with label cat
 	testAnnotate(t, imageIds[0], "cat", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
-	//now we should get no result
+	//dog&cat should still return 0
 	testBrowseAnnotation(t, "cat&dog", 0, "")
 	testBrowseAnnotation(t, "dog", 0, "")
 

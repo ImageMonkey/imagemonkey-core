@@ -342,8 +342,8 @@ func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, im
 	if !rows.Next() { //label does not exist yet, insert it
 		rows.Close()
 
-		err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by) 
-                            SELECT $1, id FROM account a WHERE a.name = $2 
+		err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by, uuid) 
+                            SELECT $1, id, uuid_generate_v4() FROM account a WHERE a.name = $2 
                             ON CONFLICT (name) DO NOTHING RETURNING id`, label, apiUser.Name).Scan(&labelSuggestionId)
 		if err != nil {
 			tx.Rollback()
@@ -362,8 +362,9 @@ func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, im
 		}
 	}
 
-	_, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period) 
-                        SELECT $1, id, $3, $4, '["now()",]'::tstzrange FROM image WHERE key = $2
+	_, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period, uuid) 
+                        SELECT $1, id, $3, $4, '["now()",]'::tstzrange, uuid_generate_v4() 
+						FROM image WHERE key = $2
                         ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
 	if err != nil {
 		tx.Rollback()
