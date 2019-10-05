@@ -178,7 +178,7 @@ function onLabelInLabelLstRemoveClicked(elem) {
     $("#removeLabelFromUnifiedModeLstDlg").modal("show");
 }
 
-function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false) {
+function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false) {
     var id = "labellstitem-" + uuid;
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     if (allowRemove) {
@@ -193,6 +193,7 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false) {
     var elem = $('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
         ' data-label="' + label + '" data-uuid="' + uuid +
         '" data-sublabel="' + sublabel +
+        '" data-newly-created="' + newlyCreated +
         '" onclick="annotationView.onLabelInLabelLstClicked(this);"' +
         'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
         'onmouseout="this.style.backgroundColor=\'white\';"' +

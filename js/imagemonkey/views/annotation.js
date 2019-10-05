@@ -41,6 +41,17 @@ var AnnotationView = (function() {
         this.browseModeLastSelectedAnnotatorMenuItem = null;
         this.annotationRefinementsContextMenu = {};
         this.labelAccessorsLookupTable = {};
+        this.availableLabels = [];
+        this.availableLabelsLookupTable = {};
+        this.labelsAutoCompletion = null;
+    }
+
+    AnnotationView.prototype.setSentryDSN = function(sentryDSN) {
+        try {
+            Sentry.init({
+                dsn: sentryDSN,
+            });
+        } catch (e) {}
     }
 
 
@@ -761,9 +772,9 @@ var AnnotationView = (function() {
                             '<div class="field">' +
                             '<div class="ui search">' +
                             '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
-                            '<div class="ui search selection dropdown" id="addLabelToUnifiedModeListDropdown">' +
-                            '<div class="default text">Select Label</div>' +
-                            '<div class="menu" id="addLabelToUnifiedModeListDropdownMenu"></div>' +
+
+                            '<div class="ui input">' +
+                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
                             '</div>' +
                             '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                             '</div>' +
@@ -857,12 +868,30 @@ var AnnotationView = (function() {
 
         if (this.annotationView === "unified") {
             $("#addLabelToUnifiedModeListButton").click(function(e) {
-                var selectedElem = $("#addLabelToUnifiedModeListDropdown").dropdown("get item",
-                    $("#addLabelToUnifiedModeListDropdown").dropdown("get value"));
+                var selectedElem = null;
+                var labelName = escapeHtml($("#addLabelsToUnifiedModeListLabels").val());
+                if (labelName in inst.availableLabelsLookupTable)
+                    selectedElem = inst.availableLabelsLookupTable[labelName];
+                if (selectedElem === null) {
+                    if (inst.loggedIn) {
+                        var tempUuid = labelName;
+                        selectedElem = {
+                            "uuid": tempUuid,
+                            "label": labelName,
+                            "sublabel": "",
+                            "newly_created": true
+                        }
+                    } else {
+                        $("#warningMsgText").text("Please sign in first to use arbitrary labels!");
+                        $("#warningMsg").show(200).delay(1500).hide(200);
+                        return
+                    }
+                }
+
                 var alreadyExistsInUnifiedModeLabelsLst = false;
                 var elem;
                 $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
-                    if ($(this).attr("data-uuid") === selectedElem.attr("data-uuid")) {
+                    if ($(this).attr("data-uuid") === selectedElem.uuid) {
                         alreadyExistsInUnifiedModeLabelsLst = true;
                         elem = $(this);
                         return false;
@@ -870,28 +899,28 @@ var AnnotationView = (function() {
                 });
 
                 if (!alreadyExistsInUnifiedModeLabelsLst) {
-                    if (selectedElem.attr("data-sublabel") !== "") {
-                        inst.unifiedModeLabels[selectedElem.attr("data-uuid")] = {
-                            "label": selectedElem.attr("data-label"),
+                    if (selectedElem.sublabel !== "") {
+                        inst.unifiedModeLabels[selectedElem.uuid] = {
+                            "label": selectedElem.label,
                             "sublabels": [{
-                                "name": selectedElem.attr("data-sublabel")
+                                "name": selectedElem.sublabel
                             }],
                             "annotatable": true
                         };
                     } else {
-                        inst.unifiedModeLabels[selectedElem.attr("data-uuid")] = {
-                            "label": selectedElem.attr("data-label"),
+                        inst.unifiedModeLabels[selectedElem.uuid] = {
+                            "label": selectedElem.label,
                             "annotatable": true
                         };
                     }
-                    elem = addLabelToLabelLst(selectedElem.attr("data-label"), selectedElem.attr("data-sublabel"),
-                        selectedElem.attr("data-uuid"), true);
+                    elem = addLabelToLabelLst(selectedElem.label, selectedElem.sublabel,
+                        selectedElem.uuid, true, true);
                 }
 
                 //select newly added (or already existing) label
                 inst.onLabelInLabelLstClicked(elem);
 
-                $("#addLabelToUnifiedModeListDropdown").dropdown("restore placeholder text");
+                $("#addLabelsToUnifiedModeListLabels").val("");
             });
 
             $("#addRefinementButton").click(function(e) {
@@ -1004,32 +1033,36 @@ var AnnotationView = (function() {
         $("#unifiedModeLabelsLstLoadingIndicator").show();
         this.unifiedModePopulated = UnifiedModeStates.uninitialized;
         this.getAnnotationsForImage(imageId);
-        this.getLabelsForImage(imageId, true);
+        this.getLabelsForImage(imageId, false);
 
+        var inst = this;
         this.imageMonkeyApi.getAvailableLabels(true)
             .then(function(data) {
                 for (var key in data) {
                     if (data.hasOwnProperty(key)) {
-                        var entry = ('<div class="item" data-value="' + data[key].uuid +
-                            '" data-label="' + key + '" data-sublabel=""' +
-                            ' data-uuid="' + data[key].uuid + '">' + key + '</div>');
-                        $("#addLabelToUnifiedModeListDropdownMenu").append(entry);
+                        inst.availableLabels.push(key);
+                        inst.availableLabelsLookupTable[key] = {
+                            "uuid": data[key].uuid,
+                            "label": key,
+                            "sublabel": ""
+                        };
                     }
 
                     if (data[key].has) {
                         for (var subkey in data[key].has) {
                             if (data[key].has.hasOwnProperty(subkey)) {
-                                var subEntry = ('<div class="item" data-value="' + data[key].has[subkey].uuid +
-                                    '" data-label="' + key + '" data-sublabel="' +
-                                    subkey + '" data-uuid="' + data[key].has[subkey].uuid + '">' +
-                                    subkey + "/" + key + '</div>');
-                                $("#addLabelToUnifiedModeListDropdownMenu").append(subEntry);
+                                inst.availableLabels.push(subkey + "/" + key);
+                                inst.availableLabels[subkey + "/" + key] = {
+                                    "uuid": data[key].has[subkey].uuid,
+                                    "label": key,
+                                    "sublabel": subkey
+                                };
                             }
                         }
 
                     }
                 }
-                $("#addLabelToUnifiedModeListDropdown").dropdown();
+                inst.labelsAutoCompletion = new AutoCompletion("#addLabelsToUnifiedModeListLabels", inst.availableLabels);
             }).catch(function(e) {
                 Raven.captureException(e);
             });

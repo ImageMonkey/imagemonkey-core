@@ -41,6 +41,7 @@ var ImageMonkeyApi = (function() {
             var xhr = new XMLHttpRequest();
             xhr.open("POST", url);
             xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
             xhr.onload = function() {
                 if (xhr.status >= 400)
                     reject();
