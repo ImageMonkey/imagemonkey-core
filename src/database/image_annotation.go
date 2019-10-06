@@ -267,7 +267,7 @@ func (p *ImageMonkeyDatabase) AddAnnotations(apiUser datastructures.APIUser, ima
 		if annotation.IsSuggestion { //label is not known to us (i.e non-productive)
 			if apiUser.Name == "" {
 				tx.Rollback()
-				return annotationIds, errors.New("you need to be authenticated")
+				return annotationIds, &AuthenticationRequiredError{Description: "you need to be authenticated to perform this action"}
 			}
 		}
 		

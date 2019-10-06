@@ -260,7 +260,7 @@ func testRandomLabel(t *testing.T, num int, skipLabel string) {
 		label, err := db.GetRandomLabelName(skipLabel)
 		ok(t, err)
 
-		testLabelImage(t, image, label, "", "")
+		testLabelImage(t, image, label, "", "", 200)
 	}
 }
 

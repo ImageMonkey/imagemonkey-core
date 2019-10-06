@@ -981,8 +981,14 @@ func main() {
 
 				_, err = imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annos)
 				if err != nil {
-					c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
-					return
+					switch err.(type) {
+					case *imagemonkeydb.AuthenticationRequiredError:
+						c.JSON(401, gin.H{"error": "Couldn't add annotations - you need to be authenticated to perform this action"})
+						return
+					default:
+						c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
+						return
+					}
 				}
 				c.JSON(201, nil)
 			})
@@ -1238,8 +1244,14 @@ func main() {
 
 			err := imageMonkeyDatabase.AddLabelsToImage(apiUser, labelMap, metaLabels, imageId, labels)
 			if err != nil {
-				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
-				return
+				switch err.(type) {
+				case *imagemonkeydb.AuthenticationRequiredError:
+					c.JSON(401, gin.H{"error": "Couldn't process request - you need to be authenticated to perform this action"})
+					return
+				default:
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
 			}
 			c.JSON(200, nil)
 		})
@@ -2163,8 +2175,14 @@ func main() {
 			}
 			annotationIds, err := imageMonkeyDatabase.AddAnnotations(apiUser, imageId, annos)
 			if err != nil {
-				c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
-				return
+				switch err.(type) {
+				case *imagemonkeydb.AuthenticationRequiredError:
+					c.JSON(401, gin.H{"error": "Couldn't add annotations - you need to be authenticated to perform this action"})
+					return
+				default:
+					c.JSON(500, gin.H{"error": "Couldn't add annotations - please try again later"})
+					return
+				}
 			}
 
 			//get client IP address and try to determine country

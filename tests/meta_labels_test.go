@@ -18,7 +18,7 @@ func TestAddMetaLabel(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "kitchen", "", "")
+	testLabelImage(t, imageId, "kitchen", "", "", 200)
 
 	numAfter, err := db.GetNumOfMetaLabelImageValidations()
 	ok(t, err)
@@ -34,7 +34,7 @@ func TestMetaLabelValidationShouldntBeReturnedInRandomAnnotation(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "kitchen", "", "")
+	testLabelImage(t, imageId, "kitchen", "", "", 200)
 
 	testGetImageForAnnotation(t, "", "", "", 422)
 }
@@ -48,7 +48,7 @@ func TestMetaLabelShouldntBeAnnotatable(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "kitchen", "", "")
+	testLabelImage(t, imageId, "kitchen", "", "", 200)
 
 	testAnnotate(t, imageId, "kitchen", "", 
 						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 400)

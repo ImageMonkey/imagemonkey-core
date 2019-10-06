@@ -3,7 +3,6 @@ package imagemonkeydb
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
@@ -310,7 +309,7 @@ func _addLabelsAndLabelSuggestionsToImageInTransaction(tx *sql.Tx, apiUser datas
 			} else {
 				tx.Rollback()
 				log.Debug("you need to be authenticated")
-				return insertedValidationIds, errors.New("you need to be authenticated to perform this action")
+				return insertedValidationIds, &AuthenticationRequiredError{Description: "you need to be authenticated to perform this action"}
 			}
 		} else {
 			knownLabels = append(knownLabels, item)
