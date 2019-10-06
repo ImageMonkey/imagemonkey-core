@@ -51,6 +51,79 @@ def _wait_until_cookie_is_set(driver, max_wait):
         raise Exception("Couldn't get ImageMonkey cookie")
     return cookie
 
+class RectAnnotationAction(object):
+    def __init__(self, x, y):
+        self._x = x
+        self._y = y
+    
+    @property
+    def x(self):
+        return self._x
+    
+    @property
+    def y(self):
+        return self._y
+
+class UnifiedModeView(object):
+    def __init__(self, driver):
+        self._driver = driver
+
+    def query(self, query, num_expected_images, mode="default"):
+        if mode != "default" and mode != "rework":
+            raise Exception("invalid mode  %s" %mode)
+
+        elem = self._driver.find_element_by_id("annotationQuery")
+        #elem = WebDriverWait(self._driver, 10).until(
+        #    EC.element_to_be_clickable((By.ID, "annotationQuery"))
+        #)
+        
+        elem.clear()
+        elem.send_keys(query)
+
+        if mode == "rework":
+            self._driver.execute_script('$("#annotationsOnlyCheckbox").checkbox("set checked")');
+
+        elem = self._driver.find_element_by_id("browseAnnotationsGoButton")
+        elem.click()
+
+        wait = WebDriverWait(self._driver, 10)
+        locator = (By.ID, "loadingIndicator")
+        wait.until(EC.invisibility_of_element_located(locator))
+
+        time.sleep(2) #wait until images are loaded so that we can click them
+
+        self._images = self._driver.find_elements_by_xpath(
+            '//div[@id="imageGrid"]/div')
+        assert len(self._images) == num_expected_images, "received expected num of images"
+
+    def select_image(self, num):
+        assert num < len(self._images), "selected image is out of range"
+        assert self._images is not None, "image cannot be selected"
+        self._images[num].click()
+
+
+        wait = WebDriverWait(self._driver, 10)
+        locator = (By.ID, "loadingIndicator")
+        wait.until(EC.invisibility_of_element_located(locator))
+
+    def annotate(self, action):
+        if isinstance(action, RectAnnotationAction):
+            self._driver.execute_script('$("#rectMenuItem").trigger("click");')
+            
+            canvas = self._driver.find_element_by_id("annotationArea")
+            drawing = ActionChains(self._driver)\
+                .click_and_hold(canvas)\
+                .move_by_offset(action.x, action.y)\
+                .release()
+            drawing.perform()
+            self._driver.find_element_by_id("doneButton").click()
+        else:
+            raise Exception("error: unknown action")
+
+    def check_revisions(self, expected_num):
+        elem = self._driver.find_element_by_id("annotationRevisionsDropdownMenu") 
+        children = elem.find_elements_by_tag_name("div")
+        assert expected_num == len(children), "received correct num of revisions"
 
 class ImageMonkeyWebClient(object):
     def __init__(self, driver):
@@ -200,6 +273,7 @@ class ImageMonkeyWebClient(object):
         wait.until(EC.visibility_of_element_located(locator))
 
         elem = self._driver.find_element_by_id("annotationQuery")
+        elem.clear()
         elem.send_keys("apple")
 
         elem = self._driver.find_element_by_id("browseAnnotationsGoButton")
@@ -228,6 +302,16 @@ class ImageMonkeyWebClient(object):
 
         self._driver.find_element_by_id("doneButton").click()
 
+
+    def unified_mode(self):
+        self._driver.get(BASE_URL + "/annotate?mode=browse&view=unified")
+
+        wait = WebDriverWait(self._driver, 10)
+        locator = (By.ID, "browseAnnotationsGoButton")
+        wait.until(EC.visibility_of_element_located(locator))
+
+        return UnifiedModeView(self._driver) 
+
     """ 
 	Returns the labels from the /label page
     """
@@ -248,7 +332,6 @@ class ImageMonkeyWebClient(object):
     
     @check_for_errors
     def create_image_collection(self, name):
-        print(BASE_URL + "/profile/" + self._username)
         self._driver.get(BASE_URL + "/profile/" + self._username)
 
         wait = WebDriverWait(self._driver, 10)
