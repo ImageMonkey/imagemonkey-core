@@ -754,6 +754,7 @@ func main() {
 				if err != nil {
 					log.Error("[Serving RoI of Donation] Couldn't serve donation: ", err.Error())
 					c.String(500, "Couldn't process request, please try again later")
+					return
 				}
 			} else {
 				//imageRegions, err = commons.GetImageRegionsFromUrlParams(c)

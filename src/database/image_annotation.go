@@ -1040,6 +1040,8 @@ func (p *ImageMonkeyDatabase) GetAnnotatedImage(apiUser datastructures.APIUser, 
             annotatedImage.Validation.Label = label2
             annotatedImage.Validation.Sublabel = label1
         }
+
+		annotatedImage.Validation.Unlocked = !isSuggestion
     }
 
     if annotationId != "" {
@@ -1327,7 +1329,7 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
     }
 
     q := fmt.Sprintf(`SELECT q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, json_agg(q2.annotation), 
-                      q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                      q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked, q2.is_suggestion
                       FROM
                       (
                         SELECT q1.image_key as image_key, label_name, parent_label_name, 
@@ -1412,7 +1414,7 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
                                    q1.num_of_valid, q1.num_of_invalid, q1.image_width, q1.image_height, q1.image_unlocked, q1.is_suggestion
                       ) q2
                       GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
-                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked
+                            q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked, q2.is_suggestion
                       `, q2, includeOwnImageDonations, q1)
 
     rows, err := p.db.Query(q, queryValues...)
@@ -1427,13 +1429,14 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
     var label1 string
     var label2 string
     var annotations []byte
+	var isSuggestion bool
     for rows.Next() {
         var annotatedImage datastructures.AnnotatedImage
         annotatedImage.Image.Provider = "donation"
 
         err = rows.Scan(&annotatedImage.Image.Id, &label1, &label2, &annotatedImage.Id, 
                         &annotations, &annotatedImage.NumOfValid, &annotatedImage.NumOfInvalid, 
-                        &annotatedImage.Image.Width, &annotatedImage.Image.Height, &annotatedImage.Image.Unlocked)
+                        &annotatedImage.Image.Width, &annotatedImage.Image.Height, &annotatedImage.Image.Unlocked, &isSuggestion)
         if err != nil {
             log.Debug("[Get Annotated Images] Couldn't scan row: ", err.Error())
             raven.CaptureError(err, nil)
@@ -1454,6 +1457,8 @@ func (p *ImageMonkeyDatabase) GetAnnotations(apiUser datastructures.APIUser, par
             annotatedImage.Validation.Label = label2
             annotatedImage.Validation.Sublabel = label1
         }
+
+		annotatedImage.Validation.Unlocked = !isSuggestion
 
         annotatedImage.Image.Url = commons.GetImageUrlFromImageId(apiBaseUrl, annotatedImage.Image.Id, annotatedImage.Image.Unlocked)
 

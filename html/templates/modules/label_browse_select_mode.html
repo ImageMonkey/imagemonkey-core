@@ -274,7 +274,7 @@
         }
         $("#browseLabelsGoButton").removeClass("disabled");
       }).catch(function(e) {
-        Raven.captureException(e);
+        Sentry.captureException(e);
       });
 
 

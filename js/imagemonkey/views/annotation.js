@@ -109,7 +109,7 @@ var AnnotationView = (function() {
                 $("#blacklistButton").hide();
                 $("#notAnnotableButton").hide();
             }).catch(function(e) {
-                Raven.captureException(e);
+                Sentry.captureException(e);
             });
     }
 
@@ -388,7 +388,7 @@ var AnnotationView = (function() {
                     $("#loadingSpinner").hide();
 
             }).catch(function(e) {
-                Raven.captureException(e);
+                Sentry.captureException(e);
             });
     }
 
@@ -654,7 +654,7 @@ var AnnotationView = (function() {
         showHideRevisionsDropdown();
 
         if (this.annotationView === "unified") {
-            addLabelToLabelLst(data.validation.label, data.validation.sublabel, data.uuid);
+            addLabelToLabelLst(data.validation.label, data.validation.sublabel, data.uuid, false, false, data.validation.unlocked);
             var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
             if (firstItem && firstItem.length === 1) {
                 $(firstItem[0]).addClass("grey inverted");
@@ -662,6 +662,19 @@ var AnnotationView = (function() {
 
             $("#unifiedModeLabelsLstLoadingIndicator").hide();
         }
+
+
+        var pushedUrl = window.location.pathname + "?annotation_id=" + data.uuid;
+        if (data.revision !== -1)
+            pushedUrl += "&rev=" + data.revision;
+        if (this.annotationView === "unified")
+            pushedUrl += "&view=unified";
+        history.pushState({
+                current_page: pushedUrl,
+                previous_page: window.location.href
+            },
+            "", pushedUrl
+        );
     }
 
     AnnotationView.prototype.changeMenuItem = function(type) {
@@ -1064,7 +1077,7 @@ var AnnotationView = (function() {
                 }
                 inst.labelsAutoCompletion = new AutoCompletion("#addLabelsToUnifiedModeListLabels", inst.availableLabels);
             }).catch(function(e) {
-                Raven.captureException(e);
+                Sentry.captureException(e);
             });
     }
 
@@ -1531,7 +1544,7 @@ var AnnotationView = (function() {
                             .then(function() {
                                 inst.addAnnotationsUnifiedMode();
                             }).catch(function(e) {
-                                Raven.captureException(e);
+                                Sentry.captureException(e);
                             });
                     } else {
                         inst.addAnnotationsUnifiedMode();
@@ -1546,6 +1559,10 @@ var AnnotationView = (function() {
                     inst.addAnnotations(annotations);
                 }
             }
+        });
+
+        $(window).bind('popstate', function() {
+            window.location.href = window.location.href;
         });
 
         changeNavHeader(inst.annotationMode);
