@@ -100,7 +100,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 
                    SELECT ils.image_id as image_id, s.name as label, 
                    '' as parent_label, false as unlocked, ils.annotatable as annotatable,
-                   '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
+                   s.uuid::text as label_uuid, ils.uuid::text as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
                    FROM image_label_suggestion ils
                    JOIN label_suggestion s on ils.label_suggestion_id = s.id`
 		}

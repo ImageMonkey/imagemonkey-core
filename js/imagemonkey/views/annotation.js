@@ -510,11 +510,11 @@ var AnnotationView = (function() {
                 if (inst.annotationView === "unified") {
                     if (data !== null) {
                         for (var i = 0; i < data.length; i++) {
-                            addLabelToLabelLst(data[i].label, '', data[i].uuid);
+                            addLabelToLabelLst(data[i].label, '', data[i].uuid, false, false, data[i].unlocked);
                             if (data[i].sublabels !== null) {
                                 for (var j = 0; j < data[i].sublabels.length; j++) {
                                     addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
-                                        data[i].sublabels[j].uuid);
+                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked);
                                 }
                             }
                         }

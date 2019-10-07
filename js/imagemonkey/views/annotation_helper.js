@@ -178,7 +178,7 @@ function onLabelInLabelLstRemoveClicked(elem) {
     $("#removeLabelFromUnifiedModeLstDlg").modal("show");
 }
 
-function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false) {
+function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false, isUnlocked = false) {
     var id = "labellstitem-" + uuid;
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     if (allowRemove) {
@@ -189,15 +189,37 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCre
         displayedLabel = '<p>' + displayedLabel + '</p>';
     }
 
+    var disabledStr = " ";
+    var onClickCallback = "annotationView.onLabelInLabelLstClicked(this);";
+    var tooltip = "";
+    if (!isUnlocked && !this.loggedIn) {
+        disabledStr = " disabled ";
+        onClickCallback = "";
+        tooltip = ' data-content="Please login to annotate this label"';
+    }
 
-    var elem = $('<div class="ui segment center aligned labelslstitem" id="' + id + '"' +
+    var elem = $('<div class="ui' + disabledStr + 'segment center aligned labelslstitem" id="' + id + '"' + tooltip +
         ' data-label="' + label + '" data-uuid="' + uuid +
         '" data-sublabel="' + sublabel +
         '" data-newly-created="' + newlyCreated +
-        '" onclick="annotationView.onLabelInLabelLstClicked(this);"' +
-        'onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
-        'onmouseout="this.style.backgroundColor=\'white\';"' +
-        'style="overflow: auto;">' + displayedLabel + '</div>');
+        '" onclick="' + onClickCallback + '"' +
+        ' onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
+        ' onmouseout="this.style.backgroundColor=\'white\';"' +
+        ' style="overflow: auto;">' + displayedLabel + '</div>');
+
+    if (tooltip !== "") {
+        $(elem)
+            .popup({
+                inline: true,
+                hoverable: true,
+                position: 'bottom center',
+                delay: {
+                    show: 300,
+                    hide: 300
+                }
+            });
+    }
+
     $("#annotationLabelsLst").append(elem);
 
     return elem;

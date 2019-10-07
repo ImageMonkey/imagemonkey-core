@@ -867,8 +867,6 @@ func (p *ImageMonkeyDatabase) GetAnnotatedImage(apiUser datastructures.APIUser, 
                             GROUP BY q2.image_key, q2.label_name, q2.parent_label_name, q2.annotation_uuid, 
                             q2.num_of_valid, q2.num_of_invalid, q2.image_width, q2.image_height, q2.image_unlocked,
 							q2.is_suggestion`, includeOwnImageDonations)
-	  log.Info(q)
-
     } else {
         q1 := ""
         if annotationId != "" {
