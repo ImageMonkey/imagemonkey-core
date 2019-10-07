@@ -883,6 +883,22 @@ var AnnotationView = (function() {
             $("#addLabelToUnifiedModeListButton").click(function(e) {
                 var selectedElem = null;
                 var labelName = escapeHtml($("#addLabelsToUnifiedModeListLabels").val());
+
+                if (!inst.loggedIn) {
+                    if (!(labelName in inst.availableLabelsLookupTable)) {
+                        $("#warningMsgText").text("Please sign in first to add new labels!");
+                        $("#warningMsg").show(200).delay(1500).hide(200);
+                        return
+                    }
+                } else {
+                    var pattern = new RegExp("^[a-zA-Z\s]+$");
+                    if (!pattern.test(labelName)) {
+                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z and ' ')");
+                        $("#warningMsg").show(200).delay(1500).hide(200);
+                        return
+                    }
+                }
+
                 if (labelName in inst.availableLabelsLookupTable)
                     selectedElem = inst.availableLabelsLookupTable[labelName];
                 if (selectedElem === null) {
@@ -895,7 +911,7 @@ var AnnotationView = (function() {
                             "newly_created": true
                         }
                     } else {
-                        $("#warningMsgText").text("Please sign in first to use arbitrary labels!");
+                        $("#warningMsgText").text("Please sign in first to add new labels!");
                         $("#warningMsg").show(200).delay(1500).hide(200);
                         return
                     }
