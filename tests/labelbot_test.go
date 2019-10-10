@@ -105,7 +105,7 @@ func TestGetTrendingLabelsForBot(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -127,7 +127,7 @@ func TestAcceptTrendingLabelForBot(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -151,7 +151,7 @@ func TestAcceptTrendingLabelForBot2(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -183,7 +183,7 @@ func TestAcceptTrendingLabelForBotWithModeratorPermissions(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -218,7 +218,7 @@ func TestCouldntAcceptTrendingLabelForBotAsNotAuthenticated(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -242,7 +242,7 @@ func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -280,7 +280,7 @@ func TestCouldntAcceptTrendingLabelForBotAsWrongLabelName(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -305,7 +305,7 @@ func TestCannotChangeTrendingLabelBotTaskStateWhileBuilding(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -346,7 +346,7 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExists(t *testing.T) {
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -380,7 +380,7 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExistsButNotProductive(t *t
 		testSuggestLabelForImage(t, imageId, "hallowelt", true, token)
 		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token)
 	}
-	runTrendingLabelsWorker(t)
+	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
@@ -400,3 +400,4 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExistsButNotProductive(t *t
 	ok(t, err)
 	equals(t, state, "already exists")
 }
+
