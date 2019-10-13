@@ -482,6 +482,14 @@ func (p *ImageMonkeyDatabase) GetAnnotationRevision(annotationId string) (int32,
 	return revision, err
 }
 
+func (p *ImageMonkeyDatabase) GetAnnotationSuggestionRevision(annotationId string) (int32, error) {
+	var revision int32
+	err := p.db.QueryRow(`SELECT revision 
+						  FROM image_annotation_suggestion WHERE uuid = $1`, annotationId).Scan(&revision)
+
+	return revision, err
+}
+
 func (p *ImageMonkeyDatabase) GetOldAnnotationDataIds(annotationId string, revision int32) ([]int64, error) {
 	var ids []int64
 
@@ -489,6 +497,33 @@ func (p *ImageMonkeyDatabase) GetOldAnnotationDataIds(annotationId string, revis
 							FROM annotation_data d
 							JOIN image_annotation_revision r ON d.image_annotation_revision_id = r.id
 							JOIN image_annotation a ON r.image_annotation_id = a.id
+							WHERE a.uuid = $1 AND r.revision = $2`, annotationId, revision)
+	if err != nil {
+		return ids, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		err = rows.Scan(&id)
+		if err != nil {
+			return ids, err
+		}
+
+		ids = append(ids, id) 
+	}
+
+	return ids, nil
+}
+
+func (p *ImageMonkeyDatabase) GetOldAnnotationSuggestionDataIds(annotationId string, revision int32) ([]int64, error) {
+	var ids []int64
+
+	rows, err := p.db.Query(`SELECT d.id
+							FROM annotation_suggestion_data d
+							JOIN image_annotation_suggestion_revision r ON d.image_annotation_suggestion_revision_id = r.id
+							JOIN image_annotation_suggestion a ON r.image_annotation_suggestion_id = a.id
 							WHERE a.uuid = $1 AND r.revision = $2`, annotationId, revision)
 	if err != nil {
 		return ids, err
@@ -534,6 +569,32 @@ func (p *ImageMonkeyDatabase) GetAnnotationDataIds(annotationId string) ([]int64
 	return ids, nil
 }
 
+func (p *ImageMonkeyDatabase) GetAnnotationSuggestionDataIds(annotationId string) ([]int64, error) {
+	var ids []int64
+	rows, err := p.db.Query(`SELECT d.id 
+							FROM annotation_suggestion_data d
+							JOIN image_annotation_suggestion a ON d.image_annotation_suggestion_id = a.id
+							WHERE a.uuid = $1`, annotationId)
+	if err != nil {
+		return ids, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		err = rows.Scan(&id)
+		if err != nil {
+			return ids, err
+		}
+
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
+
 func (p *ImageMonkeyDatabase) GetRandomImageForAnnotation() (AnnotationRow, error) {
 	var annotationRow AnnotationRow
 	err := p.db.QueryRow(`SELECT i.key, v.uuid, l.name, COALESCE(pl.name, '')
@@ -548,6 +609,52 @@ func (p *ImageMonkeyDatabase) GetRandomImageForAnnotation() (AnnotationRow, erro
 				  	 			&annotationRow.Validation.Label, &annotationRow.Validation.Sublabel)
 
 	return annotationRow, err
+}
+
+func (p *ImageMonkeyDatabase) AnnotationUuidIsASuggestion(annotationUuid string) (bool, error) {
+	var isSuggestion bool = false
+	err := p.db.QueryRow(`SELECT is_suggestion FROM
+					      (
+                           SELECT count(*) as count, false as is_suggestion
+                           FROM image_annotation a 
+                           WHERE a.uuid = $1::uuid
+
+                           UNION ALL
+
+                           SELECT count(*) as count, true as is_suggestion
+                           FROM image_annotation_suggestion a
+                           WHERE a.uuid = $1::uuid
+                          ) q WHERE q.count > 0`, annotationUuid).Scan(&isSuggestion)
+	if err != nil {
+		return isSuggestion, err
+	}
+
+	return isSuggestion, nil
+}
+
+func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionIdsForImage(imageId string) ([]string, error) {
+	annotationUuids := []string{}
+	rows, err := p.db.Query(`SELECT a.uuid
+						 		FROM image_annotation_suggestion a
+						 		JOIN image i ON a.image_id = i.id
+								WHERE i.key = $1`, imageId)
+	if err != nil {
+		return annotationUuids, err
+	}
+	
+	defer rows.Close()
+
+	for rows.Next() {
+		var annotationUuid string
+		err = rows.Scan(&annotationUuid)
+		if err != nil {
+			return annotationUuids, err
+		}
+
+		annotationUuids = append(annotationUuids, annotationUuid)
+	}
+
+	return annotationUuids, nil
 }
 
 func (p *ImageMonkeyDatabase) GetRandomAnnotationId() (string, error) {
@@ -1208,7 +1315,7 @@ type AnnotationDataEntry struct {
 
 func (p *ImageMonkeyDatabase) GetAnnotationDataEntries() ([]AnnotationDataEntry, error) {
 	annotationDataEntries := []AnnotationDataEntry{}
-	rows, err := p.db.Query(`SELECT image_annotation_id, annotation, 
+	rows, err := p.db.Query(`SELECT COALESCE(image_annotation_id, -1), annotation, 
 								annotation_type_id, COALESCE(image_annotation_revision_id, 0), uuid
 							  FROM annotation_data
 							  ORDER BY uuid`)
@@ -1233,7 +1340,7 @@ func (p *ImageMonkeyDatabase) GetAnnotationDataEntries() ([]AnnotationDataEntry,
 
 func (p *ImageMonkeyDatabase) GetAnnotationSuggestionDataEntries() ([]AnnotationDataEntry, error) {
 	annotationSuggestionDataEntries := []AnnotationDataEntry{}
-	rows, err := p.db.Query(`SELECT image_annotation_suggestion_id, annotation, 
+	rows, err := p.db.Query(`SELECT COALESCE(image_annotation_suggestion_id, -1), annotation, 
 								annotation_type_id, COALESCE(image_annotation_suggestion_revision_id, 0), uuid
 							  FROM annotation_suggestion_data
 							  ORDER BY uuid`)
@@ -1255,4 +1362,62 @@ func (p *ImageMonkeyDatabase) GetAnnotationSuggestionDataEntries() ([]Annotation
 		annotationSuggestionDataEntries = append(annotationSuggestionDataEntries, annotationSuggestionDataEntry)
 	}
 	return annotationSuggestionDataEntries, nil
+}
+
+type ImageAnnotationRevisionEntry struct {
+	Id int64
+	ImageAnnotationId int64
+	Revision int
+}
+
+func (p *ImageMonkeyDatabase) GetImageAnnotationRevisionEntries() ([]ImageAnnotationRevisionEntry, error) {
+	imageAnnotationRevisions := []ImageAnnotationRevisionEntry{}
+	
+	rows, err := p.db.Query(`SELECT r.id, r.image_annotation_id, r.revision 
+								FROM image_annotation_revision r
+								JOIN image_annotation a ON r.image_annotation_id = a.id
+								ORDER BY uuid`)
+	if err != nil {
+		return imageAnnotationRevisions, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() { 
+		var imageAnnotationRevision ImageAnnotationRevisionEntry
+		err = rows.Scan(&imageAnnotationRevision.Id, &imageAnnotationRevision.ImageAnnotationId, 
+							&imageAnnotationRevision.Revision)
+		if err != nil {
+			return imageAnnotationRevisions, err
+		}
+		imageAnnotationRevisions = append(imageAnnotationRevisions, imageAnnotationRevision)
+	}
+
+	return imageAnnotationRevisions, nil
+}
+
+func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionRevisionEntries() ([]ImageAnnotationRevisionEntry, error) {
+	imageAnnotationSuggestionRevisions := []ImageAnnotationRevisionEntry{}
+	
+	rows, err := p.db.Query(`SELECT r.id, r.image_annotation_suggestion_id, r.revision 
+								FROM image_annotation_suggestion_revision r
+								JOIN image_annotation_suggestion a ON r.image_annotation_suggestion_id = a.id
+								ORDER BY uuid`)
+	if err != nil {
+		return imageAnnotationSuggestionRevisions, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() { 
+		var imageAnnotationSuggestionRevision ImageAnnotationRevisionEntry
+		err = rows.Scan(&imageAnnotationSuggestionRevision.Id, &imageAnnotationSuggestionRevision.ImageAnnotationId, 
+							&imageAnnotationSuggestionRevision.Revision)
+		if err != nil {
+			return imageAnnotationSuggestionRevisions, err
+		}
+		imageAnnotationSuggestionRevisions = append(imageAnnotationSuggestionRevisions, imageAnnotationSuggestionRevision)
+	}
+
+	return imageAnnotationSuggestionRevisions, nil
 }
