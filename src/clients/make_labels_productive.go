@@ -207,7 +207,8 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 
 
 func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) error {
-	tempTables := []string{"temp_image_annotation_mapping", "temp_annotation_data_mapping", "temp_image_annotation_revision_mapping"}
+	tempTables := []string{"temp_image_annotation_mapping", "temp_annotation_data_mapping", "temp_image_annotation_revision_mapping",
+							"temp_annotation_data_revision_mapping"}
 	
 	for _, tempTable := range tempTables {
 		_, err := tx.Exec(fmt.Sprintf(`DROP TABLE IF EXISTS %s`, tempTable)) //controlled input, so no sql injection possible
@@ -243,7 +244,8 @@ func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) 
 						nextval('image_annotation_data_id_seq') as new_annotation_data_id, m.new_image_annotation_id as new_image_annotation_id,
 						d.image_annotation_suggestion_revision_id as old_image_annotation_revision_id
 						FROM annotation_suggestion_data d
-						JOIN temp_image_annotation_mapping m ON m.old_image_annotation_id = d.image_annotation_suggestion_id`)
+						JOIN temp_image_annotation_mapping m ON m.old_image_annotation_id = d.image_annotation_suggestion_id
+						WHERE d.image_annotation_suggestion_id is not null`)
 	if err != nil {
 		return err
 	}
@@ -260,6 +262,26 @@ func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) 
 							nextval('image_annotation_revision_id_seq') as new_image_annotation_revision_id, m.new_image_annotation_id as new_image_annotation_id
 						FROM image_annotation_suggestion_revision r
 						JOIN temp_image_annotation_mapping m ON m.old_image_annotation_id = r.image_annotation_suggestion_id`)
+	if err != nil {
+		return err
+	}
+
+
+	_, err = tx.Exec(`CREATE TEMPORARY TABLE temp_annotation_data_revision_mapping(old_annotation_data_id bigint, 
+								old_image_annotation_id bigint, new_annotation_data_id bigint, new_image_annotation_id bigint,
+								old_image_annotation_revision_id bigint)`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`INSERT INTO temp_annotation_data_revision_mapping(old_annotation_data_id, old_image_annotation_id, new_annotation_data_id, 
+								new_image_annotation_id, old_image_annotation_revision_id) 
+						SELECT d.id as old_annotation_data_id, m.old_image_annotation_id as old_image_annotation_id, 
+						nextval('image_annotation_data_id_seq') as new_annotation_data_id, m.new_image_annotation_id as new_image_annotation_id,
+						d.image_annotation_suggestion_revision_id as old_image_annotation_revision_id
+						FROM annotation_suggestion_data d
+						JOIN temp_image_annotation_revision_mapping m ON m.old_image_annotation_revision_id = d.image_annotation_suggestion_revision_id
+						WHERE d.image_annotation_suggestion_id is null`)
 	if err != nil {
 		return err
 	}
@@ -312,6 +334,23 @@ func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) 
 		return err
 	}
 
+	var insertedAnnotationDataRevisionRows int64 = 0
+	err = tx.QueryRow(`WITH rows AS (
+							INSERT INTO annotation_data(id, image_annotation_id, annotation, annotation_type_id, image_annotation_revision_id, uuid)
+								SELECT m.new_annotation_data_id, null, d.annotation, 
+										d.annotation_type_id, m1.new_image_annotation_revision_id, d.uuid 
+								FROM temp_annotation_data_revision_mapping m
+								JOIN temp_image_annotation_revision_mapping m1 ON m1.old_image_annotation_revision_id = m.old_image_annotation_revision_id 
+								AND m1.old_image_annotation_id = m.old_image_annotation_id
+								JOIN annotation_suggestion_data d ON m.old_annotation_data_id = d.id
+								
+								RETURNING 1
+					   )
+					   SELECT count(*) FROM rows`).Scan(&insertedAnnotationDataRevisionRows)
+	if err != nil {
+		return err
+	}
+
 	var insertedUserImageAnnotationRows int64 = 0
 	err = tx.QueryRow(`WITH rows AS (
 						INSERT INTO user_image_annotation(image_annotation_id, account_id, timestamp)
@@ -355,6 +394,23 @@ func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) 
 	if insertedAnnotationDataRows != deletedAnnotationSuggestionDataRows {
 		return errors.New("inserted annotation_data rows differ from deleted annotation_suggestion_data rows!")
 	}
+
+
+	var deletedAnnotationSuggestionDataRevisionRows int64 = 0
+	err = tx.QueryRow(`WITH rows AS (
+							DELETE FROM annotation_suggestion_data WHERE id IN
+								(SELECT old_annotation_data_id FROM temp_annotation_data_revision_mapping)
+						  	
+							RETURNING 1
+					   )
+					   SELECT count(*) FROM rows`).Scan(&deletedAnnotationSuggestionDataRevisionRows)
+	if err != nil {
+		return err
+	}
+	if insertedAnnotationDataRevisionRows != deletedAnnotationSuggestionDataRevisionRows {
+		return errors.New("inserted annotation_data revision rows differ from deleted annotation_suggestion_data revision rows!")
+	}
+
 
 	var deletedImageAnnotationSuggestionRevisionRows int64 = 0
 	err = tx.QueryRow(`WITH rows AS (

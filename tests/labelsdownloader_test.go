@@ -45,9 +45,22 @@ func runLabelsDownloader(t *testing.T) {
 }
 
 func verifyProductiveAnnotations(t *testing.T, imageAnnotationSuggestionEntries []ImageAnnotationEntry, imageAnnotationEntries []ImageAnnotationEntry, 
-									annotationSuggestionDataEntries []AnnotationDataEntry, annotationDataEntries []AnnotationDataEntry) {
+									annotationSuggestionDataEntries []AnnotationDataEntry, annotationDataEntries []AnnotationDataEntry,
+									imageAnnotationSuggestionRevisionEntries []ImageAnnotationRevisionEntry, 
+									imageAnnotationRevisionEntries []ImageAnnotationRevisionEntry) {
 	equals(t, len(imageAnnotationSuggestionEntries), len(imageAnnotationEntries))
 	equals(t, len(annotationSuggestionDataEntries), len(annotationDataEntries))
+	equals(t, len(imageAnnotationSuggestionRevisionEntries), len(imageAnnotationRevisionEntries))
+
+	imageAnnotationIdRevisionMapping := make(map[int64]int64)
+	imageAnnotationSuggestionIdRevisionMapping := make(map[int64]int64)
+	imageAnnotationRevisionIdMapping := make(map[int64]int64)
+	for i, imageAnnotationRevisionEntry := range imageAnnotationRevisionEntries {
+		equals(t, imageAnnotationRevisionEntry.Revision, imageAnnotationSuggestionRevisionEntries[i].Revision)
+		imageAnnotationIdRevisionMapping[imageAnnotationRevisionEntry.Id] = imageAnnotationRevisionEntry.ImageAnnotationId
+		imageAnnotationSuggestionIdRevisionMapping[imageAnnotationSuggestionRevisionEntries[i].Id] = imageAnnotationSuggestionRevisionEntries[i].ImageAnnotationId
+		imageAnnotationRevisionIdMapping[imageAnnotationSuggestionRevisionEntries[i].Id] = imageAnnotationRevisionEntry.Id
+	}
 
 	imageAnnotationIdMapping := make(map[int64]int64)
 	for i, imageAnnotationEntry := range imageAnnotationEntries {
@@ -70,9 +83,19 @@ func verifyProductiveAnnotations(t *testing.T, imageAnnotationSuggestionEntries 
 
 	for i, annotationDataEntry := range annotationDataEntries {
 		equals(t, annotationDataEntry.Uuid, annotationSuggestionDataEntries[i].Uuid)
-		equals(t, annotationDataEntry.ImageAnnotationId, imageAnnotationIdMapping[annotationSuggestionDataEntries[i].ImageAnnotationId])
+		
+		if annotationDataEntry.ImageAnnotationId == -1 {
+			equals(t, int64(annotationSuggestionDataEntries[i].ImageAnnotationId), int64(-1))
+
+			imgAnnotationId := imageAnnotationIdRevisionMapping[annotationDataEntry.ImageAnnotationRevisionId]
+			imgAnnotationSuggestionId := imageAnnotationSuggestionIdRevisionMapping[annotationSuggestionDataEntries[i].ImageAnnotationRevisionId]
+			equals(t, imgAnnotationId, imageAnnotationIdMapping[imgAnnotationSuggestionId])
+		} else {
+			equals(t, annotationDataEntry.ImageAnnotationId, imageAnnotationIdMapping[annotationSuggestionDataEntries[i].ImageAnnotationId])
+		}
+
 		equals(t, annotationDataEntry.AnnotationTypeId, annotationSuggestionDataEntries[i].AnnotationTypeId)
-		equals(t, annotationDataEntry.ImageAnnotationRevisionId, annotationSuggestionDataEntries[i].ImageAnnotationRevisionId)
+		equals(t, annotationDataEntry.ImageAnnotationRevisionId, imageAnnotationRevisionIdMapping[annotationSuggestionDataEntries[i].ImageAnnotationRevisionId])
 		equals(t, annotationDataEntry.Annotation, annotationSuggestionDataEntries[i].Annotation)
 	}
 }
@@ -293,6 +316,9 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	annotationSuggestionDataEntries, err := db.GetAnnotationSuggestionDataEntries()
 	ok(t, err)
 
+	imageAnnotationSuggestionRevisionEntries, err := db.GetImageAnnotationSuggestionRevisionEntries()
+	ok(t, err)
+
 	runTrendingLabelsWorker(t, 5)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
@@ -323,7 +349,11 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	annotationDataEntries, err := db.GetAnnotationDataEntries()
 	ok(t, err)
 
-	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries,annotationSuggestionDataEntries, annotationDataEntries)
+	imageAnnotationRevisionEntries, err := db.GetImageAnnotationRevisionEntries()
+	ok(t, err)
+
+	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
 }
 
 
@@ -358,6 +388,9 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	annotationSuggestionDataEntries, err := db.GetAnnotationSuggestionDataEntries()
 	ok(t, err)
 
+	imageAnnotationSuggestionRevisionEntries, err := db.GetImageAnnotationSuggestionRevisionEntries()
+	ok(t, err)
+
 	runTrendingLabelsWorker(t, 0)
 
 	trendingLabels := testGetTrendingLabels(t, token, 200)
@@ -390,5 +423,88 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	annotationDataEntries, err := db.GetAnnotationDataEntries()
 	ok(t, err)
 
-	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries,annotationSuggestionDataEntries, annotationDataEntries)
+	imageAnnotationRevisionEntries, err := db.GetImageAnnotationRevisionEntries()
+	ok(t, err)
+
+	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+}
+
+
+func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinementsSuccess(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token)
+	}
+
+	//annotate label suggestions
+	for i, imageId := range imageIds {
+		testAnnotate(t, imageId, "red apple " + strconv.Itoa(i), "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+		annotationIds, err := db.GetImageAnnotationSuggestionIdsForImage(imageId)
+		ok(t, err)
+		equals(t, len(annotationIds), 1)
+		newAnnotations := `[{"top":55,"left":310,"type":"rect","angle":16,"width":244,"height":120,"stroke":{"color":"red","width":1}}]`
+		testAnnotationRework(t, annotationIds[0], newAnnotations, token)
+	}
+
+	imageAnnotationSuggestionEntries, err := db.GetImageAnnotationSuggestionEntries()
+	ok(t, err)
+
+	annotationSuggestionDataEntries, err := db.GetAnnotationSuggestionDataEntries()
+	ok(t, err)
+
+	imageAnnotationSuggestionRevisionEntries, err := db.GetImageAnnotationSuggestionRevisionEntries()
+	ok(t, err)
+
+	runTrendingLabelsWorker(t, 0)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 13)
+
+	for i, _ := range imageIds {
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), token, "normal", 201)
+	}
+
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 13)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 13)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+13, numberOfLabelsAfter)
+
+	imageAnnotationEntries, err := db.GetImageAnnotationEntries()
+	ok(t, err)
+
+	annotationDataEntries, err := db.GetAnnotationDataEntries()
+	ok(t, err)
+
+	imageAnnotationRevisionEntries, err := db.GetImageAnnotationRevisionEntries()
+	ok(t, err)
+
+	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
 }
