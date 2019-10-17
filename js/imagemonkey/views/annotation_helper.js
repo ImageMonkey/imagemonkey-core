@@ -178,7 +178,7 @@ function onLabelInLabelLstRemoveClicked(elem) {
     $("#removeLabelFromUnifiedModeLstDlg").modal("show");
 }
 
-function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false, isUnlocked = false) {
+function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false, isUnlocked = false, loggedIn = false) {
     var id = "labellstitem-" + uuid;
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     if (allowRemove) {
@@ -192,7 +192,7 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCre
     var disabledStr = " ";
     var onClickCallback = "annotationView.onLabelInLabelLstClicked(this);";
     var tooltip = "";
-    if (!isUnlocked && !this.loggedIn) {
+    if (!isUnlocked && !loggedIn) {
         disabledStr = " disabled ";
         onClickCallback = "";
         tooltip = ' data-content="Please login to annotate this label"';

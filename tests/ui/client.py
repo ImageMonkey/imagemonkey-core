@@ -68,6 +68,10 @@ class UnifiedModeView(object):
     def __init__(self, driver):
         self._driver = driver
 
+    @property
+    def driver(self):
+        return self._driver
+
     def query(self, query, num_expected_images, mode="default"):
         if mode != "default" and mode != "rework":
             raise Exception("invalid mode  %s" %mode)
@@ -125,6 +129,39 @@ class UnifiedModeView(object):
         children = elem.find_elements_by_tag_name("div")
         assert expected_num == len(children), "received correct num of revisions"
 
+    @check_for_errors
+    def label(self, name, should_succeed=True):
+        time.sleep(1)
+        
+        elem = self._driver.find_element_by_id("annotationLabelsLst")
+        children = elem.find_elements_by_tag_name("//div[starts-with(@id,'labellstitem-')]")
+        num_of_children_before = len(children)
+        
+        self._driver.find_element_by_id("addLabelsToUnifiedModeListLabels").send_keys(name)
+ 
+        self._driver.execute_script('$("#addLabelToUnifiedModeListButton").trigger("click");')
+
+        elem = self._driver.find_element_by_id("annotationLabelsLst")
+        children = elem.find_elements_by_tag_name("//div[starts-with(@id,'labellstitem-')]")
+        num_of_children_after = len(children)
+
+        assert num_of_children_before == num_of_children_after, "label successfully inserted"
+
+        self._driver.execute_script('$("#doneButton").trigger("click");')
+
+        if should_succeed:
+            wait = WebDriverWait(self._driver, 10)
+            locator = (By.ID, "loadingIndicator")
+            wait.until(EC.invisibility_of_element_located(locator))
+
+            wait = WebDriverWait(self._driver, 10)
+            locator = (By.ID, "annotatorMenu")
+            wait.until(EC.invisibility_of_element_located(locator))
+        else:
+            wait = WebDriverWait(self._driver, 10)
+            locator = (By.ID, "warningMsgText")
+            wait.until(EC.visibility_of_element_located(locator))
+
 class ImageMonkeyWebClient(object):
     def __init__(self, driver):
         self._driver = driver
@@ -147,6 +184,13 @@ class ImageMonkeyWebClient(object):
             wait = WebDriverWait(self._driver, 10)
             wait.until(EC.url_changes(BASE_URL))
             self._username = username
+
+    def logout(self):
+        self._driver.execute_script('$("#mainMenuLogoutButton").trigger("click");')
+        self._driver.delete_all_cookies()
+        #after the logout we get redirected to the main page
+        wait = WebDriverWait(self._driver, 10)
+        wait.until(EC.title_is("ImageMonkey"))
 
     @check_for_errors
     def signup(self, username, email, password):

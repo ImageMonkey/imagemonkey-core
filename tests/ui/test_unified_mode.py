@@ -121,3 +121,24 @@ class TestUnifiedMode(unittest.TestCase):
         unified_mode_view.query("notexisting", 1, mode="rework")
         unified_mode_view.select_image(0) 
         unified_mode_view.check_revisions(2)
+
+    def test_add_label_in_unified_mode_should_succeed(self):
+        self._prepare_for_test()
+
+        self._client.label_image(["apple"])
+
+        unified_mode_view = self._client.unified_mode()
+        unified_mode_view.query("apple", 1)
+        unified_mode_view.select_image(0)
+        unified_mode_view.label("test")
+
+    def test_add_label_in_unified_mode_should_fail_due_to_not_authenticated(self):
+        self._prepare_for_test()
+
+        self._client.label_image(["apple"])
+        self._client.logout()
+
+        unified_mode_view = self._client.unified_mode()
+        unified_mode_view.query("apple", 1)
+        unified_mode_view.select_image(0)
+        unified_mode_view.label("test", False)

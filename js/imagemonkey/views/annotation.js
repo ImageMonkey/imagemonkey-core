@@ -510,11 +510,11 @@ var AnnotationView = (function() {
                 if (inst.annotationView === "unified") {
                     if (data !== null) {
                         for (var i = 0; i < data.length; i++) {
-                            addLabelToLabelLst(data[i].label, '', data[i].uuid, false, false, data[i].unlocked);
+                            addLabelToLabelLst(data[i].label, '', data[i].uuid, false, false, data[i].unlocked, inst.loggedIn);
                             if (data[i].sublabels !== null) {
                                 for (var j = 0; j < data[i].sublabels.length; j++) {
                                     addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
-                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked);
+                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked, inst.loggedIn);
                                 }
                             }
                         }
@@ -654,7 +654,7 @@ var AnnotationView = (function() {
         showHideRevisionsDropdown();
 
         if (this.annotationView === "unified") {
-            addLabelToLabelLst(data.validation.label, data.validation.sublabel, data.uuid, false, false, data.validation.unlocked);
+            addLabelToLabelLst(data.validation.label, data.validation.sublabel, data.uuid, false, false, data.validation.unlocked, this.loggedIn);
             var firstItem = $('#annotationLabelsLst').children('.labelslstitem').first();
             if (firstItem && firstItem.length === 1) {
                 $(firstItem[0]).addClass("grey inverted");
@@ -943,7 +943,7 @@ var AnnotationView = (function() {
                         };
                     }
                     elem = addLabelToLabelLst(selectedElem.label, selectedElem.sublabel,
-                        selectedElem.uuid, true, true);
+                        selectedElem.uuid, true, true, false, inst.loggedIn);
                 }
 
                 //select newly added (or already existing) label
