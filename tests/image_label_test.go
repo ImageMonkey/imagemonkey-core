@@ -47,7 +47,7 @@ func testLabelImage(t *testing.T, imageId string, label string, sublabel string,
 }
 
 
-func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string) {
+func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string, requiredStatusCode int) {
 	type LabelMeEntry struct {
 		Label string `json:"label"`
 		Annotatable bool `json:"annotatable"`
@@ -78,7 +78,16 @@ func testSuggestLabelForImage(t *testing.T, imageId string, label string, annota
 	newNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
 	ok(t, err)
 
-	equals(t, oldNum+1, newNum)
+	//the labelme endpoint behaves a bit special, as it returns always 200
+	//no matter if the label already exists or not.
+	//the only difference is, that it won't be inserted again if it already exists! 
+	if requiredStatusCode == 200 {
+		if oldNum == 1 { 
+			equals(t, oldNum, newNum)
+		} else {
+			equals(t, oldNum+1, newNum)
+		}
+	}
 }
 
 func testBrowseLabel(t *testing.T, query string, token string, requiredNumOfResults int, 
@@ -463,7 +472,7 @@ func TestGetLabelsForImageMultipleLabelsIncludingNonProductiveOnes(t *testing.T)
 	ok(t, err)
 
 	testLabelImage(t, imageId, "table", "", "", 200)
-	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken)
+	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken, 200)
 
 	labels := testGetLabelsForImage(t, imageId, "", false, 200)
 
@@ -502,7 +511,7 @@ func TestGetLabelsForImageMultipleLabelsWithoutNonProductiveOnes(t *testing.T) {
 	ok(t, err)
 
 	testLabelImage(t, imageId, "table", "", "", 200)
-	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken)
+	testSuggestLabelForImage(t, imageId, "not-existing", true, userToken, 200)
 
 	labels := testGetLabelsForImage(t, imageId, "", true, 200)
 
@@ -750,4 +759,27 @@ func TestGetImagesToLabelMultipleUnlabeledImages(t *testing.T) {
 	equals(t, int(imgs[1].Image.Width), int(1132))
 	equals(t, int(imgs[1].Image.Height), int(750))
 	equals(t, len(imgs[1].Labels), 0)
+}
+
+func TestLabelImageNonProductiveLabelsOnlyOnce(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testSignUp(t, "testuser", "testpwd", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpwd", 200)
+
+	testSuggestLabelForImage(t, imageId, "test", true, token, 200)
+	numBefore, err := db.GetNumberOfLabelSuggestionsForImage(imageId)
+	ok(t, err)
+	equals(t, numBefore, 1)
+
+	testSuggestLabelForImage(t, imageId, "test", true, token, 200)
+	numAfter, err := db.GetNumberOfLabelSuggestionsForImage(imageId)
+	ok(t, err)
+	equals(t, numAfter, 1)
 }

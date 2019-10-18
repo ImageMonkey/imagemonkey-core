@@ -134,18 +134,23 @@ class UnifiedModeView(object):
         time.sleep(1)
         
         elem = self._driver.find_element_by_id("annotationLabelsLst")
-        children = elem.find_elements_by_tag_name("//div[starts-with(@id,'labellstitem-')]")
+        children = elem.find_elements_by_xpath("//div[starts-with(@id,'labellstitem-')]")
         num_of_children_before = len(children)
+ 
+        #time.sleep(2)
         
         self._driver.find_element_by_id("addLabelsToUnifiedModeListLabels").send_keys(name)
  
         self._driver.execute_script('$("#addLabelToUnifiedModeListButton").trigger("click");')
-
+    
         elem = self._driver.find_element_by_id("annotationLabelsLst")
-        children = elem.find_elements_by_tag_name("//div[starts-with(@id,'labellstitem-')]")
-        num_of_children_after = len(children)
+        children = elem.find_elements_by_xpath("//div[starts-with(@id,'labellstitem-')]")
+        num_of_children_after = len(children) 
 
-        assert num_of_children_before == num_of_children_after, "label successfully inserted"
+        if should_succeed: 
+            assert num_of_children_before+1 == num_of_children_after, "label successfully inserted"
+        else:
+            assert num_of_children_before == num_of_children_after, "label count unchanged"
 
         self._driver.execute_script('$("#doneButton").trigger("click");')
 

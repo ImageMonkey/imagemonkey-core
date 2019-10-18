@@ -1421,3 +1421,18 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionRevisionEntries() ([]I
 
 	return imageAnnotationSuggestionRevisions, nil
 }
+
+func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsForImage(imageId string) (int, error) {
+	var num int
+	err := p.db.QueryRow(`SELECT count(*) 
+							FROM image_label_suggestion ils
+							JOIN label_suggestion l ON l.id = ils.label_suggestion_id
+							JOIN image i ON i.id = ils.image_id
+							WHERE i.key = $1`, imageId).Scan(&num)
+
+	if err != nil {
+		return num, err
+	}
+
+	return num, nil
+}

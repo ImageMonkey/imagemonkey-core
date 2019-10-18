@@ -18,7 +18,7 @@ func TestMakeLabelsProductiveNormalLabelTest(t *testing.T) {
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "bananaa", true, token)
+		testSuggestLabelForImage(t, imageId, "bananaa", true, token, 200)
 	}
 
 	numBefore, err := db.GetNumberOfImagesWithLabel("banana")
@@ -57,7 +57,7 @@ func TestMakeLabelsProductiveMetaLabelTest(t *testing.T) {
      imageIds, err := db.GetAllImageIds()
      ok(t, err)
      for _, imageId := range imageIds {
-         testSuggestLabelForImage(t, imageId, "construction sitee", true, token)
+         testSuggestLabelForImage(t, imageId, "construction sitee", true, token, 200)
      }
  
      numBefore, err := db.GetNumberOfImagesWithLabel("construction site")
@@ -97,11 +97,11 @@ func TestMakeLabelsProductiveMetaLabelTest(t *testing.T) {
 	ok(t, err)
 	for i, imageId := range imageIds {
 		if i == 0 || i == 4 {
-			testSuggestLabelForImage(t, imageId, " car", true, token)
+			testSuggestLabelForImage(t, imageId, " car", true, token, 200)
 		} else if i == 2 || i == 3 {
-			testSuggestLabelForImage(t, imageId, "car ", true, token)
+			testSuggestLabelForImage(t, imageId, "car ", true, token, 200)
 		} else {
-			testSuggestLabelForImage(t, imageId, " car ", true, token)
+			testSuggestLabelForImage(t, imageId, " car ", true, token, 200)
 		}
 	}
 
@@ -139,11 +139,11 @@ func TestMakeLabelsProductiveMetaLabelTest(t *testing.T) {
 	ok(t, err)
 	for i, imageId := range imageIds {
 		if i == 0 || i == 4 {
-			testSuggestLabelForImage(t, imageId, " car   ", true, token)
+			testSuggestLabelForImage(t, imageId, " car   ", true, token, 200)
 		} else if i == 2 || i == 3 {
-			testSuggestLabelForImage(t, imageId, "  car  ", true, token)
+			testSuggestLabelForImage(t, imageId, "  car  ", true, token, 200)
 		} else {
-			testSuggestLabelForImage(t, imageId, " car    ", true, token)
+			testSuggestLabelForImage(t, imageId, " car    ", true, token, 200)
 		}
 	}
 
@@ -177,16 +177,16 @@ func TestMakeLabelsProductiveMetaLabelTest(t *testing.T) {
 	imageIds, err := db.GetAllImageIds()
 	ok(t, err)
 	for i, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "car seat", true, token)
-		testSuggestLabelForImage(t, imageId, " car seat", true, token)
-		testSuggestLabelForImage(t, imageId, "car seat ", true, token)
-		testSuggestLabelForImage(t, imageId, " car seat ", true, token)
+		testSuggestLabelForImage(t, imageId, "car seat", true, token, 200)
+		testSuggestLabelForImage(t, imageId, " car seat", true, token, 200)
+		testSuggestLabelForImage(t, imageId, "car seat ", true, token, 200)
+		testSuggestLabelForImage(t, imageId, " car seat ", true, token, 200)
 		if i == 0 || i == 4 {
-			testSuggestLabelForImage(t, imageId, " car   ", true, token)
+			testSuggestLabelForImage(t, imageId, " car   ", true, token, 200)
 		} else if i == 2 || i == 3 {
-			testSuggestLabelForImage(t, imageId, "  car  ", true, token)
+			testSuggestLabelForImage(t, imageId, "  car  ", true, token, 200)
 		} else {
-			testSuggestLabelForImage(t, imageId, " car    ", true, token)
+			testSuggestLabelForImage(t, imageId, " car    ", true, token, 200)
 		}
 	}
 

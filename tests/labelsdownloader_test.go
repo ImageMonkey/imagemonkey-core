@@ -116,7 +116,7 @@ func TestLabelsDownloaderSuccess(t *testing.T) {
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", true, token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token, 200)
 	}
 	runTrendingLabelsWorker(t, 5)
 
@@ -159,7 +159,7 @@ func TestLabelsDownloaderFailure(t *testing.T) {
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", true, token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token, 200)
 	}
 	runTrendingLabelsWorker(t, 5)
 
@@ -202,7 +202,7 @@ func TestLabelsDownloaderFailureCanBeRetried(t *testing.T) {
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", true, token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token, 200)
 	}
 	runTrendingLabelsWorker(t, 5)
 
@@ -251,7 +251,7 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", true, token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token, 200)
 	}
 	runTrendingLabelsWorker(t, 5)
 
@@ -301,7 +301,7 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	ok(t, err)
 
 	for _, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple", true, token)
+		testSuggestLabelForImage(t, imageId, "red apple", true, token, 200)
 	}
 
 	//annotate label suggestions
@@ -373,7 +373,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	ok(t, err)
 
 	for i, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token)
+		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token, 200)
 	}
 
 	//annotate label suggestions
@@ -447,7 +447,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinements
 	ok(t, err)
 
 	for i, imageId := range imageIds {
-		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token)
+		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token, 200)
 	}
 
 	//annotate label suggestions

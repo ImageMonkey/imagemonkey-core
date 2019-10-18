@@ -890,7 +890,7 @@ var AnnotationView = (function() {
                         $("#warningMsg").show(200).delay(1500).hide(200);
                         return
                     }
-                } else {
+                } else { //logged in
                     var pattern = new RegExp("^[a-zA-Z\s]+$");
                     if (!pattern.test(labelName)) {
                         $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z and ' ')");
@@ -921,6 +921,15 @@ var AnnotationView = (function() {
                 var elem;
                 $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
                     if ($(this).attr("data-uuid") === selectedElem.uuid) {
+                        alreadyExistsInUnifiedModeLabelsLst = true;
+                        elem = $(this);
+                        return false;
+                    }
+
+                    //if it's a non productive label, we need to do it a bit differently
+                    if (selectedElem.uuid === labelName && $(this).attr("data-label") === selectedElem.uuid &&
+                        $(this).attr("data-sublabel") === "") {
+
                         alreadyExistsInUnifiedModeLabelsLst = true;
                         elem = $(this);
                         return false;

@@ -376,7 +376,7 @@ func TestBrowseAnnotationQueryNonProductiveLabelsNoResultsAsNotAuthenticated(t *
 	token := testLogin(t, "user", "pwd", 200)
 
 	//give first image the label 'newlabel'
-	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token)
+	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token, 200)
 	
 	testBrowseAnnotation(t, "newlabel", 0, "")
 }
@@ -394,7 +394,7 @@ func TestBrowseAnnotationQueryNonProductiveLabelsAnnotationFailsDueToNotAuthenti
 	token := testLogin(t, "user", "pwd", 200)
 
 	//give first image the label 'newlabel'
-	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token)
+	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token, 200)
 	
 	testBrowseAnnotation(t, "newlabel", 1, token)
 
@@ -417,7 +417,7 @@ func TestBrowseAnnotationQueryNonProductiveLabels(t *testing.T) {
 	token := testLogin(t, "user", "pwd", 200)
 
 	//give first image the label 'newlabel'
-	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token)
+	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token, 200)
 	
 	testBrowseAnnotation(t, "newlabel", 1, token)
 
