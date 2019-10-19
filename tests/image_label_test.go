@@ -53,6 +53,9 @@ func testSuggestLabelForImage(t *testing.T, imageId string, label string, annota
 		Annotatable bool `json:"annotatable"`
 	}
 
+	existingNumLabelsWithSameName, err := db.GetNumberOfLabelSuggestionsWithLabelForImage(imageId, label)
+	ok(t, err)
+
 	oldNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
 	ok(t, err)
 
@@ -82,7 +85,7 @@ func testSuggestLabelForImage(t *testing.T, imageId string, label string, annota
 	//no matter if the label already exists or not.
 	//the only difference is, that it won't be inserted again if it already exists! 
 	if requiredStatusCode == 200 {
-		if oldNum == 1 { 
+		if existingNumLabelsWithSameName == 1 { 
 			equals(t, oldNum, newNum)
 		} else {
 			equals(t, oldNum+1, newNum)

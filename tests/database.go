@@ -1436,3 +1436,18 @@ func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsForImage(imageId string
 
 	return num, nil
 }
+
+func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsWithLabelForImage(imageId string, labelName string) (int, error) {
+	var num int
+	err := p.db.QueryRow(`SELECT count(*) 
+							FROM image_label_suggestion ils
+							JOIN label_suggestion l ON l.id = ils.label_suggestion_id
+							JOIN image i ON i.id = ils.image_id
+							WHERE i.key = $1 AND l.name = $2`, imageId, labelName).Scan(&num)
+
+	if err != nil {
+		return num, err
+	}
+
+	return num, nil
+}
