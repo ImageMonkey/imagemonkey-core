@@ -218,72 +218,6 @@ func testMultipleDonate(t *testing.T, label string) int {
     return num
 }*/
 
-func testLabelImage(t *testing.T, imageId string, label string, token string) {
-	type LabelMeEntry struct {
-		Label string `json:"label"`
-	}
-
-	oldNum, err := db.GetNumberOfImagesWithLabel(label)
-	ok(t, err)
-
-	var labelMeEntries []LabelMeEntry
-	labelMeEntry := LabelMeEntry{Label: label}
-	labelMeEntries = append(labelMeEntries, labelMeEntry)
-
-	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
-	req := resty.R().
-			SetHeader("Content-Type", "application/json").
-			SetBody(labelMeEntries)
-
-	if token != "" {
-		req.SetAuthToken(token)
-	}
-			
-	resp, err := req.Post(url)
-
-	ok(t, err)
-	equals(t, resp.StatusCode(), 200)
-
-	newNum, err := db.GetNumberOfImagesWithLabel(label)
-	ok(t, err)
-
-	equals(t, oldNum+1, newNum)
-}
-
-
-func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string) {
-	type LabelMeEntry struct {
-		Label string `json:"label"`
-		Annotatable bool `json:"annotatable"`
-	}
-
-	oldNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
-	ok(t, err)
-
-	var labelMeEntries []LabelMeEntry
-	labelMeEntry := LabelMeEntry{Label: label}
-	labelMeEntry.Annotatable = annotatable
-	labelMeEntries = append(labelMeEntries, labelMeEntry)
-
-	url := BASE_URL + API_VERSION + "/donation/" + imageId + "/labelme"
-	req := resty.R().
-			SetHeader("Content-Type", "application/json").
-			SetBody(labelMeEntries)
-
-	if token != "" {
-		req.SetAuthToken(token)
-	}
-			
-	resp, err := req.Post(url)
-
-	ok(t, err)
-	equals(t, resp.StatusCode(), 200)
-
-	newNum, err := db.GetNumberOfImagesWithLabelSuggestions(label)
-	ok(t, err)
-
-	equals(t, oldNum+1, newNum)
-}
 
 func testGetImageForAnnotation(t *testing.T, imageId string, token string, validationId string, requiredStatusCode int) {
 	url := BASE_URL + API_VERSION + "/annotate"
@@ -326,7 +260,7 @@ func testRandomLabel(t *testing.T, num int, skipLabel string) {
 		label, err := db.GetRandomLabelName(skipLabel)
 		ok(t, err)
 
-		testLabelImage(t, image, label, "")
+		testLabelImage(t, image, label, "", "", 200)
 	}
 }
 

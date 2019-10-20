@@ -15,7 +15,7 @@ import (
     "bytes"
     "net/http"
     "encoding/json"
-    "github.com/garyburd/redigo/redis"
+    "github.com/gomodule/redigo/redis"
     log "github.com/sirupsen/logrus"
     "net/url"
     "errors"

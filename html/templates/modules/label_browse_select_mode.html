@@ -197,7 +197,8 @@
       for(var j = 0; j < labels.length; j++) {
         var labelName = (isLabelValid(labels[j]["num_yes"], labels[j]["num_no"]) 
                           ? escapeHtml(labels[j]["name"]) : strikethroughText(escapeHtml(labels[j]["name"])));
-        tooltipText += labelName + ", ";
+        if(labelName !== "")
+          tooltipText += labelName + ", ";
         var sublabels = labels[j]["sublabels"];
         for(k = 0; k < sublabels.length; k++) {
           tooltipText += (isLabelValid(sublabels[k]["num_yes"], sublabels[k]["num_no"]) 
@@ -243,25 +244,38 @@
 
   $(document).ready(function(){
     var availableLabels = [];
-    var labelAccessors = {{ .labelAccessors }};
-    for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i]);
-    }
-
-    labelSuggestions = {{ .labelSuggestions }};
-    if(labelSuggestions !== null) {
-      for(var i = 0; i < labelSuggestions.length; i++) {
-        availableLabels.push(labelSuggestions[i]);
-      }
-    }
-
 
     var staticQueryAttributes = {{ .queryAttributes }};
-    for(var key in staticQueryAttributes) {
-      if(staticQueryAttributes.hasOwnProperty(key)) {
-        availableLabels.push(staticQueryAttributes[key].name);
-      }
-    }
+    var availableLabels = staticQueryAttributes;
+    
+    var imageMonkeyApi = new ImageMonkeyApi({{ .apiBaseUrl }});
+    imageMonkeyApi.setToken(getCookie("imagemonkey"));
+    var promises = [imageMonkeyApi.getLabelAccessors(true), imageMonkeyApi.getLabelSuggestions()];
+    {{ if ne .sessionInformation.Username "" }}
+    promises.push(imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }}));
+    {{ end }}
+
+    Promise.all(promises)
+      .then(function(data) {
+        for(var i = 0; i < data[0].length; i++) {
+          availableLabels.push(data[0][i].accessor);
+        }
+
+        if(data[1] !== null) {
+          for(var i = 0; i < data[1].length; i++) {
+            availableLabels.push(escapeHtml(data[1][i]));	
+          }
+        }
+        
+        if(data.length > 2) {
+          for(var i = 0; i < data[2].length; i++) {
+            availableLabels.push("image.collection='" + escapeHtml(data[2][i].name) + "'");	
+          }
+        }
+        $("#browseLabelsGoButton").removeClass("disabled");
+      }).catch(function(e) {
+        Sentry.captureException(e);
+      });
 
 
     $("#labelQuery")
@@ -311,7 +325,7 @@
        <input placeholder="Query..." type="text" id="labelQuery">
       </div>
 
-      <div class="ui primary submit button" onclick="populateImageGrid();">Go</div>
+      <div class="ui primary disabled submit button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>
     </form>
     <p id="numberOfQueryResults"></p>
 

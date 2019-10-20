@@ -107,6 +107,7 @@ func main() {
 	gitCheckoutDir := flag.String("git_checkout_dir", "/tmp/labelrepository", "Git checkout directory")
 	singleshot := flag.Bool("singleshot", false, "singleshot")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
+	pollingInterval := flag.Int("polling_interval", 1, "Polling Intervall")
 
 	flag.Parse()
 
@@ -160,7 +161,7 @@ func main() {
 			if *singleshot {
 				return
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Duration(*pollingInterval) * time.Second)
 		} else {
 			firstIteration = false
 		}

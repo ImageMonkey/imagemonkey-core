@@ -18,7 +18,7 @@
   <p><p>
     <div class="actions">
       {{ if (eq .sessionInformation.LoggedIn true) }}
-      <div class="ui cancel button">
+      <div class="ui cancel button" id="blacklistAnnotationUsageDlgCancelButton">
         Discard
       </div>
       <div class="ui positive right labeled icon button" id="blacklistAnnotationUsageDlgAcceptButton">
@@ -27,7 +27,7 @@
       </div>
 
       {{ else }}
-      <div class="ui right labeled cancel button">
+      <div class="ui right labeled cancel button" id="blacklistAnnotationUsageDlgCancelButton">
         Close
       </div>
       {{ end }}

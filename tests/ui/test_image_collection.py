@@ -5,7 +5,7 @@ from client import ImageMonkeyWebClient
 from webdriver import ImageMonkeyChromeWebDriver
 
 
-class TestAnnotateImage(unittest.TestCase):
+class TestImageCollection(unittest.TestCase):
     def setUp(self):
         self._driver = ImageMonkeyChromeWebDriver()
         self._client = ImageMonkeyWebClient(self._driver)
@@ -17,14 +17,6 @@ class TestAnnotateImage(unittest.TestCase):
     def tearDown(self):
         self._driver.quit()
 
-    def test_annotate_image_should_succeed(self):
-        path = os.path.abspath(".." + os.path.sep + "images" +
-                               os.path.sep + "apples" + os.path.sep + "apple1.jpeg")
-        self._client.donate(path, True)
-
+    def test_create_image_collection_should_succeed(self):
         self._client.login("moderator", "moderator", True)
-        self._client.unlock_multiple_images()
-
-        self._client.label_image(["apple"])
-
-        self._client.browse_annotate()
+        self._client.create_image_collection("mycollection")

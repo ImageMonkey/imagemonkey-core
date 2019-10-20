@@ -11,9 +11,13 @@ type Parser interface {
 type QueryParser struct {
 	query string
 	offset int
-	allowStaticQueryAttributes bool
+	allowImageWidth bool
+	allowImageHeight bool
+	allowAnnotationCoverage bool
 	version int
 	allowOrderByValidation bool
+	allowImageCollection bool
+	allowImageHasLabels bool
 }
 
 type ResultOrderType int
@@ -48,18 +52,37 @@ func NewQueryParser(query string) *QueryParser {
     return &QueryParser {
         query: query,
         offset: 1,
-        allowStaticQueryAttributes: true,
+        allowImageWidth: true,
+		allowImageHeight: true,
+		allowAnnotationCoverage: true,
         version: 2,
         allowOrderByValidation: false,
+		allowImageCollection: false,
+		allowImageHasLabels: false,
     } 
 }
 
-func (p *QueryParser) AllowStaticQueryAttributes(allow bool) {
-    p.allowStaticQueryAttributes = allow
+func (p *QueryParser) AllowImageHeight(allow bool) {
+    p.allowImageHeight = allow
+}
+
+func (p *QueryParser) AllowImageWidth(allow bool) {
+	p.allowImageWidth = allow
+}
+
+func (p *QueryParser) AllowAnnotationCoverage(allow bool) {
+	p.allowAnnotationCoverage = allow
+}
+func (p *QueryParser) AllowImageCollection(allow bool) {
+	p.allowImageCollection = allow
 }
 
 func (p *QueryParser) AllowOrderByValidation(allow bool) {
 	p.allowOrderByValidation = allow
+}
+
+func (p *QueryParser) AllowImageHasLabels(allow bool) {
+	p.allowImageHasLabels = allow
 }
 
 func (p *QueryParser) SetOffset(offset int) {
@@ -78,8 +101,12 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 
 	listener := imagemonkeyQueryLangListener{
 		pos: p.offset,
-		allowStaticQueryAttributes: p.allowStaticQueryAttributes,
+		allowImageWidth: p.allowImageWidth,
+		allowImageHeight: p.allowImageHeight,
+		allowAnnotationCoverage: p.allowAnnotationCoverage,
 		allowOrderByValidation: p.allowOrderByValidation,
+		allowImageCollection: p.allowImageCollection,
+		allowImageHasLabels: p.allowImageHasLabels,
 		numOfLabels: 0,
 		version: p.version,
 		isUuidQuery: true,

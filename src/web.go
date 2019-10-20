@@ -18,10 +18,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"errors"
-	"net/http/httputil"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
-	//"net/url"
+	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 	languages "github.com/bbernhard/imagemonkey-core/languages"
 	img "github.com/bbernhard/imagemonkey-core/image" 
@@ -30,6 +29,7 @@ import (
 	"compress/gzip"
 	"net/url"
 	"io/ioutil"
+	"github.com/gomodule/redigo/redis"
 )
 
 func ShowErrorPage(c *gin.Context) {
@@ -38,6 +38,40 @@ func ShowErrorPage(c *gin.Context) {
 	})
 }
 
+func ShowProfilePage(c *gin.Context, imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase, 
+						sessionCookieHandler *SessionCookieHandler, apiBaseUrl string) {
+	username := c.Param("username")
+	tab := c.Param("tab")
+
+	userInfo, _ := imageMonkeyDatabase.GetUserInfo(username)
+	if userInfo.Name == "" {
+		c.String(404, "404 page not found")
+		return
+	}
+
+	sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+	
+	var err error
+	var apiTokens []datastructures.APIToken
+	if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
+		apiTokens, err = imageMonkeyDatabase.GetApiTokens(username)
+		if err != nil {
+			c.String(500, "Internal server error - please try again later")
+			return
+		}
+	}
+
+	c.HTML(http.StatusOK, "profile.html", gin.H{
+		"title": "Profile",
+		"apiBaseUrl": apiBaseUrl,
+		"activeMenuNr": -1,
+		"statistics": commons.Pick(imageMonkeyDatabase.GetUserStatistics(username))[0],
+		"userInfo": userInfo,
+		"sessionInformation": sessionInformation,
+		"apiTokens": apiTokens,
+		"tab": tab,
+	})
+}
 
 func GetTemplates(path string, funcMap template.FuncMap)  (*template.Template, error) {
     templ := template.New("main").Funcs(funcMap)
@@ -75,35 +109,6 @@ func GetImages(p string) (map[string]string, error) {
 	return files, nil
 }
 
-
-func ReverseProxy(target string, sessionCookieHandler *SessionCookieHandler, 
-					imageMonkeyDatabase *imagemonkeydb.ImageMonkeyDatabase) gin.HandlerFunc {
-    return func(c *gin.Context) {
-    	sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-
-    	hasPermission := false
-		if sessionInformation.LoggedIn {
-			userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
-			if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanMonitorSystem {
-				hasPermission = true
-			}
-		}
-
-		if hasPermission {
-	        director := func(req *http.Request) {
-	            req.URL.Scheme = "http"
-	            req.URL.Host = target
-	            req.Host = ""
-	            req.URL.Path = ""
-	        }
-	        proxy := &httputil.ReverseProxy{Director: director}
-	        proxy.ServeHTTP(c.Writer, c.Request)
-	    } else {
-	    	ShowErrorPage(c)
-	    }
-    }
-}
-
 func main() {
 	fmt.Printf("Starting Web Service...\n")
 
@@ -121,12 +126,14 @@ func main() {
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
 	listenPort := flag.Int("listen_port", 8080, "Specify the listen port")
 	publicBackupsPath := flag.String("public_backups_path", "../public_backups/public_backups.json", "Path to public backups")
-	netdataUrl := flag.String("netdata_url", "127.0.0.1:19999", "Netdata Monitoring URL")
 	modelsPath :=   flag.String("models_path", "https://raw.githubusercontent.com/bbernhard/imagemonkey-models/master/models.json", 
 								"Path to the pre-trained models")
 	gzipCompress := flag.Bool("gzip_compress", true, "Use Gzip Compression")
 	localSentryDsn := flag.String("local_sentry_dsn", "http://sentry:sentry@127.0.0.1:8080/sentry", "local Sentry DSN")
 	labelsRepositoryUrl := flag.String("labels_repository_url", "https://github.com/bbernhard/imagemonkey-labels-test", "Labels Repository")
+	trendingLabelsRepositoryUrl := flag.String("trending_labels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Trending Labels Repository")
+	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
+	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -195,11 +202,6 @@ func main() {
 		    }
 		    return arr
         },
-		/*"executeTemplate": func(name string) string {
-    		buf := &bytes.Buffer{}
-    		_ = tmpl.ExecuteTemplate(buf, name, nil)
-    		return buf.String()
-		},*/
 	}
 
 	clientSecret := commons.MustGetEnv("X_CLIENT_SECRET")
@@ -236,6 +238,68 @@ func main() {
 		fmt.Printf("[Main] Couldn't read public backups: %s...terminating!", *publicBackupsPath)
 		log.Fatal(err)
 	}
+
+
+	//create redis pool
+	redisPool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", *redisAddress)
+
+		if err != nil {
+			log.Fatal("[Main] Couldn't dial redis: ", err.Error())
+		}
+
+		return c, err
+	}, *redisMaxConnections)
+	defer redisPool.Close()
+
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+
+	psc := redis.PubSubConn{Conn: redisConn}
+	defer psc.Close()
+
+	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"reloadlabels"})...); err != nil {
+        log.Fatal("Couldn't subscribe to topic 'reloadlabels': ", err.Error())
+    }
+
+    done := make(chan error, 1)
+	
+	go func() {
+        for {
+            switch n := psc.Receive().(type) {
+            case error:
+                done <- n
+                return
+            case redis.Message:
+				log.Info("[Main] Reloading labels")
+				err := labelRepository.Load()
+				if err != nil {
+					log.Error("Couldn't read label map: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+				words = labelRepository.GetWords()
+
+				err = metaLabels.Load()
+				if err != nil {
+					log.Error("Couldn't read metalabels map: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+
+				labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
+				if err != nil {
+					log.Error("Couldn't read label refinements: ", err.Error())
+					raven.CaptureError(err, nil)
+				}
+            case redis.Subscription:
+                switch n.Count {
+                case 0:
+                    // Return from the goroutine when all channels are unsubscribed.
+                    done <- nil
+                    return
+                }
+            }
+        }
+    }()
 
 	imageDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 
@@ -421,12 +485,10 @@ func main() {
 				"activeMenuNr": activeMenuNr,
 				"apiBaseUrl": apiBaseUrl,
 				"languages": languages.GetAllSupported(),
-				"labelSuggestions": commons.Pick(imageMonkeyDatabase.GetLabelSuggestions())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"isModerator" : isModerator,
-				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
-				"queryAttributes": commons.GetStaticQueryAttributes(),
+				"queryAttributes": parser.GetStaticQueryAttributes(parser.LabelView),
 			})
 		})
 
@@ -492,7 +554,6 @@ func main() {
 				"onlyOnce": onlyOnce,
 				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessorDetails("normal"))[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 			})
 		})
@@ -676,34 +737,11 @@ func main() {
 		})
 
 		router.GET("/profile/:username", func(c *gin.Context) {
-			username := c.Param("username")
+			ShowProfilePage(c, imageMonkeyDatabase, sessionCookieHandler, *apiBaseUrl)
+		})
 
-			userInfo, _ := imageMonkeyDatabase.GetUserInfo(username)
-			if userInfo.Name == "" {
-				c.String(404, "404 page not found")
-				return
-			}
-
-			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
-
-			var apiTokens []datastructures.APIToken
-			if sessionInformation.Username == userInfo.Name { //only fetch API tokens in case it's our own profile
-				apiTokens, err = imageMonkeyDatabase.GetApiTokens(username)
-				if err != nil {
-					c.String(500, "Internal server error - please try again later")
-					return
-				}
-			}
-
-			c.HTML(http.StatusOK, "profile.html", gin.H{
-				"title": "Profile",
-				"apiBaseUrl": apiBaseUrl,
-				"activeMenuNr": -1,
-				"statistics": commons.Pick(imageMonkeyDatabase.GetUserStatistics(username))[0],
-				"userInfo": userInfo,
-				"sessionInformation": sessionInformation,
-				"apiTokens": apiTokens,
-			})
+		router.GET("/profile/:username/:tab", func(c *gin.Context) {
+			ShowProfilePage(c, imageMonkeyDatabase, sessionCookieHandler, *apiBaseUrl)
 		})
 
 		router.GET("/libraries", func(c *gin.Context) {
@@ -759,6 +797,7 @@ func main() {
 				"title": "Label Repository",
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": -1,
+				"trendingLabelsRepositoryUrl": *trendingLabelsRepositoryUrl,
 				"labelsRepositoryUrl": *labelsRepositoryUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 			})
@@ -820,9 +859,6 @@ func main() {
 				"models": availableModels,
 			})
 		})
-
-
-		router.GET("/monitoring/", ReverseProxy(*netdataUrl, sessionCookieHandler, imageMonkeyDatabase))
 
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{

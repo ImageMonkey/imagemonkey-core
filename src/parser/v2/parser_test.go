@@ -314,7 +314,9 @@ func TestNotOperator6(t *testing.T) {
 
 func TestQueryAnnotationCoverage(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage=10%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -334,7 +336,9 @@ func TestQueryAnnotationCoverage(t *testing.T) {
 
 func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage = 10%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -344,14 +348,18 @@ func TestQueryAnnotationCoverageMultipleWhitespaces(t *testing.T) {
 
 func TestQueryWrongAnnotationCoverage(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.cov=1")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	_, err := queryParser.Parse()
 	notOk(t, err)
 }
 
 func TestQueryAnnotationCoverageOperator(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage>=1%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -361,7 +369,9 @@ func TestQueryAnnotationCoverageOperator(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator1(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage<=50%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -371,7 +381,9 @@ func TestQueryAnnotationCoverageOperator1(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator2(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage=70%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -381,7 +393,9 @@ func TestQueryAnnotationCoverageOperator2(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator3(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage<50%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -391,7 +405,9 @@ func TestQueryAnnotationCoverageOperator3(t *testing.T) {
 
 func TestQueryAnnotationCoverageOperator4(t *testing.T) {
 	queryParser := NewQueryParser("(~a) & b & annotation.coverage>50%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 2)
@@ -401,7 +417,9 @@ func TestQueryAnnotationCoverageOperator4(t *testing.T) {
 
 func TestQueryMultipleAnnotationCoverage(t *testing.T) {
 	queryParser := NewQueryParser("annotation.coverage > 10% & annotation.coverage < 10%")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 0)
@@ -410,7 +428,9 @@ func TestQueryMultipleAnnotationCoverage(t *testing.T) {
 
 func TestQueryImageWidth(t *testing.T) {
 	queryParser := NewQueryParser("image.width > 50px")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 0)
@@ -419,7 +439,9 @@ func TestQueryImageWidth(t *testing.T) {
 
 func TestQueryImageHeight(t *testing.T) {
 	queryParser := NewQueryParser("image.height > 50px")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 0)
@@ -428,7 +450,9 @@ func TestQueryImageHeight(t *testing.T) {
 
 func TestQueryImageHeightShouldFailDueToWrongFormat(t *testing.T) {
 	queryParser := NewQueryParser("image.height > xxpx")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	notOk(t, err)
 	equals(t, len(parseResult.QueryValues), 0)
@@ -436,7 +460,9 @@ func TestQueryImageHeightShouldFailDueToWrongFormat(t *testing.T) {
 
 func TestQueryImageWidthShouldFailDueToWrongFormat(t *testing.T) {
 	queryParser := NewQueryParser("image.width >= abcpx")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	notOk(t, err)
 	equals(t, len(parseResult.QueryValues), 0)
@@ -444,7 +470,9 @@ func TestQueryImageWidthShouldFailDueToWrongFormat(t *testing.T) {
 
 func TestComplexQuery4(t *testing.T) {
 	queryParser := NewQueryParser("apple & image.width > 15px & image.height > 15px")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
 	equals(t, len(parseResult.QueryValues), 1)
@@ -454,7 +482,9 @@ func TestComplexQuery4(t *testing.T) {
 
 func TestOrderByValidationFunctionality(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c !order by validation desc")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	queryParser.AllowOrderByValidation(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
@@ -467,7 +497,9 @@ func TestOrderByValidationFunctionality(t *testing.T) {
 
 func TestOrderByValidationFunctionalityShouldFailDueToInvalidQuery(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c !order by")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	queryParser.AllowOrderByValidation(true)
 	_, err := queryParser.Parse()
 	notOk(t, err)
@@ -475,7 +507,9 @@ func TestOrderByValidationFunctionalityShouldFailDueToInvalidQuery(t *testing.T)
 
 func TestOrderByValidationFunctionalityMissingDirectionShouldDefaultToDesc(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c !order by validation")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	queryParser.AllowOrderByValidation(true)
 	parseResult, err := queryParser.Parse()
 	ok(t, err)
@@ -488,7 +522,9 @@ func TestOrderByValidationFunctionalityMissingDirectionShouldDefaultToDesc(t *te
 
 func TestOrderByValidationFunctionalityShouldFailDueToInvalidQuery1(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c !order by validation !order by validation asc")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	queryParser.AllowOrderByValidation(true)
 	_, err := queryParser.Parse()
 	notOk(t, err)
@@ -496,9 +532,75 @@ func TestOrderByValidationFunctionalityShouldFailDueToInvalidQuery1(t *testing.T
 
 func TestOrderByValidationFunctionalityShouldFailBecauseDeactivated(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c !order by validation")
-	queryParser.AllowStaticQueryAttributes(true)
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
 	queryParser.AllowOrderByValidation(false)
 	_, err := queryParser.Parse()
 	notOk(t, err)
 }
 
+func TestQueryImageCollection(t *testing.T) {
+	queryParser := NewQueryParser("image.collection='abc'")
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowImageCollection(true)
+	queryParser.AllowOrderByValidation(false)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "image_collection = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"abc"})
+}
+
+func TestQueryImageCollection1(t *testing.T) {
+	queryParser := NewQueryParser("image.collection='abc with spaces'")
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowImageCollection(true)
+	queryParser.AllowOrderByValidation(false)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "image_collection = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"abc with spaces"})
+}
+
+func TestQueryImageCollectionShouldFailBecauseDeactivated(t *testing.T) {
+	queryParser := NewQueryParser("image.collection='abc'")
+	queryParser.AllowImageCollection(false)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestQueryImageUnlabeledShouldFailBecauseDeactivated(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='true'")
+	queryParser.AllowImageHasLabels(false)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestQueryImageUnlabeledShouldFailBecauseInvalidValue(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='notexisting'")
+	queryParser.AllowImageHasLabels(true)
+	_, err := queryParser.Parse()
+	notOk(t, err)
+}
+
+func TestQueryImageUnlabeledShouldSucceedTrue(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='true'")
+	queryParser.AllowImageHasLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "is_unlabeled = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"true"})
+}
+
+func TestQueryImageUnlabeledShouldSucceedFalse(t *testing.T) {
+	queryParser := NewQueryParser("image.unlabeled='false'")
+	queryParser.AllowImageHasLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "is_unlabeled = $1")
+	equals(t, parseResult.QueryValues, []interface{}{"false"})
+}

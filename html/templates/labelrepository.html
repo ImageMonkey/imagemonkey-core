@@ -108,6 +108,7 @@
 
     function populateLabelRepositoryTable(data) {
       $("#loadingIndicator").show();
+	  $("#labelRepositoryTable").hide();
 
 	  {{ if eq .sessionInformation.Username "" }}
 	  $("#authenticationNeededInfoMessage").show(); 
@@ -116,7 +117,7 @@
       for(var i = 0; i < data.length; i++) {
 		var githubIssueUrl = '';
 		if(data[i].github.issue.id !== -1)
-			githubIssueUrl = ('<a href="' + {{ .labelsRepositoryUrl }} + 
+			githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
 								'/issues/' + data[i].github.issue.id + '">' +
 								'#' +  data[i].github.issue.id + '</a>');
 		var githubBranchUrl = ('<a href="' + {{ .labelsRepositoryUrl }} + 
@@ -138,13 +139,16 @@
 		var escapedTrendingLabelDescription = escapeHtml(data[i].label.description);
 		var escapedTrendingLabelPlural = escapeHtml(data[i].label.plural);
 		var escapedTrendingLabelRenameTo = escapeHtml(data[i].rename_to);
-		if(status === '') {
+		if(data[i].github.issue.closed) {
+			status = 'closed';
+			button = '';
+		} else if(status === '') {
 			status = 'open';	
 			button = ('<div class="ui fluid ' + disabledStr 
 						+ 'button" data-label="' + escapedTrendingLabel 
-						+ '" data-label-plural="' + escapedTrendingLabel + 's' 
+						+ '" data-label-plural="' + escapedTrendingLabel.trim() + 's' 
 						+ '" data-label-description="' + '' 
-						+ '" data-label-renameto="' + escapedTrendingLabel
+						+ '" data-label-renameto="' + escapedTrendingLabel.trim()
 						+ '" onclick="onAddTrendingLabel(this);">Add</div>');
 		} else if(status === 'waiting for moderator approval') {
 			var labelType = data[i].label.type;
@@ -191,6 +195,7 @@
       }
       $("#labelRepositoryTable").tablesort();
       $("#loadingIndicator").hide();
+	  $("#labelRepositoryTable").show();
     }
     $(document).ready(function() {
       imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");

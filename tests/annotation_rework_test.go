@@ -35,16 +35,28 @@ func testGetExistingAnnotationsForAnnotationId(t *testing.T, token string, annot
 	equals(t, equal, true)
 }
 
-func testAnnotationRework(t *testing.T, annotationId string, annotations string) {
+func testAnnotationRework(t *testing.T, annotationId string, annotations string, token string) {
 	type Annotation struct {
 		Annotations []json.RawMessage `json:"annotations"`
 	}
 
-	oldAnnotationRevision, err := db.GetAnnotationRevision(annotationId)
+	var oldAnnotationRevision int32 = 0
+	var oldAnnotationDataIds []int64 
+	isSuggestion, err := db.AnnotationUuidIsASuggestion(annotationId)
 	ok(t, err)
+	if isSuggestion {
+		oldAnnotationRevision, err = db.GetAnnotationSuggestionRevision(annotationId)
+		ok(t, err)
 
-	oldAnnotationDataIds, err := db.GetAnnotationDataIds(annotationId)
-	ok(t, err)
+		oldAnnotationDataIds, err = db.GetAnnotationSuggestionDataIds(annotationId)
+		ok(t, err)
+	} else {
+		oldAnnotationRevision, err = db.GetAnnotationRevision(annotationId)
+		ok(t, err)
+
+		oldAnnotationDataIds, err = db.GetAnnotationDataIds(annotationId)
+		ok(t, err)
+	}
 
 	annotationEntry := Annotation{}
 
@@ -52,19 +64,34 @@ func testAnnotationRework(t *testing.T, annotationId string, annotations string)
 	ok(t, err)
 
 	url := BASE_URL + API_VERSION + "/annotation/" + annotationId
-	resp, err := resty.R().
+	req := resty.R().
 					SetHeader("Content-Type", "application/json").
-					SetBody(annotationEntry).
-					Put(url)
+					SetBody(annotationEntry)
+
+	if token != "" {
+		req.SetAuthToken(token)
+	}
+
+	resp, err := req.Put(url)
 	ok(t, err)
 
 	equals(t, resp.StatusCode(), 201)
 
-	newAnnotationRevision, err := db.GetAnnotationRevision(annotationId)
-	ok(t, err)
+	var newAnnotationRevision int32 = 0
+	var newAnnotationDataIds []int64
+	if isSuggestion {
+		newAnnotationRevision, err = db.GetAnnotationSuggestionRevision(annotationId)
+		ok(t, err)
 
-	newAnnotationDataIds, err := db.GetOldAnnotationDataIds(annotationId, oldAnnotationRevision)
-	ok(t, err)
+		newAnnotationDataIds, err = db.GetOldAnnotationSuggestionDataIds(annotationId, oldAnnotationRevision)
+		ok(t, err)
+	} else {
+		newAnnotationRevision, err = db.GetAnnotationRevision(annotationId)
+		ok(t, err)
+
+		newAnnotationDataIds, err = db.GetOldAnnotationDataIds(annotationId, oldAnnotationRevision)
+		ok(t, err)
+	}
 
 	equals(t, newAnnotationRevision, (oldAnnotationRevision + 1))
 
@@ -77,7 +104,7 @@ func testRandomAnnotationRework(t *testing.T, num int, annotations string) {
 		annotationId, err := db.GetRandomAnnotationId()
 		ok(t, err)
 
-		testAnnotationRework(t, annotationId, annotations)
+		testAnnotationRework(t, annotationId, annotations, "")
 	}
 }
 

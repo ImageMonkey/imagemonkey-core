@@ -160,7 +160,6 @@
       var numOfTableEntries = {{ len .apiTokens }};
     {{ end }}
 
-
     if(ownProfile) {
       var formValidationRules = {
         fields: {
@@ -223,12 +222,6 @@
     });
 
     $('#userProfileMenu').on('click', '.item', function() {
-      if(!$(this).hasClass('dropdown')) {
-        $(this)
-          .addClass('active')
-          .siblings('.item')
-            .removeClass('active');
-      }
       changeTab($(this).attr("id"));
     });
 
@@ -258,6 +251,11 @@
     }
 
     function changeTab(id) {
+      $("#"+id)
+          .addClass('active')
+          .siblings('.item')
+            .removeClass('active');
+
       if(id === "userProfileMenuOverviewTab") {
         $("#statisticsTabContent").show();
         $("#apiTokensTabContent").hide();
@@ -404,6 +402,14 @@
 
     var numOfUserValidationsChartCtx = document.getElementById("numOfUserValidationsChart").getContext("2d");
     window.numOfUserValidations = new Chart(numOfUserValidationsChartCtx, numOfUserValidationsChartConfig);
+
+	{{ if eq .tab "tokens" }}
+	changeTab("userProfileMenuApiTokensTab");
+	{{ end }}
+
+	{{ if eq .tab "imagecollections" }}
+	changeTab("userProfileMenuImageCollectionsTab");
+	{{ end }}
 
   });
   </script>

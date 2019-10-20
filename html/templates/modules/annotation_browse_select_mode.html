@@ -187,7 +187,7 @@
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    getUnannotatedImage(validationId);
+    annotationView.loadUnannotatedImage(validationId);
   }
 
   function onImageGridCanvasClicked(data) {
@@ -196,7 +196,7 @@
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    getAnnotatedImage(annotationId, -1);
+    annotationView.loadAnnotatedImage(annotationId, -1);
   }
 
   function newImageItem(id, url, validationId, top, left, width, height){
@@ -243,7 +243,7 @@
     var item;
     var currentDateTime = new Date().getTime();
     for(var i = from; i < (from + n); i++){
-      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
+      var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"], "{{ .annotationMode }}", labelAccessorsLookupTable) 
                                   + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
                                   Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
                                   "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
@@ -303,12 +303,9 @@
     $("#label").attr("label", "");
     $("#sublabel").attr("sublabel", "");
 
+    imageMonkeyApi.setToken(getCookie("imagemonkey"));
+
     var availableLabels = [];
-    var labelAccessors = {{ .labelAccessors }};
-    for(var i = 0; i < labelAccessors.length; i++) {
-      availableLabels.push(labelAccessors[i].accessor);
-      labelAccessorsLookupTable[labelAccessors[i].accessor] = labelAccessors[i].parent_accessor;
-    }
 
     var staticQueryAttributes = {{ .queryAttributes }};
     for(var key in staticQueryAttributes) {
@@ -316,6 +313,28 @@
         availableLabels.push(staticQueryAttributes[key].name);
       }
     }
+   
+    var promises = [imageMonkeyApi.getLabelAccessors(true)];
+    {{ if ne .sessionInformation.Username "" }}
+    promises.push(imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }}));
+    {{ end }}
+    
+    Promise.all(promises)
+      .then(function(data) {
+        for(var i = 0; i < data[0].length; i++) {
+          availableLabels.push(data[0][i].accessor);
+          labelAccessorsLookupTable[data[0][i].accessor] = data[0][i].parent_accessor;
+        }
+			
+        if(data.length > 1) {
+          for(var i = 0; i < data[1].length; i++) {
+            availableLabels.push("image.collection='" + escapeHtml(data[1][i].name) + "'");	
+          }
+        }
+        $("#browseAnnotationsGoButton").removeClass("disabled");
+      }).catch(function(e) {
+        Sentry.captureException(e);
+      });
 
     $('#annotatedStatisticsButton').click(function(e){
       $('#annotatedStatisticsPopup').modal('show');
@@ -353,7 +372,7 @@
         this.value = terms.join(" ");
         return false;
       }
-    });
+    });	
 
     getAnnotatedStatistics();
   });
@@ -394,7 +413,7 @@
       {{ end }}
 
 
-      <div class="ui primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui disabled primary submit button" id="browseAnnotationsGoButton" onclick="populateImageGrid();">Go</div>
       <div class="ui right aligned disabled button" id="annotatedStatisticsButton">
         <i class="chart bar icon"></i>
         Statistics

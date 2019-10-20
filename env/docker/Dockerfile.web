@@ -1,4 +1,4 @@
-FROM golang:1.12.5-stretch
+FROM bbernhard/imagemonkey-buildbase:latest
 
 ENV SENTRY_DSN=
 ENV X_CLIENT_ID=
@@ -9,15 +9,21 @@ ENV PLAYGROUND_BASE_URL=
 ENV LOCAL_SENTRY_DSN=
 ENV USE_SENTRY=false
 ENV IMAGEMONKEY_DB_CONNECTION_STRING=
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      sudo lsb-release
+ENV REDIS_ADDRESS=:6379
+ENV DB_HOST=127.0.0.1
+ENV DB_PORT=5433
 
 RUN mkdir -p /home/go/bin
 ENV GOPATH=/home/go
 ENV GOBIN=/home/go/bin
 
 RUN mkdir -p /home/imagemonkey
+
+RUN apt-get update && apt-get install -y pkg-config postgresql-client-9.6 --no-install-recommends \
+	# until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
+	&& curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash - \ 
+    && rm -rf /var/lib/apt/lists/* 
+
 
 COPY src/web.go /tmp/src/web.go
 COPY src/auth.go /tmp/src/auth.go
@@ -33,16 +39,6 @@ COPY html /home/imagemonkey/html
 COPY js /home/imagemonkey/js
 COPY css /home/imagemonkey/css
 COPY img /home/imagemonkey/img
-
-# until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
-RUN curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash -
-
-RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
-
-RUN cd /tmp/src \
-	&& go get -u -d gocv.io/x/gocv \
-	&& cd /home/go/pkg/mod/gocv.io/x/gocv\@v0.20.0/ \
-	&& make install
 	
 RUN cd /tmp/src/ \
 	&& go get -d
@@ -54,7 +50,7 @@ RUN mkdir -p /home/imagemonkey/bin/ \
 
 WORKDIR /home/imagemonkey/bin/
 
-RUN echo -e "#!/bin/bash\n\n./web -api_base_url=$API_BASE_URL -playground_base_url=$PLAYGROUND_BASE_URL -use_sentry=$USE_SENTRY -local_sentry_dsn=$LOCAL_SENTRY_DSN -donations_dir=/home/imagemonkey/data/donations/ -unverified_donations_dir=/home/imagemonkey/data/unverified_donations/ -image_quarantine_dir=/home/imagemonkey/data/quarantine/" > run_web.sh \
-	&& chmod u+rx ./run_web.sh
+COPY env/docker/run_web.sh /home/imagemonkey/bin/run_web.sh
+RUN chmod u+rx ./run_web.sh
 
 ENTRYPOINT ["./run_web.sh"]

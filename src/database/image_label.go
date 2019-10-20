@@ -3,7 +3,6 @@ package imagemonkeydb
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
@@ -101,7 +100,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 
                    SELECT ils.image_id as image_id, s.name as label, 
                    '' as parent_label, false as unlocked, ils.annotatable as annotatable,
-                   '' as label_uuid, '' as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
+                   s.uuid::text as label_uuid, ils.uuid::text as validation_uuid, 0 as num_of_valid, 0 as num_of_invalid
                    FROM image_label_suggestion ils
                    JOIN label_suggestion s on ils.label_suggestion_id = s.id`
 		}
@@ -310,7 +309,7 @@ func _addLabelsAndLabelSuggestionsToImageInTransaction(tx *sql.Tx, apiUser datas
 			} else {
 				tx.Rollback()
 				log.Debug("you need to be authenticated")
-				return insertedValidationIds, errors.New("you need to be authenticated to perform this action")
+				return insertedValidationIds, &AuthenticationRequiredError{Description: "you need to be authenticated to perform this action"}
 			}
 		} else {
 			knownLabels = append(knownLabels, item)
@@ -342,8 +341,8 @@ func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, im
 	if !rows.Next() { //label does not exist yet, insert it
 		rows.Close()
 
-		err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by) 
-                            SELECT $1, id FROM account a WHERE a.name = $2 
+		err := tx.QueryRow(`INSERT INTO label_suggestion(name, proposed_by, uuid) 
+                            SELECT $1, id, uuid_generate_v4() FROM account a WHERE a.name = $2 
                             ON CONFLICT (name) DO NOTHING RETURNING id`, label, apiUser.Name).Scan(&labelSuggestionId)
 		if err != nil {
 			tx.Rollback()
@@ -362,8 +361,9 @@ func _addLabelSuggestionToImage(apiUser datastructures.APIUser, label string, im
 		}
 	}
 
-	_, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period) 
-                        SELECT $1, id, $3, $4, '["now()",]'::tstzrange FROM image WHERE key = $2
+	_, err = tx.Exec(`INSERT INTO image_label_suggestion (fingerprint_of_last_modification, image_id, label_suggestion_id, annotatable, sys_period, uuid) 
+                        SELECT $1, id, $3, $4, '["now()",]'::tstzrange, uuid_generate_v4() 
+						FROM image WHERE key = $2
                         ON CONFLICT(image_id, label_suggestion_id) DO NOTHING`, apiUser.ClientFingerprint, imageId, labelSuggestionId, annotatable)
 	if err != nil {
 		tx.Rollback()
@@ -501,8 +501,10 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 		shuffleStr = "ORDER BY RANDOM()"
 	}
 
+	q2 := "acc.name is null"
 	includeOwnImageDonations := ""
 	if apiUser.Name != "" {
+		q2 = fmt.Sprintf(`acc.name = $%d`, len(parseResult.QueryValues) + 1)
 		includeOwnImageDonations = fmt.Sprintf(`OR (
                                                 EXISTS 
                                                     (
@@ -523,27 +525,28 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 	q := fmt.Sprintf(`WITH 
                         image_productive_labels AS (
                                            SELECT i.id as image_id, a.accessor as accessor, a.label_id as label_id
-                                                                FROM image_validation v 
-                                                                JOIN label_accessor a ON v.label_id = a.label_id
-                                                                JOIN image i ON v.image_id = i.id
+                                                                FROM image i
+                                                                LEFT JOIN image_validation v ON v.image_id = i.id
+                                                                LEFT JOIN label_accessor a ON v.label_id = a.label_id
                                                                 WHERE (i.unlocked = true %s)
                         ),image_trending_labels AS (
 
                                                             SELECT i.id as image_id, s.name as label
-                                                                FROM image_label_suggestion ils
-                                                                JOIN label_suggestion s on ils.label_suggestion_id = s.id
-                                                                JOIN image i ON ils.image_id = i.id
+                                                                FROM image i
+                                                                LEFT JOIN image_label_suggestion ils ON ils.image_id = i.id
+                                                                LEFT JOIN label_suggestion s on ils.label_suggestion_id = s.id
                                                                 WHERE (i.unlocked = true %s)
                         ),
                         image_ids AS (
-                            SELECT image_id, annotated_percentage, image_width, image_height, image_key, image_unlocked
+                            SELECT image_id, annotated_percentage, image_width, image_height, image_key, image_unlocked, image_collection
                             FROM
                             (
-                                SELECT image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
-                                i.unlocked as image_unlocked, i.key as image_key
+                                SELECT q2.image_id as image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
+                                i.unlocked as image_unlocked, i.key as image_key, coll.image_collection as image_collection,
+                                CASE WHEN array_length(COALESCE(accessors, ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled
                                 FROM
                                 (
-                                    SELECT q1.image_id, array_agg(label)::text[] as accessors, 
+                                    SELECT q1.image_id, (array_agg(label) FILTER (WHERE label is not null))::text[] as accessors, 
                                     COALESCE(c.annotated_percentage, 0) as annotated_percentage
                                     FROM 
                                     (
@@ -555,10 +558,18 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                         SELECT image_id, label as label
                                         FROM image_trending_labels t
                                     ) q1
-                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id
+                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id	
                                     GROUP BY q1.image_id, c.annotated_percentage
                                 ) q2
                                 JOIN image i ON i.id = q2.image_id
+                                LEFT JOIN 
+                                (
+                                    SELECT ui.name as image_collection, c.image_id as image_id
+                                    FROM image_collection_image c
+                                    JOIN user_image_collection ui ON c.user_image_collection_id = ui.id
+                                    JOIN account acc ON acc.id = ui.account_id
+                                    WHERE %s
+                                ) coll ON coll.image_id = i.id
                             ) q
                             WHERE %s
                         ),
@@ -574,8 +585,9 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 
 
                         SELECT image_key, image_width, image_height, image_unlocked,
-                        json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels)),
-                        coalesce(imgdsc.descriptions, '[]'::jsonb)
+                        COALESCE(json_agg(json_build_object('name', q4.label, 'num_yes', q4.num_of_valid, 'num_no', q4.num_of_invalid, 'sublabels', q4.sublabels))
+                        FILTER (WHERE q4.label is not null), '[]'::json),
+						COALESCE(imgdsc.descriptions, '[]'::jsonb)
                         FROM
                         (
                             SELECT q3.image_id, q3.label, q3.num_of_valid, q3.num_of_invalid,
@@ -591,10 +603,10 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                        ii.image_unlocked as image_unlocked
                                 FROM
                                 image_ids ii
-                                JOIN image_productive_labels p on p.image_id = ii.image_id
-                                JOIN label l on l.id = p.label_id
+                                LEFT JOIN image_productive_labels p on p.image_id = ii.image_id
+                                LEFT JOIN label l on l.id = p.label_id
                                 LEFT JOIN label pl on pl.id = l.parent_id
-                                JOIN image_validation v ON ii.image_id = v.image_id AND v.label_id = l.id
+                                LEFT JOIN image_validation v ON ii.image_id = v.image_id AND v.label_id = l.id
 
                                 UNION ALL
 
@@ -603,15 +615,15 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                 ii.image_key as image_key, ii.image_width as image_width, ii.image_height as image_height,
                                 ii.image_unlocked as image_unlocked
                                 FROM image_ids ii
-                                JOIN image_label_suggestion ils on ii.image_id = ils.image_id
-                                JOIN label_suggestion s on ils.label_suggestion_id = s.id
+                                LEFT JOIN image_label_suggestion ils on ii.image_id = ils.image_id
+                                LEFT JOIN label_suggestion s on ils.label_suggestion_id = s.id
                             ) q3
                             GROUP BY image_id, image_key, image_width, image_height, image_unlocked, label, num_of_valid, num_of_invalid
                         ) q4
                         LEFT JOIN img_descriptions imgdsc ON imgdsc.image_id = q4.image_id
                         GROUP BY image_key, image_width, image_height, image_unlocked, imgdsc.descriptions
                         %s`,
-		includeOwnImageDonations, includeOwnImageDonations, parseResult.Query, shuffleStr)
+		includeOwnImageDonations, includeOwnImageDonations, q2, parseResult.Query, shuffleStr)
 
 	var rows *sql.Rows
 	if apiUser.Name != "" {

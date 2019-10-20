@@ -4,7 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"flag"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"time"
 	"database/sql"
 	_ "github.com/lib/pq"

@@ -141,16 +141,36 @@ func (p *LabelsRepository) MergeRemoteBranchIntoMaster(branchName string) error 
 
 	client := github.NewClient(tc)
 
-	//create a new comment
-	newPullRequest := &github.NewPullRequest{
-		Title: github.String("test"),
-		Head:  github.String(branchName),
-		Base:  github.String("master"),
-	}
-
-	pullRequest, _, err := client.PullRequests.Create(ctx, p.projectOwner, p.repositoryName, newPullRequest)
+	openPullRequests, _, err := client.PullRequests.List(ctx, p.projectOwner, p.repositoryName, 
+														&github.PullRequestListOptions{State: "open"})
 	if err != nil {
 		return err
+	}
+
+	var pullRequest *github.PullRequest = nil
+	for _, openPullRequest := range openPullRequests {
+		if *openPullRequest.Head.Label == p.projectOwner + ":" + branchName {
+			pullRequest = openPullRequest
+			break
+		}
+	}
+
+	if pullRequest == nil {
+		//create a new comment
+		newPullRequest := &github.NewPullRequest{
+			Title: github.String("add label"),
+			Head:  github.String(branchName),
+			Base:  github.String("master"),
+		}
+
+		pullRequest, _, err = client.PullRequests.Create(ctx, p.projectOwner, p.repositoryName, newPullRequest)
+		if err != nil {
+			return err
+		}
+	}
+
+	if pullRequest == nil {
+		return errors.New("PullRequest is nil")
 	}
 
 	_, _, err = client.PullRequests.Merge(ctx, p.projectOwner, p.repositoryName, *pullRequest.Number, "merged", &github.PullRequestOptions{})

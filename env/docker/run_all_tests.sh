@@ -42,6 +42,15 @@ if [ $retVal -ne 0 ]; then
 	exit $retVal
 fi
 
+echo "Starting UI tests"
+cd ui/
+python3 -m unittest
+retVal=$?
+if [ $retVal -ne 0 ]; then
+	echo "Aborting due to error"
+	exit $retVal
+fi
+
 echo "All tests successful"
 
 exit 0

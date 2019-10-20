@@ -20,6 +20,16 @@ func NewCustomErrorListener() *CustomErrorListener {
     } 
 }
 
+func trimQuotes(s string) string {
+    if len(s) >= 2 {
+        if c := s[len(s)-1]; s[0] == c && (c == '"' || c == '\'') {
+            return s[1 : len(s)-1]
+        }
+    }
+    return s
+}
+
+
 func underlineError(input, msg string, offendingSymbolStart int, offendingSymbolEnd int, column int) string {
 	out := input + "\n"
 	for i := 0; i < column; i++ {
@@ -42,8 +52,12 @@ func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offending
 type imagemonkeyQueryLangListener struct {
 	*BaseImagemonkeyQueryLangListener
 	pos int
-	allowStaticQueryAttributes bool
+	allowImageHeight bool
+	allowImageWidth bool
+	allowAnnotationCoverage bool
 	allowOrderByValidation bool
+	allowImageCollection bool
+	allowImageHasLabels bool
 	numOfLabels int
 	version int
 	typeOfQueryKnown bool
@@ -162,7 +176,7 @@ func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *Annot
 		if _, err := strconv.Atoi(annotationCoverageVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowStaticQueryAttributes {
+				if l.allowAnnotationCoverage {
 					operator := tokens[0].GetText()
 					val := "q.annotated_percentage" + operator + annotationCoverageVal
 
@@ -185,7 +199,7 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 		if _, err := strconv.Atoi(imageWidthVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowStaticQueryAttributes {
+				if l.allowImageWidth {
 					operator := tokens[0].GetText()
 					val := "image_width" + operator + imageWidthVal
 
@@ -209,7 +223,7 @@ func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightE
 		if _, err := strconv.Atoi(imageHeightVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowStaticQueryAttributes {
+				if l.allowImageHeight {
 					operator := tokens[0].GetText()
 					val := "q.image_height" + operator + imageHeightVal
 
@@ -309,9 +323,33 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 		beforePart := strings.TrimSpace(assignmentVal[: equalSignPos])
 		afterPart := strings.TrimSpace(assignmentVal[equalSignPos + 1 :])
 
-		assignmentVal = beforePart + "=" + afterPart
-		subval := "a.accessor = $" + strconv.Itoa(l.pos)
+		subval := ""
+		if beforePart == "image.collection" {
+			if !l.allowImageCollection {
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				return
+			}
+			assignmentVal = trimQuotes(afterPart)
+			val = "image_collection = $" + strconv.Itoa(l.pos) 
+		} else if beforePart == "image.unlabeled" {
+			if !l.allowImageHasLabels {
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				return
+			}
 
+			assignmentVal = trimQuotes(afterPart)
+			if assignmentVal != "true" && assignmentVal != "false" {
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				return
+			}
+			val = "is_unlabeled = $" + strconv.Itoa(l.pos)
+		} else {
+			assignmentVal = beforePart + "=" + afterPart
+			subval = "a.accessor = $" + strconv.Itoa(l.pos)
+		}
 		stackEntry := ParseResult{Query: val}
 		stackEntry.QueryValues = append(stackEntry.QueryValues, assignmentVal)
 		stackEntry.Subquery = subval
