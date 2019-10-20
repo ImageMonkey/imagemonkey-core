@@ -15,3 +15,11 @@ type InvalidTrendingLabelError struct {
 func (e *InvalidTrendingLabelError) Error() string {
 	return e.Description
 }
+
+type AuthenticationRequiredError struct {
+	Description string
+}
+
+func (e *AuthenticationRequiredError) Error() string {
+	return e.Description
+}

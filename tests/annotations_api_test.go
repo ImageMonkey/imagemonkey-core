@@ -314,11 +314,11 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	ok(t, err)
 
 	//give first image the labels cat and dog
-	testLabelImage(t, imageIds[0], "dog", "", "")
-	testLabelImage(t, imageIds[0], "cat", "", "")
+	testLabelImage(t, imageIds[0], "dog", "", "", 200)
+	testLabelImage(t, imageIds[0], "cat", "", "", 200)
 
 	//add label 'cat' to second image
-	testLabelImage(t, imageIds[1], "cat", "", "")
+	testLabelImage(t, imageIds[1], "cat", "", "", 200)
 
 	testBrowseAnnotation(t, "cat&dog", 2, "")
 	testBrowseAnnotation(t, "cat|dog", 3, "")
@@ -328,15 +328,18 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	testAnnotate(t, imageIds[0], "dog", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
-	//now we expect just one result 
-	testBrowseAnnotation(t, "cat&dog", 1, "")
+	//dog is already annotated, so cat&dog should return 0
+	testBrowseAnnotation(t, "cat&dog", 0, "")
 	testBrowseAnnotation(t, "cat", 2, "")
+
+	//but dog|cat should return 2
+	testBrowseAnnotation(t, "cat|dog", 2, "")
 
 	//annotate image with label cat
 	testAnnotate(t, imageIds[0], "cat", "", 
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
-	//now we should get no result
+	//dog&cat should still return 0
 	testBrowseAnnotation(t, "cat&dog", 0, "")
 	testBrowseAnnotation(t, "dog", 0, "")
 
@@ -344,6 +347,86 @@ func TestBrowseAnnotationQuery(t *testing.T) {
 	testBrowseAnnotation(t, "cat", 1, "")
 
 }
+
+func TestBrowseAnnotationQueryNonProductiveLabelsShouldFailDueToNotAuthenticated(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	//give first image the label 'newlabel'
+	testLabelImage(t, imageIds[0], "newlabel", "", "", 401)
+
+	testBrowseAnnotation(t, "newlabel", 0, "")
+}
+
+func TestBrowseAnnotationQueryNonProductiveLabelsNoResultsAsNotAuthenticated(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	//give first image the label 'newlabel'
+	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token, 200)
+	
+	testBrowseAnnotation(t, "newlabel", 0, "")
+}
+
+func TestBrowseAnnotationQueryNonProductiveLabelsAnnotationFailsDueToNotAuthenticated(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	//give first image the label 'newlabel'
+	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token, 200)
+	
+	testBrowseAnnotation(t, "newlabel", 1, token)
+
+	testAnnotate(t, imageIds[0], "newlabel", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 401)
+
+	testBrowseAnnotation(t, "newlabel", 1, token)
+}
+
+func TestBrowseAnnotationQueryNonProductiveLabels(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	//give first image the label 'newlabel'
+	testSuggestLabelForImage(t, imageIds[0], "newlabel", true, token, 200)
+	
+	testBrowseAnnotation(t, "newlabel", 1, token)
+
+	testAnnotate(t, imageIds[0], "newlabel", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+
+	testBrowseAnnotation(t, "newlabel", 0, token)
+}
+
 
 func TestBrowseAnnotationQueryLockedButOwnDonation(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
@@ -432,7 +515,7 @@ func TestBrowseAnnotationQueryAnnotationCoverage(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "", "")
+	testLabelImage(t, imageId, "orange", "", "", 200)
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
@@ -451,7 +534,7 @@ func TestBrowseAnnotationQueryImageDimensions(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "", "")
+	testLabelImage(t, imageId, "orange", "", "", 200)
 
 	testAnnotate(t, imageId, "apple", "", 
 					`[{"top":60,"left":145,"type":"rect","angle":0,"width":836,"height":660,"stroke":{"color":"red","width":5}}]`, "", 201)
@@ -576,7 +659,7 @@ func TestBrowseAnnotationBelongingToImageCollection2(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "", "")
+	testLabelImage(t, imageId, "orange", "", "", 200)
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 2, token)
 }
@@ -596,7 +679,7 @@ func TestBrowseAnnotationBelongingToImageCollection3(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "", "")
+	testLabelImage(t, imageId, "orange", "", "", 200)
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 2, token)
 }
@@ -619,7 +702,7 @@ func TestBrowseAnnotationBelongingToOtherImageCollection(t *testing.T) {
 	imageId, err := db.GetLatestDonatedImageId()
 	ok(t, err)
 
-	testLabelImage(t, imageId, "orange", "", "")
+	testLabelImage(t, imageId, "orange", "", "", 200)
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 0, token2)
 }

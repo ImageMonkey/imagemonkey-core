@@ -62,7 +62,8 @@ func (p *ImageMonkeyDatabase) GetMostPopularLabels(limit int32) ([]string, error
 }
 
 func (p *ImageMonkeyDatabase) AddLabelSuggestion(suggestedLabel string) error {
-     _, err := p.db.Exec(`INSERT INTO label_suggestion(name) VALUES($1)
+     _, err := p.db.Exec(`INSERT INTO label_suggestion(name, uuid)
+	 						SELECT $1, uuid_generate_v4()
                        ON CONFLICT (name) DO NOTHING`, suggestedLabel)
     if err != nil {
         log.Debug("[Add label suggestion] Couldn't insert: ", err.Error())
