@@ -168,4 +168,26 @@ class TestUnifiedMode(unittest.TestCase):
         unified_mode_view.select_image(0)
         unified_mode_view.label("test", False)
  
-    
+    def test_blacklist_in_unified_mode_fails_due_to_not_authenticated(self):
+        self._prepare_for_test()
+
+        self._client.label_image(["apple"])
+        self._client.logout()
+
+        unified_mode_view = self._client.unified_mode()
+        unified_mode_view.query("apple", 1)
+        unified_mode_view.select_image(0)
+        unified_mode_view.blacklist_annotation(False)
+
+    def test_blacklist_in_unified_mode_succeeds(self):
+        self._prepare_for_test()
+
+        self._client.label_image(["apple"])
+
+        unified_mode_view = self._client.unified_mode()
+        unified_mode_view.query("apple", 1)
+        unified_mode_view.select_image(0)
+        unified_mode_view.blacklist_annotation(True)
+
+        unified_mode_view = self._client.unified_mode()
+        unified_mode_view.query("apple", 0)

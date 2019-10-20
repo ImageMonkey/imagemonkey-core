@@ -124,6 +124,28 @@ class UnifiedModeView(object):
         else:
             raise Exception("error: unknown action")
 
+    @check_for_errors
+    def blacklist_annotation(self, should_succeed):
+        self._driver.execute_script('$("#blacklistButton").trigger("click");') 
+        
+        if should_succeed:
+            wait = WebDriverWait(self._driver, 10)
+            locator = (By.ID, "blacklistAnnotationUsageDlg")
+            wait.until(EC.visibility_of_element_located(locator))
+            
+            self._driver.find_element_by_id("blacklistAnnotationUsageDlgCancelButton").click()
+
+            self._driver.execute_script('$("#blacklistButton").trigger("click");')
+                     
+            wait = WebDriverWait(self._driver, 10)
+            locator = (By.ID, "imageGrid")
+            wait.until(EC.visibility_of_element_located(locator))
+
+        else:             
+            wait = WebDriverWait(self._driver, 10)
+            locator = (By.ID, "warningMsgText")
+            wait.until(EC.visibility_of_element_located(locator))
+
     def check_revisions(self, expected_num):
         elem = self._driver.find_element_by_id("annotationRevisionsDropdownMenu") 
         children = elem.find_elements_by_tag_name("div")

@@ -1215,7 +1215,7 @@ var AnnotationView = (function() {
 
 
         $("#rectMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
                 inst.annotator.disableSelectMoveMode();
                 inst.annotator.setShape("Rectangle");
@@ -1228,7 +1228,7 @@ var AnnotationView = (function() {
         });
 
         $("#circleMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
                 inst.annotator.disableSelectMoveMode();
                 inst.annotator.setShape("Circle");
@@ -1245,7 +1245,7 @@ var AnnotationView = (function() {
         });
 
         $("#polygonMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
                 inst.annotator.disableSelectMoveMode();
                 inst.annotator.setShape("Polygon");
@@ -1254,7 +1254,7 @@ var AnnotationView = (function() {
         });
 
         $("#selectMoveMenutItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
                 inst.annotator.setShape("");
                 inst.annotator.enableSelectMoveMode();
@@ -1265,7 +1265,7 @@ var AnnotationView = (function() {
 
 
         $("#freeDrawingMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
                 inst.annotator.disableSelectMoveMode();
                 inst.annotator.setShape("FreeDrawing");
@@ -1407,7 +1407,7 @@ var AnnotationView = (function() {
         }, "keyup");
 
         $("#panMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.enablePanMode();
                 inst.annotator.disableSelectMoveMode();
                 inst.annotator.setShape("");
@@ -1416,11 +1416,13 @@ var AnnotationView = (function() {
         });
 
         $("#blockSelectMenuItem").click(function(e) {
-            inst.annotator.disablePanMode();
-            inst.annotator.disableSelectMoveMode();
-            inst.annotator.setShape("Blocks");
-            inst.changeMenuItem("BlockSelection");
-            inst.annotator.toggleGrid();
+            if (inst.annotator !== undefined && inst.annotator) {
+                inst.annotator.disablePanMode();
+                inst.annotator.disableSelectMoveMode();
+                inst.annotator.setShape("Blocks");
+                inst.changeMenuItem("BlockSelection");
+                inst.annotator.toggleGrid();
+            }
         });
 
         $("#deletedObjectsYesButton").click(function(e) {
@@ -1430,7 +1432,7 @@ var AnnotationView = (function() {
         });
 
         $("#smartAnnotationFgMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.changeMenuItem("ForegroundSelection");
                 inst.annotator.disablePanMode();
                 inst.annotator.disableSelectMoveMode();
@@ -1441,7 +1443,7 @@ var AnnotationView = (function() {
         });
 
         $("#smartAnnotationBgMenuItem").click(function(e) {
-            if (inst.annotator !== undefined) {
+            if (inst.annotator !== undefined && inst.annotator) {
                 inst.changeMenuItem("BackgroundSelection");
                 inst.annotator.disablePanMode();
                 inst.annotator.disableSelectMoveMode();
@@ -1490,6 +1492,8 @@ var AnnotationView = (function() {
 
         $('#blacklistButton').click(function(e) {
             if (!inst.loggedIn) {
+                $("#warningMsgText").text("You need to be logged in to perform this action.");
+                $("#warningMsg").show(200).delay(1500).hide(200);
                 //in case we aren't logged in, do nothing
                 return;
             }
