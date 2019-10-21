@@ -207,6 +207,57 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 
 
 func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) error {
+	//safety check
+	//the below code was written given a specific database table layout. If someone changes
+	//the database schema (e.g add/remove a column), the code below needs to be adapted.
+	//so in order to prevent that someone adds/removes a column to these tables, but forgets
+	//to change the code below we strictly check for the number of columns here
+	rows, err := tx.Query(`SELECT table_name, count(*) as columns 
+							FROM information_schema.columns 
+                  			WHERE table_name='image_annotation' OR 
+				  				  table_name = 'image_annotation_revision' or
+				  				  table_name = 'annotation_data' or
+				  				  table_name = 'user_image_annotation' or
+				  				  table_name = 'image_annotation_suggestion' or
+				  				  table_name= 'image_annotation_suggestion_revision' or
+				  				  table_name = 'annotation_suggestion_data' or
+				  				  table_name = 'user_image_annotation_suggestion'
+				  			GROUP BY table_name`)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	tableToColumnsMapping := make(map[string]int)
+	for rows.Next() {
+		var name, cols string
+		err = rows.Scan(&name, &cols)
+		if err != nil {
+			return err
+		}
+	}
+	rows.Close()
+	
+
+	if tableToColumnsMapping["image_annotation"] != 10 || tableToColumnsMapping["image_annotation_suggestion"] != 10 {
+		return errors.New("either the image_annotation or the image_annotation_suggestion table has more columns than expected!")
+	}
+
+	if tableToColumnsMapping["annotation_data"] != 6 || tableToColumnsMapping["annotation_suggestion_data"] != 6 {
+		return errors.New("either the annotation_data or the annotation_suggestion_data table has more columns than expected!")
+	} 
+
+	if tableToColumnsMapping["user_image_annotation"] != 4 || tableToColumnsMapping["user_image_annotation_suggestion"] != 4 {
+		return errors.New("either the user_image_annotation or the user_image_annotation_suggestion table has more columns than expected!")
+	}
+	
+	if tableToColumnsMapping["image_annotation_revision"] != 3 || tableToColumnsMapping["image_annotation_suggestion_revision"] != 3 {
+		return errors.New("either the image_annotation_revision or the image_annotation_suggestion_revision table has more columns than expected!")
+	}
+
+
+	
 	tempTables := []string{"temp_image_annotation_mapping", "temp_annotation_data_mapping", "temp_image_annotation_revision_mapping",
 							"temp_annotation_data_revision_mapping"}
 	
@@ -217,7 +268,7 @@ func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) 
 		}
 	}
 
-	_, err := tx.Exec(`CREATE TEMPORARY TABLE temp_image_annotation_mapping(old_image_annotation_id bigint, new_image_annotation_id bigint)`)
+	_, err = tx.Exec(`CREATE TEMPORARY TABLE temp_image_annotation_mapping(old_image_annotation_id bigint, new_image_annotation_id bigint)`)
 	if err != nil {
 		return err
 	}
