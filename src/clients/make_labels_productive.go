@@ -231,11 +231,13 @@ func makeAnnotationsProductive(trendingLabel string, labelId int64, tx *sql.Tx) 
 
 	tableToColumnsMapping := make(map[string]int)
 	for rows.Next() {
-		var name, cols string
+		var name string
+		var cols int
 		err = rows.Scan(&name, &cols)
 		if err != nil {
 			return err
 		}
+		tableToColumnsMapping[name] = cols
 	}
 	rows.Close()
 	
