@@ -4,6 +4,13 @@ services:
     ports:
       - 6380:6379
     image: redis
+  pgbouncer:
+    network_mode: host
+    build:
+      context: "../../"
+      dockerfile: env/docker/Dockerfile.pgbouncer
+      cache_from:
+        - bbernhard/imagemonkey-pgbouncer:latest
   db:
     network_mode: host
     command: postgres -c port=5433

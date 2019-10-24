@@ -1,0 +1,2 @@
+"monkey" "md5060d92ed67fd81befa3de7a096c2f5cd"
+"pgbouncer" "supersecretpgbouncerpassword"
