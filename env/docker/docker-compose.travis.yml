@@ -11,8 +11,8 @@ services:
       dockerfile: env/docker/Dockerfile.pgbouncer
       cache_from:
         - bbernhard/imagemonkey-pgbouncer:latest
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
   db:
     network_mode: host
     command: postgres -c port=5433
