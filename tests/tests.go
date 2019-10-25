@@ -29,13 +29,8 @@ func init() {
 
 	X_CLIENT_ID = commons.MustGetEnv("X_CLIENT_ID")
 	X_CLIENT_SECRET = commons.MustGetEnv("X_CLIENT_SECRET")
-
-	tokens := strings.Split(commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING"), " ")
-	for _,token := range tokens {
-		if(strings.HasPrefix(token, "port=")) {
-			DB_PORT = strings.Replace(token, "port=", "", 1)
-		}
-	}
+	
+	DB_PORT = commons.MustGetEnv("DB_PORT")
 
 	redisAddress := commons.GetEnv("REDIS_ADDRESS")
 	if redisAddress != "" {
