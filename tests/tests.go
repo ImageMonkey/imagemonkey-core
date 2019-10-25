@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	_"github.com/lib/pq"
 	"flag"
-	"strings"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
