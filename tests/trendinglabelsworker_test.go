@@ -696,3 +696,93 @@ func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionWithMetal
 	ok(t, err)
 	equals(t, numMetaLabelsAfter, 13)
 }
+
+func TestBasicTrendingLabelsWorkerFunctionalityRecurringLabelSuggestionWithAnnotation(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+		testSuggestLabelForImage(t, imageId, "red apple", true, token, 200)
+	}
+	runTrendingLabelsWorker(t, 5)
+
+	numWithLabelsBefore, err := db.GetNumberOfImagesWithLabel("apple")
+	ok(t, err)
+	equals(t, int(numWithLabelsBefore), int(0))
+
+	numBefore, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
+	ok(t, err)
+	equals(t, int(numBefore), int(12))
+
+	productiveLabelIdsBefore, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(0), int(len(productiveLabelIdsBefore)))
+
+	numOfTrendingLabelSuggestionsBefore, err := db.GetNumberOfTrendingLabelSuggestions()
+	ok(t, err)
+	equals(t, int(numOfTrendingLabelSuggestionsBefore), int(1))
+
+	runMakeTrendingLabelsProductiveScript(t, "red apple", "apple", true)
+	numAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
+	ok(t, err)
+	equals(t, int(numAfter), int(0))
+
+	numWithLabelsAfter, err := db.GetNumberOfImagesWithLabel("apple")
+	ok(t, err)
+	equals(t, int(numWithLabelsAfter), int(12))
+
+	productiveLabelIdsAfter, err := db.GetProductiveLabelIdsForTrendingLabels()
+	ok(t, err)
+	equals(t, int(1), int(len(productiveLabelIdsAfter)))
+
+	expectedLabelId, err := db.GetLabelIdFromName("apple")
+	ok(t, err)
+	equals(t, productiveLabelIdsAfter[0], expectedLabelId)
+
+
+	testSuggestLabelForImage(t, imageIds[0], "red apple", true, token, 200)
+	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
+
+	numOfAnnotationsBefore, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(numOfAnnotationsBefore), 0)
+
+	//add annotation
+	testAnnotate(t, imageIds[0], "red apple", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+
+	runTrendingLabelsWorker(t, 5)
+
+	recurringLabelSuggestionNumAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumAfter), int(0))
+
+	numLabelsAfterRecurringLabelSuggestion, err := db.GetNumberOfImagesWithLabel("apple")
+	ok(t, err)
+	equals(t, int(numLabelsAfterRecurringLabelSuggestion), int(13))
+
+	numOfAnnotationsAfter, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(numOfAnnotationsAfter), 1)
+
+
+	labelUuids, err := db.GetLabelUuidsForImage(imageIds[0])
+	ok(t, err)
+	equals(t, len(labelUuids), 2)
+
+	equals(t, labelUuids[0], "f81cf567-4798-4e4d-95f9-b430cf04ee55")
+	equals(t, labelUuids[1], "cab8e973-3c19-426b-8239-ccc5a899368b")
+}

@@ -109,8 +109,9 @@ func handleRecurringLabelSuggestions() error {
 				raven.CaptureError(err, nil)
 				return err
 			}
-
+			
 			if len(elem.LabelMeEntry.Sublabels) == 0 {
+				//if the label re-occurs and there are annotations too, migrate them also
 				err = imagemonkeydb.MakeAnnotationsProductive(tx, elem.LabelSuggestion, elem.ProductionLabelId)
 				if err != nil {
 					tx.Rollback()
