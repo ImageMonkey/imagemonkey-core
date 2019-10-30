@@ -1478,3 +1478,8 @@ func (p *ImageMonkeyDatabase) GetLabelUuidsForImage(imageId string) ([]string, e
 	}
 	return labelUuids, nil
 }
+
+func (p *ImageMonkeyDatabase) CloseAllTrendingLabelTasks() error {
+	_, err := p.db.Exec("UPDATE trending_label_suggestion SET closed = true")
+	return err
+}

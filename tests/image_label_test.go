@@ -46,6 +46,26 @@ func testLabelImage(t *testing.T, imageId string, label string, sublabel string,
 	}
 }
 
+func testGetLabelSuggestions(t *testing.T, includeUnlocked bool) []string {
+	url := BASE_URL + API_VERSION + "/label/suggestions"
+
+	if !includeUnlocked {
+		url += "?include_unlocked=false"
+	}
+
+	labelSuggestions := []string{}
+
+	req := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetResult(&labelSuggestions)
+
+	resp, err := req.Get(url)
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
+
+	return labelSuggestions
+}
+
 
 func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string, requiredStatusCode int) {
 	type LabelMeEntry struct {
@@ -785,4 +805,51 @@ func TestLabelImageNonProductiveLabelsOnlyOnce(t *testing.T) {
 	numAfter, err := db.GetNumberOfLabelSuggestionsForImage(imageId)
 	ok(t, err)
 	equals(t, numAfter, 1)
+}
+
+func TestGetLabelSuggestions(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testSignUp(t, "testuser", "testpwd", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpwd", 200)
+
+	testSuggestLabelForImage(t, imageId, "test", true, token, 200)
+	numBefore, err := db.GetNumberOfLabelSuggestionsForImage(imageId)
+	ok(t, err)
+	equals(t, numBefore, 1)
+
+	labelSuggestions := testGetLabelSuggestions(t, true)
+	equals(t, len(labelSuggestions), 1)
+}
+
+func TestGetLabelSuggestionsShouldntIncludeUnlocked(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+	testDonate(t, "./images/apples/apple2.jpeg", "apple", true, "", "", 200)
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testSignUp(t, "testuser", "testpwd", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpwd", 200)
+
+	testSuggestLabelForImage(t, imageIds[0], "test", true, token, 200)
+	testSuggestLabelForImage(t, imageIds[1], "test", true, token, 200)
+
+
+	runTrendingLabelsWorker(t, 0)
+	
+	err = db.CloseAllTrendingLabelTasks()
+	ok(t, err)
+
+	labelSuggestions := testGetLabelSuggestions(t, false)
+	equals(t, len(labelSuggestions), 0)
 }
