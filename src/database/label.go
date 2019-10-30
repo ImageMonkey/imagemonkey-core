@@ -102,10 +102,18 @@ func (p *ImageMonkeyDatabase) GetLabelCategories() ([]string, error) {
     return labels, nil
 }
 
-func (p *ImageMonkeyDatabase) GetLabelSuggestions() ([]string, error) {
-    var labelSuggestions []string
+func (p *ImageMonkeyDatabase) GetLabelSuggestions(includeUnlocked bool) ([]string, error) {
+    labelSuggestions := []string{}
 
-    rows, err := p.db.Query("SELECT name FROM label_suggestion")
+	q1 := ""
+	if !includeUnlocked {
+		q1 = `LEFT JOIN trending_label_suggestion t ON t.label_suggestion_id = l.id
+			  WHERE t.closed = false OR t.closed is null`
+	}
+
+	q := fmt.Sprintf(`SELECT l.name FROM label_suggestion l %s`, q1)
+
+    rows, err := p.db.Query(q)
     if err != nil {
         log.Debug("[Get Label Suggestions] Couldn't get label suggestions: ", err.Error())
         raven.CaptureError(err, nil)

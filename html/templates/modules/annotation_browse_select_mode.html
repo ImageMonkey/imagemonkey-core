@@ -317,6 +317,7 @@
     var promises = [imageMonkeyApi.getLabelAccessors(true)];
     {{ if ne .sessionInformation.Username "" }}
     promises.push(imageMonkeyApi.getImageCollections({{ .sessionInformation.Username }}));
+    promises.push(imageMonkeyApi.getLabelSuggestions(false));
     {{ end }}
     
     Promise.all(promises)
@@ -329,6 +330,11 @@
         if(data.length > 1) {
           for(var i = 0; i < data[1].length; i++) {
             availableLabels.push("image.collection='" + escapeHtml(data[1][i].name) + "'");	
+          }
+        }
+        if(data.length > 2) {
+          for(var i = 0; i < data[2].length; i++) {
+            availableLabels.push(escapeHtml(data[2][i]));
           }
         }
         $("#browseAnnotationsGoButton").removeClass("disabled");
