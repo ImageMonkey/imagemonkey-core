@@ -1073,32 +1073,38 @@ var AnnotationView = (function() {
         this.getAnnotationsForImage(imageId);
         this.getLabelsForImage(imageId, false);
 
+        var labelRequests = [this.imageMonkeyApi.getAvailableLabels()];
+        if (this.loggedIn)
+            labelRequests.push(this.imageMonkeyApi.getLabelSuggestions(false));
+
         var inst = this;
-        this.imageMonkeyApi.getAvailableLabels(true)
+        Promise.all(labelRequests)
             .then(function(data) {
-                for (var key in data) {
-                    if (data.hasOwnProperty(key)) {
+                for (var key in data[0]) {
+                    if (data[0].hasOwnProperty(key)) {
                         inst.availableLabels.push(key);
                         inst.availableLabelsLookupTable[key] = {
-                            "uuid": data[key].uuid,
+                            "uuid": data[0][key].uuid,
                             "label": key,
                             "sublabel": ""
                         };
                     }
 
-                    if (data[key].has) {
-                        for (var subkey in data[key].has) {
-                            if (data[key].has.hasOwnProperty(subkey)) {
+                    if (data[0][key].has) {
+                        for (var subkey in data[0][key].has) {
+                            if (data[0][key].has.hasOwnProperty(subkey)) {
                                 inst.availableLabels.push(subkey + "/" + key);
                                 inst.availableLabels[subkey + "/" + key] = {
-                                    "uuid": data[key].has[subkey].uuid,
+                                    "uuid": data[0][key].has[subkey].uuid,
                                     "label": key,
                                     "sublabel": subkey
                                 };
                             }
                         }
-
                     }
+                }
+                if (data.length > 1) {
+                    inst.availableLabels.push(...data[1]);
                 }
                 inst.labelsAutoCompletion = new AutoCompletion("#addLabelsToUnifiedModeListLabels", inst.availableLabels);
             }).catch(function(e) {
