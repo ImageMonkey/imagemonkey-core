@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css"/>
   <script src="js/imagemonkey/api.js?v=3"></script>
   <script src="js/sentry/sentry.min.js"></script>
+  <script src="js/imagemonkey/misc/autocompletion.js?v=1"></script>
 
   <style type="text/css">
     .canvas-container{margin: 0 auto;}
@@ -879,37 +880,7 @@
       }
     }
 
-    $("#labelSuggestion")
-      // don't navigate away from the field on tab when selecting an item
-      .on("keydown", function(event) {
-        if (event.keyCode === $.ui.keyCode.TAB &&
-          $(this).autocomplete("instance").menu.active) {
-          event.preventDefault();
-      }
-    })
-    .autocomplete({
-      minLength: 2,
-      source: function(request, response) {
-        // delegate back to autocomplete, but extract the last term
-        response($.ui.autocomplete.filter(
-        availableLabels, extractLast(request.term)));
-      },
-      focus: function() {
-        // prevent value inserted on focus
-        return false;
-      },
-      select: function(event, ui) {
-        var terms = split(this.value);
-        // remove the current input
-        terms.pop();
-        // add the selected item
-        terms.push(ui.item.value);
-        // add placeholder to get the comma-and-space at the end
-        terms.push("");
-        this.value = terms.join("");
-        return false;
-      }
-    });
+    new AutoCompletion("#labelSuggestion", availableLabels);
 
     try {
       //can fail in case someone uses uBlock origin or Co.

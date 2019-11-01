@@ -9,11 +9,16 @@ var AutoCompletion = (function() {
                 }
             })
             .autocomplete({
-                minLength: 2,
+                minLength: 3,
+                delay: 500,
                 source: function(request, response) {
                     // delegate back to autocomplete, but extract the last term
                     response($.ui.autocomplete.filter(
                         entries, extractLast(request.term)));
+                },
+                search: function(e, ui) {
+                    //see https://stackoverflow.com/questions/40782638/jquery-autocomplete-performance-going-down-with-each-search
+                    $(this).data("ui-autocomplete").menu.bindings = $();
                 },
                 focus: function() {
                     // prevent value inserted on focus
