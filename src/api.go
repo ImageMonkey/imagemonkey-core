@@ -1718,7 +1718,13 @@ func main() {
 		})
 
 		router.GET("/v1/label/suggestions", func(c *gin.Context) {
-			labelSuggestions, err := imageMonkeyDatabase.GetLabelSuggestions()
+			includeUnlockedStr := commons.GetParamFromUrlParams(c, "include_unlocked", "true")
+			includeUnlocked := true
+			if includeUnlockedStr == "false" {
+				includeUnlocked = false
+			}
+			
+			labelSuggestions, err := imageMonkeyDatabase.GetLabelSuggestions(includeUnlocked)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return

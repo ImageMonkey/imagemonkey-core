@@ -1451,3 +1451,35 @@ func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsWithLabelForImage(image
 
 	return num, nil
 }
+
+func (p *ImageMonkeyDatabase) GetLabelUuidsForImage(imageId string) ([]string, error) {
+	labelUuids := []string{}
+	
+	rows, err := p.db.Query(`SELECT l.uuid 
+								FROM image_validation v 
+								JOIN label l ON v.label_id = l.id
+								JOIN image i ON v.image_id = i.id
+								WHERE i.key = $1
+								ORDER BY uuid DESC`, imageId)
+	if err != nil {
+		return labelUuids, err
+	}
+
+	defer rows.Close()
+	
+	for rows.Next() {
+		var labelUuid string
+		err = rows.Scan(&labelUuid)
+		if err != nil {
+			return labelUuids, err
+		}
+
+		labelUuids = append(labelUuids, labelUuid)
+	}
+	return labelUuids, nil
+}
+
+func (p *ImageMonkeyDatabase) CloseAllTrendingLabelTasks() error {
+	_, err := p.db.Exec("UPDATE trending_label_suggestion SET closed = true")
+	return err
+}

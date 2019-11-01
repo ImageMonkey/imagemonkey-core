@@ -145,10 +145,12 @@ var ImageMonkeyApi = (function() {
             xhr.send();
         });
     }
-    ImageMonkeyApi.prototype.getLabelSuggestions = function() {
+    ImageMonkeyApi.prototype.getLabelSuggestions = function(includeUnlocked = true) {
         var inst = this;
         return new Promise(function(resolve, reject) {
             var url = inst.baseUrl + "/" + inst.apiVersion + "/label/suggestions";
+            if (!includeUnlocked)
+                url += "?include_unlocked=false";
 
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";

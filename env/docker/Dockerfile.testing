@@ -38,6 +38,15 @@ RUN apt-get update \
 	&& apt install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
 	&& rm /tmp/google-chrome-stable_current_amd64.deb 
 
+RUN cd /tmp \
+	&& wget https://github.com/tsenart/vegeta/releases/download/v12.7.0/vegeta-12.7.0-linux-amd64.tar.gz --directory-prefix=/tmp/ \
+	&& tar xvf vegeta-12.7.0-linux-amd64.tar.gz \
+	&& cd /tmp/ \
+	&& rm -f /tmp/vegeta-12.7.0-linux-amd64.tar.gz \
+	&& rm -f /tmp/CHANGELOG \
+	&& rm -f /tmp/README.md \
+	&& rm -f /tmp/LICENSE \
+	&& mv /tmp/vegeta /usr/bin/vegeta
 
 RUN cd /tmp/tests && go get -u gopkg.in/resty.v1
 RUN cd /tmp/tests && go test -c -o test	
@@ -51,6 +60,8 @@ RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for
 	&& chmod u+rx /tmp/wait-for-it.sh
 
 COPY env/docker/run_all_tests.sh /tmp/tests/run_all_tests.sh
+COPY env/docker/run_loadtests.sh /tmp/tests/run_loadtests.sh
+COPY tests/stresstest/requests.txt /tmp/tests/loadtests.txt
 
 RUN chmod u+rx ./run_all_tests.sh
 

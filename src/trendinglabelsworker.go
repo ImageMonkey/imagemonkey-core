@@ -35,6 +35,8 @@ func handleRecurringLabelSuggestions() error {
 		ImageId string
 		Annotatable bool
 		LabelMeEntry datastructures.LabelMeEntry
+		ProductionLabelId int64
+		LabelSuggestion string
 	}
 
 	tx, err := db.Begin()
@@ -43,7 +45,7 @@ func handleRecurringLabelSuggestions() error {
         return err
     }
 
-	rows, err := tx.Query(`SELECT s.id, i.key, ils.annotatable, l.name, COALESCE(pl.name, '')
+	rows, err := tx.Query(`SELECT s.id, i.key, ils.annotatable, l.name, COALESCE(pl.name, ''), t.productive_label_id, s.name
 							FROM label_suggestion s
 							JOIN trending_label_suggestion t ON t.label_suggestion_id = s.id
 							JOIN image_label_suggestion ils ON ils.label_suggestion_id = s.id
@@ -66,7 +68,8 @@ func handleRecurringLabelSuggestions() error {
 		var label1 string
 		var label2 string
 		var resultEntry ResultEntry
-		err = rows.Scan(&labelSuggestionId, &resultEntry.ImageId, &resultEntry.Annotatable, &label1, &label2)
+		err = rows.Scan(&labelSuggestionId, &resultEntry.ImageId, &resultEntry.Annotatable, &label1, &label2, 
+						&resultEntry.ProductionLabelId, &resultEntry.LabelSuggestion)
 		if err != nil {
 			tx.Rollback()
 			log.Error("[Mark label suggestions as productive] Couldn't scan row: ", err.Error())
@@ -90,20 +93,29 @@ func handleRecurringLabelSuggestions() error {
 		for _, elem := range results {
 			labels := []datastructures.LabelMeEntry{}
 			labels = append(labels, elem.LabelMeEntry)
-	    	if elem.Annotatable {
-				_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 0, tx)  
-				if err != nil {
-					//transaction already rolled back in AddLabelsToImageInTransaction()
-					log.Error("[Mark label suggestions as productive] Couldn't add labels: ", err.Error())
-					raven.CaptureError(err, nil)
-					return err
-				} 	
+	    	
+			numOfNotAnnotatable := 0
+			if elem.Annotatable {
+				numOfNotAnnotatable = 0
 			} else {
 				//if label is not annotatable, set num_of_not_annotatable to 10
-				_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, 10, tx)
+				numOfNotAnnotatable = 10
+			}
+				
+			_, err = imagemonkeydb.AddLabelsToImageInTransaction("", elem.ImageId, labels, 0, numOfNotAnnotatable, tx)  
+			if err != nil {
+				//transaction already rolled back in AddLabelsToImageInTransaction()
+				log.Error("[Mark label suggestions as productive] Couldn't add labels: ", err.Error())
+				raven.CaptureError(err, nil)
+				return err
+			}
+			
+			if len(elem.LabelMeEntry.Sublabels) == 0 {
+				//if the label re-occurs and there are annotations too, migrate them also
+				err = imagemonkeydb.MakeAnnotationsProductive(tx, elem.LabelSuggestion, elem.ProductionLabelId)
 				if err != nil {
-					//transaction already rolled back in AddLabelsToImageInTransaction()
-					log.Error("[Mark label suggestions as productive] Couldn't add labels: ", err.Error())
+					tx.Rollback()
+					log.Error("[Mark label suggestions as productive] Couldn't make annotations productive", err.Error())
 					raven.CaptureError(err, nil)
 					return err
 				}

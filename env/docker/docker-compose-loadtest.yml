@@ -11,8 +11,6 @@ services:
       dockerfile: env/docker/Dockerfile.pgbouncer
       cache_from:
         - bbernhard/imagemonkey-pgbouncer:latest
-    #logging:
-    #  driver: none
   db:
     network_mode: host
     command: postgres -c port=5433
@@ -27,15 +25,6 @@ services:
         - dbdata:/var/lib/postgresql/data
     logging:
       driver: none
-  #trendinglabelsworker:
-  #  restart: always
-  #  network_mode: host
-  #  env_file:
-  #      - ../env.travis
-  #  build:
-  #    context: "../../"
-  #    dockerfile: env/docker/Dockerfile.trendinglabelsworker
-  #  entrypoint: tail -f /dev/null 
   web:
     network_mode: host
     #entrypoint: tail -f /dev/null
@@ -58,50 +47,24 @@ services:
        dockerfile: env/docker/Dockerfile.api
        cache_from:
          - bbernhard/imagemonkey-api:latest
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
     entrypoint: ./run_api.sh --merge-labels-before-start 
     volumes:
       - ../../geoip_database:/home/imagemonkey/geoip_database
       - ../../wordlists:/home/imagemonkey/wordlists
       - ../../data:/home/imagemonkey/data
       - ../../avatars:/home/imagemonkey/avatars
-  #statworker:
-  #  restart: always
-  #  entrypoint: tail -f /dev/null
-  #  network_mode: host
-  #  env_file:
-  #    - ../env.travis
-  #  build:
-  #     context: "../../"
-  #     dockerfile: env/docker/Dockerfile.statworker
-  #dataprocessor:
-  #  restart: always
-  #  entrypoint: tail -f /dev/null
-  #  network_mode: host
-  #  env_file:
-  #    - ../env.travis
-  #  build:
-  #     context: "../../"
-  #     dockerfile: env/docker/Dockerfile.dataprocessor
-  #blogsubscriptionworker:
-  # restart: always
-  #  entrypoint: tail -f /dev/null
-  #  network_mode: host
-  #  env_file:
-  #    - ../env.travis
-  #  build:
-  #    context: "../../"
-  #    dockerfile: env/docker/Dockerfile.blogsubscriptionworker
   testing:
     network_mode: host
-    #entrypoint: tail -f /dev/null
+    entrypoint: /tmp/tests/run_loadtests.sh
     env_file:
       - ../env.travis
     volumes:
       - ../../wordlists:/tmp/wordlists
       - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json
       - ../../data:/tmp/data
+      - ~/Downloads/imagemonkey.sql:/tmp/imagemonkey_dump.sql
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.testing
