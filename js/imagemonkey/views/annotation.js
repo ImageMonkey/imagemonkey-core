@@ -903,7 +903,7 @@ var AnnotationView = (function() {
                     selectedElem = inst.availableLabelsLookupTable[labelName];
                 if (selectedElem === null) {
                     if (inst.loggedIn) {
-                        var tempUuid = labelName.replace(/\s/g, ""); //remove all whitespaces
+                        var tempUuid = labelName.replace(/\s/g, "-"); //remove all whitespaces with '-' (spaces are not allowed in html id tags)
                         selectedElem = {
                             "uuid": tempUuid,
                             "label": labelName,
