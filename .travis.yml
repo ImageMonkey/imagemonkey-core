@@ -31,7 +31,7 @@ jobs:
     - stage: test
       script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
     - # stage name not required, will continue to use `test`
-      script: $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
+      script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
 
 
 #script:
