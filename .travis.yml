@@ -26,12 +26,12 @@ before_install: |
   && docker pull bbernhard/imagemonkey-testing:latest \
   && docker-compose -f env/docker/docker-compose.travis.yml build --parallel \
   && echo "Preparing env files for travis jobs" \
-  && cp $TRAVIS_BUILD_DIR/env/docker/env.travis $TRAVIS_BUILD_DIR/env/docker/env_ui_tests.travis \
-  && echo "TEST_MODE=only-ui" >> $TRAVIS_BUILD_DIR/env/docker/env_ui_tests.travis \
-  && cp $TRAVIS_BUILD_DIR/env/docker/env.travis $TRAVIS_BUILD_DIR/env/docker/env_api_tests.travis \
-  && echo "TEST_MODE=only-api" >> $TRAVIS_BUILD_DIR/env/docker/env_api_tests.travis \
-  && cp $TRAVIS_BUILD_DIR/env/docker/env.travis $TRAVIS_BUILD_DIR/env/docker/env_unittest_tests.travis \
-  && echo "TEST_MODE=only-unittest" >> $TRAVIS_BUILD_DIR/env/docker/env_unit_tests.travis \
+  && cp $TRAVIS_BUILD_DIR/env/env.travis $TRAVIS_BUILD_DIR/env/env_ui_tests.travis \
+  && echo "TEST_MODE=only-ui" >> $TRAVIS_BUILD_DIR/env/env_ui_tests.travis \
+  && cp $TRAVIS_BUILD_DIR/env/env.travis $TRAVIS_BUILD_DIR/env/env_api_tests.travis \
+  && echo "TEST_MODE=only-api" >> $TRAVIS_BUILD_DIR/env/env_api_tests.travis \
+  && cp $TRAVIS_BUILD_DIR/env/env.travis $TRAVIS_BUILD_DIR/env/env_unittest_tests.travis \
+  && echo "TEST_MODE=only-unittest" >> $TRAVIS_BUILD_DIR/env/env_unit_tests.travis \
 
 
 
