@@ -40,12 +40,12 @@ jobs:
     - stage: test
       script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
       env:
-        - ENV_FILE_LOCATION=$TRAVIS_BUILD_DIR/env/docker/env_ui_tests.travis
+        - ENV_FILE_LOCATION=../env_ui_tests.travis
     - # stage name not required, will continue to use `test`
       script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
       env:
-        - ENV_FILE_LOCATION=$TRAVIS_BUILD_DIR/env/docker/env_api_tests.travis
+        - ENV_FILE_LOCATION=../env_api_tests.travis
     - # stage name not required, will continue to use `test`
       script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
       env:  
-        - ENV_FILE_LOCATION=$TRAVIS_BUILD_DIR/env/docker/env_unit_tests.travis
+        - ENV_FILE_LOCATION=../env_unit_tests.travis
