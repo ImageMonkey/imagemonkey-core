@@ -31,8 +31,7 @@ before_install: |
   && echo "TEST_MODE=only-api" >> $TRAVIS_BUILD_DIR/env/env_api_tests.travis \
   && cp $TRAVIS_BUILD_DIR/env/env.travis $TRAVIS_BUILD_DIR/env/env_unit_tests.travis \
   && echo "TEST_MODE=only-unittest" >> $TRAVIS_BUILD_DIR/env/env_unit_tests.travis \
-  && docker-compose -f env/docker/docker-compose.travis.yml build --parallel \ 
-  && ls -la $TRAVIS_BUILD_DIR/env
+  && docker-compose -f env/docker/docker-compose.travis.yml build --parallel
 
 
 
