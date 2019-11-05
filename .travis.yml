@@ -34,9 +34,11 @@ jobs:
         - TEST_MODE=only-ui
     - # stage name not required, will continue to use `test`
       script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
+      env:
         - TEST_MODE=only-api
     - # stage name not required, will continue to use `test`
       script: cd $TRAVIS_BUILD_DIR && docker-compose -f env/docker/docker-compose.travis.yml up --abort-on-container-exit --exit-code-from testing
+      env:  
         - TEST_MODE=only-unittest
 
 
