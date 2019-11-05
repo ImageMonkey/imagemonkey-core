@@ -22,7 +22,7 @@ services:
       cache_from:
         - bbernhard/imagemonkey-db:latest
     env_file:
-        - ../env.travis
+        - ${ENV_FILE_LOCATION} #../env.travis
     volumes:
         - dbdata:/var/lib/postgresql/data
     logging:
@@ -40,7 +40,7 @@ services:
     network_mode: host
     #entrypoint: tail -f /dev/null
     env_file:
-      - ../env.travis
+      - ${ENV_FILE_LOCATION} #../env.travis
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.web
@@ -52,7 +52,7 @@ services:
   api:
     network_mode: host
     env_file:
-      - ../env.travis
+      - ${ENV_FILE_LOCATION} #../env.travis
     build:
        context: "../../"
        dockerfile: env/docker/Dockerfile.api
@@ -97,7 +97,7 @@ services:
     network_mode: host
     #entrypoint: tail -f /dev/null
     env_file:
-      - ../env.travis
+      - ${ENV_FILE_LOCATION} #../env.travis
     volumes:
       - ../../wordlists:/tmp/wordlists
       - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json
