@@ -16,7 +16,7 @@ services:
     command: postgres -c port=5433
     image: bbernhard/imagemonkey-db:latest 
     env_file:
-        - ../env.travis
+        - ${ENV_FILE_LOCATION}
     volumes:
         - dbdata:/var/lib/postgresql/data
     logging:
@@ -24,7 +24,7 @@ services:
   api:
     network_mode: host
     env_file:
-      - ../env.travis
+      - ${ENV_FILE_LOCATION}
     image: bbernhard/imagemonkey-api:latest 
     entrypoint: ./run_api.sh --merge-labels-before-start
     logging:
@@ -36,7 +36,7 @@ services:
   testing:
     network_mode: host
     env_file:
-      - ../env.travis
+      - ${ENV_FILE_LOCATION}
     volumes:
       - ../../wordlists:/tmp/wordlists
       - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json
