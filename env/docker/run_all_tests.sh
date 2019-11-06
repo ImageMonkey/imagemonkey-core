@@ -18,37 +18,53 @@ while true
 echo "Starting integration tests (after 5 sec delay)"
 sleep 5
 
-./test -test.v -test.parallel 1 -donations_dir=/tmp/data/donations/ -unverified_donations_dir=/tmp/data/unverified_donations/ -test.timeout=600m
-retVal=$?
-if [ $retVal -ne 0 ]; then
-	echo "Aborting due to error"
-	exit $retVal
+
+MODE="all"
+if [[ -z "${TEST_MODE}" ]]; then
+	MODE="all"
+else
+	MODE="${TEST_MODE}"
 fi
 
-echo "Starting unittests"
-echo "Parser tests"
-./parser_test -test.v
-retVal=$?
-if [ $retVal -ne 0 ]; then
-	echo "Aborting due to error"
-	exit $retVal
+if [ ${MODE} == "all" ]  || [ ${MODE} == "only-api" ]; then
+	echo "Starting API tests"
+	./test -test.v -test.parallel 1 -donations_dir=/tmp/data/donations/ -unverified_donations_dir=/tmp/data/unverified_donations/ -test.timeout=600m
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+		echo "Aborting due to error"
+		exit $retVal
+	fi
 fi
 
-echo "Parser v2 tests"
-./parserv2_test -test.v
-retVal=$?
-if [ $retVal -ne 0 ]; then
-	echo "Aborting due to error"
-	exit $retVal
+if [ ${MODE} == "all" ]  || [ ${MODE} == "only-unittest" ]; then
+	echo "Starting unittests"
+	echo "Parser tests"
+	./parser_test -test.v
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+		echo "Aborting due to error"
+		exit $retVal
+	fi
+
+
+	echo "Parser v2 tests"
+	./parserv2_test -test.v
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+		echo "Aborting due to error"
+		exit $retVal
+	fi
 fi
 
-echo "Starting UI tests"
-cd ui/
-python3 -m unittest
-retVal=$?
-if [ $retVal -ne 0 ]; then
-	echo "Aborting due to error"
-	exit $retVal
+if [ ${MODE} == "all" ] || [ ${MODE} == "only-ui" ]; then
+	echo "Starting UI tests"
+	cd ui/
+	python3 -m unittest
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+		echo "Aborting due to error"
+		exit $retVal
+	fi
 fi
 
 echo "All tests successful"

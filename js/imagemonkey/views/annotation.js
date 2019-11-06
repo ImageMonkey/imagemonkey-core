@@ -891,7 +891,7 @@ var AnnotationView = (function() {
                         return
                     }
                 } else { //logged in
-                    var pattern = new RegExp("^[a-zA-Z\s]+$");
+                    var pattern = new RegExp("^[a-zA-Z ]+$");
                     if (!pattern.test(labelName)) {
                         $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z and ' ')");
                         $("#warningMsg").show(200).delay(1500).hide(200);
@@ -903,7 +903,7 @@ var AnnotationView = (function() {
                     selectedElem = inst.availableLabelsLookupTable[labelName];
                 if (selectedElem === null) {
                     if (inst.loggedIn) {
-                        var tempUuid = labelName;
+                        var tempUuid = labelName.replace(/\s/g, "-"); //remove all whitespaces with '-' (spaces are not allowed in html id tags)
                         selectedElem = {
                             "uuid": tempUuid,
                             "label": labelName,
