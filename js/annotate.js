@@ -1553,10 +1553,10 @@ var AnnotationSettings = (function () {
     $("#annotationPolygonVertexSizeInput").val(settings.getPolygonVertexSize());
   }
 
-  AnnotationSettings.prototype.loadPreferedAnnotationTool = function(annotator) {
+  AnnotationSettings.prototype.loadPreferedAnnotationTool = function(annotationView, annotator) {
     var preferedAnnotationTool = localStorage.getItem("preferedAnnotationTool");
     if((preferedAnnotationTool === "Rectangle") || (preferedAnnotationTool === "Circle") || (preferedAnnotationTool === "Polygon")){
-      changeMenuItem(preferedAnnotationTool);
+      annotationView.changeMenuItem(preferedAnnotationTool);
       annotator.setShape(preferedAnnotationTool);
     }
   }

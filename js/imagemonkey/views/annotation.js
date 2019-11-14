@@ -636,7 +636,7 @@ var AnnotationView = (function() {
         if (this.annotationMode === "browse") {
             if (this.browseModeLastSelectedAnnotatorMenuItem === null) {
                 if (this.annotator) {
-                    this.annotationSettings.loadPreferedAnnotationTool(this.annotator);
+                    this.annotationSettings.loadPreferedAnnotationTool(this, this.annotator);
                     this.annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
                 }
             } else {
@@ -645,7 +645,7 @@ var AnnotationView = (function() {
             }
         } else {
             if (this.annotator) {
-                this.annotationSettings.loadPreferedAnnotationTool(this.annotator);
+                this.annotationSettings.loadPreferedAnnotationTool(this, this.annotator);
                 this.annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
             }
         }
@@ -1040,7 +1040,7 @@ var AnnotationView = (function() {
         if (this.annotationMode === "browse") {
             if (this.browseModeLastSelectedAnnotatorMenuItem === null) {
                 if (this.annotator) {
-                    this.annotationSettings.loadPreferedAnnotationTool(this.annotator);
+                    this.annotationSettings.loadPreferedAnnotationTool(this, this.annotator);
                     this.annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
                 }
             } else {
@@ -1049,7 +1049,7 @@ var AnnotationView = (function() {
             }
         } else {
             if (this.annotator) {
-                this.annotationSettings.loadPreferedAnnotationTool(this.annotator);
+                this.annotationSettings.loadPreferedAnnotationTool(this, this.annotator);
                 this.annotator.setPolygonVertexSize(new Settings().getPolygonVertexSize());
             }
         }
@@ -1134,7 +1134,6 @@ var AnnotationView = (function() {
                         '<canvas id="smartAnnotationCanvas"></canvas>' +
                         '</div>' +
                         '</div>');
-
                     inst.populateDetailedCanvas(true);
                 } else {
                     inst.annotator.disableSmartAnnotation();
@@ -1144,7 +1143,7 @@ var AnnotationView = (function() {
                 }
 
                 inst.addMainCanvas();
-                inst.populateCanvas(inst.getUrlFromImageUrl(inst.annotationInfo.imageUrl, inst.annotationInfo.imageUnlocked, this.annotationMode,
+                inst.populateCanvas(getUrlFromImageUrl(inst.annotationInfo.imageUrl, inst.annotationInfo.imageUnlocked, this.annotationMode,
                     this.labelAccessorsLookupTable), false);
 
                 showHideSmartAnnotationControls(enabled);

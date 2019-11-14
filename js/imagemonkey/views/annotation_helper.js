@@ -166,7 +166,7 @@ function isTrashMenuButtonEnabled() {
 }
 
 function isSmartAnnotationEnabled() {
-    var obj = $("smartAnnotation");
+    var obj = $("#smartAnnotation");
     if (obj.length) {
         return obj.checkbox("is checked");
     }
