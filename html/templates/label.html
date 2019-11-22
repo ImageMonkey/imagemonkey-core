@@ -880,7 +880,8 @@
       }
     }
 
-    new AutoCompletion("#labelSuggestion", availableLabels);
+    if($("#labelSuggestion").length)
+	  new AutoCompletion("#labelSuggestion", availableLabels);
 
     try {
       //can fail in case someone uses uBlock origin or Co.
