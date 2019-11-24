@@ -92,6 +92,10 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * apply sql functions from `env/functions` directory
 * apply sql stored procedures from `env/stored_procs` directory
 
+* install redis with `apt-get install redis-server`
+* make sure that redis only listens on localhost
+* change redis.conf and set `maxmemory` (e.g: 500mb) and set `maxmemory-policy` to `allkeys-lru` 
+
 ### Install Bimg ###
 **Windows:**
 * install MSYS2
@@ -116,7 +120,7 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * modify `conf/nginx/nginx.conf` and replace `imagemonkey.io` and `api.imagemonkey.io` with your own domain names, copy it to `/etc/nginx/nginx.conf` and reload nginx with `service nginx reload`
 
 ### Build Application ###
-**Minimal** required Go version: v1.10.3
+**Minimal** required Go version: v1.11.10
 
 * install git with `apt-get install git`
 * install golang with `apt-get install golang`
@@ -138,9 +142,11 @@ mkdir -p /home/imagemonkey/unverified_donations
 ### Watchdog ###
 * install supervisor with `apt-get install supervisor`
 * add `imagemonkey` user to supervisor group with `adduser imagemonkey supervisor`
-* create logging directories with `mkdir -p /var/log/imagemonkey-api` and `mkdir -p /var/log/imagemonkey-web`
+* create logging directories with `mkdir -p /var/log/imagemonkey-api`, `mkdir -p /var/log/imagemonkey-web` `mkdir -p /var/log/imagemonkey-statworker`, `mkdir -p /var/log/imagemonkey-bot`, `mkdir -p /var/log/imagemonkey-blog-subscription-worker`, `mkdir -p /var/log/imagemonkey-data-processor`, `mkdir -p /var/log/imagemonkey-labelsdownloader`, `mkdir -p /var/log/imagemonkey-trending-labels-worker`
 * copy `conf/supervisor/imagemonkey-api.conf` to `/etc/supervisor/conf.d/imagemonkey-api.conf`
 * copy `conf/supervisor/imagemonkey-web.conf` to `/etc/supervisor/conf.d/imagemonkey-web.conf`
+* add `EnvironmentFile=/etc/environment` to the service section of the systemctl supervisor config file (see https://stackoverflow.com/questions/47083582/supervisor-not-using-etc-environment)
+* run `systemctl daemon-reload` and `systemctl restart supervisor`
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
 
 
