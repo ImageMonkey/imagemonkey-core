@@ -719,6 +719,13 @@ func main() {
 				})
 			}
 		})
+		router.GET("/privacy", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "privacy.html", gin.H{
+				"title": "Privacy Policy",
+				"activeMenuNr": -1,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+			})
+		})
 
 		router.GET("/signup", func(c *gin.Context) {
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
