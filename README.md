@@ -92,6 +92,8 @@ GRANT USAGE ON SCHEMA blog TO monkey;
 * apply sql functions from `env/functions` directory
 * apply sql stored procedures from `env/stored_procs` directory
 
+### Redis ###
+
 * install redis with `apt-get install redis-server`
 * make sure that redis only listens on localhost
 * change redis.conf and set `maxmemory` (e.g: 500mb) and set `maxmemory-policy` to `allkeys-lru` 
@@ -145,6 +147,11 @@ mkdir -p /home/imagemonkey/unverified_donations
 * create logging directories with `mkdir -p /var/log/imagemonkey-api`, `mkdir -p /var/log/imagemonkey-web` `mkdir -p /var/log/imagemonkey-statworker`, `mkdir -p /var/log/imagemonkey-bot`, `mkdir -p /var/log/imagemonkey-blog-subscription-worker`, `mkdir -p /var/log/imagemonkey-data-processor`, `mkdir -p /var/log/imagemonkey-labelsdownloader`, `mkdir -p /var/log/imagemonkey-trending-labels-worker`
 * copy `conf/supervisor/imagemonkey-api.conf` to `/etc/supervisor/conf.d/imagemonkey-api.conf`
 * copy `conf/supervisor/imagemonkey-web.conf` to `/etc/supervisor/conf.d/imagemonkey-web.conf`
+* copy `conf/supervisor/imagemonkey-statworker.conf` to `/etc/supervisor/conf.d/imagemonkey-statworker.conf`
+* copy `conf/supervisor/imagemonkey-blog-subscription-worker.conf` to `/etc/supervisor/conf.d/imagemonkey-blog-subscription-worker.conf`
+* copy `conf/supervisor/imagemonkey-bot.conf` to `/etc/supervisor/conf.d/imagemonkey-bot.conf`
+* copy `conf/supervisor/imagemonkey-labels-downloader.conf` to `/etc/supervisor/conf.d/imagemonkey-labels-downloader.conf`
+* copy `conf/supervisor/imagemonkey-trending-labels-worker.conf` to `/etc/supervisor/conf.d/imagemonkey-trending-labels-worker.conf`
 * add `EnvironmentFile=/etc/environment` to the service section of the systemctl supervisor config file (see https://stackoverflow.com/questions/47083582/supervisor-not-using-etc-environment)
 * run `systemctl daemon-reload` and `systemctl restart supervisor`
 * run `supervisorctl reread && supervisorctl update && supervisorctl restart all`
