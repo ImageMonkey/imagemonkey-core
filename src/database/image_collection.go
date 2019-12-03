@@ -120,7 +120,7 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
 						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)`,
-						imageCollectionName, username, imageId)
+		imageCollectionName, username, imageId)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23502" {
