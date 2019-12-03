@@ -10,7 +10,6 @@ import (
 	"fmt"
     "errors"
     "encoding/json"
-    "github.com/lib/pq"
     "time"
 )
 
@@ -235,12 +234,12 @@ func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string
 
 func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, imageInfo datastructures.ImageInfo, autoUnlock bool, 
                                               labels []datastructures.LabelMeEntry, imageCollectionName string, labelMap map[string]datastructures.LabelMapEntry, 
-                                              metalabels *commons.MetaLabels) ImageDonationErrorType {
+                                              metalabels *commons.MetaLabels) error {
 	tx, err := p.db.Begin()
     if err != nil {
     	log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
-        return ImageDonationInternalError
+        return err 
     }
 
     imageProvider := imageInfo.Source.Provider
@@ -260,7 +259,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
 		tx.Rollback()
-		return ImageDonationInternalError
+		return err 
 	}
 
     var insertedValidationIds []int64
@@ -276,7 +275,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 
         insertedValidationIds, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageInfo.Name, labels, numOfValid, 0)
         if err != nil {
-            return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
+            return err //tx already rolled back in case of error, so we can just return here
         }
     }
 
@@ -284,12 +283,12 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
     if imageProvider != "donation" {
         imageSourceId, err := _addImageSource(imageId, imageInfo.Source, tx)
         if err != nil {
-            return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
+            return err //tx already rolled back in case of error, so we can just return here
         }
 
         err = _addImageValidationSources(imageSourceId, insertedValidationIds, tx)
         if err != nil {
-            return ImageDonationInternalError //tx already rolled back in case of error, so we can just return here
+            return err //tx already rolled back in case of error, so we can just return here
         }
     }
 
@@ -301,29 +300,31 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
             tx.Rollback()
             log.Debug("[Add user image entry] Couldn't add entry: ", err.Error())
             raven.CaptureError(err, nil)
-            return ImageDonationInternalError
+            return err 
         }
     }
 
-    if imageCollectionName != "" && apiUser.Name != "" {
-        _, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
-                           SELECT (SELECT u.id 
-                                 FROM user_image_collection u 
-                                 JOIN account a ON u.account_id = a.id
-                                 WHERE u.name = $1 AND a.name = $2), $3`,
-                           imageCollectionName, apiUser.Name, imageId)
-        if err != nil {
-            if err, ok := err.(*pq.Error); ok {
-                log.Info(err.Code)
-                if err.Code == "23502" {
-                    return ImageDonationImageCollectionDoesntExistError
-                }
-            }
-            tx.Rollback()
-            log.Error("[Add donated Image To Collection] Couldn't add image to collection: ", err.Error())
-            raven.CaptureError(err, nil)
-            return ImageDonationInternalError
-        }
+	//if user is logged in
+    if apiUser.Name != "" {
+		//add image to default image collection
+		err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, "my donations", imageInfo.Name)
+		if err != nil {
+			//transaction already rolled back
+			log.Error("[Add donated Image To Collection] Couldn't add image to default collection: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+
+		//if image collection is provided
+		if imageCollectionName != "" {
+			err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, imageCollectionName, imageInfo.Name)
+			if err != nil {
+				//transaction already rolled back
+				log.Error("[Add donated Image To Collection] Couldn't add image to collection: ", err.Error())
+            	raven.CaptureError(err, nil)
+				return err
+			}
+		}
     }
 
     if imageInfo.Source.Provider == "imagehunt" {
@@ -332,7 +333,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
             err = errors.New("Couldn't create imagehunt entry due to missing or invalid label")
             log.Error("[Create ImageHunt entry for donated image]", err.Error())
             raven.CaptureError(err, nil)
-            return ImageDonationInternalError 
+            return err 
         }
 
         _, err := tx.Exec(`INSERT INTO imagehunt_task(image_validation_id, created)
@@ -341,7 +342,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
             tx.Rollback()
             log.Error("[Create ImageHunt entry for donated image] Couldn't create entry: ", err.Error())
             raven.CaptureError(err, nil)
-            return ImageDonationInternalError
+            return err 
         }
     }
 
@@ -349,10 +350,10 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
     if err != nil {
         log.Error("[Add donated Image] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
-        return ImageDonationInternalError
+        return err 
     }
 
-    return ImageDonationSuccess
+    return nil 
 }
 
 

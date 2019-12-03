@@ -441,12 +441,15 @@ func donate(c *gin.Context, db *imagemonkeydb.ImageMonkeyDatabase, username stri
 
 	e := db.AddDonatedPhoto(apiUser, imageInfo, autoUnlock, labelMeEntries,
 		imageCollectionName, labelMap, metalabels)
-	if e == imagemonkeydb.ImageDonationInternalError {
-		c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
-		return
-	} else if e == imagemonkeydb.ImageDonationImageCollectionDoesntExistError {
-		c.JSON(404, gin.H{"error": "Couldn't add photo - image collection doesn't exist"})
-		return
+	if e != nil {
+		switch e.(type) {
+		case *imagemonkeydb.InvalidImageCollectionInputError:
+			c.JSON(404, gin.H{"error": "Couldn't add photo - image collection doesn't exist"})
+			return
+		default:
+			c.JSON(500, gin.H{"error": "Couldn't add photo - please try again later"})
+			return
+		}
 	}
 
 	//get client IP address and try to determine country

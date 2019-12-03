@@ -70,16 +70,41 @@ func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser
 	return imageCollections, nil
 }
 
-func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser, name string, description string) error {
-	_, err := p.db.Exec(`INSERT INTO user_image_collection(account_id, name, description)
-							SELECT id, $2, $3 FROM account WHERE name = $1`, apiUser.Name, name, description)
+func (p *ImageMonkeyDatabase) _addImageCollectionInTransaction(tx *sql.Tx, username string, name string, description string) error {
+	_, err := tx.Exec(`INSERT INTO user_image_collection(account_id, name, description)
+							SELECT id, $2, $3 FROM account WHERE name = $1`, username, name, description)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23505" {
+				tx.Rollback()
 				return &DuplicateImageCollectionError{Description: "An Image Collection with that name already exists"}
 			}
 		}
+		tx.Rollback()
+		return err
+	}
+
+	return nil
+}
+
+func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser, name string, description string) error {
+	tx, err := p.db.Begin()
+	if err != nil {
+		log.Error("[Image Collections] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	err = p._addImageCollectionInTransaction(tx, apiUser.Name, name, description)
+	if err != nil { //transaction already rolled back
 		log.Error("[Image Collections] Couldn't add image collection: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Error("[Image Collections] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
@@ -87,7 +112,7 @@ func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser,
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, apiUser datastructures.APIUser,
+func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, username string,
 	imageCollectionName string, imageId string) error {
 
 	_, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
@@ -95,20 +120,18 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
 						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)`,
-		imageCollectionName, apiUser.Name, imageId)
+						imageCollectionName, username, imageId)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23502" {
 				tx.Rollback()
-				return &InvalidImageCollectionInputError{Description: ""}
+				return &InvalidImageCollectionInputError{Description: "Invalid Image Collection Input"}
 			} else if err.Code == "23505" {
 				tx.Rollback()
 				return &DuplicateImageCollectionError{Description: "Image already assigned to image collection"}
 			}
 		}
 		tx.Rollback()
-		log.Error("[Add Image To Collection] Couldn't add image to collection: ", err.Error())
-		raven.CaptureError(err, nil)
 		return err
 	}
 
@@ -120,19 +143,21 @@ func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.A
 
 	tx, err := p.db.Begin()
 	if err != nil {
-		log.Debug("[Add Image To Collection] Couldn't begin transaction: ", err.Error())
+		log.Error("[Add Image To Collection] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	err = p._addImageToImageCollectionInTransaction(tx, apiUser, imageCollectionName, imageId)
+	err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, imageCollectionName, imageId)
 	if err != nil { //transaction already rolled back
+		log.Error("[Add Image to Collection] Couldn't add image to image collection: ", err.Error())
+		raven.CaptureError(err, nil)
 		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Debug("[Add Image to Collection] Couldn't commit transaction: ", err.Error())
+		log.Error("[Add Image to Collection] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}

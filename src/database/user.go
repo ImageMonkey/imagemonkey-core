@@ -38,7 +38,7 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
                               LEFT JOIN account_permission p ON p.account_id = a.id 
                               WHERE a.name = $1`, username)
     if err != nil {
-        log.Debug("[User Info] Couldn't get user info: ", err.Error())
+        log.Error("[User Info] Couldn't get user info: ", err.Error())
         raven.CaptureError(err, nil)
         return userInfo, err
     }
@@ -51,7 +51,7 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
                         &unlockImageDescriptionPermission, &unlockImage, &canMonitorSystem, &canAcceptTrendingLabel)
 
         if err != nil {
-            log.Debug("[User Info] Couldn't scan user info: ", err.Error())
+            log.Error("[User Info] Couldn't scan user info: ", err.Error())
             raven.CaptureError(err, nil)
             return userInfo, err
         }
@@ -73,7 +73,7 @@ func (p *ImageMonkeyDatabase) UserExists(username string) (bool, error) {
     var numOfExistingUsers int32
     err := p.db.QueryRow("SELECT count(*) FROM account u WHERE u.name = $1", username).Scan(&numOfExistingUsers)
     if err != nil {
-        log.Debug("[User exists] Couldn't get num of existing users: ", err.Error())
+        log.Error("[User exists] Couldn't get num of existing users: ", err.Error())
         raven.CaptureError(err, nil)
         return false, err
     }
@@ -88,7 +88,7 @@ func (p *ImageMonkeyDatabase) EmailExists(email string) (bool, error) {
     var numOfExistingUsers int32
     err := p.db.QueryRow("SELECT count(*) FROM account u WHERE u.email = $1", email).Scan(&numOfExistingUsers)
     if err != nil {
-        log.Debug("[Email exists] Couldn't get num of existing users: ", err.Error())
+        log.Error("[Email exists] Couldn't get num of existing users: ", err.Error())
         raven.CaptureError(err, nil)
         return false, err
     }
@@ -103,7 +103,7 @@ func (p *ImageMonkeyDatabase) GetHashedPasswordForUser(username string) (string,
     var hashedPassword string
     err := p.db.QueryRow("SELECT hashed_password FROM account u WHERE u.name = $1", username).Scan(&hashedPassword)
     if err != nil {
-        log.Debug("[Hashed Password] Couldn't get hashed password for user: ", err.Error())
+        log.Error("[Hashed Password] Couldn't get hashed password for user: ", err.Error())
         raven.CaptureError(err, nil)
         return "", err
     }
@@ -114,20 +114,56 @@ func (p *ImageMonkeyDatabase) GetHashedPasswordForUser(username string) (string,
 func (p *ImageMonkeyDatabase) CreateUser(username string, hashedPassword []byte, email string) error {
     var insertedId int64
 
+	type DefaultImageCollection struct {
+		Name string
+		Description string
+	}
+
     created := int64(time.Now().Unix())
 
+	defaultImageCollections := []DefaultImageCollection{
+									DefaultImageCollection{Name: "my donations", Description: "My donations"},
+								}
+
+	tx, err := p.db.Begin()
+    if err != nil {
+        log.Error("[Creating User] Couldn't begin transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
+    }
+
     insertedId = 0
-    err := p.db.QueryRow(`INSERT INTO account(name, hashed_password, email, created, is_moderator) 
+    err = tx.QueryRow(`INSERT INTO account(name, hashed_password, email, created, is_moderator) 
                         VALUES($1, $2, $3, $4, $5) RETURNING id`, 
                         username, hashedPassword, email, created, false).Scan(&insertedId)
     if err != nil {
-        log.Debug("[Creating User] Couldn't create user: ", err.Error())
+		tx.Rollback()
+        log.Error("[Creating User] Couldn't create user: ", err.Error())
         raven.CaptureError(err, nil)
         return err
     }
 
     if insertedId == 0 {
+		tx.Rollback()
         return errors.New("nothing inserted")
+    }
+
+	for _, defaultImageCollection := range defaultImageCollections {
+		err = p._addImageCollectionInTransaction(tx, username, defaultImageCollection.Name, defaultImageCollection.Description) 
+		if err != nil {
+			//transaction already rolled back
+			log.Error("[Creating User] Couldn't add default image collection: ", err.Error())
+        	raven.CaptureError(err, nil)
+			return err
+		}
+	}
+
+
+	err = tx.Commit()
+    if err != nil {
+        log.Error("[Creating User] Couldn't commit transaction: ", err.Error())
+        raven.CaptureError(err, nil)
+        return err
     }
 
     return nil
@@ -140,21 +176,21 @@ func (p *ImageMonkeyDatabase) ChangeProfilePicture(username string, uuid string)
 
     tx, err := p.db.Begin()
     if err != nil {
-        log.Debug("[Change Profile Picture] Couldn't begin transaction: ", err.Error())
+        log.Error("[Change Profile Picture] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return existingProfilePicture, err
     }
 
     err = tx.QueryRow(`SELECT COALESCE(a.profile_picture, '') FROM account a WHERE a.name = $1`, username).Scan(&existingProfilePicture)
     if err != nil {
-        log.Debug("[Change Profile Picture] Couldn't get existing profile picture: ", err.Error())
+        log.Error("[Change Profile Picture] Couldn't get existing profile picture: ", err.Error())
         raven.CaptureError(err, nil)
         return existingProfilePicture, err
     }
 
     _, err = tx.Exec(`UPDATE account SET profile_picture = $1 WHERE name = $2`, uuid, username)
     if err != nil {
-        log.Debug("[Change Profile Picture] Couldn't change profile picture: ", err.Error())
+        log.Error("[Change Profile Picture] Couldn't change profile picture: ", err.Error())
         raven.CaptureError(err, nil)
         return existingProfilePicture, err
     }
@@ -162,7 +198,7 @@ func (p *ImageMonkeyDatabase) ChangeProfilePicture(username string, uuid string)
 
     err = tx.Commit()
     if err != nil {
-        log.Debug("[Change Profile Picture] Couldn't commit transaction: ", err.Error())
+        log.Error("[Change Profile Picture] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return existingProfilePicture, err
     }
