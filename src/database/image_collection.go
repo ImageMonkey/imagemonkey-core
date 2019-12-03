@@ -6,24 +6,7 @@ import (
     datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	"github.com/lib/pq"
-)
-
-type AddImageCollectionErrorType int
-
-const (
-  AddImageCollectionSuccess AddImageCollectionErrorType = 1 << iota
-  AddImageCollectionInternalError
-  AddImageCollectionAlreadyExistsError
-)
-
-
-type AddImageToImageCollectionErrorType int
-
-const (
-  AddImageToImageCollectionSuccess AddImageToImageCollectionErrorType = 1 << iota
-  AddImageToImageCollectionInternalError
-  AddImageToImageCollectionInvalidInputError
-  AddImageToImageCollectionDuplicateEntryError
+	"database/sql"
 )
 
 func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser, apiBaseUrl string) ([]datastructures.ImageCollection, error) {
@@ -87,27 +70,27 @@ func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser
     return imageCollections, nil
 }
 
-func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser, name string, description string) AddImageCollectionErrorType {
+func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser, name string, description string) error {
 	_, err := p.db.Exec(`INSERT INTO user_image_collection(account_id, name, description)
 							SELECT id, $2, $3 FROM account WHERE name = $1`, apiUser.Name, name, description)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23505" {
-				return AddImageCollectionAlreadyExistsError
+				return &DuplicateImageCollectionError{Description: "An Image Collection with that name already exists"}
 			}
 		}
 		log.Error("[Image Collections] Couldn't add image collection: ", err.Error())
         raven.CaptureError(err, nil)
-        return AddImageCollectionInternalError
+        return err 
 	}
 
-	return AddImageCollectionSuccess
+	return nil 
 }
 
-func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.APIUser, 
-	imageCollectionName string, imageId string) AddImageToImageCollectionErrorType {
+func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, 
+	imageCollectionName string, imageId string) error {
 
-	_, err := p.db.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
+	_, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
 						 SELECT (SELECT u.id 
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
@@ -116,15 +99,43 @@ func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.A
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23502" {
-				return AddImageToImageCollectionInvalidInputError
+				tx.Rollback()
+				return &InvalidImageCollectionInputError{Description: ""}
 			} else if err.Code == "23505" {
-				return AddImageToImageCollectionDuplicateEntryError	
+				tx.Rollback()
+				return &DuplicateImageCollectionError{Description: "Image already assigned to image collection"}
 			}
 		}
+		tx.Rollback()
 		log.Error("[Add Image To Collection] Couldn't add image to collection: ", err.Error())
         raven.CaptureError(err, nil)
-        return AddImageToImageCollectionInternalError
+        return err 
 	}
 
-	return AddImageToImageCollectionSuccess
+	return nil
+}
+
+func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.APIUser, 
+	imageCollectionName string, imageId string) error {
+	
+	tx, err := p.db.Begin()
+	if err != nil {
+		log.Debug("[Add Image To Collection] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+	
+	err = p._addImageToImageCollectionInTransaction(tx, apiUser, imageCollectionName, imageId)
+	if err != nil { //transaction already rolled back
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Debug("[Add Image to Collection] Couldn't commit transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
+
+	return nil
 }

@@ -23,3 +23,19 @@ type AuthenticationRequiredError struct {
 func (e *AuthenticationRequiredError) Error() string {
 	return e.Description
 }
+
+type DuplicateImageCollectionError struct {
+	Description string
+}
+
+func (e *DuplicateImageCollectionError) Error() string {
+	return e.Description
+}
+
+type InvalidImageCollectionInputError struct {
+	Description string
+}
+
+func (e *InvalidImageCollectionInputError) Error() string {
+	return e.Description
+}
