@@ -1,12 +1,12 @@
 package imagemonkeydb
 
 import (
-    "github.com/getsentry/raven-go"
-    log "github.com/sirupsen/logrus"
-    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	commons "github.com/bbernhard/imagemonkey-core/commons"
-	"github.com/lib/pq"
 	"database/sql"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+	"github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 )
 
 func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser, apiBaseUrl string) ([]datastructures.ImageCollection, error) {
@@ -35,39 +35,39 @@ func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser
 								JOIN image i ON q1.image_id = i.id
 							 ) q1 ON q1.user_image_collection_id = u.id 
 							 WHERE a.name = $1`, apiUser.Name)
-    if err != nil {
-        log.Error("[Image Collections] Couldn't get image collections: ", err.Error())
-        raven.CaptureError(err, nil)
-        return imageCollections, err
-    }
+	if err != nil {
+		log.Error("[Image Collections] Couldn't get image collections: ", err.Error())
+		raven.CaptureError(err, nil)
+		return imageCollections, err
+	}
 
-    defer rows.Close()
+	defer rows.Close()
 
-    for rows.Next() {
-    	var imageCollection datastructures.ImageCollection
-    	err = rows.Scan(&imageCollection.Name, &imageCollection.Description, &imageCollection.Count, 
-    					&imageCollection.SampleImage.Id, &imageCollection.SampleImage.Width, &imageCollection.SampleImage.Height,
-    					&imageCollection.SampleImage.Unlocked)
-    	if err != nil {
-    		log.Error("[Image Collections] Couldn't scan image collection: ", err.Error())
-        	raven.CaptureError(err, nil)
-        	return imageCollections, err
-    	}
+	for rows.Next() {
+		var imageCollection datastructures.ImageCollection
+		err = rows.Scan(&imageCollection.Name, &imageCollection.Description, &imageCollection.Count,
+			&imageCollection.SampleImage.Id, &imageCollection.SampleImage.Width, &imageCollection.SampleImage.Height,
+			&imageCollection.SampleImage.Unlocked)
+		if err != nil {
+			log.Error("[Image Collections] Couldn't scan image collection: ", err.Error())
+			raven.CaptureError(err, nil)
+			return imageCollections, err
+		}
 
-    	if imageCollection.SampleImage.Id == "" {
-	    	imageCollection.SampleImage.Id = ""
-	    	imageCollection.SampleImage.Unlocked = true
-	    	imageCollection.SampleImage.Width = 960
-	    	imageCollection.SampleImage.Height = 796
-	    	imageCollection.SampleImage.Url = "/img/default.png"
-	    } else {
-	    	imageCollection.SampleImage.Url = commons.GetImageUrlFromImageId(apiBaseUrl, imageCollection.SampleImage.Id, imageCollection.SampleImage.Unlocked)
-	    }
+		if imageCollection.SampleImage.Id == "" {
+			imageCollection.SampleImage.Id = ""
+			imageCollection.SampleImage.Unlocked = true
+			imageCollection.SampleImage.Width = 960
+			imageCollection.SampleImage.Height = 796
+			imageCollection.SampleImage.Url = "/img/default.png"
+		} else {
+			imageCollection.SampleImage.Url = commons.GetImageUrlFromImageId(apiBaseUrl, imageCollection.SampleImage.Id, imageCollection.SampleImage.Unlocked)
+		}
 
-    	imageCollections = append(imageCollections, imageCollection)
-    }
+		imageCollections = append(imageCollections, imageCollection)
+	}
 
-    return imageCollections, nil
+	return imageCollections, nil
 }
 
 func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser, name string, description string) error {
@@ -80,22 +80,22 @@ func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser,
 			}
 		}
 		log.Error("[Image Collections] Couldn't add image collection: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err 
+		raven.CaptureError(err, nil)
+		return err
 	}
 
-	return nil 
+	return nil
 }
 
-func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, apiUser datastructures.APIUser, 
+func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, apiUser datastructures.APIUser,
 	imageCollectionName string, imageId string) error {
 
 	_, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
 						 SELECT (SELECT u.id 
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
-						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)`, 
-						   		 imageCollectionName, apiUser.Name, imageId)
+						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)`,
+		imageCollectionName, apiUser.Name, imageId)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23502" {
@@ -108,23 +108,23 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 		}
 		tx.Rollback()
 		log.Error("[Add Image To Collection] Couldn't add image to collection: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err 
+		raven.CaptureError(err, nil)
+		return err
 	}
 
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.APIUser, 
+func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.APIUser,
 	imageCollectionName string, imageId string) error {
-	
+
 	tx, err := p.db.Begin()
 	if err != nil {
 		log.Debug("[Add Image To Collection] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
-	
+
 	err = p._addImageToImageCollectionInTransaction(tx, apiUser, imageCollectionName, imageId)
 	if err != nil { //transaction already rolled back
 		return err
