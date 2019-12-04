@@ -239,6 +239,33 @@ func TestDonateImageAndAssignToImageCollection(t *testing.T) {
 }
 
 
+func TestImageGetsAssignedToMyDonationsImageCollection(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testSignUp(t, "user2", "pwd", "user2@imagemonkey.io")
+
+	imageCollections := testGetImageCollections(t, "user", token, 200)
+	equals(t, len(imageCollections), 1)
+
+	equals(t, imageCollections[0].Name, "my donations")
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, token, "", 200) 
+
+	numOfImagesInImageCollection, err := db.GetNumOfImagesInImageCollection("user", "my donations")
+	ok(t, err)
+	equals(t, numOfImagesInImageCollection, 1)
+
+
+	numOfImagesInImageCollectionOfOtherUser, err := db.GetNumOfImagesInImageCollection("user2", "my donations")
+	ok(t, err)
+	equals(t, numOfImagesInImageCollectionOfOtherUser, 0)
+}
+
+
 //temporarily disabled, as it doesn't work
 /*func TestDonateImageCouldntAssignToImageCollectionAsImageCollectionDoesntExit(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
