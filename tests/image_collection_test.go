@@ -124,13 +124,15 @@ func TestGetImageCollectionSuccess(t *testing.T) {
 	token := testLogin(t, "user", "pwd", 200)
 
 	imageCollections := testGetImageCollections(t, "user", token, 200)
-	equals(t, len(imageCollections), 0)
+	equals(t, len(imageCollections), 1)
+
+	equals(t, imageCollections[0].Name, "my donations")
 
 	testAddImageCollection(t, "user", token, "new-image-collection", "my-new-image-collection", 201)
 
 
 	imageCollections = testGetImageCollections(t, "user", token, 200)
-	equals(t, len(imageCollections), 1)
+	equals(t, len(imageCollections), 2)
 }
 
 func TestGetImageCollectionsFailsDueToWrongToken(t *testing.T) {
