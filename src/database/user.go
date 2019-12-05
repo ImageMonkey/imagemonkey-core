@@ -121,7 +121,8 @@ func (p *ImageMonkeyDatabase) CreateUser(username string, hashedPassword []byte,
 	created := int64(time.Now().Unix())
 
 	defaultImageCollections := []DefaultImageCollection{
-		DefaultImageCollection{Name: "my donations", Description: "My donations"},
+		DefaultImageCollection{Name: MyDonations, Description: "My donations"},
+		DefaultImageCollection{Name: MyLabels, Description: "My labels"},
 	}
 
 	tx, err := p.db.Begin()

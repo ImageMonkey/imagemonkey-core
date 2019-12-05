@@ -304,7 +304,7 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 	//if user is logged in
 	if apiUser.Name != "" {
 		//add image to default image collection
-		err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, "my donations", imageInfo.Name)
+		err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, MyDonations, imageInfo.Name)
 		if err != nil {
 			//transaction already rolled back
 			log.Error("[Add donated Image To Collection] Couldn't add image to default collection: ", err.Error())

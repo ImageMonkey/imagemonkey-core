@@ -272,21 +272,30 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
 	metalabels *commons.MetaLabels, imageId string, labels []datastructures.LabelMeEntry) error {
 	tx, err := p.db.Begin()
 	if err != nil {
-		log.Debug("[Adding image labels] Couldn't begin transaction: ", err.Error())
+		log.Error("[Adding image labels] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
 	_, err = _addLabelsAndLabelSuggestionsToImageInTransaction(tx, apiUser, labelMap, metalabels, imageId, labels, 0, 0)
 	if err != nil { //tx already rolled back in case of error, so we can just return here
-		log.Debug("[Adding image labels] Couldn't add labels: ", err.Error())
+		log.Error("[Adding image labels] Couldn't add labels: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
+	if apiUser.Name != "" {
+		err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, MyLabels, imageId)
+		if err != nil { //transaction already rolled back, so we can just return here
+			log.Error("[Adding image labels] Couldn't add image to default image collection: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
+	}
+
 	err = tx.Commit()
 	if err != nil {
-		log.Debug("[Adding image labels] Couldn't commit changes: ", err.Error())
+		log.Error("[Adding image labels] Couldn't commit changes: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
