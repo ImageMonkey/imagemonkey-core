@@ -290,13 +290,6 @@
     $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
   }
 
-  function split(val) {
-    return val.split( / \s*/ );
-  }
-  function extractLast(term) {
-    return split(term).pop();
-  }
-
   $(document).ready(function(){
     //change label text (label is defined in annotate.html)
     $("#label").text("Browse");
