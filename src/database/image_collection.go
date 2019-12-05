@@ -7,6 +7,8 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"fmt"
+	"time"
 )
 
 func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser, apiBaseUrl string) ([]datastructures.ImageCollection, error) {
@@ -113,22 +115,30 @@ func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser,
 }
 
 func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, username string,
-	imageCollectionName string, imageId string) error {
+	imageCollectionName string, imageId string, failIfAlreadyAssigned bool) error {
 
-	_, err := tx.Exec(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
+	currentUnixTimestamp := int64(time.Now().Unix())
+
+	queryValues := []interface{}{imageCollectionName, username, imageId}
+
+	q1 := ""
+	if !failIfAlreadyAssigned {
+		q1 = "ON CONFLICT(user_image_collection_id, image_id) DO UPDATE SET last_modified = $4"
+		queryValues = append(queryValues, currentUnixTimestamp)
+	}
+
+	q := fmt.Sprintf(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
 						 SELECT (SELECT u.id 
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
-						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)`,
-		imageCollectionName, username, imageId)
+						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)
+					  %s`, q1)
+	_, err := tx.Exec(q, queryValues...)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == "23502" {
 				tx.Rollback()
 				return &InvalidImageCollectionInputError{Description: "Invalid Image Collection Input"}
-			} else if err.Code == "23505" {
-				tx.Rollback()
-				return &DuplicateImageCollectionError{Description: "Image already assigned to image collection"}
 			}
 		}
 		tx.Rollback()
@@ -139,7 +149,7 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 }
 
 func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.APIUser,
-	imageCollectionName string, imageId string) error {
+	imageCollectionName string, imageId string, failIfAlreadyAssigned bool) error {
 
 	tx, err := p.db.Begin()
 	if err != nil {
@@ -148,7 +158,7 @@ func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.A
 		return err
 	}
 
-	err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, imageCollectionName, imageId)
+	err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, imageCollectionName, imageId, failIfAlreadyAssigned)
 	if err != nil { //transaction already rolled back
 		log.Error("[Add Image to Collection] Couldn't add image to image collection: ", err.Error())
 		raven.CaptureError(err, nil)

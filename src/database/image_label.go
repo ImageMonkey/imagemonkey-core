@@ -285,7 +285,7 @@ func (p *ImageMonkeyDatabase) AddLabelsToImage(apiUser datastructures.APIUser, l
 	}
 
 	if apiUser.Name != "" {
-		err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, MyLabels, imageId)
+		err = p._addImageToImageCollectionInTransaction(tx, apiUser.Name, MyLabels, imageId, false)
 		if err != nil { //transaction already rolled back, so we can just return here
 			log.Error("[Adding image labels] Couldn't add image to default image collection: ", err.Error())
 			raven.CaptureError(err, nil)

@@ -2748,7 +2748,7 @@ func main() {
 				return
 			}
 
-			err := imageMonkeyDatabase.AddImageToImageCollection(apiUser, imageCollectionName, imageId)
+			err := imageMonkeyDatabase.AddImageToImageCollection(apiUser, imageCollectionName, imageId, true)
 			if err != nil {
 				switch err.(type) {
 				case *imagemonkeydb.InvalidImageCollectionInputError:
