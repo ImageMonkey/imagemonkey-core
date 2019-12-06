@@ -125,7 +125,11 @@
       var justifiedLayout = require('justified-layout');
       justifiedLayoutGeometry = justifiedLayout(sizes, {
         "fullWidthBreakoutRowCadence": false,
-        "containerWidth": document.getElementById("imageGrid").clientWidth
+        "containerWidth": document.getElementById("imageGrid").clientWidth,
+        "boxSpacing": {
+          "horizontal": 10,
+          "vertical": 100
+        }
       });
 
       loadNextImagesInImageGrid();
@@ -199,16 +203,18 @@
     annotationView.loadAnnotatedImage(annotationId, -1);
   }
 
-  function newImageItem(id, url, validationId, top, left, width, height){
-    var d = ('<div class="justified-layout-item" style="width: ' + width 
+  function newImageItem(id, url, validationId, top, left, width, height, tooltip) {
+    var d = ('<div class="justified-layout-item" data-balloon-visible data-balloon="' + tooltip 
+            + '" data-balloon-length="fit" data-balloon-pos="up" style="width: ' + width 
             +'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><img id="' + id +'" src="' + url 
             + '" data-validationid="' + validationId +'" onclick="onImageGridItemClicked(this);" style="cursor: pointer;"></div>');
     return d;
   }
 
-  function newCanvasItem(id, url, validationId, top, left, width, height){
-    var d = ('<div class="justified-layout-item" style="width: ' + width 
+  function newCanvasItem(id, url, validationId, top, left, width, height, tooltip) {
+    var d = ('<div class="justified-layout-item" data-balloon-visible data-balloon="' + tooltip 
+            + '" data-balloon-length="fit" data-balloon-pos="up" style="width: ' + width 
             +'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
     return d;
@@ -247,6 +253,16 @@
                                   + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
                                   Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
                                   "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
+     
+      var tooltipText = '';
+      if(browseAnnotationsOnlyMode) {
+        if(imageGridData[i].validation.sublabel !== "")
+          tooltipText = escapeHtml(imageGridData[i].validation.sublabel) + "/" + escapeHtml(imageGridData[i].validation.label);
+        else
+          tooltipText = escapeHtml(imageGridData[i].validation.label);
+      }
+      else
+        tooltipText = escapeHtml(imageGridData[i].label.accessor);
       
       if(browseAnnotationsOnlyMode) {
         var itemId = imageGridData[i]["uuid"];
@@ -255,7 +271,7 @@
           annotationsScaleFactor = 1.0;
 
         item = newCanvasItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
-                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
 
         $("#imageGrid").append(item); 
 
@@ -276,7 +292,7 @@
 
         var imageId = ("galleryItem" + i.toString());
         item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
-                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
         $("#imageGrid").append(item); 
       }
 
