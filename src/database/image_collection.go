@@ -139,6 +139,9 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 			if err.Code == "23502" {
 				tx.Rollback()
 				return &InvalidImageCollectionInputError{Description: "Invalid Image Collection Input"}
+			} else if err.Code == "23505" {
+				tx.Rollback()
+				return &DuplicateImageCollectionError{Description: "Image already assigned to Image Collection"}
 			}
 		}
 		tx.Rollback()

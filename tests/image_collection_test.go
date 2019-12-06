@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 	"gopkg.in/resty.v1"
+	"sort"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 )
 
@@ -124,15 +125,18 @@ func TestGetImageCollectionSuccess(t *testing.T) {
 	token := testLogin(t, "user", "pwd", 200)
 
 	imageCollections := testGetImageCollections(t, "user", token, 200)
-	equals(t, len(imageCollections), 1)
+	equals(t, len(imageCollections), 2)
+
+	sort.SliceStable(imageCollections, func(i, j int) bool { return imageCollections[i].Name < imageCollections[j].Name })
 
 	equals(t, imageCollections[0].Name, "my donations")
+	equals(t, imageCollections[1].Name, "my labels")
 
 	testAddImageCollection(t, "user", token, "new-image-collection", "my-new-image-collection", 201)
 
 
 	imageCollections = testGetImageCollections(t, "user", token, 200)
-	equals(t, len(imageCollections), 2)
+	equals(t, len(imageCollections), 3)
 }
 
 func TestGetImageCollectionsFailsDueToWrongToken(t *testing.T) {
@@ -249,9 +253,12 @@ func TestImageGetsAssignedToMyDonationsImageCollection(t *testing.T) {
 	testSignUp(t, "user2", "pwd", "user2@imagemonkey.io")
 
 	imageCollections := testGetImageCollections(t, "user", token, 200)
-	equals(t, len(imageCollections), 1)
+	equals(t, len(imageCollections), 2) //per default a user has already created 2 image collections (my donations + my labels)
+
+	sort.SliceStable(imageCollections, func(i, j int) bool { return imageCollections[i].Name < imageCollections[j].Name })
 
 	equals(t, imageCollections[0].Name, "my donations")
+	equals(t, imageCollections[1].Name, "my labels")
 
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, token, "", 200) 
 
