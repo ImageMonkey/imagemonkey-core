@@ -20,7 +20,7 @@
   var justifiedLayoutGeometry, imageGridData;
   var numOfLastFetchedImg = 0;
   var defaultBatchSize = 50;
-  var currentAnnotatedImageGridElement;
+  //var currentAnnotatedImageGridElement;
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var browseAnnotationsOnlyMode = false;
   var imageGridCanvases = {};
@@ -87,12 +87,16 @@
     });
   }
 
-  function showBrowseAnnotationImageGrid() {
+  function showBrowseAnnotationImageGrid(annotatedEntriesIds = null) {
     //if the image grid gets shown again, the image in question was successfully annotated/blacklisted or marked
     //as non-annotatable. We now grey the image out and change the mouse cursor to default again.
 
-    $("#"+currentAnnotatedImageGridElement).addClass("grey-out");
-    $("#"+currentAnnotatedImageGridElement).css('cursor', 'default');
+    if(annotatedEntriesIds !== null) {
+      for(var i = 0; i < annotatedEntriesIds.length; i++) {
+        $("#"+annotatedEntriesIds[i]).addClass("grey-out");
+        $("#"+annotatedEntriesIds[i]).css('cursor', 'default');
+      }
+    }
 
     //show image grid and jump to scroll position that we were before
     $("#imageGrid").show();
@@ -186,7 +190,7 @@
       return;
 
     var validationId = $(elem).attr("data-validationid");
-    currentAnnotatedImageGridElement = $(elem).attr("id");
+    //currentAnnotatedImageGridElement = $(elem).attr("id");
     $("#annotationQuerySearchContainer").hide();
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
@@ -290,8 +294,8 @@
           }
         }
 
-        var imageId = ("galleryItem" + i.toString());
-        item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+        var itemId = imageGridData[i]["uuid"];
+        item = newImageItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
         $("#imageGrid").append(item); 
       }

@@ -59,7 +59,7 @@ var AnnotationView = (function() {
         if (this.annotationMode === "browse") {
             $("#loadingSpinner").hide();
             this.updateAnnotationsForImage(this.annotationInfo.annotationId, res);
-            showBrowseAnnotationImageGrid();
+            showBrowseAnnotationImageGrid(null);
         }
 
         if (this.onlyOnce) {
@@ -207,7 +207,7 @@ var AnnotationView = (function() {
                     $("#loadingSpinner").hide();
                     clearDetailedCanvas(inst.detailedCanvas);
                     inst.annotator.reset();
-                    showBrowseAnnotationImageGrid();
+                    showBrowseAnnotationImageGrid([validationId]);
                 }
             }
         });
@@ -267,12 +267,15 @@ var AnnotationView = (function() {
                 }
             }
         }
+
+        var validationIds = null //TODO 
+
         this.unifiedModeLabels = {};
         this.unifiedModeAnnotations = {};
-        this.addAnnotations(annotations);
+        this.addAnnotations(annotations, validationIds);
     }
 
-    AnnotationView.prototype.addAnnotations = function(annotations) {
+    AnnotationView.prototype.addAnnotations = function(annotations, validationIds = null) {
         var headers = {}
         if (this.browserFingerprint !== null)
             headers["X-Browser-Fingerprint"] = this.browserFingerprint;
@@ -304,13 +307,13 @@ var AnnotationView = (function() {
         });
     }
 
-    AnnotationView.prototype.onAddAnnotationsDone = function() {
+    AnnotationView.prototype.onAddAnnotationsDone = function(validationIds = null) {
         if (this.annotationMode === "default")
             this.loadUnannotatedImage();
         else {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
-            showBrowseAnnotationImageGrid();
+            showBrowseAnnotationImageGrid(validationIds);
         }
 
         if (this.onlyOnce) {
@@ -337,7 +340,7 @@ var AnnotationView = (function() {
                     $("#loadingSpinner").hide();
                     clearDetailedCanvas(inst.detailedCanvas);
                     inst.annotator.reset();
-                    showBrowseAnnotationImageGrid();
+                    showBrowseAnnotationImageGrid([validationId]);
                 }
             }
         });
