@@ -1,7 +1,7 @@
 FROM postgres:9.6.13
 
 ARG TEMPORAL_TABLE_VERSION=1.2.0
-ARG POSTGIS_VERSION=2.3
+ARG POSTGIS_VERSION=2.5
 ENV MONKEY_DB_PASSWORD=
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
