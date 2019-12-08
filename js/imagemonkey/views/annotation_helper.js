@@ -178,7 +178,8 @@ function onLabelInLabelLstRemoveClicked(elem) {
     $("#removeLabelFromUnifiedModeLstDlg").modal("show");
 }
 
-function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false, isUnlocked = false, loggedIn = false) {
+function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false,
+    isUnlocked = false, loggedIn = false, validationId = null) {
     var id = "labellstitem-" + uuid;
     var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
     if (allowRemove) {
@@ -198,10 +199,15 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCre
         tooltip = ' data-content="Please login to annotate this label"';
     }
 
+    var validationIdStr = '';
+    if (validationId !== null)
+        validationIdStr = '" data-validation-uuid="' + validationId;
+
     var elem = $('<div class="ui' + disabledStr + 'segment center aligned labelslstitem" id="' + id + '"' + tooltip +
         ' data-label="' + label + '" data-uuid="' + uuid +
         '" data-sublabel="' + sublabel +
         '" data-newly-created="' + newlyCreated +
+        validationIdStr +
         '" onclick="' + onClickCallback + '"' +
         ' onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
         ' onmouseout="this.style.backgroundColor=\'white\';"' +
