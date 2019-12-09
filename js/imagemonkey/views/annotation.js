@@ -531,7 +531,7 @@ var AnnotationView = (function() {
                             if (data[i].sublabels !== null) {
                                 for (var j = 0; j < data[i].sublabels.length; j++) {
                                     addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
-                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked, inst.loggedIn, data[i].validation.uuid);
+                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked, inst.loggedIn, data[i].sublabels[j].validation.uuid);
                                 }
                             }
                         }
