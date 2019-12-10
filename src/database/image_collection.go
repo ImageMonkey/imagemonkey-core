@@ -119,19 +119,18 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 
 	currentUnixTimestamp := int64(time.Now().Unix())
 
-	queryValues := []interface{}{imageCollectionName, username, imageId}
+	queryValues := []interface{}{imageCollectionName, username, imageId, currentUnixTimestamp}
 
 	q1 := ""
 	if !failIfAlreadyAssigned {
 		q1 = "ON CONFLICT(user_image_collection_id, image_id) DO UPDATE SET last_modified = $4"
-		queryValues = append(queryValues, currentUnixTimestamp)
 	}
 
 	q := fmt.Sprintf(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
 						 SELECT (SELECT u.id 
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
-						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3)
+						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3), $4
 					  %s`, q1)
 	_, err := tx.Exec(q, queryValues...)
 	if err != nil {
