@@ -126,7 +126,7 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 		q1 = "ON CONFLICT(user_image_collection_id, image_id) DO UPDATE SET last_modified = $4"
 	}
 
-	q := fmt.Sprintf(`INSERT INTO image_collection_image(user_image_collection_id, image_id)
+	q := fmt.Sprintf(`INSERT INTO image_collection_image(user_image_collection_id, image_id, last_modified)
 						 SELECT (SELECT u.id 
 						   		 FROM user_image_collection u 
 						   		 JOIN account a ON u.account_id = a.id
