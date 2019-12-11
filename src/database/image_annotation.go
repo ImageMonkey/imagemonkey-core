@@ -1882,6 +1882,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                               ) q WHERE %s
                         )qq
                       ) qqq
+                      GROUP BY image_key, image_width, image_height, validation_uuid, image_unlocked, accessor
                       %s`, parseResult.Subquery, parseResult.Subquery, parseResult.Subquery, 
 					  		q2, q4, q3, includeOwnImageDonations, parseResult.Query, orderBy)
 

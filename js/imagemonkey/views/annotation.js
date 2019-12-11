@@ -59,7 +59,7 @@ var AnnotationView = (function() {
         if (this.annotationMode === "browse") {
             $("#loadingSpinner").hide();
             this.updateAnnotationsForImage(this.annotationInfo.annotationId, res);
-            showBrowseAnnotationImageGrid();
+            showBrowseAnnotationImageGrid(null);
         }
 
         if (this.onlyOnce) {
@@ -207,7 +207,7 @@ var AnnotationView = (function() {
                     $("#loadingSpinner").hide();
                     clearDetailedCanvas(inst.detailedCanvas);
                     inst.annotator.reset();
-                    showBrowseAnnotationImageGrid();
+                    showBrowseAnnotationImageGrid([validationId]);
                 }
             }
         });
@@ -255,24 +255,30 @@ var AnnotationView = (function() {
 
 
     AnnotationView.prototype.addAnnotationsUnifiedMode = function() {
+        var validationIds = [];
         var annotations = [];
         for (var key in this.unifiedModeAnnotations) {
             if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
                 if (this.unifiedModeAnnotations[key].dirty) {
                     var annotation = {};
-                    annotation["annotations"] = this.unifiedModeAnnotations[key].annotations;
-                    annotation["label"] = this.unifiedModeAnnotations[key].label;
-                    annotation["sublabel"] = this.unifiedModeAnnotations[key].sublabel;
+                    var entry = this.unifiedModeAnnotations[key];
+                    annotation["annotations"] = entry.annotations;
+                    annotation["label"] = entry.label;
+                    annotation["sublabel"] = entry.sublabel;
                     annotations.push(annotation);
+
+                    if ("validationUuid" in entry && entry.validationUuid !== null)
+                        validationIds.push(entry.validationUuid);
                 }
             }
         }
+
         this.unifiedModeLabels = {};
         this.unifiedModeAnnotations = {};
-        this.addAnnotations(annotations);
+        this.addAnnotations(annotations, validationIds);
     }
 
-    AnnotationView.prototype.addAnnotations = function(annotations) {
+    AnnotationView.prototype.addAnnotations = function(annotations, validationIds = null) {
         var headers = {}
         if (this.browserFingerprint !== null)
             headers["X-Browser-Fingerprint"] = this.browserFingerprint;
@@ -299,18 +305,18 @@ var AnnotationView = (function() {
                 xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
             },
             success: function(data) {
-                inst.onAddAnnotationsDone();
+                inst.onAddAnnotationsDone(validationIds);
             }
         });
     }
 
-    AnnotationView.prototype.onAddAnnotationsDone = function() {
+    AnnotationView.prototype.onAddAnnotationsDone = function(validationIds = null) {
         if (this.annotationMode === "default")
             this.loadUnannotatedImage();
         else {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
-            showBrowseAnnotationImageGrid();
+            showBrowseAnnotationImageGrid(validationIds);
         }
 
         if (this.onlyOnce) {
@@ -337,7 +343,7 @@ var AnnotationView = (function() {
                     $("#loadingSpinner").hide();
                     clearDetailedCanvas(inst.detailedCanvas);
                     inst.annotator.reset();
-                    showBrowseAnnotationImageGrid();
+                    showBrowseAnnotationImageGrid([validationId]);
                 }
             }
         });
@@ -400,6 +406,15 @@ var AnnotationView = (function() {
         else
             key = $("#label").attr("sublabel") + "/" + $("#label").attr("label");
 
+        //get the validationId of the currently selected item
+        var currentSelectedValidationUuid = null;
+        $("#annotationLabelsLst").children().each(function(i) {
+            if ($(this).hasClass("grey inverted")) {
+                currentSelectedValidationUuid = $(this).attr("data-validation-uuid");
+                return;
+            }
+        });
+
         var annos = null;
         if (key in this.unifiedModeAnnotations) {
             if (this.annotator.isDirty()) {
@@ -408,6 +423,7 @@ var AnnotationView = (function() {
                     annotations: annos,
                     label: $("#label").attr("label"),
                     sublabel: $("#label").attr("sublabel"),
+                    validationUuid: currentSelectedValidationUuid,
                     dirty: true
                 };
             }
@@ -418,6 +434,7 @@ var AnnotationView = (function() {
                     annotations: annos,
                     label: $("#label").attr("label"),
                     sublabel: $("#label").attr("sublabel"),
+                    validationUuid: currentSelectedValidationUuid,
                     dirty: true
                 };
             }
@@ -510,11 +527,11 @@ var AnnotationView = (function() {
                 if (inst.annotationView === "unified") {
                     if (data !== null) {
                         for (var i = 0; i < data.length; i++) {
-                            addLabelToLabelLst(data[i].label, '', data[i].uuid, false, false, data[i].unlocked, inst.loggedIn);
+                            addLabelToLabelLst(data[i].label, '', data[i].uuid, false, false, data[i].unlocked, inst.loggedIn, data[i].validation.uuid);
                             if (data[i].sublabels !== null) {
                                 for (var j = 0; j < data[i].sublabels.length; j++) {
                                     addLabelToLabelLst(data[i].label, data[i].sublabels[j].name,
-                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked, inst.loggedIn);
+                                        data[i].sublabels[j].uuid, false, false, data[i].unlocked, inst.loggedIn, data[i].sublabels[j].validation.uuid);
                                 }
                             }
                         }
@@ -952,7 +969,7 @@ var AnnotationView = (function() {
                         };
                     }
                     elem = addLabelToLabelLst(selectedElem.label, selectedElem.sublabel,
-                        selectedElem.uuid, true, true, false, inst.loggedIn);
+                        selectedElem.uuid, true, true, false, inst.loggedIn, null);
                 }
 
                 //select newly added (or already existing) label
