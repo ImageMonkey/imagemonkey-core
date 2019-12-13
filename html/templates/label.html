@@ -1116,11 +1116,11 @@
 {{ template "footer.html" .}}
   
 
-  <link href="css/shepherdjs/shepherd-theme-dark.css" rel="stylesheet">
-  <script src="js/popperjs/popper.min.js"></script>
-  <script src="js/shepherdjs/shepherd.js"></script>
+  <link href="css/shepherdjs/shepherd-theme-dark.css?v={{ .assetVersion }}" rel="stylesheet">
+  <script src="js/popperjs/popper.min.js?v={{ .assetVersion }}"></script>
+  <script src="js/shepherdjs/shepherd.js?v={{ .assetVersion }}"></script>
   
 </body>
-<script src="js/intros/label_intro.js"></script>
+<script src="js/intros/label_intro.js?v={{ .assetVersion }}"></script>
 
 </html>
