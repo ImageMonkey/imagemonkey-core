@@ -743,6 +743,7 @@ func main() {
 				"activeMenuNr": -1,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"assetVersion": assetVersion,
+				"apiBaseUrl": apiBaseUrl,
 			})
 		})
 
