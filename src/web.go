@@ -32,7 +32,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-var assetVersion string = "abc"
+var assetVersion string = ""
 
 func ShowErrorPage(c *gin.Context) {
 	c.HTML(404, "404.html", gin.H{
@@ -243,6 +243,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	assetVersion = strconv.FormatInt(int64(time.Now().Unix()), 10)
 
 	//create redis pool
 	redisPool := redis.NewPool(func() (redis.Conn, error) {
