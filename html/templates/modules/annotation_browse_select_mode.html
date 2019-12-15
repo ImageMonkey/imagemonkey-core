@@ -20,7 +20,7 @@
   var justifiedLayoutGeometry, imageGridData;
   var numOfLastFetchedImg = 0;
   var defaultBatchSize = 50;
-  var currentAnnotatedImageGridElement;
+  //var currentAnnotatedImageGridElement;
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var browseAnnotationsOnlyMode = false;
   var imageGridCanvases = {};
@@ -87,12 +87,16 @@
     });
   }
 
-  function showBrowseAnnotationImageGrid() {
+  function showBrowseAnnotationImageGrid(annotatedEntriesIds = null) {
     //if the image grid gets shown again, the image in question was successfully annotated/blacklisted or marked
     //as non-annotatable. We now grey the image out and change the mouse cursor to default again.
 
-    $("#"+currentAnnotatedImageGridElement).addClass("grey-out");
-    $("#"+currentAnnotatedImageGridElement).css('cursor', 'default');
+    if(annotatedEntriesIds !== null) {
+      for(var i = 0; i < annotatedEntriesIds.length; i++) {
+        $("#"+annotatedEntriesIds[i]).addClass("grey-out");
+        $("#"+annotatedEntriesIds[i]).css('cursor', 'default');
+      }
+    }
 
     //show image grid and jump to scroll position that we were before
     $("#imageGrid").show();
@@ -125,7 +129,11 @@
       var justifiedLayout = require('justified-layout');
       justifiedLayoutGeometry = justifiedLayout(sizes, {
         "fullWidthBreakoutRowCadence": false,
-        "containerWidth": document.getElementById("imageGrid").clientWidth
+        "containerWidth": document.getElementById("imageGrid").clientWidth,
+        "boxSpacing": {
+          "horizontal": 10,
+          "vertical": 100
+        }
       });
 
       loadNextImagesInImageGrid();
@@ -182,7 +190,7 @@
       return;
 
     var validationId = $(elem).attr("data-validationid");
-    currentAnnotatedImageGridElement = $(elem).attr("id");
+    //currentAnnotatedImageGridElement = $(elem).attr("id");
     $("#annotationQuerySearchContainer").hide();
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
@@ -199,16 +207,18 @@
     annotationView.loadAnnotatedImage(annotationId, -1);
   }
 
-  function newImageItem(id, url, validationId, top, left, width, height){
-    var d = ('<div class="justified-layout-item" style="width: ' + width 
+  function newImageItem(id, url, validationId, top, left, width, height, tooltip) {
+    var d = ('<div class="justified-layout-item" data-balloon-visible data-balloon="' + tooltip 
+            + '" data-balloon-length="fit" data-balloon-pos="up" style="width: ' + width 
             +'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><img id="' + id +'" src="' + url 
             + '" data-validationid="' + validationId +'" onclick="onImageGridItemClicked(this);" style="cursor: pointer;"></div>');
     return d;
   }
 
-  function newCanvasItem(id, url, validationId, top, left, width, height){
-    var d = ('<div class="justified-layout-item" style="width: ' + width 
+  function newCanvasItem(id, url, validationId, top, left, width, height, tooltip) {
+    var d = ('<div class="justified-layout-item" data-balloon-visible data-balloon="' + tooltip 
+            + '" data-balloon-length="fit" data-balloon-pos="up" style="width: ' + width 
             +'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
     return d;
@@ -247,6 +257,16 @@
                                   + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width=" + 
                                   Math.round(justifiedLayoutGeometry.boxes[i].width, 0) + 
                                   "&height=" + Math.round(justifiedLayoutGeometry.boxes[i].height, 0);
+     
+      var tooltipText = '';
+      if(browseAnnotationsOnlyMode) {
+        if(imageGridData[i].validation.sublabel !== "")
+          tooltipText = escapeHtml(imageGridData[i].validation.sublabel) + "/" + escapeHtml(imageGridData[i].validation.label);
+        else
+          tooltipText = escapeHtml(imageGridData[i].validation.label);
+      }
+      else
+        tooltipText = escapeHtml(imageGridData[i].label.accessor);
       
       if(browseAnnotationsOnlyMode) {
         var itemId = imageGridData[i]["uuid"];
@@ -255,7 +275,7 @@
           annotationsScaleFactor = 1.0;
 
         item = newCanvasItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
-                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
 
         $("#imageGrid").append(item); 
 
@@ -274,9 +294,9 @@
           }
         }
 
-        var imageId = ("galleryItem" + i.toString());
-        item = newImageItem(imageId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
-                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height);
+        var itemId = imageGridData[i]["uuid"];
+        item = newImageItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
         $("#imageGrid").append(item); 
       }
 
@@ -288,13 +308,6 @@
     numberOfCurrentlyShownResults = numOfLastFetchedImg;
 
     $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
-  }
-
-  function split(val) {
-    return val.split( / \s*/ );
-  }
-  function extractLast(term) {
-    return split(term).pop();
   }
 
   $(document).ready(function(){

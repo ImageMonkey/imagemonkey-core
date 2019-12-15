@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {{ template "favicon.html" .}}
+  
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css?v={{ .assetVersion }}"/>
+  <script src="js/jquery.min.js?v={{ .assetVersion }}"></script>
+  <script src="js/semantic.min.js?v={{ .assetVersion }}"></script> 
+  <link rel="stylesheet" href="css/common.css?v={{ .assetVersion }}"/>
+  <link rel="stylesheet" href="css/common_sub.css?v={{ .assetVersion }}"/>
+  <script src="js/common.js?v={{ .assetVersion }}"></script> 
+</head>
+<body>
+
+{{ template "menu.html" .}}
+
+<!-- Page Contents -->
+<div class="pusher">
+  <div class="ui inverted vertical masthead center aligned segment">
+  	{{ template "pointing_menu.html" .}}  
+  	<div class="ui text container">
+  		<h2 class="ui inverted header">
+        Privacy Policy
+      </h2>
+    </div>
+  </div>
+  <div class="ui vertical stripe segment">
+    <div class="ui text container">
+	   <b>Last updated: November, 2019</b> <br><br>
+	   This Privacy Policy governs the manner in which ImageMonkey collects, uses, maintains and discloses 
+	   information collected from users of the various ImageMonkey services, including
+	   the website, or applications such as "ImageMonkey - The Game" for Android. 
+	   When using any of our Services you consent to the collection, transfer, storage, 
+	   disclosure, and use of your information as described in this Privacy Policy. 
+	   <br> <br>
+	   We use your Personal Information for providing and improving the Service. 
+	   By using the Service, you agree to the collection and use of information in accordance with this policy.
+	   <br><br>
+	   Your information is controlled by ImageMonkey. Irrespective of which country you reside in 
+	   or supply information from, you authorize ImageMonkey to use your information in Austria, 
+	   and any other country where ImageMonkey operates. 
+	   <br><br>
+	   If you have any questions or comments about this Privacy Policy, please contact us at <b>info@imagemonkey.io</b>.
+
+
+		<h3 class="text-justify">Information Collection and Use</h3>
+            Users of ImageMonkey's services choose to interact with ImageMonkey in ways that may require ImageMonkey to gather personally-identifying information. The amount and type of information that ImageMonkey gathers depends on the nature of the interaction. For example, we ask users who sign up for an ImageMonkey account to provide a username and email address.
+            <br><br>
+
+			By using our services you acknowledge that the data that we collect (images, annotations, validations) will be 
+			backed up to <a href="https://archive.org">The internet archive</a> in regular intervals, as part of <a href="/public_backup">our backup</a>.
+
+			<br><br>
+			By uploading an image you acknowledge that you are the owner of the image and and that you are fine that the image will be available for everybody
+			to download under the <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 license</a>. 
+
+			<br><br>
+            If you email us, we may keep your message, email address and contact information to respond to your request. 
+
+
+            <h3 class="text-justify">Accessing and Modifying Your Personal Information</h3>
+            We provide you with tools and account settings to access, correct, or modify the personal information you provided to us and associated with your account.
+            <br><br>
+            You can also permanently delete your ImageMonkey account. Contact us at <b>info@imagemonkey.io</b> with that request and your account will be deleted. That means the 
+            deletion of all public information related to your account. Some records of your account may remain temporarily in cache even after deletion. 
+            Non-public behavioral event logs used for analytic purposes may remain as well. <br><br>
+
+            Keep in mind that search engines and other third parties may still retain copies of your public information, 
+            like your user profile information, even after the information has been deleted from the ImageMonkey services.
+
+            <h3 class="text-justify">Links To Other Sites</h3>
+            Our Service may contain links to other sites that are not operated by us. If you click on a third party link, you will be directed to that third party's site. We strongly advise you to review the Privacy Policy of every site you visit. We have no control over, and assume no responsibility for the content, privacy policies or practices of any third party sites or services.
+
+            <h3 class="text-justify">Our Policy Towards Children</h3>
+            Protecting the privacy of the very young is especially important. For that reason, we never collect or 
+            maintain information at our Site from those we actually know are under 13, and no part of our website is 
+            structured to attract anyone under 13. If you become aware that your child has provided us 
+            with personal information without your consent, please contact us at <b>info@imagemonkey.io.</b> We will immediatelly
+            take steps and remove such information and terminate the childs's account.
+
+            <h3 class="text-justify">Changes to this Privacy Policy</h3>
+            ImageMonkey has the discretion to update this privacy policy at any time. When we do, we will notify you by
+			sending an email to the email address associated with your account.
+            We encourage Users to frequently check this page for any changes to stay informed about how we are helping 
+            to protect the personal information we collect. You acknowledge and agree that it is your responsibility to review 
+            this privacy policy periodically and become aware of modifications.
+            <br><br>
+            By using this Site, you signify your acceptance of this policy. If you do not agree to this policy, 
+            please do not use our Site. By continuing to access or use the Services after those changes become effective, 
+            you agree to be bound by the revised Privacy Policy.
+
+            <h3 class="text-justify">Contact</h3>
+            Thoughts or questions about this Privacy Policy? Contact us at <b>info@imagemonkey.io</b>.
+
+
+    </div>
+  </div>
+</div>
+  {{ template "footer.html" .}}
+</div>
+
+</body>
+
+</html>

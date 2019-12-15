@@ -466,31 +466,18 @@ func GetAvailableModels(s string) ([]json.RawMessage, error) {
 type AchievementsGenerator struct {
     achievements []datastructures.ImageHuntAchievement
 
-    numOfWeekendWarriorEntries int
-    lastAddedWeekendWarriorEntry time.Time
-
-    numOfNightOwlEntries int
-    lastAddedNightOwlEntry time.Time
-
-    numOfEarlyBirdEntries int
-    lastAddedEarlyBirdEntry time.Time
-
-    numOfCouchPotatoEntries int
-    lastAddedCouchPotatorEntry time.Time
-
-    numOfWorkerBeeEntries int
-    lastAddedWorkerBeeEntry time.Time
-
-    numOfAntEntries int
-    lastAddedAntEntry time.Time
-
-    numOfGreedySquirrelEntries int
-    lastAddedGreedySquirrelEntry time.Time
-
-    numOfImageMonkeyEntries int
-    lastAddedImageMonkeyEntry time.Time
-
     numOfAvailableLabels int
+
+	hasWeekendWarriorBadge bool
+	hasEarlyBirdBadge bool
+	hasNightOwlBadge bool
+	hasCouchPotatoBadge bool
+	hasWorkerBeeBadge bool
+	hasAntBadge bool
+	hasGreedySquirrelBadge bool
+	hasImageMonkeyBadge bool
+
+	timestamps []time.Time
 }
 
 func NewAchievementsGenerator() *AchievementsGenerator {
@@ -520,25 +507,57 @@ func NewAchievementsGenerator() *AchievementsGenerator {
                                                                 Description: "Add an image for every label",
                                                                 Badge: "monkey.png"},
                                                          },
-        numOfWeekendWarriorEntries: 0,
-        numOfNightOwlEntries: 0,
-        numOfEarlyBirdEntries: 0,
-        numOfCouchPotatoEntries: 0,
-        numOfWorkerBeeEntries: 0,
-        numOfAntEntries: 0,
-        numOfGreedySquirrelEntries: 0,
-        numOfImageMonkeyEntries: 0,
-        numOfAvailableLabels: 0,
+
+		hasWeekendWarriorBadge: false,
+		hasEarlyBirdBadge: false,
+		hasNightOwlBadge: false,
+		hasCouchPotatoBadge: false,
+		hasWorkerBeeBadge: false,
+		hasAntBadge: false,
+		hasGreedySquirrelBadge: false,
+		hasImageMonkeyBadge: false,
+		timestamps: []time.Time{},
     } 
 }
 
-func (p *AchievementsGenerator) isConsecutiveDay(old time.Time, new time.Time) bool {
-    if old.IsZero() {
+func isConsecutiveDay(old time.Time, new time.Time) bool {
+    oldDate := time.Date(old.Year(), old.Month(), old.Day(), 0, 0, 0, 0, time.UTC)
+	newDate := time.Date(new.Year(), new.Month(), new.Day(), 0, 0, 0, 0, time.UTC)
+	
+	if newDate.Equal(oldDate.AddDate(0, 0, 1)) {
         return true
     }
+    return false
+}
 
-    if new.Equal(old.AddDate(0, 0, 1)) {
-        return true
+func isSameDay(old time.Time, new time.Time) bool {
+	oldDate := time.Date(old.Year(), old.Month(), old.Day(), 0, 0, 0, 0, time.UTC)
+	newDate := time.Date(new.Year(), new.Month(), new.Day(), 0, 0, 0, 0, time.UTC)
+
+	if newDate.Equal(oldDate) {
+		return true
+	}
+	return false
+}
+
+func isConsecutiveWeek(old time.Time, new time.Time) bool {
+	oldDate := time.Date(old.Year(), old.Month(), old.Day(), 0, 0, 0, 0, time.UTC)
+	newDate := time.Date(new.Year(), new.Month(), new.Day(), 0, 0, 0, 0, time.UTC)
+
+	
+    if newDate.Equal(oldDate.AddDate(0, 0, 7)) || newDate.Equal(oldDate.AddDate(0, 0, 8)) {
+		return true
+    }
+    return false
+}
+
+func isSameWeek(old time.Time, new time.Time) bool {
+	oldDate := time.Date(old.Year(), old.Month(), old.Day(), 0, 0, 0, 0, time.UTC)
+	newDate := time.Date(new.Year(), new.Month(), new.Day(), 0, 0, 0, 0, time.UTC)
+
+	
+    if newDate.Equal(oldDate.AddDate(0, 0, 0)) || newDate.Equal(oldDate.AddDate(0, 0, 1)) {
+		return true
     }
     return false
 }
@@ -548,135 +567,158 @@ func (p *AchievementsGenerator) SetNumOfAvailableLabels(numOfAvailableLabels int
 }
 
 func (p *AchievementsGenerator) Add(t time.Time) {
-    weekday := t.Weekday()
+	p.timestamps = append(p.timestamps, t)
+}
 
-    //weekend warrior?
-    if (weekday == time.Sunday) || (weekday == time.Saturday) {
-        if p.isConsecutiveDay(p.lastAddedWeekendWarriorEntry, t) {
-            p.numOfWeekendWarriorEntries += 1
-            p.lastAddedWeekendWarriorEntry = t
-        } else {
-            p.numOfWeekendWarriorEntries = 0
+func (p *AchievementsGenerator) calculateAchievements() {
+	numOfWeekendWarriorEntries := 0
+    var lastAddedWeekendWarriorEntry time.Time
+
+    numOfNightOwlEntries := 0
+    var lastAddedNightOwlEntry time.Time
+
+    numOfEarlyBirdEntries := 0
+    var lastAddedEarlyBirdEntry time.Time
+
+    numOfCouchPotatoEntries := 0
+    var lastAddedCouchPotatoEntry time.Time
+
+    numOfWorkerBeeEntries := 0
+    var lastAddedWorkerBeeEntry time.Time
+
+    numOfAntEntries := 0
+    var lastAddedAntEntry time.Time
+
+    numOfGreedySquirrelEntries := 0
+    var lastAddedGreedySquirrelEntry time.Time
+
+    numOfImageMonkeyEntries := 0
+
+	for _, t := range p.timestamps {
+		weekday := t.Weekday()
+
+		//weekend warrior?
+		if (weekday == time.Sunday) || (weekday == time.Saturday) {
+			if isConsecutiveWeek(lastAddedWeekendWarriorEntry, t) {
+				numOfWeekendWarriorEntries += 1
+
+				if numOfWeekendWarriorEntries >= 3 {
+					p.hasWeekendWarriorBadge = true
+				}
+			} else if !isSameWeek(lastAddedWeekendWarriorEntry, t) {
+				numOfWeekendWarriorEntries = 1
+			}
+			lastAddedWeekendWarriorEntry = t
+		}
+
+		//night owl?
+		hour, _, _ := t.Clock()
+		if hour >= 0 && hour <= 3 {
+			if isConsecutiveDay(lastAddedNightOwlEntry, t) {
+				numOfNightOwlEntries += 1
+
+				if numOfNightOwlEntries >= 3 {
+                	p.hasNightOwlBadge = true
+            	}
+			} else if !isSameDay(lastAddedNightOwlEntry, t) {
+				numOfNightOwlEntries = 1
+			}
+			lastAddedNightOwlEntry = t
+		}
+
+
+		//early bird? 
+		hour, _, _ = t.Clock()
+		if hour >= 5 && hour <= 7 {
+			if isConsecutiveDay(lastAddedEarlyBirdEntry, t) {
+				numOfEarlyBirdEntries += 1
+				if numOfEarlyBirdEntries >= 3 {
+                	p.hasEarlyBirdBadge = true
+            	}
+			} else if !isSameDay(lastAddedEarlyBirdEntry, t) {
+				numOfEarlyBirdEntries = 1
+			}
+			lastAddedEarlyBirdEntry = t
+		}
+
+		//couch potato? 
+		hour, _, _ = t.Clock()
+		if hour >= 20 && hour <= 20 {
+			if isConsecutiveDay(lastAddedCouchPotatoEntry, t) {
+				numOfCouchPotatoEntries += 1
+
+				if numOfCouchPotatoEntries >= 3 {
+                	p.hasCouchPotatoBadge = true
+            	}
+			} else if !isSameDay(lastAddedCouchPotatoEntry, t) {
+				numOfCouchPotatoEntries = 1
+			}
+			lastAddedCouchPotatoEntry = t
+		}
+
+		//worker bee?
+		if isConsecutiveDay(lastAddedWorkerBeeEntry, t) {
+			numOfWorkerBeeEntries += 1
+			if numOfWorkerBeeEntries >= 7 {
+                p.hasWorkerBeeBadge = true
+            }
+		} else if !isSameDay(lastAddedWorkerBeeEntry, t) {
+			numOfWorkerBeeEntries = 1
+		}
+		lastAddedWorkerBeeEntry = t
+
+		//ant?
+		if isConsecutiveDay(lastAddedAntEntry, t) {
+			numOfAntEntries += 1
+			if numOfAntEntries >= 30 {
+                p.hasAntBadge = true
+            }
+		} else if !isSameDay(lastAddedAntEntry, t) {
+			numOfAntEntries = 1
+		}
+		lastAddedAntEntry = t
+
+		//greedy squirrel?
+		if isConsecutiveDay(lastAddedGreedySquirrelEntry, t) {
+			numOfGreedySquirrelEntries += 1
+			if numOfGreedySquirrelEntries >= 60 {
+                p.hasGreedySquirrelBadge = true
+            }
+		} else if !isSameDay(lastAddedGreedySquirrelEntry, t) {
+			numOfGreedySquirrelEntries = 1
+		}
+		lastAddedGreedySquirrelEntry = t
+
+		//image monkey?
+		numOfImageMonkeyEntries += 1
+		if numOfImageMonkeyEntries == p.numOfAvailableLabels {
+			p.hasImageMonkeyBadge = true
         }
-    }
-
-    //night owl?
-    hour, _, _ := t.Clock()
-    if hour >= 0 && hour <= 3 {
-        if p.isConsecutiveDay(p.lastAddedNightOwlEntry, t) {
-            p.numOfNightOwlEntries += 1
-            p.lastAddedNightOwlEntry = t
-        } else {
-            p.numOfNightOwlEntries = 0
-        }
-    }
-
-
-    //early bird? 
-    hour, _, _ = t.Clock()
-    if hour >= 5 && hour <= 7 {
-        if p.isConsecutiveDay(p.lastAddedEarlyBirdEntry, t) {
-            p.numOfEarlyBirdEntries += 1
-            p.lastAddedEarlyBirdEntry = t
-        } else {
-            p.numOfEarlyBirdEntries = 0
-        }
-    }
-
-    //couch potato? 
-    hour, _, _ = t.Clock()
-    if hour >= 20 && hour <= 20 {
-        if p.isConsecutiveDay(p.lastAddedCouchPotatorEntry, t) {
-            p.numOfCouchPotatoEntries += 1
-            p.lastAddedCouchPotatorEntry = t
-        } else {
-            p.numOfCouchPotatoEntries = 0
-        }
-    }
-
-    //worker bee?
-    if p.isConsecutiveDay(p.lastAddedWorkerBeeEntry, t) {
-        p.numOfWorkerBeeEntries += 1
-        p.lastAddedWorkerBeeEntry = t
-    } else {
-        p.numOfWorkerBeeEntries = 0
-    }
-
-    //ant?
-    if p.isConsecutiveDay(p.lastAddedAntEntry, t) {
-        p.numOfAntEntries += 1
-        p.lastAddedAntEntry = t
-    } else {
-        p.numOfAntEntries = 0
-    }
-
-    //greedy squirrel?
-    if p.isConsecutiveDay(p.lastAddedGreedySquirrelEntry, t) {
-        p.numOfGreedySquirrelEntries += 1
-        p.lastAddedGreedySquirrelEntry = t
-    } else {
-        p.numOfGreedySquirrelEntries = 0
-    }
-
-    //image monkey?
-    if p.isConsecutiveDay(p.lastAddedImageMonkeyEntry, t) {
-        p.numOfImageMonkeyEntries += 1
-        p.lastAddedImageMonkeyEntry = t
-    } else {
-        p.numOfImageMonkeyEntries = 0
-    }
-
+	}
 }
 
 func (p *AchievementsGenerator) GetAchievements(apiBaseUrl string) ([]datastructures.ImageHuntAchievement, error) {
-    achievements := p.achievements
+    p.calculateAchievements()
+	
+	achievements := p.achievements
     for key, val := range achievements {
 
         if val.Name == "Weekend Warrior" {
-            val.Accomplished = false
-            if p.numOfWeekendWarriorEntries >= 3 {
-                val.Accomplished = true
-            }
-
+            val.Accomplished = p.hasWeekendWarriorBadge
         } else if val.Name == "Early Bird" {
-            val.Accomplished = false
-            if p.numOfEarlyBirdEntries >= 3 {
-                val.Accomplished = true
-            }
-
+            val.Accomplished = p.hasEarlyBirdBadge
         } else if val.Name == "Night Owl" {
-            val.Accomplished = false
-            if p.numOfNightOwlEntries >= 3 {
-                val.Accomplished = true
-            }
-
+            val.Accomplished = p.hasNightOwlBadge
         } else if val.Name == "Couch Potato" {
-            val.Accomplished = false
-            if p.numOfCouchPotatoEntries >= 3 {
-                val.Accomplished = true
-            }
-
+            val.Accomplished = p.hasCouchPotatoBadge
         } else if val.Name == "Worker Bee" {
-            val.Accomplished = false
-            if p.numOfWorkerBeeEntries >= 7 {
-                val.Accomplished = true
-            }
+            val.Accomplished = p.hasWorkerBeeBadge
         } else if val.Name == "Ant Power" {
-            val.Accomplished = false
-            if p.numOfAntEntries >= 30 {
-                val.Accomplished = true
-            }
-
+            val.Accomplished = p.hasAntBadge
         } else if val.Name == "Greedy Squirrel" {
-            val.Accomplished = false
-            if p.numOfGreedySquirrelEntries >= 60 {
-                val.Accomplished = true
-            }
+            val.Accomplished = p.hasGreedySquirrelBadge 
         } else if val.Name == "Image Monkey" {
-            val.Accomplished = false
-            if p.numOfImageMonkeyEntries == p.numOfAvailableLabels {
-                val.Accomplished = true
-            }
+            val.Accomplished = p.hasImageMonkeyBadge 
         } else {
             return achievements, errors.New("Invalid entry")
         }

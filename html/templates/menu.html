@@ -1,5 +1,5 @@
-<script src="/js/cookies.min.js"></script>
-<script src="/js/settings.js?v=1"></script>
+<script src="/js/cookies.min.js?v={{ .assetVersion }}"></script>
+<script src="/js/settings.js?v={{ .assetVersion }}"></script>
 
 <!-- Following Menu -->
 <!-- when changing here, change it also in pointing-menu.html-->
@@ -81,9 +81,14 @@
       </div>
     </div>
 
-    <a class="{{if (eq .activeMenuNr 10)}}active {{end}}item" href="/apps">Apps</a>
-    <a class="{{if (eq .activeMenuNr 11)}}active {{end}}item" href="/playground">Playground</a>
-    <a class="item" href="/blog">Blog</a>
+    <div class="ui dropdown item" id="moreMenuDropdown">
+      More<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/apps';">Apps</div>
+        <div class="center aligned item" onclick="window.location='/blog';">Blog</div>
+        <div class="center aligned item" onclick="window.location='/playground';">Playground</div>
+      </div>
+    </div>
 
     {{if (eq .sessionInformation.LoggedIn false)}}
     <a class="{{if (eq .activeMenuNr 12)}}active {{end}}item" href="/login">Login</a>
@@ -123,5 +128,6 @@
     $('#validateMenuDropdown').dropdown();
     $('#annotateMenuDropdown').dropdown();
     $('#unifiedModeMenuDropdown').dropdown();
+    $('#moreMenuDropdown').dropdown();
   });
 </script>

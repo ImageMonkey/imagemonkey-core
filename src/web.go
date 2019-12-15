@@ -32,9 +32,12 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+var assetVersion string = ""
+
 func ShowErrorPage(c *gin.Context) {
 	c.HTML(404, "404.html", gin.H{
 		"title": "Page not found",
+		"assetVersion": assetVersion,
 	})
 }
 
@@ -70,6 +73,7 @@ func ShowProfilePage(c *gin.Context, imageMonkeyDatabase *imagemonkeydb.ImageMon
 		"sessionInformation": sessionInformation,
 		"apiTokens": apiTokens,
 		"tab": tab,
+		"assetVersion": assetVersion,
 	})
 }
 
@@ -239,6 +243,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	assetVersion = strconv.FormatInt(int64(time.Now().Unix()), 10)
 
 	//create redis pool
 	redisPool := redis.NewPool(func() (redis.Conn, error) {
@@ -429,6 +434,7 @@ func main() {
 				"annotationRefinementStatistics": commons.Pick(imageMonkeyDatabase.GetAnnotationRefinementStatistics("last-month"))[0],
 				"imageDescriptionStatistics": commons.Pick(imageMonkeyDatabase.GetImageDescriptionStatistics("last-month"))[0],
 				"donationsStatistics": commons.Pick(imageMonkeyDatabase.GetDonationsStatistics("last-month"))[0],
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/donate", func(c *gin.Context) {
@@ -440,6 +446,7 @@ func main() {
 				"words": words,
 				"appIdentifier": webAppIdentifier,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -489,6 +496,7 @@ func main() {
 				"isModerator" : isModerator,
 				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
 				"queryAttributes": parser.GetStaticQueryAttributes(parser.LabelView),
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -555,6 +563,7 @@ func main() {
 				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"queryAttributes": commons.GetStaticQueryAttributes(),
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -622,6 +631,7 @@ func main() {
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"queryAttributes": commons.GetStaticQueryAttributes(),
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/verify_annotation", func(c *gin.Context) {
@@ -631,6 +641,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"appIdentifier": webAppIdentifier,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/quiz", func(c *gin.Context) {
@@ -641,6 +652,7 @@ func main() {
 				"activeMenuNr": 7,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})	
 		router.GET("/refine", func(c *gin.Context) {
@@ -655,6 +667,7 @@ func main() {
 				"labels": labelRefinementsMap,
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"labelCategories": commons.Pick(imageMonkeyDatabase.GetLabelCategories())[0],
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/statistics", func(c *gin.Context) {
@@ -665,6 +678,7 @@ func main() {
 				"statistics": commons.Pick(imageMonkeyDatabase.Explore(words))[0],
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/explore", func(c *gin.Context) {
@@ -684,6 +698,7 @@ func main() {
 				"labelAccessors": commons.Pick(imageMonkeyDatabase.GetLabelAccessors())[0],
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"queryInfo": queryInfo,
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/apps", func(c *gin.Context) {
@@ -692,6 +707,7 @@ func main() {
 				"activeMenuNr": 10,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/playground", func(c *gin.Context) {
@@ -701,6 +717,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"playgroundPredictBaseUrl": playgroundBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 		router.GET("/login", func(c *gin.Context) {
@@ -716,8 +733,18 @@ func main() {
 					"apiBaseUrl": apiBaseUrl,
 					"activeMenuNr": 12,
 					"sessionInformation": sessionInformation,
+					"assetVersion": assetVersion,
 				})
 			}
+		})
+		router.GET("/privacy", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "privacy.html", gin.H{
+				"title": "Privacy Policy",
+				"activeMenuNr": -1,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
+				"apiBaseUrl": apiBaseUrl,
+			})
 		})
 
 		router.GET("/signup", func(c *gin.Context) {
@@ -732,6 +759,7 @@ func main() {
 					"apiBaseUrl": apiBaseUrl,
 					"activeMenuNr": -1,
 					"sessionInformation": sessionInformation,
+					"assetVersion": assetVersion,
 				})
 			}
 		})
@@ -750,6 +778,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"activeMenuNr": 13,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -760,6 +789,7 @@ func main() {
 				"activeMenuNr": -1,
 				"publicBackups": publicBackups,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -789,6 +819,7 @@ func main() {
 				"defaultLabelGraphName": labelGraphName,
 				"editorMode" : editorMode,
 				"repository": "https://github.com/bbernhard/imagemonkey-core",
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -800,6 +831,7 @@ func main() {
 				"trendingLabelsRepositoryUrl": *trendingLabelsRepositoryUrl,
 				"labelsRepositoryUrl": *labelsRepositoryUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -817,6 +849,7 @@ func main() {
 				"activeMenuNr": -1,
 				//"activeMenuNr": 14,
 				"sessionInformation": sessionInformation,
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -846,6 +879,7 @@ func main() {
 				"activeMenuNr": -1,
 				"sessionInformation": sessionInformation,
 				"mode": mode,
+				"assetVersion": assetVersion,
 			})
 		})
 
@@ -857,6 +891,8 @@ func main() {
 				"activeMenuNr": 16,
 				"sessionInformation": sessionInformation,
 				"models": availableModels,
+				"assetVersion": assetVersion,
+				"apiBaseUrl": apiBaseUrl,
 			})
 		})
 

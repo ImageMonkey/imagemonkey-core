@@ -1483,3 +1483,14 @@ func (p *ImageMonkeyDatabase) CloseAllTrendingLabelTasks() error {
 	_, err := p.db.Exec("UPDATE trending_label_suggestion SET closed = true")
 	return err
 }
+
+func (p *ImageMonkeyDatabase) GetNumOfImagesInImageCollection(username string, imageCollectionName string) (int, error) {
+	var num int
+	err := p.db.QueryRow(`SELECT count(*) 
+							FROM image_collection_image ici
+							JOIN image i ON i.id = ici.image_id
+							JOIN user_image_collection u ON u.id = ici.user_image_collection_id
+							JOIN account a ON u.account_id = a.id
+							WHERE a.name = $1 AND u.name = $2`, username, imageCollectionName).Scan(&num)
+	return num, err
+}
