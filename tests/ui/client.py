@@ -220,6 +220,10 @@ class ImageMonkeyWebClient(object):
         wait.until(EC.title_is("ImageMonkey"))
 
     @check_for_errors
+    def navigate_to(self, endpoint):
+        self._driver.get(BASE_URL + "/" + endpoint)
+
+    @check_for_errors
     def signup(self, username, email, password):
         self._driver.get(BASE_URL + "/signup")
         self._driver.find_element_by_id("usernameInput").send_keys(username)
