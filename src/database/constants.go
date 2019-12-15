@@ -1,4 +1,4 @@
 package imagemonkeydb
 
 const MyDonations = "my donations"
-const MyLabels = "my open tasks"
+const MyOpenTasks = "my open tasks"
