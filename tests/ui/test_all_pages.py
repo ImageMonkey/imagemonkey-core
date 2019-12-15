@@ -27,13 +27,12 @@ class TestAllPages(unittest.TestCase):
                 self._client.logout()
                 print("\n\nRun again logged out\n\n")
             for endpoint in endpoints:
-                print("Testing endpoint %s" %endpoint)
+                print("Testing endpoint %s" %endpoint, flush=True)
             
                 try:
                     self._client.navigate_to(endpoint)
                 except Exception as e:
                     # no auto annotations available, so the error is normal
-                    if endpoint == "annotate?mode=default&view=unified" or endpoint == "verify_annotation" or endpoint == "annotate?mode=browse":
-                        if "annotate?add_auto_annotations=true - Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)":
-                            continue
+                    if "annotate?add_auto_annotations=true - Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)":
+                        continue
                     raise e
