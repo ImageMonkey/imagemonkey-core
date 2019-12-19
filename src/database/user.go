@@ -10,16 +10,12 @@ import (
 
 func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserInfo, error) {
 	var userInfo datastructures.UserInfo
-	var removeLabelPermission bool
-	var unlockImageDescriptionPermission bool
-	var unlockImage bool
-	var canMonitorSystem bool
-	var canAcceptTrendingLabel bool
-	removeLabelPermission = false
-	unlockImageDescriptionPermission = false
-	unlockImage = false
-	canMonitorSystem = false
-	canAcceptTrendingLabel = false
+	var removeLabelPermission bool = false
+	var unlockImageDescriptionPermission bool = false
+	var unlockImage bool = false
+	var canMonitorSystem bool = false
+	var canAcceptTrendingLabel bool = false
+	var canAccessPgStat bool = false
 
 	userInfo.Name = ""
 	userInfo.Created = 0
@@ -32,7 +28,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
                               COALESCE(p.can_unlock_image_description, false) as unlock_image_description,
                               COALESCE(p.can_unlock_image, false) as unlock_image,
                               COALESCE(p.can_monitor_system, false) as can_monitor_system,
-							  COALESCE(p.can_accept_trending_label, false) as can_accept_trending_label
+							  COALESCE(p.can_accept_trending_label, false) as can_accept_trending_label,
+							  COALESCE(p.can_access_pg_stat, false) as can_access_pg_stat
                               FROM account a 
                               LEFT JOIN account_permission p ON p.account_id = a.id 
                               WHERE a.name = $1`, username)
@@ -47,7 +44,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
 	if rows.Next() {
 		err = rows.Scan(&userInfo.Name, &userInfo.ProfilePicture, &userInfo.Created,
 			&userInfo.IsModerator, &removeLabelPermission,
-			&unlockImageDescriptionPermission, &unlockImage, &canMonitorSystem, &canAcceptTrendingLabel)
+			&unlockImageDescriptionPermission, &unlockImage, &canMonitorSystem, &canAcceptTrendingLabel, 
+			&canAccessPgStat)
 
 		if err != nil {
 			log.Error("[User Info] Couldn't scan user info: ", err.Error())
@@ -60,7 +58,9 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
 				CanUnlockImageDescription: unlockImageDescriptionPermission,
 				CanUnlockImage:            unlockImage,
 				CanMonitorSystem:          canMonitorSystem,
-				CanAcceptTrendingLabel:    canAcceptTrendingLabel}
+				CanAcceptTrendingLabel:    canAcceptTrendingLabel,
+				CanAccessPgStat:           canAccessPgStat,
+			}
 			userInfo.Permissions = permissions
 		}
 	}

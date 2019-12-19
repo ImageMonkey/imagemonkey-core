@@ -110,6 +110,24 @@ func installUuidExtension() error {
 	return nil
 } 
 
+func installPgStatStatementsExtension() error {
+	query := "CREATE EXTENSION IF NOT EXISTS \"pg_stat_statements\""
+	var out, stderr bytes.Buffer
+
+	//load defaults
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+	    fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+	    return err
+	}
+
+	return nil
+} 
+
 func installPostgisExtension() error {
 	query := "CREATE EXTENSION IF NOT EXISTS \"postgis\""
 	var out, stderr bytes.Buffer
@@ -274,6 +292,11 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 	if err != nil {
 		return err
 	}
+
+	err = installPgStatStatementsExtension()
+	if err != nil {
+		return err
+	}
 	
 	err = loadSchema()
 	if err != nil {
@@ -353,8 +376,8 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 	}
 
 	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description, 
-														can_monitor_system, can_accept_trending_label) 
-							SELECT a.id, true, true, true, true FROM account a WHERE a.name = $1`, name)
+														can_monitor_system, can_accept_trending_label, can_access_pg_stat) 
+							SELECT a.id, true, true, true, true, true FROM account a WHERE a.name = $1`, name)
 	if err != nil {
 		return err
 	}

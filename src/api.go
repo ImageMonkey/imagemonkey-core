@@ -919,6 +919,39 @@ func main() {
 				}
 			})
 
+			clientAuth.GET("/v1/internal/statistics/pg", func(c *gin.Context) {
+				var apiUser datastructures.APIUser
+				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
+
+				hasPermissions := false
+				if isModerationRequest(c) {
+					if apiUser.Name != "" {
+						userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
+						if err != nil {
+							c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+							return
+						}
+
+						if userInfo.Permissions != nil && userInfo.Permissions.CanAccessPgStat {
+							hasPermissions = true
+						}
+					}
+				}
+
+				if !hasPermissions {
+					c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
+					return
+				}
+
+				res, err := imageMonkeyDatabase.GetPgStatStatements()
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+					return
+				}
+
+				c.JSON(200, res)
+			})
+
 			clientAuth.POST("/v1/internal/labelme/donate", func(c *gin.Context) {
 				imageSourceUrl := c.PostForm("image_source_url")
 
