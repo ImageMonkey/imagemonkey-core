@@ -4,10 +4,20 @@ var ImageMonkeyApi = (function() {
         this.apiVersion = 'v1';
         this.token = '';
         this.availableLabels = null;
+        this.clientSecret = null;
+        this.clientId = null
     };
 
     ImageMonkeyApi.prototype.setToken = function(token) {
         this.token = token;
+    }
+
+    ImageMonkeyApi.prototype.setClientId = function(clientId) {
+        this.clientId = clientId
+    }
+
+    ImageMonkeyApi.prototype.setClientSecret = function(clientSecret) {
+        this.clientSecret = clientSecret;
     }
 
     ImageMonkeyApi.prototype.getAvailableLabels = function(useCache = false) {
@@ -238,6 +248,34 @@ var ImageMonkeyApi = (function() {
             xhr.responseType = "json";
             xhr.open("GET", url);
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+
+    ImageMonkeyApi.prototype.getPgStatStatements = function() {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/internal/statistics/pg";
+
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.setRequestHeader("X-Client-Id", inst.clientId);
+            xhr.setRequestHeader("X-Client-Secret", inst.clientSecret);
             xhr.onload = function() {
                 var jsonResponse = xhr.response;
                 resolve(jsonResponse);

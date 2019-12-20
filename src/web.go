@@ -853,6 +853,33 @@ func main() {
 			})
 		})
 
+		router.GET("/pgstat", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			isAuthenticated := false
+			if sessionInformation.LoggedIn {
+				userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
+				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanAccessPgStat {
+					isAuthenticated = true
+				}
+			}
+			
+			if !isAuthenticated {
+				ShowErrorPage(c)
+				return
+			}
+
+			c.HTML(http.StatusOK, "pgstat.html", gin.H{
+				"title": "PostgreSQL Statistics",
+				"clientSecret": clientSecret, 
+				"clientId": clientId, 
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+				"assetVersion": assetVersion,
+			})
+		})
+
 		router.GET("/image_unlock", func(c *gin.Context) {
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
