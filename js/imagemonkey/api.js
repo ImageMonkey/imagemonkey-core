@@ -276,7 +276,6 @@ var ImageMonkeyApi = (function() {
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
             xhr.setRequestHeader("X-Client-Id", inst.clientId);
             xhr.setRequestHeader("X-Client-Secret", inst.clientSecret);
-            xhr.setRequestHeader("X-Moderation", "true");
             xhr.onload = function() {
                 var jsonResponse = xhr.response;
                 resolve(jsonResponse);

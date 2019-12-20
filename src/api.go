@@ -924,19 +924,18 @@ func main() {
 				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
 				hasPermissions := false
-				if isModerationRequest(c) {
-					if apiUser.Name != "" {
-						userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
-						if err != nil {
-							c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
-							return
-						}
+				if apiUser.Name != "" {
+					userInfo, err := imageMonkeyDatabase.GetUserInfo(apiUser.Name)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't process request - please try again later"})
+						return
+					}
 
-						if userInfo.Permissions != nil && userInfo.Permissions.CanAccessPgStat {
-							hasPermissions = true
-						}
+					if userInfo.Permissions != nil && userInfo.Permissions.CanAccessPgStat {
+						hasPermissions = true
 					}
 				}
+
 
 				if !hasPermissions {
 					c.JSON(403, gin.H{"error": "You do not have the appropriate permissions to access this information"})
