@@ -804,7 +804,7 @@ var AnnotationView = (function() {
                             '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
 
                             '<div class="ui input">' +
-                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
+                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels">' +
                             '</div>' +
                             '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                             '</div>' +
