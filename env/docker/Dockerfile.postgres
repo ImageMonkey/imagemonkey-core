@@ -1,20 +1,27 @@
-FROM postgres:9.6.13
+FROM postgres:12.1
 
 ARG TEMPORAL_TABLE_VERSION=1.2.0
 ARG POSTGIS_VERSION=2.5
 ENV MONKEY_DB_PASSWORD=
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates build-essential postgresql-9.6-postgis-${POSTGIS_VERSION} postgresql-9.6-postgis-${POSTGIS_VERSION}-scripts postgresql-contrib-9.6 postgresql-server-dev-9.6 curl
+      git ca-certificates build-essential postgresql-12-postgis-${POSTGIS_VERSION} postgresql-12-postgis-${POSTGIS_VERSION}-scripts postgresql-contrib-12 postgresql-server-dev-12 curl
 
-RUN cd /tmp && curl -o /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz -L https://github.com/arkhipov/temporal_tables/archive/v${TEMPORAL_TABLE_VERSION}.tar.gz \
-    && mkdir -p /tmp/temporal_table \
-    && mv /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz /tmp/temporal_table/v${TEMPORAL_TABLE_VERSION}.tar.gz \
-    && cd /tmp/temporal_table && tar xvf v${TEMPORAL_TABLE_VERSION}.tar.gz \
-    && cd /tmp/temporal_table/temporal_tables-${TEMPORAL_TABLE_VERSION} \
-    && make \
-    && make install \
-    && rm -rf /tmp_temporal_table
+#RUN cd /tmp && curl -o /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz -L https://github.com/arkhipov/temporal_tables/archive/v${TEMPORAL_TABLE_VERSION}.tar.gz \
+#    && mkdir -p /tmp/temporal_table \
+#    && mv /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz /tmp/temporal_table/v${TEMPORAL_TABLE_VERSION}.tar.gz \
+#    && cd /tmp/temporal_table && tar xvf v${TEMPORAL_TABLE_VERSION}.tar.gz \
+#    && cd /tmp/temporal_table/temporal_tables-${TEMPORAL_TABLE_VERSION} \
+#    && make \
+#    && make install \
+#    && rm -rf /tmp_temporal_table
+
+RUN cd /tmp && git clone https://github.com/mlt/temporal_tables.git temporal_tables \	
+	&& cd /tmp/temporal_tables \
+	&& git checkout mlt \
+	&& make \
+	&& make install 
+
 
 RUN mkdir -p /docker-entrypoint-initdb.d/
 COPY env/docker/postgres_init.sh /docker-entrypoint-initdb.d/postgres_init.sh 
