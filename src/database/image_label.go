@@ -45,7 +45,8 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 
 	var unlabeledRows *sql.Rows
 	if imageId == "" {
-		q := fmt.Sprintf(`SELECT i.key, i.unlocked, i.width, i.height
+		q := fmt.Sprintf(`WITH imgs AS (
+                            SELECT i.key, i.unlocked, i.width, i.height
                             FROM image i 
                             WHERE (i.unlocked = true %s)
 
@@ -53,7 +54,13 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
                                 SELECT image_id FROM image_validation
                             ) AND i.id NOT IN (
                                 SELECT image_id FROM image_label_suggestion
-                            ) LIMIT 1`, includeOwnImageDonations)
+                            )
+						  )
+                          SELECT i.key, i.unlocked, i.width, i.height
+                          FROM imgs i
+                          OFFSET random() * (
+                            SELECT count(*) FROM imgs
+                          ) LIMIT 1`, includeOwnImageDonations)
 
 		if username == "" {
 			unlabeledRows, err = tx.Query(q)
@@ -513,7 +520,7 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 	q2 := "acc.name is null"
 	includeOwnImageDonations := ""
 	if apiUser.Name != "" {
-		q2 = fmt.Sprintf(`acc.name = $%d`, len(parseResult.QueryValues) + 1)
+		q2 = fmt.Sprintf(`acc.name = $%d`, len(parseResult.QueryValues)+1)
 		includeOwnImageDonations = fmt.Sprintf(`OR (
                                                 EXISTS 
                                                     (
@@ -716,9 +723,9 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 	return trendingLabels, nil
 }
 
-func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string, labelDescription string, 
-													labelPlural string, labelRenameTo string, 
-													userInfo datastructures.UserInfo) error {
+func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string, labelDescription string,
+	labelPlural string, labelRenameTo string,
+	userInfo datastructures.UserInfo) error {
 	status := "waiting for moderator approval"
 	if userInfo.Permissions != nil && userInfo.Permissions.CanAcceptTrendingLabel {
 		status = "accepted"
