@@ -50,6 +50,11 @@
     var elem = '';
     var val; 
     var labelUrl = '';
+	
+    // detach element from DOM. This is much faster..especially when we are inserting thousand of elements
+    const annotatedStatisticsPopupContentItem = $("#annotatedStatisticsPopupContent");
+    const annotatedStatisticsPopupContentParentItem =  annotatedStatisticsPopupContentItem.parent();
+    annotatedStatisticsPopupContentItem.detach();
     for(var i = 0; i < data.length; i++) {
       if(data[i].num.total === 0)
         val = 0;
@@ -67,8 +72,10 @@
                '</div>'));
       elem.progress();
 
-      $("#annotatedStatisticsPopupContent").append(elem);
+      annotatedStatisticsPopupContentItem.append(elem);
     }
+    //re-attach to DOM
+    annotatedStatisticsPopupContentItem.appendTo(annotatedStatisticsPopupContentParentItem);
 
     $("#annotatedStatisticsButton").removeClass("disabled");
   }
