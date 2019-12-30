@@ -58,7 +58,7 @@ var AnnotationView = (function() {
     AnnotationView.prototype.handleUpdateAnnotationsRes = function(res) {
         if (this.annotationMode === "browse") {
             $("#loadingSpinner").hide();
-            this.updateAnnotationsForImage(this.annotationInfo.annotationId, res);
+            updateAnnotationsForImage(this.annotationInfo.annotationId, res);
             showBrowseAnnotationImageGrid(null);
         }
 
