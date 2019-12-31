@@ -367,7 +367,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.populateDefaultsAndLoadData = function() {
         if (this.annotationMode === "browse")
-            $("#loadingSpinner").show();
+            $("#browseAnnotationsGoButton").addClass("loading");
 
         var inst = this;
         Promise.all([this.imageMonkeyApi.getPluralLabels(), this.imageMonkeyApi.getLabelAccessors(true)])
@@ -391,7 +391,7 @@ var AnnotationView = (function() {
                 }
 
                 if (inst.annotationMode === "browse")
-                    $("#loadingSpinner").hide();
+                    $("#browseAnnotationsGoButton").removeClass("loading");
 
             }).catch(function(e) {
                 Sentry.captureException(e);
