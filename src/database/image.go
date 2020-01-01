@@ -1,7 +1,6 @@
 package imagemonkeydb
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +10,8 @@ import (
 	"github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 	"time"
+	"context"
+	"github.com/jackc/pgx/v4"
 )
 
 type ImageDonationErrorType int
@@ -30,11 +31,11 @@ func sublabelsToStringlist(sublabels []datastructures.Sublabel) []string {
 	return s
 }
 
-func _addImageSource(imageId int64, imageSource datastructures.ImageSource, tx *sql.Tx) (int64, error) {
+func _addImageSource(imageId int64, imageSource datastructures.ImageSource, tx pgx.Tx) (int64, error) {
 	var insertedId int64
-	err := tx.QueryRow("INSERT INTO image_source(image_id, url) VALUES($1, $2) RETURNING id", imageId, imageSource.Url).Scan(&insertedId)
+	err := tx.QueryRow(context.TODO(), "INSERT INTO image_source(image_id, url) VALUES($1, $2) RETURNING id", imageId, imageSource.Url).Scan(&insertedId)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Add image source] Couldn't add image source: ", err.Error())
 		raven.CaptureError(err, nil)
 		return insertedId, err
@@ -47,7 +48,7 @@ func _addImageSource(imageId int64, imageSource datastructures.ImageSource, tx *
 func (p *ImageMonkeyDatabase) GetRandomGroupedImages(label string, limit int) ([]datastructures.ValidationImage, error) {
 	var images []datastructures.ValidationImage
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Debug("[Random grouped images] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -60,13 +61,14 @@ func (p *ImageMonkeyDatabase) GetRandomGroupedImages(label string, limit int) ([
 	//TODO: the following SQL query is a potential candidate for improvement, as it probably gets slow if there
 	//are ten thousands of rows in the DB.
 	var numOfRows int
-	err = tx.QueryRow(`SELECT count(*) FROM image i 
+	err = tx.QueryRow(context.TODO(),
+                       `SELECT count(*) FROM image i 
                         JOIN image_provider p ON i.image_provider_id = p.id 
                         JOIN image_validation v ON v.image_id = i.id
                         JOIN label l ON v.label_id = l.id
                         WHERE i.unlocked = true AND p.name = 'donation' AND l.name = $1 AND l.parent_id is null`, label).Scan(&numOfRows)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Random grouped images] Couldn't get num of rows: ", err.Error())
 		raven.CaptureError(err, nil)
 		return images, err
@@ -83,7 +85,8 @@ func (p *ImageMonkeyDatabase) GetRandomGroupedImages(label string, limit int) ([
 	}
 
 	//fetch images
-	rows, err := p.db.Query(`SELECT i.key, l.name, v.num_of_valid, v.num_of_invalid, v.uuid FROM image i 
+	rows, err := p.db.Query(context.TODO(),
+                          `SELECT i.key, l.name, v.num_of_valid, v.num_of_invalid, v.uuid FROM image i 
                            JOIN image_provider p ON i.image_provider_id = p.id 
                            JOIN image_validation v ON v.image_id = i.id
                            JOIN label l ON v.label_id = l.id
@@ -91,7 +94,7 @@ func (p *ImageMonkeyDatabase) GetRandomGroupedImages(label string, limit int) ([
                            OFFSET $2 LIMIT $3`, label, randomNumber, limit)
 
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Random grouped images] Couldn't get images: ", err.Error())
 		raven.CaptureError(err, nil)
 		return images, err
@@ -104,7 +107,7 @@ func (p *ImageMonkeyDatabase) GetRandomGroupedImages(label string, limit int) ([
 		image.Provider = "donation"
 		err = rows.Scan(&image.Id, &image.Label, &image.Validation.NumOfValid, &image.Validation.NumOfInvalid, &image.Validation.Id)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			log.Debug("[Fetch random grouped image] Couldn't scan row: ", err.Error())
 			raven.CaptureError(err, nil)
 			return images, err
@@ -113,11 +116,11 @@ func (p *ImageMonkeyDatabase) GetRandomGroupedImages(label string, limit int) ([
 		images = append(images, image)
 	}
 
-	return images, tx.Commit()
+	return images, tx.Commit(context.TODO())
 }
 
 func (p *ImageMonkeyDatabase) UnlockImage(imageId string) error {
-	_, err := p.db.Exec("UPDATE image SET unlocked = true WHERE key = $1", imageId)
+	_, err := p.db.Exec(context.TODO(), "UPDATE image SET unlocked = true WHERE key = $1", imageId)
 	if err != nil {
 		log.Debug("[Unlock Image] Couldn't unlock image: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -128,7 +131,7 @@ func (p *ImageMonkeyDatabase) UnlockImage(imageId string) error {
 }
 
 func (p *ImageMonkeyDatabase) PutImageInQuarantine(imageId string) error {
-	_, err := p.db.Exec(`INSERT INTO image_quarantine(image_id)
+	_, err := p.db.Exec(context.TODO(), `INSERT INTO image_quarantine(image_id)
                         SELECT id FROM image WHERE key = $1
                         ON CONFLICT(image_id) DO NOTHING`, imageId)
 	if err != nil {
@@ -143,7 +146,7 @@ func (p *ImageMonkeyDatabase) PutImageInQuarantine(imageId string) error {
 func (p *ImageMonkeyDatabase) IsImageUnlocked(uuid string) (bool, error) {
 	var unlocked bool
 	unlocked = false
-	rows, err := p.db.Query("SELECT unlocked FROM image WHERE key = $1", uuid)
+	rows, err := p.db.Query(context.TODO(), "SELECT unlocked FROM image WHERE key = $1", uuid)
 	if err != nil {
 		log.Debug("[Is Image Unlocked] Couldn't get row: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -166,7 +169,7 @@ func (p *ImageMonkeyDatabase) IsImageUnlocked(uuid string) (bool, error) {
 
 func (p *ImageMonkeyDatabase) ImageExists(hash uint64) (bool, error) {
 	//PostgreSQL can't handle unsigned 64bit, so we are casting the hash to a signed 64bit value when comparing against the stored hash (so values above maxuint64/2 are negative).
-	rows, err := p.db.Query("SELECT COUNT(hash) FROM image where hash = $1", int64(hash))
+	rows, err := p.db.Query(context.TODO(), "SELECT COUNT(hash) FROM image where hash = $1", int64(hash))
 	if err != nil {
 		log.Debug("[Checking if photo exists] Couldn't get hash: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -219,7 +222,7 @@ func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string
 	q := fmt.Sprintf(`SELECT COUNT(i.id) FROM image i 
                       WHERE i.key = $1 AND (i.unlocked = true %s)`, includeOwnImageDonations)
 	var num int = 0
-	err := p.db.QueryRow(q, queryValues...).Scan(&num)
+	err := p.db.QueryRow(context.TODO(), q, queryValues...).Scan(&num)
 	if err != nil {
 		log.Error("[Image exists for user] Couldn't determine whether image exists: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -235,7 +238,7 @@ func (p *ImageMonkeyDatabase) ImageExistsForUser(imageId string, username string
 func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, imageInfo datastructures.ImageInfo, autoUnlock bool,
 	labels []datastructures.LabelMeEntry, imageCollectionName string, labelMap map[string]datastructures.LabelMapEntry,
 	metalabels *commons.MetaLabels) error {
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Debug("[Adding donated photo] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -250,14 +253,15 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 	//PostgreSQL can't store unsigned 64bit, so we are casting the hash to a signed 64bit value when storing the hash (so values above maxuint64/2 are negative).
 	//this should be ok, as we do not need to order those values, but just need to check if a hash exists. So it should be fine
 	var imageId int64
-	err = tx.QueryRow(`INSERT INTO image(key, unlocked, image_provider_id, hash, width, height, sys_period) 
+	err = tx.QueryRow(context.TODO(),
+                       `INSERT INTO image(key, unlocked, image_provider_id, hash, width, height, sys_period) 
                         SELECT $1, $2, p.id, $3, $5, $6, '["now()",]'::tstzrange FROM image_provider p WHERE p.name = $4 
                         RETURNING id`,
 		imageInfo.Name, autoUnlock, int64(imageInfo.Hash), imageProvider, imageInfo.Width, imageInfo.Height).Scan(&imageId)
 	if err != nil {
 		log.Debug("[Adding donated photo] Couldn't insert image: ", err.Error())
 		raven.CaptureError(err, nil)
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
@@ -291,10 +295,11 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 
 	//in case a username is provided, link image to user account
 	if apiUser.Name != "" {
-		_, err := tx.Exec(`INSERT INTO user_image(image_id, account_id)
+		_, err := tx.Exec(context.TODO(),
+                           `INSERT INTO user_image(image_id, account_id)
                             SELECT $1, id FROM account WHERE name = $2`, imageId, apiUser.Name)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			log.Debug("[Add user image entry] Couldn't add entry: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
@@ -326,24 +331,25 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 
 	if imageInfo.Source.Provider == "imagehunt" {
 		if len(insertedValidationIds) != 1 {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			err = errors.New("Couldn't create imagehunt entry due to missing or invalid label")
 			log.Error("[Create ImageHunt entry for donated image]", err.Error())
 			raven.CaptureError(err, nil)
 			return err
 		}
 
-		_, err := tx.Exec(`INSERT INTO imagehunt_task(image_validation_id, created)
+		_, err := tx.Exec(context.TODO(),
+                           `INSERT INTO imagehunt_task(image_validation_id, created)
                             VALUES($1, $2)`, insertedValidationIds[0], time.Now().Unix())
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			log.Error("[Create ImageHunt entry for donated image] Couldn't create entry: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
 		}
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Error("[Add donated Image] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -355,7 +361,8 @@ func (p *ImageMonkeyDatabase) AddDonatedPhoto(apiUser datastructures.APIUser, im
 
 func (p *ImageMonkeyDatabase) IsOwnDonation(imageId string, username string) (bool, error) {
 	isOwnDonation := false
-	rows, err := p.db.Query(`SELECT count(*)
+	rows, err := p.db.Query(context.TODO(),
+                           `SELECT count(*)
                             FROM image i 
                             WHERE i.key = $1 AND EXISTS 
                                                         (
@@ -397,7 +404,7 @@ func (p *ImageMonkeyDatabase) IsOwnDonation(imageId string, username string) (bo
 
 func (p *ImageMonkeyDatabase) ReportImage(imageId string, reason string) error {
 	insertedId := 0
-	err := p.db.QueryRow("INSERT INTO image_report(image_id, reason) SELECT i.id, $2 FROM image i WHERE i.key = $1 RETURNING id",
+	err := p.db.QueryRow(context.TODO(), "INSERT INTO image_report(image_id, reason) SELECT i.id, $2 FROM image i WHERE i.key = $1 RETURNING id",
 		imageId, reason).Scan(&insertedId)
 	if err != nil {
 		log.Debug("[Report image] Couldn't add report: ", err.Error())
@@ -465,16 +472,16 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
                                      %s AND q.unlocked = false`, q1)
 
 	var err error
-	var rows *sql.Rows
+	var rows pgx.Rows
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Debug("[Fetch unverified images] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return lockedImages, err
 	}
 
-	rows, err = tx.Query(q, queryValues...)
+	rows, err = tx.Query(context.TODO(), q, queryValues...)
 
 	if err != nil {
 		log.Debug("[Fetch unverified images] Couldn't fetch unverified images: ", err.Error())
@@ -496,14 +503,14 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
 		lockedImages.Images = append(lockedImages.Images, image)
 	}
 
-	err = tx.QueryRow(totalImagesQuery).Scan(&lockedImages.Total)
+	err = tx.QueryRow(context.TODO(), totalImagesQuery).Scan(&lockedImages.Total)
 	if err != nil {
 		log.Debug("[Fetch unverified images] Couldn't get number of images: ", err.Error())
 		raven.CaptureError(err, nil)
 		return lockedImages, err
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Debug("[Fetch unverified images] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -516,64 +523,68 @@ func (p *ImageMonkeyDatabase) GetAllUnverifiedImages(imageProvider string, shuff
 func (p *ImageMonkeyDatabase) DeleteImage(uuid string) error {
 	var imageId int64
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Debug("[Delete image] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	_, err = tx.Exec(`DELETE FROM user_image
+	_, err = tx.Exec(context.TODO(),
+                     `DELETE FROM user_image
                       WHERE image_id IN (
                         SELECT id FROM image WHERE key = $1 
                       )`, uuid)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Delete image] Couldn't delete user_image entry: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	_, err = tx.Exec(`DELETE FROM image_validation
+	_, err = tx.Exec(context.TODO(),
+                     `DELETE FROM image_validation
                       WHERE image_id IN (
                         SELECT id FROM image WHERE key = $1 
                       )`, uuid)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Delete image] Couldn't delete image_validation entry: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
 	imageId = -1
-	err = tx.QueryRow(`DELETE FROM image i WHERE key = $1
+	err = tx.QueryRow(context.TODO(),
+                      `DELETE FROM image i WHERE key = $1
                        RETURNING i.id`, uuid).Scan(&imageId)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
 	if imageId == -1 {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		err = errors.New("nothing deleted")
 		log.Debug("[Delete image] Couldn't delete image entry: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	_, err = tx.Exec(`DELETE FROM image_label_suggestion s 
+	_, err = tx.Exec(context.TODO(),
+                      `DELETE FROM image_label_suggestion s 
                        WHERE image_id = $1`, imageId)
 
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Debug("[Delete image] Couldn't delete image_label_suggestion entry: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Debug("[Delete image] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -645,7 +656,7 @@ func (p *ImageMonkeyDatabase) Export(parseResult parser.ParseResult, annotations
                       
                      WHERE i.unlocked = true
                      GROUP BY i.key, q3.validations, i.width, i.height`, identifier, q1, parseResult.Query, identifier, q2, parseResult.Query, joinType, identifier, q3, parseResult.Query)
-	rows, err := p.db.Query(q, parseResult.QueryValues...)
+	rows, err := p.db.Query(context.TODO(), q, parseResult.QueryValues...)
 	if err != nil {
 		log.Debug("[Export] Couldn't export data: ", err.Error())
 		raven.CaptureError(err, nil)

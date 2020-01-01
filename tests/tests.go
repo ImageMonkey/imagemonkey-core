@@ -2,7 +2,6 @@ package tests
 
 import (
 	log "github.com/sirupsen/logrus"
-	_"github.com/lib/pq"
 	"flag"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 )

@@ -5,15 +5,16 @@ import (
 	"github.com/getsentry/raven-go"
     log "github.com/sirupsen/logrus"
     "errors"
-    "database/sql"
+    "github.com/jackc/pgx/v4"
     "fmt"
     "encoding/json"
+	"context"
 )
 
 
 func (p *ImageMonkeyDatabase) GetNumOfDonatedImages() (int64, error) {
     var num int64
-    err := p.db.QueryRow("SELECT count(*) FROM image").Scan(&num)
+    err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM image").Scan(&num)
     if err != nil {
         log.Debug("[Fetch images] Couldn't get num of available images: ", err.Error())
         raven.CaptureError(err, nil)
@@ -30,7 +31,8 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionStatistics(period string) ([]da
         return imageDescriptionStatistics, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`WITH dates AS (
+    rows, err := p.db.Query(context.TODO(),
+                          `WITH dates AS (
                             SELECT *
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
@@ -79,7 +81,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
         return annotationStatistics, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`WITH dates AS (
+    rows, err := p.db.Query(context.TODO(),
+                          `WITH dates AS (
                             SELECT *
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
@@ -128,7 +131,8 @@ func (p *ImageMonkeyDatabase) GetDonationsStatistics(period string) ([]datastruc
         return donationStatistics, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`WITH dates AS (
+    rows, err := p.db.Query(context.TODO(),
+                          `WITH dates AS (
                             SELECT *
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
@@ -174,7 +178,8 @@ func (p *ImageMonkeyDatabase) GetValidationStatistics(period string) ([]datastru
         return validationStatistics, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`WITH dates AS (
+    rows, err := p.db.Query(context.TODO(),
+                          `WITH dates AS (
                             SELECT *
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
@@ -226,7 +231,8 @@ func (p *ImageMonkeyDatabase) GetLabeledObjectsStatistics(period string) ([]data
         return labeledObjectsStatistics, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`WITH dates AS (
+    rows, err := p.db.Query(context.TODO(),
+                          `WITH dates AS (
                             SELECT *
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
@@ -282,7 +288,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationRefinementStatistics(period string) (
         return annotationRefinementStatistics, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`WITH dates AS (
+    rows, err := p.db.Query(context.TODO(),
+                          `WITH dates AS (
                             SELECT *
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day') date
                            ),
@@ -327,7 +334,7 @@ func (p *ImageMonkeyDatabase) GetAnnotationRefinementStatistics(period string) (
 func (p *ImageMonkeyDatabase) GetUserStatistics(username string) (datastructures.UserStatistics, error) {
     var userStatistics datastructures.UserStatistics
 
-    tx, err := p.db.Begin()
+    tx, err := p.db.Begin(context.TODO())
     if err != nil {
         log.Debug("[User Statistics] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
@@ -335,9 +342,9 @@ func (p *ImageMonkeyDatabase) GetUserStatistics(username string) (datastructures
     }
 
     userStatistics.Total.Annotations = 0
-    err = tx.QueryRow("SELECT count(*) FROM image_annotation").Scan(&userStatistics.Total.Annotations)
+    err = tx.QueryRow(context.TODO(), "SELECT count(*) FROM image_annotation").Scan(&userStatistics.Total.Annotations)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[User Statistics] Couldn't get total annotations: ", err.Error())
         raven.CaptureError(err, nil)
         return userStatistics, err
@@ -345,10 +352,11 @@ func (p *ImageMonkeyDatabase) GetUserStatistics(username string) (datastructures
 
 
     userStatistics.User.Annotations = 0
-    err = tx.QueryRow(`SELECT count(*) FROM user_image_annotation u
+    err = tx.QueryRow(context.TODO(),
+                      `SELECT count(*) FROM user_image_annotation u
                        JOIN account a on u.account_id = a.id WHERE a.name = $1`, username).Scan(&userStatistics.User.Annotations)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[User Statistics] Couldn't get user annotations: ", err.Error())
         raven.CaptureError(err, nil)
         return userStatistics, err
@@ -356,26 +364,28 @@ func (p *ImageMonkeyDatabase) GetUserStatistics(username string) (datastructures
 
 
     userStatistics.Total.Validations = 0
-    err = tx.QueryRow("SELECT count(*) FROM image_validation").Scan(&userStatistics.Total.Validations)
+    err = tx.QueryRow(context.TODO(),
+                       "SELECT count(*) FROM image_validation").Scan(&userStatistics.Total.Validations)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[User Statistics] Couldn't get total validations: ", err.Error())
         raven.CaptureError(err, nil)
         return userStatistics, err
     }
 
     userStatistics.User.Validations = 0
-    err = tx.QueryRow(`SELECT count(*) FROM user_image_validation u
+    err = tx.QueryRow(context.TODO(),
+                      `SELECT count(*) FROM user_image_validation u
                        JOIN account a on u.account_id = a.id WHERE a.name = $1`, username).Scan(&userStatistics.User.Validations)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[User Statistics] Couldn't get user validations: ", err.Error())
         raven.CaptureError(err, nil)
         return userStatistics, err
     }
 
 
-    err = tx.Commit()
+    err = tx.Commit(context.TODO())
     if err != nil {
         log.Debug("[User Statistics] Couldn't commit transaction: ", err.Error())
         raven.CaptureError(err, nil)
@@ -392,14 +402,15 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
     //use temporary map for faster lookup
     temp := make(map[string]datastructures.ValidationStat)
 
-    tx, err := p.db.Begin()
+    tx, err := p.db.Begin(context.TODO())
     if err != nil {
         log.Debug("[Explore] Couldn't begin transaction: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
     }
     
-    rows, err := tx.Query(`SELECT CASE WHEN pl.name is null THEN l.name ELSE l.name || '/' || pl.name END, count(l.name), 
+    rows, err := tx.Query(context.TODO(),
+                         `SELECT CASE WHEN pl.name is null THEN l.name ELSE l.name || '/' || pl.name END, count(l.name), 
                            CASE 
                             WHEN SUM(v.num_of_valid + v.num_of_invalid) = 0 THEN 0 
                             ELSE (CAST (SUM(v.num_of_invalid) AS float)/(SUM(v.num_of_valid) + SUM(v.num_of_invalid))) 
@@ -410,7 +421,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
                            LEFT JOIN label pl on l.parent_id = pl.id
                            GROUP BY l.name, pl.name ORDER BY count(l.name) DESC`)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -421,7 +432,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         var validationStat datastructures.ValidationStat
         err = rows.Scan(&validationStat.Label, &validationStat.Count, &validationStat.ErrorRate, &validationStat.TotalValidations)
         if err != nil {
-            tx.Rollback()
+            tx.Rollback(context.TODO())
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
             return statistics, err
@@ -446,9 +457,10 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
     }
 
     //get donations grouped by country
-    donationsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM donations_per_country ORDER BY count DESC`)
+    donationsPerCountryRows, err := tx.Query(context.TODO(),
+                                              `SELECT country_code, count FROM donations_per_country ORDER BY count DESC`)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -459,7 +471,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         var donationsPerCountryStat datastructures.DonationsPerCountryStat
         err = donationsPerCountryRows.Scan(&donationsPerCountryStat.CountryCode, &donationsPerCountryStat.Count)
         if err != nil {
-            tx.Rollback()
+            tx.Rollback(context.TODO())
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
             return statistics, err
@@ -470,9 +482,9 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
 
     //get validations grouped by country
-    validationsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM validations_per_country ORDER BY count DESC`)
+    validationsPerCountryRows, err := tx.Query(context.TODO(), `SELECT country_code, count FROM validations_per_country ORDER BY count DESC`)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -483,7 +495,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         var validationsPerCountryStat datastructures.ValidationsPerCountryStat
         err = validationsPerCountryRows.Scan(&validationsPerCountryStat.CountryCode, &validationsPerCountryStat.Count)
         if err != nil {
-            tx.Rollback()
+            tx.Rollback(context.TODO())
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
             return statistics, err
@@ -493,9 +505,9 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
     }
 
     //get annotations grouped by country
-    annotationsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM annotations_per_country ORDER BY count DESC`)
+    annotationsPerCountryRows, err := tx.Query(context.TODO(), `SELECT country_code, count FROM annotations_per_country ORDER BY count DESC`)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -506,7 +518,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         var annotationsPerCountryStat datastructures.AnnotationsPerCountryStat
         err = annotationsPerCountryRows.Scan(&annotationsPerCountryStat.CountryCode, &annotationsPerCountryStat.Count)
         if err != nil {
-            tx.Rollback()
+            tx.Rollback(context.TODO())
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
             return statistics, err
@@ -517,9 +529,10 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
 
     //get annotation refinements grouped by country
-    annotationRefinementsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM annotation_refinements_per_country ORDER BY count DESC`)
+    annotationRefinementsPerCountryRows, err := tx.Query(context.TODO(),
+                                                         `SELECT country_code, count FROM annotation_refinements_per_country ORDER BY count DESC`)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -530,7 +543,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         var annotationRefinementsPerCountryStat datastructures.AnnotationRefinementsPerCountryStat
         err = annotationRefinementsPerCountryRows.Scan(&annotationRefinementsPerCountryStat.CountryCode, &annotationRefinementsPerCountryStat.Count)
         if err != nil {
-            tx.Rollback()
+            tx.Rollback(context.TODO())
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
             return statistics, err
@@ -541,9 +554,10 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
 
     //get image descriptions grouped by country
-    imageDescriptionsPerCountryRows, err := tx.Query(`SELECT country_code, count FROM image_descriptions_per_country ORDER BY count DESC`)
+    imageDescriptionsPerCountryRows, err := tx.Query(context.TODO(),
+                                                     `SELECT country_code, count FROM image_descriptions_per_country ORDER BY count DESC`)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore data: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -554,7 +568,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
         var imageDescriptionsPerCountryStat datastructures.ImageDescriptionsPerCountryStat
         err = imageDescriptionsPerCountryRows.Scan(&imageDescriptionsPerCountryStat.CountryCode, &imageDescriptionsPerCountryStat.Count)
         if err != nil {
-            tx.Rollback()
+            tx.Rollback(context.TODO())
             log.Debug("[Explore] Couldn't scan data row: ", err.Error())
             raven.CaptureError(err, nil)
             return statistics, err
@@ -564,7 +578,8 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
     }
 
     //get all unlabeled donations
-    err = tx.QueryRow(`SELECT count(i.id) from image i 
+    err = tx.QueryRow(context.TODO(),
+                       `SELECT count(i.id) from image i 
                         WHERE i.id NOT IN 
                         (
                             SELECT image_id FROM image_validation
@@ -572,7 +587,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
                             SELECT image_id FROM image_label_suggestion
                         )`).Scan(&statistics.NumOfUnlabeledDonations)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't scan data row: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -580,7 +595,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.AnnotationsPerApp, err = _exploreAnnotationsPerApp(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore annotations per app: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -588,7 +603,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.DonationsPerApp, err = _exploreDonationsPerApp(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore donations per app: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -596,7 +611,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.ValidationsPerApp, err = _exploreValidationsPerApp(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't explore validations per app: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -604,7 +619,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.NumOfDonations, err = _getTotalDonations(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't get total donations: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -612,7 +627,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.NumOfAnnotations, err = _getTotalAnnotations(tx, false)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't get total annotations: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -620,7 +635,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.NumOfValidations, err = _getTotalValidations(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't get total validations: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -628,7 +643,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.NumOfAnnotationRefinements, err = _getTotalAnnotationRefinements(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't get total annotation refinements: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -636,7 +651,7 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.NumOfLabelSuggestions, err = _getTotalLabelSuggestions(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't get total label suggestions: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
@@ -644,20 +659,20 @@ func (p *ImageMonkeyDatabase) Explore(words []string) (datastructures.Statistics
 
     statistics.NumOfLabels, err = _getTotalLabels(tx)
     if err != nil {
-        tx.Rollback()
+        tx.Rollback(context.TODO())
         log.Debug("[Explore] Couldn't get total labels: ", err.Error())
         raven.CaptureError(err, nil)
         return statistics, err
     }
 
-    return statistics, tx.Commit()
+    return statistics, tx.Commit(context.TODO())
 }
 
-func _getTotalDonations(tx *sql.Tx) (int64, error) {
+func _getTotalDonations(tx pgx.Tx) (int64, error) {
     var numOfTotalDonations int64
     numOfTotalDonations = 0
 
-    rows, err := tx.Query(`SELECT count(*) FROM image i`)
+    rows, err := tx.Query(context.TODO(), `SELECT count(*) FROM image i`)
     if err != nil {
         return numOfTotalDonations, nil
     }
@@ -674,11 +689,11 @@ func _getTotalDonations(tx *sql.Tx) (int64, error) {
     return numOfTotalDonations, nil
 }
 
-func _getTotalLabels(tx *sql.Tx) (int64, error) {
+func _getTotalLabels(tx pgx.Tx) (int64, error) {
     var numOfTotalLabels int64
     numOfTotalLabels = 0
 
-    rows, err := tx.Query(`SELECT count(*) FROM label l`)
+    rows, err := tx.Query(context.TODO(), `SELECT count(*) FROM label l`)
     if err != nil {
         return numOfTotalLabels, nil
     }
@@ -695,7 +710,7 @@ func _getTotalLabels(tx *sql.Tx) (int64, error) {
     return numOfTotalLabels, nil
 }
 
-func _getTotalAnnotations(tx *sql.Tx, includeAutoGeneratedAnnotations bool) (int64, error) {
+func _getTotalAnnotations(tx pgx.Tx, includeAutoGeneratedAnnotations bool) (int64, error) {
     var numOfAnnotations int64
     numOfAnnotations = 0
 
@@ -706,7 +721,7 @@ func _getTotalAnnotations(tx *sql.Tx, includeAutoGeneratedAnnotations bool) (int
 
     q := fmt.Sprintf(`SELECT count(*) FROM image_annotation a %s`, q1)
 
-    rows, err := tx.Query(q)
+    rows, err := tx.Query(context.TODO(), q)
     if err != nil {
         return numOfAnnotations, nil
     }
@@ -723,11 +738,11 @@ func _getTotalAnnotations(tx *sql.Tx, includeAutoGeneratedAnnotations bool) (int
     return numOfAnnotations, nil
 }
 
-func _getTotalValidations(tx *sql.Tx) (int64, error) {
+func _getTotalValidations(tx pgx.Tx) (int64, error) {
     var numOfValidations int64
     numOfValidations = 0
 
-    rows, err := tx.Query(`SELECT count(*) FROM image_validation v`)
+    rows, err := tx.Query(context.TODO(), `SELECT count(*) FROM image_validation v`)
     if err != nil {
         return numOfValidations, nil
     }
@@ -744,11 +759,11 @@ func _getTotalValidations(tx *sql.Tx) (int64, error) {
     return numOfValidations, nil
 }
 
-func _getTotalAnnotationRefinements(tx *sql.Tx) (int64, error) {
+func _getTotalAnnotationRefinements(tx pgx.Tx) (int64, error) {
     var numOfAnnotationRefinements int64
     numOfAnnotationRefinements = 0
 
-    rows, err := tx.Query(`SELECT count(*) FROM image_annotation_refinement r`)
+    rows, err := tx.Query(context.TODO(), `SELECT count(*) FROM image_annotation_refinement r`)
     if err != nil {
         return numOfAnnotationRefinements, nil
     }
@@ -765,11 +780,11 @@ func _getTotalAnnotationRefinements(tx *sql.Tx) (int64, error) {
     return numOfAnnotationRefinements, nil
 }
 
-func _exploreAnnotationsPerApp(tx *sql.Tx) ([]datastructures.AnnotationsPerAppStat, error) {
+func _exploreAnnotationsPerApp(tx pgx.Tx) ([]datastructures.AnnotationsPerAppStat, error) {
     var annotationsPerApp []datastructures.AnnotationsPerAppStat
 
     //get annotations grouped by app
-    annotationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM annotations_per_app ORDER BY count DESC`)
+    annotationsPerAppRows, err := tx.Query(context.TODO(), `SELECT app_identifier, count FROM annotations_per_app ORDER BY count DESC`)
     if err != nil {
         return annotationsPerApp, err
     }
@@ -788,11 +803,11 @@ func _exploreAnnotationsPerApp(tx *sql.Tx) ([]datastructures.AnnotationsPerAppSt
     return annotationsPerApp, nil
 }
 
-func _exploreDonationsPerApp(tx *sql.Tx) ([]datastructures.DonationsPerAppStat, error) {
+func _exploreDonationsPerApp(tx pgx.Tx) ([]datastructures.DonationsPerAppStat, error) {
     var donationsPerApp []datastructures.DonationsPerAppStat
 
     //get donations grouped by app
-    donationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM donations_per_app ORDER BY count DESC`)
+    donationsPerAppRows, err := tx.Query(context.TODO(), `SELECT app_identifier, count FROM donations_per_app ORDER BY count DESC`)
     if err != nil {
         return donationsPerApp, err
     }
@@ -811,11 +826,11 @@ func _exploreDonationsPerApp(tx *sql.Tx) ([]datastructures.DonationsPerAppStat, 
     return donationsPerApp, nil
 }
 
-func _exploreValidationsPerApp(tx *sql.Tx) ([]datastructures.ValidationsPerAppStat, error) {
+func _exploreValidationsPerApp(tx pgx.Tx) ([]datastructures.ValidationsPerAppStat, error) {
     var validationsPerApp []datastructures.ValidationsPerAppStat
 
     //get validations grouped by app
-    validationsPerAppRows, err := tx.Query(`SELECT app_identifier, count FROM validations_per_app ORDER BY count DESC`)
+    validationsPerAppRows, err := tx.Query(context.TODO(), `SELECT app_identifier, count FROM validations_per_app ORDER BY count DESC`)
     if err != nil {
         return validationsPerApp, err
     }
@@ -836,7 +851,8 @@ func _exploreValidationsPerApp(tx *sql.Tx) ([]datastructures.ValidationsPerAppSt
 
 func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType string, countryCode string) error {
     if contributionType == "donation" {
-        _, err := p.db.Exec(`INSERT INTO donations_per_country (country_code, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO donations_per_country (country_code, count)
                             VALUES ($1, $2) ON CONFLICT (country_code)
                             DO UPDATE SET count = donations_per_country.count + 1`, countryCode, 1)
         if err != nil {
@@ -844,7 +860,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType str
             return err
         }
     } else if contributionType == "validation" {
-        _, err := p.db.Exec(`INSERT INTO validations_per_country (country_code, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO validations_per_country (country_code, count)
                             VALUES ($1, $2) ON CONFLICT (country_code)
                             DO UPDATE SET count = validations_per_country.count + 1`, countryCode, 1)
         if err != nil {
@@ -852,7 +869,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType str
             return err
         }
     } else if contributionType == "annotation" {
-        _, err := p.db.Exec(`INSERT INTO annotations_per_country (country_code, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO annotations_per_country (country_code, count)
                             VALUES ($1, $2) ON CONFLICT (country_code)
                             DO UPDATE SET count = annotations_per_country.count + 1`, countryCode, 1)
         if err != nil {
@@ -860,7 +878,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType str
             return err
         }
     } else if contributionType == "annotation-refinement" {
-        _, err := p.db.Exec(`INSERT INTO annotation_refinements_per_country (country_code, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO annotation_refinements_per_country (country_code, count)
                             VALUES ($1, $2) ON CONFLICT (country_code)
                             DO UPDATE SET count = annotation_refinements_per_country.count + 1`, countryCode, 1)
         if err != nil {
@@ -868,7 +887,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType str
             return err
         }
     } else if contributionType == "image-description" {
-        _, err := p.db.Exec(`INSERT INTO image_descriptions_per_country (country_code, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO image_descriptions_per_country (country_code, count)
                             VALUES ($1, $2) ON CONFLICT (country_code)
                             DO UPDATE SET count = image_descriptions_per_country.count + 1`, countryCode, 1)
         if err != nil {
@@ -882,7 +902,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerCountry(contributionType str
 
 func (p *ImageMonkeyDatabase) UpdateContributionsPerApp(contributionType string, appIdentifier string) error {
     if contributionType == "donation" {
-        _, err := p.db.Exec(`INSERT INTO donations_per_app (app_identifier, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO donations_per_app (app_identifier, count)
                             VALUES ($1, $2) ON CONFLICT (app_identifier)
                             DO UPDATE SET count = donations_per_app.count + 1`, appIdentifier, 1)
         if err != nil {
@@ -890,7 +911,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerApp(contributionType string,
             return err
         }
     } else if contributionType == "validation" {
-        _, err := p.db.Exec(`INSERT INTO validations_per_app (app_identifier, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO validations_per_app (app_identifier, count)
                             VALUES ($1, $2) ON CONFLICT (app_identifier)
                             DO UPDATE SET count = validations_per_app.count + 1`, appIdentifier, 1)
         if err != nil {
@@ -898,7 +920,8 @@ func (p *ImageMonkeyDatabase) UpdateContributionsPerApp(contributionType string,
             return err
         }
     } else if contributionType == "annotation" {
-        _, err := p.db.Exec(`INSERT INTO annotations_per_app (app_identifier, count)
+        _, err := p.db.Exec(context.TODO(),
+                           `INSERT INTO annotations_per_app (app_identifier, count)
                             VALUES ($1, $2) ON CONFLICT (app_identifier)
                             DO UPDATE SET count = annotations_per_app.count + 1`, appIdentifier, 1)
         if err != nil {
@@ -969,7 +992,7 @@ func (p *ImageMonkeyDatabase) GetAnnotatedStatistics(apiUser datastructures.APIU
                         END DESC`, 
                      includeOwnImageDonations, includeOwnImageDonations, q1)
 
-    rows, err := p.db.Query(q, queryValues...)
+    rows, err := p.db.Query(context.TODO(), q, queryValues...)
     if err != nil {
         log.Debug("[Get Annotated Statistics] Couldn't get annotated statistics: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1045,7 +1068,7 @@ func (p *ImageMonkeyDatabase) GetValidatedStatistics(apiUser datastructures.APIU
                         END DESC`, 
                      includeOwnImageDonations, includeOwnImageDonations)
 
-    rows, err := p.db.Query(q, queryValues...)
+    rows, err := p.db.Query(context.TODO(), q, queryValues...)
     if err != nil {
         log.Debug("[Get Validated Statistics] Couldn't get validated statistics: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1077,7 +1100,8 @@ func (p *ImageMonkeyDatabase) GetActivity(period string) ([]datastructures.Activ
         return activity, errors.New("Only last-month statistics are supported at the moment")
     }
 
-    rows, err := p.db.Query(`SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
+    rows, err := p.db.Query(context.TODO(),
+                          `SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
                            (d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation, q.activity_name 
                            FROM
                             (
@@ -1221,7 +1245,7 @@ func (p *ImageMonkeyDatabase) GetActivity(period string) ([]datastructures.Activ
 
 func (p *ImageMonkeyDatabase) GetNumOfAnnotatedImages() (int64, error) {
     var num int64
-    err := p.db.QueryRow("SELECT count(*) FROM image_annotation").Scan(&num)
+    err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM image_annotation").Scan(&num)
     if err != nil {
         log.Debug("[Fetch images] Couldn't get num of annotated images: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1234,7 +1258,7 @@ func (p *ImageMonkeyDatabase) GetNumOfAnnotatedImages() (int64, error) {
 
 func (p *ImageMonkeyDatabase) GetNumOfValidatedImages() (int64, error) {
     var num int64
-    err := p.db.QueryRow("SELECT count(*) FROM image_validation").Scan(&num)
+    err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM image_validation").Scan(&num)
     if err != nil {
         log.Debug("[Fetch images] Couldn't get num of validated images: ", err.Error())
         raven.CaptureError(err, nil)
@@ -1247,7 +1271,8 @@ func (p *ImageMonkeyDatabase) GetNumOfValidatedImages() (int64, error) {
 func (p *ImageMonkeyDatabase) GetValidationsCount(minProbability float64, minCount int) ([]datastructures.ValidationCount, error) {
     validationCounts := []datastructures.ValidationCount{}
 
-    rows, err := p.db.Query(`SELECT a.accessor, COUNT(*) 
+    rows, err := p.db.Query(context.TODO(),
+                            `SELECT a.accessor, COUNT(*) 
                              FROM
                              (
                                 SELECT v.id as validation_id, v.label_id as label_id 
@@ -1289,7 +1314,8 @@ func (p *ImageMonkeyDatabase) GetValidationsCount(minProbability float64, minCou
 func (p *ImageMonkeyDatabase) GetAnnotationsCount(minProbability float64, minCount int) ([]datastructures.AnnotationCount, error) {
     annotationCounts := []datastructures.AnnotationCount{}
 
-    rows, err := p.db.Query(`SELECT a.accessor, COUNT(*) 
+    rows, err := p.db.Query(context.TODO(),
+                            `SELECT a.accessor, COUNT(*) 
                              FROM
                              (
                                 SELECT a.id as annotation_id, a.label_id as label_id 

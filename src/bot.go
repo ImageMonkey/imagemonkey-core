@@ -1,20 +1,19 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	//"github.com/gofrs/uuid"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v4"
 	log "github.com/sirupsen/logrus"
 	"time"
 	"errors"
+	"context"
 )
 
-var db *sql.DB
+var db *pgx.Conn
 
 func setTrendingLabelBotTaskState(status string, branchName string, jobUrl string, id int64) error {
 	var queryValues []interface{}
@@ -30,12 +29,13 @@ func setTrendingLabelBotTaskState(status string, branchName string, jobUrl strin
 	q := fmt.Sprintf(`UPDATE trending_label_bot_task 
 					  	SET state = $1, branch_name = $2%s
 						WHERE id = $3`, jobUrlStr)
-	_, err := db.Exec(q, queryValues...)
+	_, err := db.Exec(context.TODO(), q, queryValues...)
 	return err
 }
 
 func resetTrendingLabelBotTaskState(id int64) error {
-	_, err := db.Exec(`UPDATE trending_label_bot_task
+	_, err := db.Exec(context.TODO(),
+						`UPDATE trending_label_bot_task
 						SET state = 'accepted', branch_name = null, job_url = null,
 						try = try + 1
 						WHERE id = $1`, id)
@@ -45,7 +45,8 @@ func resetTrendingLabelBotTaskState(id int64) error {
 func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 	trendingLabels := []datastructures.TrendingLabelBotTask{}
 
-	rows, err := db.Query(`SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), label_type,
+	rows, err := db.Query(context.TODO(),
+						   `SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), label_type,
 						   COALESCE(b.plural) as plural, COALESCE(b.description, ''), COALESCE(b.rename_to, '')
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
@@ -75,7 +76,8 @@ func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 }
 
 func labelAlreadyExistsInPipeline(label string, trendingLabelBotTaskId int64) (bool, error) {
-	rows, err := db.Query(`SELECT count(*)
+	rows, err := db.Query(context.TODO(),
+						   `SELECT count(*)
 			  				FROM trending_label_suggestion t
 			  				JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id
 			  				WHERE b.rename_to = $1 AND b.id != $2`, label, trendingLabelBotTaskId)
@@ -135,18 +137,18 @@ func main() {
 	//open database and make sure that we can ping it
 	var err error
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
-	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
+	db, err = pgx.Connect(context.Background(), imageMonkeyDbConnectionString)
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't open database: ", err.Error())
 	}
 
-	err = db.Ping()
+	err = db.Ping(context.Background())
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't ping database: ", err.Error())
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 
 	labelsRepository := commons.NewLabelsRepository(*labelsRepositoryOwner, *labelsRepositoryName, *gitCheckoutDir)
 	labelsRepository.SetToken(imageMonkeyBotGithubApiToken)

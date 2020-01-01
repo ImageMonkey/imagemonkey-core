@@ -6,6 +6,7 @@ import (
 	"github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 	"time"
+	"context"
 )
 
 func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserInfo, error) {
@@ -23,7 +24,8 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
 	userInfo.IsModerator = false
 	userInfo.Permissions = nil
 
-	rows, err := p.db.Query(`SELECT a.name, COALESCE(a.profile_picture, ''), a.created, a.is_moderator,
+	rows, err := p.db.Query(context.TODO(),
+                             `SELECT a.name, COALESCE(a.profile_picture, ''), a.created, a.is_moderator,
                               COALESCE(p.can_remove_label, false) as remove_label_permission,
                               COALESCE(p.can_unlock_image_description, false) as unlock_image_description,
                               COALESCE(p.can_unlock_image, false) as unlock_image,
@@ -70,7 +72,7 @@ func (p *ImageMonkeyDatabase) GetUserInfo(username string) (datastructures.UserI
 
 func (p *ImageMonkeyDatabase) UserExists(username string) (bool, error) {
 	var numOfExistingUsers int32
-	err := p.db.QueryRow("SELECT count(*) FROM account u WHERE u.name = $1", username).Scan(&numOfExistingUsers)
+	err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM account u WHERE u.name = $1", username).Scan(&numOfExistingUsers)
 	if err != nil {
 		log.Error("[User exists] Couldn't get num of existing users: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -85,7 +87,7 @@ func (p *ImageMonkeyDatabase) UserExists(username string) (bool, error) {
 
 func (p *ImageMonkeyDatabase) EmailExists(email string) (bool, error) {
 	var numOfExistingUsers int32
-	err := p.db.QueryRow("SELECT count(*) FROM account u WHERE u.email = $1", email).Scan(&numOfExistingUsers)
+	err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM account u WHERE u.email = $1", email).Scan(&numOfExistingUsers)
 	if err != nil {
 		log.Error("[Email exists] Couldn't get num of existing users: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -100,7 +102,7 @@ func (p *ImageMonkeyDatabase) EmailExists(email string) (bool, error) {
 
 func (p *ImageMonkeyDatabase) GetHashedPasswordForUser(username string) (string, error) {
 	var hashedPassword string
-	err := p.db.QueryRow("SELECT hashed_password FROM account u WHERE u.name = $1", username).Scan(&hashedPassword)
+	err := p.db.QueryRow(context.TODO(), "SELECT hashed_password FROM account u WHERE u.name = $1", username).Scan(&hashedPassword)
 	if err != nil {
 		log.Error("[Hashed Password] Couldn't get hashed password for user: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -125,7 +127,7 @@ func (p *ImageMonkeyDatabase) CreateUser(username string, hashedPassword []byte,
 		DefaultImageCollection{Name: MyOpenTasks, Description: "My open tasks"},
 	}
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Error("[Creating User] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -133,18 +135,19 @@ func (p *ImageMonkeyDatabase) CreateUser(username string, hashedPassword []byte,
 	}
 
 	insertedId = 0
-	err = tx.QueryRow(`INSERT INTO account(name, hashed_password, email, created, is_moderator) 
+	err = tx.QueryRow(context.TODO(),
+                       `INSERT INTO account(name, hashed_password, email, created, is_moderator) 
                         VALUES($1, $2, $3, $4, $5) RETURNING id`,
 		username, hashedPassword, email, created, false).Scan(&insertedId)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Error("[Creating User] Couldn't create user: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
 	if insertedId == 0 {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return errors.New("nothing inserted")
 	}
 
@@ -158,7 +161,7 @@ func (p *ImageMonkeyDatabase) CreateUser(username string, hashedPassword []byte,
 		}
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Error("[Creating User] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -173,28 +176,30 @@ func (p *ImageMonkeyDatabase) ChangeProfilePicture(username string, uuid string)
 
 	existingProfilePicture = ""
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Error("[Change Profile Picture] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return existingProfilePicture, err
 	}
 
-	err = tx.QueryRow(`SELECT COALESCE(a.profile_picture, '') FROM account a WHERE a.name = $1`, username).Scan(&existingProfilePicture)
+	err = tx.QueryRow(context.TODO(),
+                       `SELECT COALESCE(a.profile_picture, '') FROM account a WHERE a.name = $1`, username).Scan(&existingProfilePicture)
 	if err != nil {
 		log.Error("[Change Profile Picture] Couldn't get existing profile picture: ", err.Error())
 		raven.CaptureError(err, nil)
 		return existingProfilePicture, err
 	}
 
-	_, err = tx.Exec(`UPDATE account SET profile_picture = $1 WHERE name = $2`, uuid, username)
+	_, err = tx.Exec(context.TODO(),
+                       `UPDATE account SET profile_picture = $1 WHERE name = $2`, uuid, username)
 	if err != nil {
 		log.Error("[Change Profile Picture] Couldn't change profile picture: ", err.Error())
 		raven.CaptureError(err, nil)
 		return existingProfilePicture, err
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Error("[Change Profile Picture] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)

@@ -4,12 +4,14 @@ import (
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	log "github.com/sirupsen/logrus"
 	"github.com/getsentry/raven-go"
+	"context"
 )
 
 func (p *ImageMonkeyDatabase) GetPgStatStatements() ([]datastructures.PgStatStatementResult, error) {
 	res := []datastructures.PgStatStatementResult{}
 	
-	rows, err := p.db.Query(`SELECT 
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT 
   								(total_time / 1000 / 60) as total, 
  	 							(total_time/calls) as avg, 
   								query 

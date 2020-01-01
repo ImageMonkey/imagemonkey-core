@@ -4,20 +4,18 @@ import (
 	"time"
 	log "github.com/sirupsen/logrus"
 	"github.com/google/go-github/github"
-	"database/sql"
-	_ "github.com/lib/pq"
 	"github.com/getsentry/raven-go"
 	"flag"
 	"context"
 	"golang.org/x/oauth2"
 	"fmt"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v4"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 )
 
-var db *sql.DB
+var db *pgx.Conn
 
 type TrendingLabel struct {
 	Name string `json:"name"`
@@ -39,13 +37,14 @@ func handleRecurringLabelSuggestions() error {
 		LabelSuggestion string
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.Begin(context.TODO())
     if err != nil {
     	log.Error("[Mark label suggestion as productive] Couldn't begin trensaction: ", err.Error())
         return err
     }
 
-	rows, err := tx.Query(`SELECT s.id, i.key, ils.annotatable, l.name, COALESCE(pl.name, ''), t.productive_label_id, s.name
+	rows, err := tx.Query(context.TODO(),
+						   `SELECT s.id, i.key, ils.annotatable, l.name, COALESCE(pl.name, ''), t.productive_label_id, s.name
 							FROM label_suggestion s
 							JOIN trending_label_suggestion t ON t.label_suggestion_id = s.id
 							JOIN image_label_suggestion ils ON ils.label_suggestion_id = s.id
@@ -54,7 +53,7 @@ func handleRecurringLabelSuggestions() error {
 							LEFT JOIN label pl ON l.parent_id = pl.id
 							WHERE t.github_issue_id is not null AND t.productive_label_id is not null`)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Error("[Mark label suggestions as productive] Couldn't get entries: ", err.Error())
 		raven.CaptureError(err, nil)
 		return err
@@ -71,7 +70,7 @@ func handleRecurringLabelSuggestions() error {
 		err = rows.Scan(&labelSuggestionId, &resultEntry.ImageId, &resultEntry.Annotatable, &label1, &label2, 
 						&resultEntry.ProductionLabelId, &resultEntry.LabelSuggestion)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			log.Error("[Mark label suggestions as productive] Couldn't scan row: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
@@ -114,7 +113,7 @@ func handleRecurringLabelSuggestions() error {
 				//if the label re-occurs and there are annotations too, migrate them also
 				err = imagemonkeydb.MakeAnnotationsProductive(tx, elem.LabelSuggestion, elem.ProductionLabelId)
 				if err != nil {
-					tx.Rollback()
+					tx.Rollback(context.TODO())
 					log.Error("[Mark label suggestions as productive] Couldn't make annotations productive", err.Error())
 					raven.CaptureError(err, nil)
 					return err
@@ -124,17 +123,18 @@ func handleRecurringLabelSuggestions() error {
 
 
 		//remove label suggestions
-		_, err := tx.Exec(`DELETE FROM image_label_suggestion s
-						   WHERE s.label_suggestion_id = ANY($1)`, pq.Array(labelSuggestionIds))
+		_, err := tx.Exec(context.TODO(),
+						  `DELETE FROM image_label_suggestion s
+						   WHERE s.label_suggestion_id = ANY($1)`, labelSuggestionIds)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			log.Error("[Mark label suggestions as productive] Couldn't delete label suggestions: ", err.Error())
 			raven.CaptureError(err, nil)
 			return err
 		}
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Error("[Mark label suggestions as productive] Couldn't commit transaction: ", err.Error())
 		return err
@@ -145,7 +145,8 @@ func handleRecurringLabelSuggestions() error {
 func getNewTrendingLabels(trendingLabelTreshold int) ([]TrendingLabel, error) {
 	var trendingLabels []TrendingLabel
 
-	rows, err := db.Query(`SELECT s.id, s.name, COUNT(t.id), COALESCE(github_issue_id, -1) FROM label_suggestion s 
+	rows, err := db.Query(context.TODO(),
+						   `SELECT s.id, s.name, COUNT(t.id), COALESCE(github_issue_id, -1) FROM label_suggestion s 
 							JOIN image_label_suggestion i ON i.label_suggestion_id = s.id
 							LEFT JOIN trending_label_suggestion t ON t.label_suggestion_id = s.id
 							GROUP BY s.name, s.id, num_of_last_sent, github_issue_id
@@ -225,7 +226,8 @@ func addCommentToGithubTicket(trendingLabel TrendingLabel, repository string,
 }
 
 func updateSentTrendingLabelCount(trendingLabel TrendingLabel) error {
-	_, err := db.Exec(`INSERT INTO trending_label_suggestion(label_suggestion_id, num_of_last_sent, github_issue_id, closed) VALUES($1, $2, $3, $4)
+	_, err := db.Exec(context.TODO(),
+					   `INSERT INTO trending_label_suggestion(label_suggestion_id, num_of_last_sent, github_issue_id, closed) VALUES($1, $2, $3, $4)
 						ON CONFLICT(label_suggestion_id) DO UPDATE SET num_of_last_sent = $2, github_issue_id = $3`, 
 						trendingLabel.Id, trendingLabel.Count, trendingLabel.GithubIssue.Id, false)
 	return err
@@ -264,18 +266,18 @@ func main() {
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")	
 
 	var err error
-	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
+	db, err = pgx.Connect(context.Background(), imageMonkeyDbConnectionString)
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal(err)
 	}
 
-	err = db.Ping()
+	err = db.Ping(context.Background())
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 
 	for {
 		trendingLabels, err := getNewTrendingLabels(*trendingLabelsTreshold)

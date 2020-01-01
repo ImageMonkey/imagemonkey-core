@@ -20,19 +20,19 @@ require (
 	github.com/google/go-jsonnet v0.13.0
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/h2non/filetype v1.0.8
+	github.com/jackc/pgconn v1.1.0
+	github.com/jackc/pgx/v4 v4.1.2
 	github.com/justinas/nosurf v0.0.0-20190416172904-05988550ea18 // indirect
-	github.com/lib/pq v1.1.1
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/ugorji/go v1.1.5-pre // indirect
 	gocv.io/x/gocv v0.20.0
 	golang.org/dl v0.0.0-20190507014322-219d744c5398 // indirect
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/h2non/bimg.v1 v1.0.19
 	gopkg.in/resty.v1 v1.12.0
 	gopkg.in/src-d/go-git.v4 v4.12.0
-	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
