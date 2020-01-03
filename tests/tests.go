@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"flag"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
+	"github.com/gomodule/redigo/redis"
 )
 
 var db *ImageMonkeyDatabase
@@ -65,4 +66,25 @@ func init() {
 	if err != nil {
 		log.Fatal("[Main] Couldn't open database: ", err.Error())
 	}
+
+
+	//create redis pool
+	redisPool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", REDIS_ADDRESS)
+
+		if err != nil {
+			log.Fatal("[Main] Couldn't dial redis: ", err.Error())
+		}
+
+		return c, err
+	}, 1)
+	defer redisPool.Close()
+
+	log.Info("Notify api/web service to reconnect to database (to avoid flaky testcases)")
+	redisConn := redisPool.Get()
+	_, err = redisConn.Do("PUBLISH", "tasks", "reconnectdb")
+	if err != nil {
+		log.Fatal("Couldn't publish message: ", err.Error())
+	}
+	defer redisConn.Close()
 }

@@ -600,8 +600,8 @@ func main() {
 	psc := redis.PubSubConn{Conn: redisConn}
 	defer psc.Close()
 
-	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"reloadlabels"})...); err != nil {
-		log.Fatal("Couldn't subscribe to topic 'reloadlabels': ", err.Error())
+	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"tasks"})...); err != nil {
+		log.Fatal("Couldn't subscribe to topic 'tasks': ", err.Error())
 	}
 
 	done := make(chan error, 1)
@@ -613,25 +613,38 @@ func main() {
 				done <- n
 				return
 			case redis.Message:
-				log.Info("[Main] Reloading labels")
-				err := labelRepository.Load()
-				if err != nil {
-					log.Error("Couldn't read label map: ", err.Error())
-					raven.CaptureError(err, nil)
-				}
-				labelMap = labelRepository.GetMapping()
-				words = labelRepository.GetWords()
+				if n.Channel == "tasks" {
+					if string(n.Data) == "reloadlabels" {
+						log.Info("[Main] Reloading labels")
+						err := labelRepository.Load()
+						if err != nil {
+							log.Error("Couldn't read label map: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+						labelMap = labelRepository.GetMapping()
+						words = labelRepository.GetWords()
 
-				err = metaLabels.Load()
-				if err != nil {
-					log.Error("Couldn't read metalabels map: ", err.Error())
-					raven.CaptureError(err, nil)
-				}
+						err = metaLabels.Load()
+						if err != nil {
+							log.Error("Couldn't read metalabels map: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
 
-				labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
-				if err != nil {
-					log.Error("Couldn't read label refinements: ", err.Error())
-					raven.CaptureError(err, nil)
+						labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
+						if err != nil {
+							log.Error("Couldn't read label refinements: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+					} else if string(n.Data) == "reconnectdb" {
+						log.Info("Reconnecting to Database")
+						log.Info(string(n.Data))
+						imageMonkeyDatabase.Close()
+						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
+						if err != nil {
+							raven.CaptureError(err, nil)
+							log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+						}
+					}
 				}
 			case redis.Subscription:
 				switch n.Count {

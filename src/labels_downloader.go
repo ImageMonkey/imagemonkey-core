@@ -288,7 +288,7 @@ func main() {
 			}
 			
 			redisConn := redisPool.Get()
-			_, err = redisConn.Do("PUBLISH", "reloadlabels", "reloadlabels")
+			_, err = redisConn.Do("PUBLISH", "tasks", "reloadlabels")
 			if err != nil {
 				raven.CaptureError(err, nil)
 				log.Error("Couldn't publish message: ", err.Error())
