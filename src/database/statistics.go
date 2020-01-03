@@ -1101,7 +1101,7 @@ func (p *ImageMonkeyDatabase) GetActivity(period string) ([]datastructures.Activ
     }
 
     rows, err := p.db.Query(context.TODO(),
-                          `SELECT l.name, i.key, q.type, date(q.dt), i.width, i.height, 
+                          `SELECT l.name, i.key, q.type, date(q.dt)::text, i.width, i.height, 
                            (d.annotation || ('{"type":"' || t.name || '"}')::jsonb)::jsonb as annotation, q.activity_name 
                            FROM
                             (
