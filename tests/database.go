@@ -1315,7 +1315,7 @@ func (p *ImageMonkeyDatabase) AddDummyTrendingLabelBotTask(trendingLabelName str
 
 type ImageAnnotationEntry struct {
 	Uuid string
-	ImageId string
+	ImageId int64
 	NumOfValid int32
 	NumOfInvalid int32
 	FingerprintOfLastModification string
@@ -1330,7 +1330,7 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationEntries() ([]ImageAnnotationEntr
 	imageAnnotationEntries :=[]ImageAnnotationEntry{}
 	rows, err := p.db.Query(context.TODO(),
 							`SELECT uuid, image_id, num_of_valid, num_of_invalid, 
-								COALESCE(fingerprint_of_last_modification, ''), sys_period, label_id, auto_generated, revision, id
+								COALESCE(fingerprint_of_last_modification, ''), sys_period::text, label_id, auto_generated, revision, id
 							 FROM image_annotation
 							 ORDER BY uuid`)
 	if err != nil {
@@ -1357,7 +1357,7 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionEntries() ([]ImageAnno
 	imageAnnotationSuggestionEntries :=[]ImageAnnotationEntry{}
 	rows, err := p.db.Query(context.TODO(),
 							`SELECT uuid, image_id, num_of_valid, num_of_invalid, 
-								COALESCE(fingerprint_of_last_modification, ''), sys_period, label_suggestion_id, auto_generated, revision, id
+								COALESCE(fingerprint_of_last_modification, ''), sys_period::text, label_suggestion_id, auto_generated, revision, id
 							 FROM image_annotation_suggestion
 							 ORDER BY uuid`)
 	if err != nil {

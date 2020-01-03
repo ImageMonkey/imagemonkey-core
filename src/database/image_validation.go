@@ -124,7 +124,7 @@ func (p *ImageMonkeyDatabase) ValidateImages(apiUser datastructures.APIUser,
 
 		_, err = tx.Exec(context.TODO(),
 			`INSERT INTO user_image_validation(image_validation_id, account_id, timestamp)
-                            SELECT unnest($1::integer[]), a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2`,
+                            SELECT unnest($1::bigint[]), a.id, CURRENT_TIMESTAMP FROM account a WHERE a.name = $2`,
 			updatedRowIds, apiUser.Name)
 		if err != nil {
 			tx.Rollback(context.TODO())

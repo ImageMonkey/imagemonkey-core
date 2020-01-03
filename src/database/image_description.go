@@ -8,6 +8,7 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/jackc/pgtype"
 )
 
 type UnlockImageDescriptionErrorType int
@@ -95,12 +96,15 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 		return AddImageDescriptionInternalError
 	}
 
+	pgxLanguageIds := &pgtype.Int8Array{}
+	pgxLanguageIds.Set(languageIds)
+
 	_, err = tx.Exec(context.TODO(),
 		`INSERT INTO image_description(image_id, description, num_of_valid, num_of_invalid, state, processed_by, uuid, language_id)
 							SELECT (SELECT i.id FROM image i WHERE i.key = $1), 
-									unnest($2::text[]), 0, 0, 'unknown', null, uuid_generate_v4(), unnest($3::integer[])
+									unnest($2::text[]), 0, 0, 'unknown', null, uuid_generate_v4(), unnest($3::bigint[])
 						  ON CONFLICT(image_id, description) DO UPDATE SET num_of_valid = image_description.num_of_valid + 1`,
-		imageId, imageDescriptions, languageIds)
+		imageId, imageDescriptions, pgxLanguageIds)
 	if err != nil {
 		tx.Rollback(context.TODO())
 		log.Error("[Adding image description] Couldn't add image description: ", err.Error())
