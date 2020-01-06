@@ -923,6 +923,18 @@ func main() {
 			})
 		})
 
+		router.GET("/supportus", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+			
+			c.HTML(http.StatusOK, "supportus.html", gin.H{
+				"title": "Support Us",
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+				"apiBaseUrl": apiBaseUrl,
+				"assetVersion": assetVersion,
+			})
+		})
+
 		/*router.GET("/reset_password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "reset_password.html", gin.H{
 				"title": "Profile",
