@@ -135,9 +135,7 @@
       elem.progress();
 
       $("#validatedStatisticsPopupContent").append(elem);
-    }
-
-    $("#validatedStatisticsButton").removeClass("disabled");
+    }    
   }
 
   function getValidatedStatistics() {
@@ -151,6 +149,7 @@
       success: function(d) {
         if(d !== null)
           handleValidatedStatisticsRes(d);
+        $("#validatedStatisticsButton").removeClass("disabled");
       }
     });
   }
