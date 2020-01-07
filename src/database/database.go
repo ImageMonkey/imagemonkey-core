@@ -14,9 +14,15 @@ func NewImageMonkeyDatabase() *ImageMonkeyDatabase {
 	return &ImageMonkeyDatabase{}
 }
 
-func (p *ImageMonkeyDatabase) Open(connectionString string) error {
-	var err error
-	p.db, err = pgxpool.Connect(context.Background(), connectionString)
+func (p *ImageMonkeyDatabase) Open(connectionString string, maxNumConnections int32) error {
+	cfg, err := pgxpool.ParseConfig(connectionString)
+	if err != nil {
+		return err
+	}
+
+	cfg.MaxConns = maxNumConnections
+	
+	p.db, err = pgxpool.ConnectConfig(context.Background(), cfg)
 	if err != nil {
 		return err
 	}

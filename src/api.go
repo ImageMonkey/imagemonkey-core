@@ -513,6 +513,7 @@ func main() {
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081/", "API Base URL")
 	corsAllowOrigin := flag.String("cors_allow_origin", "*", "CORS Access-Control-Allow-Origin")
 	imageHuntAssetsDir := flag.String("imagehunt_assets_dir", "../img/game-assets/", "ImageHunt Game Assets Directory")
+	maxNumOfDatabaseConnections := flag.Int("db_max_connections", 5, "Max. number of database connections")
 
 	sentryEnvironment := "api"
 
@@ -559,7 +560,7 @@ func main() {
 
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
+	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
@@ -639,7 +640,7 @@ func main() {
 						log.Info("Reconnecting to Database")
 						log.Info(string(n.Data))
 						imageMonkeyDatabase.Close()
-						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
+						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
 						if err != nil {
 							raven.CaptureError(err, nil)
 							log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())

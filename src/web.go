@@ -138,6 +138,7 @@ func main() {
 	trendingLabelsRepositoryUrl := flag.String("trending_labels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Trending Labels Repository")
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
+	maxNumOfDatabaseConnections := flag.Int("db_max_connections", 5, "Max. number of database connections")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -249,7 +250,7 @@ func main() {
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
+	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
@@ -316,7 +317,7 @@ func main() {
 
 						//close existing db handle + reconnect
 						imageMonkeyDatabase.Close()
-						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
+						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
 						if err != nil {
 							raven.CaptureError(err, nil)
 							log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
