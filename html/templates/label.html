@@ -40,15 +40,6 @@
   <style type="text/css">
     .canvas-container{margin: 0 auto;}
 
-    #mainGrid {
-      margin-top: -8em;
-    }
-
-    @media only screen and (max-width: 700px) {
-      #mainGrid {
-        margin-top: 0em;
-      }
-    }
   </style>
 
   <script type="text/javascript">
@@ -941,7 +932,7 @@
      </div>
    </div>
 
-   <div id="mainGrid" class="ui stackable grid vertical stripe mobile reversed">
+   <div id="mainGrid" class="ui stackable grid mobile reversed">
     {{ if eq .mode "browse" }}
     {{ template "label_browse_select_mode.html" .}}
     {{ end }}
