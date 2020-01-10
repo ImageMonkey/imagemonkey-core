@@ -317,6 +317,7 @@ var AnnotationView = (function() {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
             showBrowseAnnotationImageGrid(validationIds);
+            $("#isPluralContainer").hide();
         }
 
         if (this.onlyOnce) {
@@ -1607,7 +1608,7 @@ var AnnotationView = (function() {
                     annotation["label"] = $('#label').attr('label');
                     annotation["sublabel"] = $('#label').attr('sublabel');
                     annotations.push(annotation);
-                    inst.addAnnotations(annotations);
+                    inst.addAnnotations(annotations, [inst.annotationInfo.validationId]);
                 }
             }
         });
