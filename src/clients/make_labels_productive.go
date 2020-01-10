@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"database/sql"
 	"golang.org/x/oauth2"
 	"errors"
 	"context"
@@ -11,6 +10,7 @@ import (
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 	log "github.com/sirupsen/logrus"
+	"github.com/jackc/pgx/v4"
 )
 
 type MakeLabelsProductiveClient struct {
@@ -24,7 +24,7 @@ type MakeLabelsProductiveClient struct {
 	strict bool
 	labels *commons.LabelRepository
 	metalabels *commons.MetaLabels
-	db *sql.DB
+	db *pgx.Conn
 }
 
 func NewMakeLabelsProductiveClient(dbConnectionString string, labelsPath string, metalabelsPath string, strict bool, autoCloseIssue bool) *MakeLabelsProductiveClient {
@@ -63,12 +63,12 @@ func (p *MakeLabelsProductiveClient) Load() error {
 		return err
 	}
 
-	p.db, err = sql.Open("postgres", p.dbConnectionString)
+	p.db, err = pgx.Connect(context.TODO(), p.dbConnectionString)
 	if err != nil {
 		return err
 	}
 
-	err = p.db.Ping()
+	err = p.db.Ping(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 		return errors.New("Please provide a trending label!")
 	}
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
     if err != nil {
 		return errors.New("Couldn't begin trensaction: " + err.Error())
     }
@@ -94,7 +94,7 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 	if p.strict {
 		exists, err := trendingLabelExists(trendingLabel, tx)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("Couldn't determine whether trending label exists: " + err.Error())
 		}
 
@@ -104,7 +104,7 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 	} else {
 		nonStrictLabels, err := getNonStrictLabels(tx, trendingLabel)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("Couldn't get non strict labels: " + err.Error())
 		}
 		trendingLabels = nonStrictLabels
@@ -123,48 +123,48 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 
 	labelId, err := _getLabelId(labelToCheck, tx)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return errors.New("Couldn't determine whether label exists: " + err.Error())
 	}
 	if labelId == -1 {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return errors.New("label " + labelToCheck + " doesn't exist in database - please add it via the populate_labels script.")
 	}
 
 
 	labelMeEntry, err := makeLabelMeEntry(tx, labelToCheck)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return errors.New("Couldn't create label entry - is UUID valid?")
 	}
 
 	if !isLabelInLabelsMap(p.labels.GetMapping(), p.metalabels, labelMeEntry) && renameTo == "" {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return errors.New("Label doesn't exist in labels map - please add it first!")
 	}
 
 	for _, trendingLabel := range trendingLabels {
 		err = makeTrendingLabelProductive(trendingLabel, labelMeEntry, labelId, tx)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("Couldn't make trending label " + trendingLabel + " productive: " + err.Error())
 		}
 
 		err = removeTrendingLabelEntries(trendingLabel, tx)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("Couldn't remove trending label entries: " + err.Error())
 		}
 	}
 
 	err = imagemonkeydb.MakeAnnotationsProductive(tx, trendingLabel, labelId)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return errors.New("Couldn't make annotations productive: " + err.Error())
 	}
 
     if dryRun {
-		err = tx.Rollback()
+		err = tx.Rollback(context.TODO())
 		if err != nil {
 			return errors.New("Couldn't rollback transaction: " + err.Error())
 		}
@@ -176,13 +176,13 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 			for _, trendingLabel := range trendingLabels {
 				err := closeGithubIssue(trendingLabel, p.githubRepository, p.githubRepositoryOwner, p.githubApiToken, tx)
 				if err != nil {
-					tx.Rollback()
+					tx.Rollback(context.TODO())
 					return errors.New("Couldn't get github issue id to close issue!")
 				}
 			}
 		}
 
-		err = tx.Commit()
+		err = tx.Commit(context.TODO())
 		if err != nil {
 			return errors.New("Couldn't commit transaction: " + err.Error())
 		}
@@ -204,9 +204,10 @@ func (p *MakeLabelsProductiveClient) DoIt(trendingLabel string, renameTo string,
 	return nil
 }
 
-func trendingLabelExists(label string, tx *sql.Tx) (bool, error) {
+func trendingLabelExists(label string, tx pgx.Tx) (bool, error) {
 	var numOfRows int32
-	err := tx.QueryRow(`SELECT COUNT(*) FROM trending_label_suggestion t 
+	err := tx.QueryRow(context.TODO(),
+					   `SELECT COUNT(*) FROM trending_label_suggestion t 
 			  			RIGHT JOIN label_suggestion l ON t.label_suggestion_id = l.id
 			  			WHERE l.name = $1`, label).Scan(&numOfRows)
 	if err != nil {
@@ -220,18 +221,20 @@ func trendingLabelExists(label string, tx *sql.Tx) (bool, error) {
 	return false, nil
 }
 
-func _getLabelId(labelIdentifier string, tx *sql.Tx) (int64, error) {
+func _getLabelId(labelIdentifier string, tx pgx.Tx) (int64, error) {
 	var labelId int64 = -1
 	var err error
-	var rows *sql.Rows
+	var rows pgx.Rows
 
 	_, err = uuid.FromString(labelIdentifier)
 	if err == nil { //is UUID
-		rows, err = tx.Query(`SELECT l.id 
+		rows, err = tx.Query(context.TODO(),
+						  `SELECT l.id 
 						   FROM label l 
 			  			   WHERE l.uuid::text = $1`, labelIdentifier)
 	} else {
-		rows, err = tx.Query(`SELECT l.id 
+		rows, err = tx.Query(context.TODO(),
+						  `SELECT l.id 
 						   FROM label l 
 			  			   WHERE l.name = $1 AND l.parent_id is null`, labelIdentifier)
 	}
@@ -250,10 +253,11 @@ func _getLabelId(labelIdentifier string, tx *sql.Tx) (int64, error) {
 	return labelId, nil
 }
 
-func getLabelMeEntryFromUuid(tx *sql.Tx, uuid string) (datastructures.LabelMeEntry, error) {
+func getLabelMeEntryFromUuid(tx pgx.Tx, uuid string) (datastructures.LabelMeEntry, error) {
 	var labelMeEntry datastructures.LabelMeEntry
 
-	rows, err := tx.Query(`SELECT l.name, COALESCE(pl.name, '')
+	rows, err := tx.Query(context.TODO(),
+						   `SELECT l.name, COALESCE(pl.name, '')
 			   				FROM label l
 			   				LEFT JOIN label pl ON pl.id = l.parent_id
 			   				WHERE l.uuid::text = $1`, uuid)
@@ -282,8 +286,9 @@ func getLabelMeEntryFromUuid(tx *sql.Tx, uuid string) (datastructures.LabelMeEnt
 	return labelMeEntry, nil
 }
 
-func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
-	_, err := tx.Exec(`DELETE FROM image_label_suggestion s
+func removeTrendingLabelEntries(trendingLabel string, tx pgx.Tx) (error) {
+	_, err := tx.Exec(context.TODO(),
+					  `DELETE FROM image_label_suggestion s
 					   WHERE s.label_suggestion_id IN (
 					   	SELECT l.id FROM label_suggestion l WHERE l.name = $1
 					   )`, trendingLabel)
@@ -292,7 +297,8 @@ func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 		return err
 	}
 
-	_, err = tx.Exec(`UPDATE trending_label_suggestion t 
+	_, err = tx.Exec(context.TODO(),
+					 `UPDATE trending_label_suggestion t 
 				 	  SET closed = true
 				 	  FROM label_suggestion AS l 
 				 	  WHERE label_suggestion_id = l.id AND l.name = $1`, trendingLabel)
@@ -300,8 +306,9 @@ func removeTrendingLabelEntries(trendingLabel string, tx *sql.Tx) (error) {
 	return err
 }
 
-func closeGithubIssue(trendingLabel string, repository string, githubProjectOwner string, githubApiToken string, tx *sql.Tx) error {
-	rows, err := tx.Query(`SELECT t.github_issue_id, t.closed
+func closeGithubIssue(trendingLabel string, repository string, githubProjectOwner string, githubApiToken string, tx pgx.Tx) error {
+	rows, err := tx.Query(context.TODO(),
+						   `SELECT t.github_issue_id, t.closed
 							FROM trending_label_suggestion t
 							JOIN label_suggestion l ON t.label_suggestion_id = l.id
 							WHERE l.name = $1`, trendingLabel)
@@ -359,13 +366,14 @@ func closeGithubIssue(trendingLabel string, repository string, githubProjectOwne
 
 
 func makeTrendingLabelProductive(trendingLabel string, label datastructures.LabelMeEntry,
-									labelId int64, tx *sql.Tx) error {
+									labelId int64, tx pgx.Tx) error {
 	type Result struct {
 		ImageId string
 		Annotatable bool
 	}
 
-    rows, err := tx.Query(`SELECT i.key, annotatable 
+    rows, err := tx.Query(context.TODO(),
+						  `SELECT i.key, annotatable 
 			  			   FROM label_suggestion l
 			  			   JOIN image_label_suggestion isg on isg.label_suggestion_id =l.id
 			  			   JOIN image i on i.id = isg.image_id
@@ -408,7 +416,8 @@ func makeTrendingLabelProductive(trendingLabel string, label datastructures.Labe
 		}
 	}
 
-	_, err = tx.Exec(`UPDATE trending_label_suggestion t
+	_, err = tx.Exec(context.TODO(),
+					   `UPDATE trending_label_suggestion t
 						SET productive_label_id = $2
 						FROM label_suggestion l
 						WHERE t.label_suggestion_id = l.id AND l.name = $1`, trendingLabel, labelId)
@@ -419,7 +428,7 @@ func makeTrendingLabelProductive(trendingLabel string, label datastructures.Labe
     return nil
 }
 
-func makeLabelMeEntry(tx *sql.Tx, name string) (datastructures.LabelMeEntry, error) {
+func makeLabelMeEntry(tx pgx.Tx, name string) (datastructures.LabelMeEntry, error) {
     _, err := uuid.FromString(name)
     if err == nil { //is UUID
 		entry, err := getLabelMeEntryFromUuid(tx, name)
@@ -442,10 +451,10 @@ func isLabelInLabelsMap(labelMap map[string]datastructures.LabelMapEntry, metala
 }
 
 
-func getNonStrictLabels(tx *sql.Tx, name string) ([]string, error) {
+func getNonStrictLabels(tx pgx.Tx, name string) ([]string, error) {
 	names := []string{}
 
-	rows, err := tx.Query("SELECT l.name FROM label_suggestion l WHERE l.name ~  ('^[ ]*'||$1||'[ ]*$')", name)
+	rows, err := tx.Query(context.TODO(), "SELECT l.name FROM label_suggestion l WHERE l.name ~  ('^[ ]*'||$1||'[ ]*$')", name)
 	if err != nil {
 		return names, err
 	}

@@ -402,6 +402,7 @@ type UserPermissions struct {
 	CanUnlockImage            bool `json:"can_unlock_image"`
 	CanMonitorSystem          bool `json:"can_monitor_system"`
 	CanAcceptTrendingLabel    bool `json:"can_accept_trending_label"`
+	CanAccessPgStat           bool `json:"can_access_pg_stat"`
 }
 
 type UserInfo struct {
@@ -629,8 +630,8 @@ type DescriptionsPerImage struct {
 
 type Validation struct {
 	Id       string `json:"uuid"`
-	NumOfYes string `json:"num_of_yes"`
-	NumOfNo  string `json:"num_of_no"`
+	NumOfYes int    `json:"num_of_yes"`
+	NumOfNo  int    `json:"num_of_no"`
 	Image    struct {
 		Id       string `json:"uuid"`
 		Width    int32  `json:"width"`
@@ -675,7 +676,7 @@ type AnnotationCount struct {
 type ImageCollection struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	Count       string `json:"count"`
+	Count       int    `json:"count"`
 
 	SampleImage struct {
 		Id       string `json:"uuid"`
@@ -774,4 +775,10 @@ type AcceptTrendingLabel struct {
 		Plural      string `json:"plural"`
 		RenameTo    string `json:"rename_to"`
 	} `json:"label"`
+}
+
+type PgStatStatementResult struct {
+	Total float64 `json:"total"`
+	Avg   float64 `json:"avg"`
+	Query string  `json:"query"`
 }

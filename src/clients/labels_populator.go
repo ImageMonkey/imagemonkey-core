@@ -4,9 +4,9 @@ import (
 	"errors"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
-	"database/sql"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v4"
 	log "github.com/sirupsen/logrus"
+	"context"
 )
 
 type LabelsPopulatorClient struct {
@@ -17,7 +17,7 @@ type LabelsPopulatorClient struct {
 	labelRefinements map[string]datastructures.LabelMapRefinementEntry
 	metalabels *commons.MetaLabels
 	dbConnectionString string
-	db *sql.DB
+	db *pgx.Conn
 }
 
 func NewLabelsPopulatorClient(dbConnectionString string, labelsPath string, labelRefinementsPath string, metalabelsPath string) *LabelsPopulatorClient {
@@ -47,7 +47,7 @@ func (p *LabelsPopulatorClient) Load() error {
 		return errors.New("Couldn't get meta labels: " + err.Error())
 	}
 
-	p.db, err = sql.Open("postgres", p.dbConnectionString)
+	p.db, err = pgx.Connect(context.TODO(), p.dbConnectionString)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (p *LabelsPopulatorClient) Load() error {
 }
 
 func (p *LabelsPopulatorClient) Populate(dryRun bool) error {
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
     if err != nil {
     	return errors.New("Couldn't start transaction: " + err.Error())
     }
@@ -76,33 +76,34 @@ func (p *LabelsPopulatorClient) Populate(dryRun bool) error {
 	}
 	
 	if ! dryRun {
-		err = tx.Commit()
+		err = tx.Commit(context.TODO())
 		if err != nil {
 			return errors.New("Couldn't commit changes: " + err.Error())
 		}
 	} else {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Info("Rolling back transaction...it was only a dry run.")
 	}
 	
 	return nil
 }
 
-func getLabelId(tx *sql.Tx, label string, sublabel string) (int64, error) {
+func getLabelId(tx pgx.Tx, label string, sublabel string) (int64, error) {
 	var labelId int64
 	labelId = -1
 	if sublabel == "" {
-		err := tx.QueryRow(`SELECT id FROM label WHERE name = $1 and parent_id is null`, label).Scan(&labelId)
+		err := tx.QueryRow(context.TODO(), `SELECT id FROM label WHERE name = $1 and parent_id is null`, label).Scan(&labelId)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return labelId, errors.New("Couldn't get label id: " + err.Error())
 		}
 	} else {
-		err := tx.QueryRow(`SELECT l.id FROM label l 
+		err := tx.QueryRow(context.TODO(),
+						   `SELECT l.id FROM label l 
 							JOIN label pl ON pl.id = l.parent_id
 							WHERE l.name = $1 and pl.name = $2`, sublabel, label).Scan(&labelId)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return labelId, errors.New("Couldn't get label id: " + label + "," + sublabel)
 		}
 	}
@@ -110,10 +111,11 @@ func getLabelId(tx *sql.Tx, label string, sublabel string) (int64, error) {
 	return labelId, nil
 }
 
-func addAccessor(tx *sql.Tx, labelId int64, accessor string) error {
+func addAccessor(tx pgx.Tx, labelId int64, accessor string) error {
 	var insertedId int64
 	insertedId = -1
-	err := tx.QueryRow(`INSERT INTO label_accessor(label_id, accessor) VALUES($1, $2)
+	err := tx.QueryRow(context.TODO(),
+								   `INSERT INTO label_accessor(label_id, accessor) VALUES($1, $2)
                        				ON CONFLICT (label_id, accessor) DO NOTHING RETURNING id`, labelId, accessor).Scan(&insertedId)
 
 	if insertedId != -1 {
@@ -125,7 +127,7 @@ func addAccessor(tx *sql.Tx, labelId int64, accessor string) error {
 	return err
 }
 
-func addAccessors(tx *sql.Tx, label string, val datastructures.LabelMapEntry) error {
+func addAccessors(tx pgx.Tx, label string, val datastructures.LabelMapEntry) error {
 	for _, accessor := range val.Accessors {
 
 		labelId, err := getLabelId(tx, label, "")
@@ -140,7 +142,7 @@ func addAccessors(tx *sql.Tx, label string, val datastructures.LabelMapEntry) er
 
 		err = addAccessor(tx, labelId, accessorStr)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("Couldn't add accessor: " + err.Error())
 		}
 
@@ -160,7 +162,7 @@ func addAccessors(tx *sql.Tx, label string, val datastructures.LabelMapEntry) er
 
 					err = addAccessor(tx, labelId, subaccessorStr)
 					if err != nil {
-						tx.Rollback()
+						tx.Rollback(context.TODO())
 						return errors.New("Couldn't add accessor for sublabel: " + err.Error())
 					}
 				}
@@ -187,7 +189,7 @@ func addAccessors(tx *sql.Tx, label string, val datastructures.LabelMapEntry) er
 
 					err = addAccessor(tx, labelId, quizEntryAccessorStr)
 					if err != nil {
-						tx.Rollback()
+						tx.Rollback(context.TODO())
 						return errors.New("Couldn't add accessor for quiz entry: " + err.Error())
 					}
 
@@ -199,9 +201,10 @@ func addAccessors(tx *sql.Tx, label string, val datastructures.LabelMapEntry) er
 	return nil
 }
 
-func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val datastructures.LabelMapEntry) error {
+func addQuizQuestion(tx pgx.Tx, parentLabelUuid string, val datastructures.LabelMapEntry) error {
 	for _, quizEntry := range val.Quiz {
-		_, err := tx.Exec(`INSERT INTO quiz_question(question, refines_label_id, recommended_control, 
+		_, err := tx.Exec(context.TODO(),
+						  `INSERT INTO quiz_question(question, refines_label_id, recommended_control, 
 														allow_unknown, allow_other, browse_by_example, multiselect, uuid)
 							SELECT $1, id, $2, $3, $4, $5, $6, $8 FROM label WHERE uuid = $7
 							ON CONFLICT(uuid) DO NOTHING`, 
@@ -209,22 +212,23 @@ func addQuizQuestion(tx *sql.Tx, parentLabelUuid string, val datastructures.Labe
 							quizEntry.AllowOther, quizEntry.BrowseByExample, quizEntry.Multiselect,
 							parentLabelUuid, quizEntry.Uuid)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("Couldn't add quiz question " + err.Error())
 		}
 	}
 	return nil
 }
 
-func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val datastructures.LabelMapEntry) error {
+func addQuizAnswers(tx pgx.Tx, parentLabelUuid string, val datastructures.LabelMapEntry) error {
 	//quiz answers
 	for _, quizEntry := range val.Quiz {
 		for _, answer := range quizEntry.Answers {
-			rows, err := tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type)
+			rows, err := tx.Query(context.TODO(),
+							   `INSERT INTO label(name, parent_id, uuid, label_type)
 								SELECT $1, id, $3, 'refinement' FROM label WHERE uuid = $2
 								ON CONFLICT(uuid) DO NOTHING RETURNING id`, answer.Name, parentLabelUuid, answer.Uuid)
 			if err != nil {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return errors.New("Couldn't add quiz answer label " + err.Error())
 			}
 
@@ -236,13 +240,14 @@ func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val datastructures.Label
 
 			rows.Close()
 
-			rows, err = tx.Query(`INSERT INTO quiz_answer(quiz_question_id, label_id)
+			rows, err = tx.Query(context.TODO(),
+								  `INSERT INTO quiz_answer(quiz_question_id, label_id)
 									SELECT (SELECT q.id FROM quiz_question q WHERE q.uuid = $1),
 									   	   (SELECT l.id FROM label l WHERE l.uuid = $2)
 								   ON CONFLICT DO NOTHING RETURNING id`, quizEntry.Uuid, answer.Uuid)
 
 			if err != nil {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return errors.New("Couldn't add quiz answer entry " + err.Error())
 			}
 
@@ -258,21 +263,21 @@ func addQuizAnswers(tx *sql.Tx, parentLabelUuid string, val datastructures.Label
 	return nil
 }
 
-func addLabel(tx *sql.Tx, uuid string, label string) error {
-	rows, err := tx.Query("SELECT COUNT(id) FROM label WHERE uuid = $1", uuid)
+func addLabel(tx pgx.Tx, uuid string, label string) error {
+	rows, err := tx.Query(context.TODO(), "SELECT COUNT(id) FROM label WHERE uuid = $1", uuid)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 	if !rows.Next() {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
 	numOfLabels := 0
 	err = rows.Scan(&numOfLabels)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
@@ -280,9 +285,9 @@ func addLabel(tx *sql.Tx, uuid string, label string) error {
 
 	if numOfLabels == 0 {
 		log.Info("Adding label ", label)
-		_,err := tx.Exec("INSERT INTO label(name, uuid, label_type) VALUES($1, $2, 'normal')", label, uuid)
+		_,err := tx.Exec(context.TODO(), "INSERT INTO label(name, uuid, label_type) VALUES($1, $2, 'normal')", label, uuid)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return err
 		}
 	} else {
@@ -292,21 +297,21 @@ func addLabel(tx *sql.Tx, uuid string, label string) error {
 	return nil
 }
 
-func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) error {
-	rows, err := tx.Query("SELECT count(*) FROM label WHERE uuid = $1", uuid)
+func addSublabel(tx pgx.Tx, uuid string, label string, sublabel string) error {
+	rows, err := tx.Query(context.TODO(), "SELECT count(*) FROM label WHERE uuid = $1", uuid)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 	if !rows.Next() {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
 	numOfLabels := 0
 	err = rows.Scan(&numOfLabels)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
@@ -314,11 +319,12 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) error {
 
 	if numOfLabels == 0 {
 		log.Info("Adding label ", sublabel, " (parent: ", label, " )")
-		_,err := tx.Exec(`INSERT INTO label(name, parent_id, uuid, label_type)
+		_,err := tx.Exec(context.TODO(),
+						 `INSERT INTO label(name, parent_id, uuid, label_type)
 						  SELECT $1, l.id, $3, 'normal' FROM label l WHERE l.name = $2 AND l.parent_id is null`,
 						  sublabel, label, uuid)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return err
 		}
 	} else {
@@ -328,17 +334,18 @@ func addSublabel(tx *sql.Tx, uuid string, label string, sublabel string) error {
 	return nil
 }
 
-func addLabelRefinements(tx *sql.Tx, labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry) error {
+func addLabelRefinements(tx pgx.Tx, labelMapRefinementEntries map[string]datastructures.LabelMapRefinementEntry) error {
 	for k, v := range labelMapRefinementEntries {
 		if v.Uuid == "" {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("refinement type uuid is empty!")
 		}
 
-		rows, err := tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type) VALUES ($1, null, $2, 'refinement_category')
+		rows, err := tx.Query(context.TODO(),
+								  `INSERT INTO label(name, parent_id, uuid, label_type) VALUES ($1, null, $2, 'refinement_category')
 				                   ON CONFLICT DO NOTHING RETURNING id`, k, v.Uuid)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return err
 		}
 
@@ -352,17 +359,18 @@ func addLabelRefinements(tx *sql.Tx, labelMapRefinementEntries map[string]datast
 
 		for k1, v1 := range v.Values {
 			if v1.Uuid == "" {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return errors.New("refinement label uuid is empty!")
 			}
 
 			//insert label if not exists
-			rows, err = tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type)
+			rows, err = tx.Query(context.TODO(),
+								  `INSERT INTO label(name, parent_id, uuid, label_type)
 									SELECT $1, l.id, $2, 'refinement' FROM label l WHERE l.uuid = $3
 				                   ON CONFLICT DO NOTHING RETURNING id`, k1, v1.Uuid, v.Uuid)
 
 			if err != nil {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return err
 			}
 
@@ -385,18 +393,19 @@ func addLabelRefinements(tx *sql.Tx, labelMapRefinementEntries map[string]datast
 
 
 
-func addMetaLabelAccessors(tx *sql.Tx, labelUuid string, label string, accessors []string) error {
+func addMetaLabelAccessors(tx pgx.Tx, labelUuid string, label string, accessors []string) error {
 	for _, acc := range accessors {
 		accessor := acc
 		if accessor == "." {
 			accessor = label
 		}
 
-		rows, err := tx.Query(`INSERT INTO label_accessor(label_id, accessor)
+		rows, err := tx.Query(context.TODO(),
+							   `INSERT INTO label_accessor(label_id, accessor)
 								SELECT l.id, $2 FROM label l WHERE uuid = $1
 								ON CONFLICT DO NOTHING RETURNING id`, labelUuid, accessor)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return err
 		}
 
@@ -411,7 +420,7 @@ func addMetaLabelAccessors(tx *sql.Tx, labelUuid string, label string, accessors
 	return nil
 }
 
-func addLabels(tx *sql.Tx, labelMap map[string]datastructures.LabelMapEntry) error {
+func addLabels(tx pgx.Tx, labelMap map[string]datastructures.LabelMapEntry) error {
 	for k := range labelMap {
 		val := labelMap[k]
 
@@ -447,17 +456,18 @@ func addLabels(tx *sql.Tx, labelMap map[string]datastructures.LabelMapEntry) err
 	return nil
 }
 
-func addMetaLabels(tx *sql.Tx, metaLabels datastructures.MetaLabelMap) error {
+func addMetaLabels(tx pgx.Tx, metaLabels datastructures.MetaLabelMap) error {
 	for k, v := range metaLabels.MetaLabelMapEntries {
 		if v.Uuid == "" {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return errors.New("metalabels uuid is empty!")
 		}
 
-		rows, err := tx.Query(`INSERT INTO label(name, parent_id, uuid, label_type) VALUES ($1, null, $2, 'meta')
+		rows, err := tx.Query(context.TODO(),
+								  `INSERT INTO label(name, parent_id, uuid, label_type) VALUES ($1, null, $2, 'meta')
 				                   ON CONFLICT DO NOTHING RETURNING id`, k, v.Uuid)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return err
 		}
 
@@ -477,18 +487,19 @@ func addMetaLabels(tx *sql.Tx, metaLabels datastructures.MetaLabelMap) error {
 	return nil
 }
 
-func addLabelRefinementAccessors(tx *sql.Tx, labelUuid string, label string, accessors []string) error {
+func addLabelRefinementAccessors(tx pgx.Tx, labelUuid string, label string, accessors []string) error {
 	for _, acc := range accessors {
 		accessor := acc
 		if accessor == "." {
 			accessor = label
 		}
 
-		rows, err := tx.Query(`INSERT INTO label_accessor(label_id, accessor)
+		rows, err := tx.Query(context.TODO(),
+							   `INSERT INTO label_accessor(label_id, accessor)
 								SELECT l.id, $2 FROM label l WHERE uuid = $1
 								ON CONFLICT DO NOTHING RETURNING id`, labelUuid, accessor)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(context.TODO())
 			return err
 		}
 

@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v4"
 	"bytes"
 	"os/exec"
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"time"
 	"github.com/bbernhard/imagemonkey-core/commons"
+	"context"
 )
 
 func random(min, max int) int {
@@ -94,6 +95,24 @@ func populateLabels() error {
 
 func installUuidExtension() error {
 	query := "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""
+	var out, stderr bytes.Buffer
+
+	//load defaults
+	cmd := exec.Command("psql", "-c", query, "-d", "imagemonkey", "-U", "postgres", "-h", "127.0.0.1", "-p", DB_PORT)
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+	    fmt.Sprintf("Error executing query. Command Output: %+v\n: %+v, %v", out.String(), stderr.String(), err)
+	    return err
+	}
+
+	return nil
+} 
+
+func installPgStatStatementsExtension() error {
+	query := "CREATE EXTENSION IF NOT EXISTS \"pg_stat_statements\""
 	var out, stderr bytes.Buffer
 
 	//load defaults
@@ -208,7 +227,7 @@ func installTruncateAllTablesFunction() error {
 
 
 type ImageMonkeyDatabase struct {
-    db *sql.DB
+    db *pgx.Conn
 }
 
 func NewImageMonkeyDatabase() *ImageMonkeyDatabase {
@@ -219,12 +238,12 @@ func (p *ImageMonkeyDatabase) Open() error {
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	
 	var err error
-	p.db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
+	p.db, err = pgx.Connect(context.Background(), imageMonkeyDbConnectionString)
 	if err != nil {
 		return err
 	}
 
-	err = p.db.Ping()
+	err = p.db.Ping(context.Background())
 	if err != nil {
 		return err
 	}
@@ -235,27 +254,28 @@ func (p *ImageMonkeyDatabase) Open() error {
 func (p *ImageMonkeyDatabase) Initialize() error {
 
 	//connect as user postgres, in order to drop + re-create database imagemonkey
-	localDb, err := sql.Open("postgres", "user=postgres sslmode=disable port="+ DB_PORT)
+	localDb, err := pgx.Connect(context.Background(), "user=postgres host=127.0.0.1 sslmode=disable port="+ DB_PORT)
 	if err != nil {
 		return err
 	}
 
-	defer localDb.Close()
+	defer localDb.Close(context.Background())
 
 	//terminate any open database connections (we need to do this, before we can drop the database)
-	_, err = localDb.Exec(`SELECT pg_terminate_backend(pid)
+	_, err = localDb.Exec(context.TODO(),
+					 `SELECT pg_terminate_backend(pid)
 					  FROM pg_stat_activity
 					  WHERE datname = 'imagemonkey'`)
 	if err != nil {
 		return err
 	}
 
-	_, err = localDb.Exec("DROP DATABASE IF EXISTS imagemonkey")
+	_, err = localDb.Exec(context.TODO(), "DROP DATABASE IF EXISTS imagemonkey")
 	if err != nil {
 		return err
 	}
 
-	_, err = localDb.Exec("CREATE DATABASE imagemonkey OWNER monkey")
+	_, err = localDb.Exec(context.TODO(), "CREATE DATABASE imagemonkey OWNER monkey")
 	if err != nil {
 		return err
 	}
@@ -271,6 +291,11 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 	}
 
 	err = installPostgisExtension()
+	if err != nil {
+		return err
+	}
+
+	err = installPgStatStatementsExtension()
 	if err != nil {
 		return err
 	}
@@ -309,7 +334,7 @@ func (p *ImageMonkeyDatabase) Initialize() error {
 }
 
 func (p *ImageMonkeyDatabase) ClearAll() error {
-	_, err := p.db.Exec(`SELECT truncate_tables('monkey')`)
+	_, err := p.db.Exec(context.TODO(), `SELECT truncate_tables('monkey')`)
 	if err != nil {
 		return err
 	}
@@ -333,12 +358,12 @@ func (p *ImageMonkeyDatabase) ClearAll() error {
 
 func (p *ImageMonkeyDatabase) TablesAreEmpty() (bool, error) {
 	var empty bool
-	err := p.db.QueryRow("SELECT tables_empty('monkey')").Scan(&empty)
+	err := p.db.QueryRow(context.TODO(), "SELECT tables_empty('monkey')").Scan(&empty)
 	return empty, err
 }
 
 func (p *ImageMonkeyDatabase) UnlockAllImages() error {
-	_, err := p.db.Exec(`UPDATE image SET unlocked = true`)
+	_, err := p.db.Exec(context.TODO(), `UPDATE image SET unlocked = true`)
 	if err != nil {
 		return err
 	}
@@ -347,14 +372,15 @@ func (p *ImageMonkeyDatabase) UnlockAllImages() error {
 }
 
 func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
-	_, err := p.db.Exec("UPDATE account SET is_moderator = true WHERE name = $1", name)
+	_, err := p.db.Exec(context.TODO(), "UPDATE account SET is_moderator = true WHERE name = $1", name)
 	if err != nil {
 		return err
 	}
 
-	_, err = p.db.Exec(`INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description, 
-														can_monitor_system, can_accept_trending_label) 
-							SELECT a.id, true, true, true, true FROM account a WHERE a.name = $1`, name)
+	_, err = p.db.Exec(context.TODO(),
+						   `INSERT INTO account_permission(account_id, can_remove_label, can_unlock_image_description, 
+														can_monitor_system, can_accept_trending_label, can_access_pg_stat) 
+							SELECT a.id, true, true, true, true, true FROM account a WHERE a.name = $1`, name)
 	if err != nil {
 		return err
 	}
@@ -363,7 +389,8 @@ func (p *ImageMonkeyDatabase) GiveUserModeratorRights(name string) error {
 }
 
 func (p *ImageMonkeyDatabase) GiveUserUnlockImagePermissions(name string) error {
-	_, err := p.db.Exec(`UPDATE account_permission 
+	_, err := p.db.Exec(context.TODO(),
+						`UPDATE account_permission 
 						 SET can_unlock_image = true
 						 FROM account a
 						 WHERE a.id = account_id AND a.name = $1`, name)
@@ -372,7 +399,7 @@ func (p *ImageMonkeyDatabase) GiveUserUnlockImagePermissions(name string) error 
 
 func (p *ImageMonkeyDatabase) GetNumberOfImages() (int32, error) {
 	var numOfImages int32
-	err := p.db.QueryRow("SELECT count(*) FROM image").Scan(&numOfImages)
+	err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM image").Scan(&numOfImages)
 	if err != nil {
 		return 0, err
 	}
@@ -382,7 +409,7 @@ func (p *ImageMonkeyDatabase) GetNumberOfImages() (int32, error) {
 
 func (p *ImageMonkeyDatabase) GetNumberOfLabels() (int32, error) {
 	var numOfLabels int32
-	err := p.db.QueryRow("SELECT count(*) FROM label").Scan(&numOfLabels)
+	err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM label").Scan(&numOfLabels)
 	if err != nil {
 		return 0, err
 	}
@@ -392,7 +419,7 @@ func (p *ImageMonkeyDatabase) GetNumberOfLabels() (int32, error) {
 
 func (p *ImageMonkeyDatabase) GetNumberOfUsers() (int32, error) {
 	var numOfUsers int32
-	err := p.db.QueryRow("SELECT count(*) FROM account").Scan(&numOfUsers)
+	err := p.db.QueryRow(context.TODO(), "SELECT count(*) FROM account").Scan(&numOfUsers)
 	if err != nil {
 		return 0, err
 	}
@@ -403,7 +430,7 @@ func (p *ImageMonkeyDatabase) GetNumberOfUsers() (int32, error) {
 func (p *ImageMonkeyDatabase) GetAllValidationIds() ([]string, error) {
 	var validationIds []string
 
-	rows, err := p.db.Query("SELECT uuid FROM image_validation")
+	rows, err := p.db.Query(context.TODO(), "SELECT uuid FROM image_validation")
 	if err != nil {
 		return validationIds, err
 	}
@@ -426,7 +453,8 @@ func (p *ImageMonkeyDatabase) GetAllValidationIds() ([]string, error) {
 func (p *ImageMonkeyDatabase) GetAllValidationIdsForLabel(label string) ([]string, error) {
      var validationIds []string
 
-     rows, err := p.db.Query(`SELECT v.uuid FROM image_validation v 
+     rows, err := p.db.Query(context.TODO(),
+	 						 `SELECT v.uuid FROM image_validation v 
 	 						  JOIN label l ON v.label_id = l.id 
 							  WHERE l.name = $1 AND l.parent_id is null`, label)
      if err != nil {
@@ -468,7 +496,8 @@ func (p *ImageMonkeyDatabase) GetRandomValidationId() (string, error) {
 func (p *ImageMonkeyDatabase) GetValidationCount(uuid string) (int32, int32, error) {
 	var numOfYes int32
 	var numOfNo int32
-	err := p.db.QueryRow(`SELECT num_of_valid, num_of_invalid 
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT num_of_valid, num_of_invalid 
 						  FROM image_validation WHERE uuid = $1`, uuid).Scan(&numOfYes, &numOfNo)
 
 	return numOfYes, numOfNo, err
@@ -476,7 +505,8 @@ func (p *ImageMonkeyDatabase) GetValidationCount(uuid string) (int32, int32, err
 
 func (p *ImageMonkeyDatabase) GetAnnotationRevision(annotationId string) (int32, error) {
 	var revision int32
-	err := p.db.QueryRow(`SELECT revision 
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT revision 
 						  FROM image_annotation WHERE uuid = $1`, annotationId).Scan(&revision)
 
 	return revision, err
@@ -484,7 +514,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationRevision(annotationId string) (int32,
 
 func (p *ImageMonkeyDatabase) GetAnnotationSuggestionRevision(annotationId string) (int32, error) {
 	var revision int32
-	err := p.db.QueryRow(`SELECT revision 
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT revision 
 						  FROM image_annotation_suggestion WHERE uuid = $1`, annotationId).Scan(&revision)
 
 	return revision, err
@@ -493,7 +524,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationSuggestionRevision(annotationId strin
 func (p *ImageMonkeyDatabase) GetOldAnnotationDataIds(annotationId string, revision int32) ([]int64, error) {
 	var ids []int64
 
-	rows, err := p.db.Query(`SELECT d.id
+	rows, err := p.db.Query(context.TODO(),
+						   `SELECT d.id
 							FROM annotation_data d
 							JOIN image_annotation_revision r ON d.image_annotation_revision_id = r.id
 							JOIN image_annotation a ON r.image_annotation_id = a.id
@@ -520,7 +552,8 @@ func (p *ImageMonkeyDatabase) GetOldAnnotationDataIds(annotationId string, revis
 func (p *ImageMonkeyDatabase) GetOldAnnotationSuggestionDataIds(annotationId string, revision int32) ([]int64, error) {
 	var ids []int64
 
-	rows, err := p.db.Query(`SELECT d.id
+	rows, err := p.db.Query(context.TODO(),
+						   `SELECT d.id
 							FROM annotation_suggestion_data d
 							JOIN image_annotation_suggestion_revision r ON d.image_annotation_suggestion_revision_id = r.id
 							JOIN image_annotation_suggestion a ON r.image_annotation_suggestion_id = a.id
@@ -546,7 +579,8 @@ func (p *ImageMonkeyDatabase) GetOldAnnotationSuggestionDataIds(annotationId str
 
 func (p *ImageMonkeyDatabase) GetAnnotationDataIds(annotationId string) ([]int64, error) {
 	var ids []int64
-	rows, err := p.db.Query(`SELECT d.id 
+	rows, err := p.db.Query(context.TODO(),
+						   `SELECT d.id 
 							FROM annotation_data d
 							JOIN image_annotation a ON d.image_annotation_id = a.id
 							WHERE a.uuid = $1`, annotationId)
@@ -571,7 +605,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationDataIds(annotationId string) ([]int64
 
 func (p *ImageMonkeyDatabase) GetAnnotationSuggestionDataIds(annotationId string) ([]int64, error) {
 	var ids []int64
-	rows, err := p.db.Query(`SELECT d.id 
+	rows, err := p.db.Query(context.TODO(),
+						   `SELECT d.id 
 							FROM annotation_suggestion_data d
 							JOIN image_annotation_suggestion a ON d.image_annotation_suggestion_id = a.id
 							WHERE a.uuid = $1`, annotationId)
@@ -597,7 +632,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationSuggestionDataIds(annotationId string
 
 func (p *ImageMonkeyDatabase) GetRandomImageForAnnotation() (AnnotationRow, error) {
 	var annotationRow AnnotationRow
-	err := p.db.QueryRow(`SELECT i.key, v.uuid, l.name, COALESCE(pl.name, '')
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT i.key, v.uuid, l.name, COALESCE(pl.name, '')
 			      	 		FROM image i 
 				  	 		JOIN image_validation v ON v.image_id = i.id 
 				  	 		JOIN label l ON v.label_id = l.id
@@ -613,7 +649,8 @@ func (p *ImageMonkeyDatabase) GetRandomImageForAnnotation() (AnnotationRow, erro
 
 func (p *ImageMonkeyDatabase) AnnotationUuidIsASuggestion(annotationUuid string) (bool, error) {
 	var isSuggestion bool = false
-	err := p.db.QueryRow(`SELECT is_suggestion FROM
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT is_suggestion FROM
 					      (
                            SELECT count(*) as count, false as is_suggestion
                            FROM image_annotation a 
@@ -634,7 +671,8 @@ func (p *ImageMonkeyDatabase) AnnotationUuidIsASuggestion(annotationUuid string)
 
 func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionIdsForImage(imageId string) ([]string, error) {
 	annotationUuids := []string{}
-	rows, err := p.db.Query(`SELECT a.uuid
+	rows, err := p.db.Query(context.TODO(),
+							   `SELECT a.uuid
 						 		FROM image_annotation_suggestion a
 						 		JOIN image i ON a.image_id = i.id
 								WHERE i.key = $1`, imageId)
@@ -659,38 +697,39 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionIdsForImage(imageId st
 
 func (p *ImageMonkeyDatabase) GetRandomAnnotationId() (string, error) {
 	var annotationId string
-	err := p.db.QueryRow(`SELECT a.uuid FROM image_annotation a ORDER BY random() LIMIT 1`).Scan(&annotationId)
+	err := p.db.QueryRow(context.TODO(), `SELECT a.uuid FROM image_annotation a ORDER BY random() LIMIT 1`).Scan(&annotationId)
 	return annotationId, err
 }
 
 func (p *ImageMonkeyDatabase) GetLastAddedAnnotationDataId() (string, error) {
 	var annotationDataId string
-	err := p.db.QueryRow(`SELECT d.uuid FROM annotation_data d ORDER BY d.id DESC LIMIT 1`).Scan(&annotationDataId)
+	err := p.db.QueryRow(context.TODO(), `SELECT d.uuid FROM annotation_data d ORDER BY d.id DESC LIMIT 1`).Scan(&annotationDataId)
 	return annotationDataId, err
 }
 
 func (p *ImageMonkeyDatabase) GetLastAddedAnnotationId() (string, error) {
 	var annotationId string
-	err := p.db.QueryRow(`SELECT a.uuid FROM image_annotation a ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId)
+	err := p.db.QueryRow(context.TODO(), `SELECT a.uuid FROM image_annotation a ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId)
 	return annotationId, err
 }
 
 func (p *ImageMonkeyDatabase) GetRandomLabelId() (int64, error) {
 	var labelId int64
-	err := p.db.QueryRow(`SELECT l.id FROM label l ORDER BY random() LIMIT 1`).Scan(&labelId)
+	err := p.db.QueryRow(context.TODO(), `SELECT l.id FROM label l ORDER BY random() LIMIT 1`).Scan(&labelId)
 	return labelId, err
 }
 
 func (p *ImageMonkeyDatabase) GetRandomLabelUuid() (string, error) {
 	var labelUuid string
-	err := p.db.QueryRow(`SELECT l.uuid FROM label l ORDER BY random() LIMIT 1`).Scan(&labelUuid)
+	err := p.db.QueryRow(context.TODO(), `SELECT l.uuid FROM label l ORDER BY random() LIMIT 1`).Scan(&labelUuid)
 	return labelUuid, err
 }
 
 func (p *ImageMonkeyDatabase) GetRandomAnnotationData() (string, string, error) {
 	var annotationId string
 	var annotationDataId string
-	err := p.db.QueryRow(`SELECT a.uuid, d.uuid
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT a.uuid, d.uuid
 						  FROM image_annotation a 
 						  JOIN annotation_data d ON d.image_annotation_id = a.id
 						  ORDER BY random() LIMIT 1`).Scan(&annotationId, &annotationDataId)
@@ -700,7 +739,8 @@ func (p *ImageMonkeyDatabase) GetRandomAnnotationData() (string, string, error) 
 func (p *ImageMonkeyDatabase) GetLastAddedAnnotationData() (string, string, error) {
 	var annotationId string
 	var annotationDataId string
-	err := p.db.QueryRow(`SELECT a.uuid, d.uuid
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT a.uuid, d.uuid
 						  FROM image_annotation a 
 						  JOIN annotation_data d ON d.image_annotation_id = a.id
 						  ORDER BY a.id DESC LIMIT 1`).Scan(&annotationId, &annotationDataId)
@@ -709,7 +749,8 @@ func (p *ImageMonkeyDatabase) GetLastAddedAnnotationData() (string, string, erro
 
 func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabel(label string) (int32, error) {
 	var num int32
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						  `SELECT count(*) 
 						   FROM image_validation v 
 						   JOIN label l ON v.label_id = l.id
 						   WHERE l.name = $1 AND l.parent_id is null`, label).Scan(&num)
@@ -718,7 +759,8 @@ func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabel(label string) (int32, e
 
 func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelUuid(labelUuid string) (int32, error) {
 	var num int32
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						  `SELECT count(*) 
 						   FROM image_validation v 
 						   JOIN label l ON v.label_id = l.id
 						   WHERE l.uuid::text = $1`, labelUuid).Scan(&num)
@@ -727,7 +769,8 @@ func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelUuid(labelUuid string) (
 
 func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelSuggestions(label string) (int32, error) {
 	var num int32
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						  `SELECT count(*) 
 						   FROM image_label_suggestion ils
 						   JOIN label_suggestion l ON l.id = ils.label_suggestion_id
 						   WHERE l.name = $1
@@ -737,14 +780,16 @@ func (p *ImageMonkeyDatabase) GetNumberOfImagesWithLabelSuggestions(label string
 
 func (p *ImageMonkeyDatabase) GetNumberOfTrendingLabelSuggestions() (int32, error) {
 	var num int32
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						  `SELECT count(*) 
 						   FROM trending_label_suggestion`).Scan(&num)
 	return num, err
 }
 
 func (p *ImageMonkeyDatabase) GetNumberOfImageHuntTasksForImageWithLabel(imageId string, label string) (int32, error) {
 	var num int32
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						  `SELECT count(*) 
 						   FROM imagehunt_task h
 						   JOIN image_validation v ON v.id = h.image_validation_id
 						   JOIN label l ON l.id = v.label_id
@@ -755,7 +800,8 @@ func (p *ImageMonkeyDatabase) GetNumberOfImageHuntTasksForImageWithLabel(imageId
 
 func (p *ImageMonkeyDatabase) GetNumberOfImageUserEntriesForImageAndUser(imageId string, username string) (int32, error) {
 	var num int32
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						  `SELECT count(*) 
 						   FROM image i
 						   JOIN user_image u ON u.image_id = i.id
 						   JOIN account a ON a.id = u.account_id
@@ -766,7 +812,8 @@ func (p *ImageMonkeyDatabase) GetNumberOfImageUserEntriesForImageAndUser(imageId
 func (p *ImageMonkeyDatabase) GetProductiveLabelIdsForTrendingLabels() ([]int64, error) {
 	productiveLabelIds := []int64{}
 
-	rows, err := p.db.Query(`SELECT t.productive_label_id FROM trending_label_suggestion t 
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT t.productive_label_id FROM trending_label_suggestion t 
 							 WHERE t.productive_label_id is not null`)
 	if err != nil {
 		return productiveLabelIds, err
@@ -802,14 +849,14 @@ func (p *ImageMonkeyDatabase) GetRandomLabelName(skipLabel string) (string, erro
 	
 	
 	var label string
-	err := p.db.QueryRow(query, queryParams...).Scan(&label)
+	err := p.db.QueryRow(context.TODO(), query, queryParams...).Scan(&label)
 	return label, err
 }
 
 func (p *ImageMonkeyDatabase) GetAllImageIds() ([]string, error) {
 	var imageIds []string
 
-	rows, err := p.db.Query(`SELECT i.key FROM image i ORDER BY random()`)
+	rows, err := p.db.Query(context.TODO(), `SELECT i.key FROM image i ORDER BY random()`)
 	if err != nil {
 		return imageIds, err
 	}
@@ -831,19 +878,21 @@ func (p *ImageMonkeyDatabase) GetAllImageIds() ([]string, error) {
 
 func (p *ImageMonkeyDatabase) GetLatestDonatedImageId() (string,error) {
 	var imageId string 
-	err := p.db.QueryRow(`SELECT i.key FROM image i ORDER BY id DESC LIMIT 1`).Scan(&imageId)
+	err := p.db.QueryRow(context.TODO(), `SELECT i.key FROM image i ORDER BY id DESC LIMIT 1`).Scan(&imageId)
 	return imageId, err
 }
 
 func (p *ImageMonkeyDatabase) PutImageInQuarantine(imageId string) error { 
-	_, err := p.db.Exec(`INSERT INTO image_quarantine(image_id)
+	_, err := p.db.Exec(context.TODO(), 
+						   `INSERT INTO image_quarantine(image_id)
 							SELECT id FROM image WHERE key = $1`, imageId)
 	return err
 }
 
 func (p *ImageMonkeyDatabase) GetLabelUuidFromName(label string) (string, error) {
 	var uuid string 
-	err := p.db.QueryRow(`SELECT l.uuid 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.uuid 
 							FROM label l 
 							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&uuid)
 	return uuid, err
@@ -851,7 +900,8 @@ func (p *ImageMonkeyDatabase) GetLabelUuidFromName(label string) (string, error)
 
 func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
 	var labelId int64 
-	err := p.db.QueryRow(`SELECT l.id 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.id 
 							FROM label l 
 							WHERE l.name = $1 and l.parent_id is null`, label).Scan(&labelId)
 	return labelId, err
@@ -859,7 +909,8 @@ func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
 
 func (p *ImageMonkeyDatabase) GetLabelIdFromUuid(labelUuid string) (int64, error) {
 	var labelId int64 
-	err := p.db.QueryRow(`SELECT l.id 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.id 
 							FROM label l 
 							WHERE l.uuid::text = $1`, labelUuid).Scan(&labelId)
 	return labelId, err
@@ -867,7 +918,8 @@ func (p *ImageMonkeyDatabase) GetLabelIdFromUuid(labelUuid string) (int64, error
 
 func (p *ImageMonkeyDatabase) GetLabelNameFromId(id int64) (string, error) {
 	var labelName string 
-	err := p.db.QueryRow(`SELECT l.name 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.name 
 							FROM label l 
 							WHERE l.id = $1`, id).Scan(&labelName)
 	return labelName, err
@@ -875,7 +927,8 @@ func (p *ImageMonkeyDatabase) GetLabelNameFromId(id int64) (string, error) {
 
 func (p *ImageMonkeyDatabase) GetLabelSuggestionNameFromId(id int64) (string, error) {
 	var labelName string 
-	err := p.db.QueryRow(`SELECT l.name 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.name 
 							FROM label_suggestion l 
 							WHERE l.id = $1`, id).Scan(&labelName)
 	return labelName, err
@@ -883,7 +936,8 @@ func (p *ImageMonkeyDatabase) GetLabelSuggestionNameFromId(id int64) (string, er
 
 func (p *ImageMonkeyDatabase) GetNumOfSentOfTrendingLabel(tendingLabel string) (int, error) {
 	var tendingLabelId int 
-	err := p.db.QueryRow(`SELECT t.num_of_last_sent 
+	err := p.db.QueryRow(context.TODO(),
+						 `SELECT t.num_of_last_sent 
 						  FROM trending_label_suggestion t
 						  JOIN label_suggestion l ON t.label_suggestion_id = l.id
 						  WHERE l.name = $1`, tendingLabel).Scan(&tendingLabelId)
@@ -891,7 +945,8 @@ func (p *ImageMonkeyDatabase) GetNumOfSentOfTrendingLabel(tendingLabel string) (
 }
 
 func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) error {
-	_, err := p.db.Exec(`UPDATE image_validation 
+	_, err := p.db.Exec(context.TODO(),
+						   `UPDATE image_validation 
 							SET num_of_valid = $2 
 							WHERE uuid = $1`, validationId, num)
 	return err
@@ -899,14 +954,14 @@ func (p *ImageMonkeyDatabase) SetValidationValid(validationId string, num int) e
 
 func (p *ImageMonkeyDatabase) GetNumOfRefinements() (int, error) {
 	var num int 
-	err := p.db.QueryRow(`SELECT count(*) FROM image_annotation_refinement`).Scan(&num)
+	err := p.db.QueryRow(context.TODO(), `SELECT count(*) FROM image_annotation_refinement`).Scan(&num)
 	return num, err
 }
 
 func (p *ImageMonkeyDatabase) GetAllAnnotationIds() ([]string, error) {
 	var annotationIds []string
 
-	rows, err := p.db.Query("SELECT uuid FROM image_annotation")
+	rows, err := p.db.Query(context.TODO(), "SELECT uuid FROM image_annotation")
 	if err != nil {
 		return annotationIds, err
 	}
@@ -927,14 +982,16 @@ func (p *ImageMonkeyDatabase) GetAllAnnotationIds() ([]string, error) {
 }
 
 func (p *ImageMonkeyDatabase) SetAnnotationValid(annotationId string, num int) error {
-	_, err := p.db.Exec(`UPDATE image_annotation 
+	_, err := p.db.Exec(context.TODO(),
+						   `UPDATE image_annotation 
 							SET num_of_valid = $2 
 							WHERE uuid = $1`, annotationId, num)
 	return err
 }
 
 func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId string) (int, error) {
-	rows, err := p.db.Query(`SELECT annotated_percentage 
+	rows, err := p.db.Query(context.TODO(),
+							 `SELECT annotated_percentage 
 							  FROM image_annotation_coverage c
 							  JOIN image i ON i.id = c.image_id
 							  WHERE i.key = $1`, imageId)
@@ -959,7 +1016,8 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationCoverageForImageId(imageId strin
 func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]ImageDescriptionSummary, error) {
 	var descriptionSummaries []ImageDescriptionSummary
 
-	rows, err := p.db.Query(`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state, l.name
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT dsc.description, dsc.num_of_valid, dsc.uuid, dsc.state, l.name
 							 FROM image_description dsc
 							 JOIN language l ON l.id = dsc.language_id
 							 JOIN image i ON i.id = dsc.image_id
@@ -995,7 +1053,8 @@ func (p *ImageMonkeyDatabase) GetImageDescriptionForImageId(imageId string) ([]I
 
 
 func (p *ImageMonkeyDatabase) GetModeratorWhoProcessedImageDescription(imageId string, imageDescription string) (string, error) {
-	rows, err := p.db.Query(`SELECT a.name
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT a.name
 							 FROM image_description dsc
 							 JOIN image i ON i.id = dsc.image_id
 							 JOIN account a ON a.id = dsc.processed_by
@@ -1019,7 +1078,7 @@ func (p *ImageMonkeyDatabase) GetModeratorWhoProcessedImageDescription(imageId s
 }
 
 func (p *ImageMonkeyDatabase) IsImageUnlocked(imageId string) (bool, error) {
-	rows, err := p.db.Query(`SELECT unlocked FROM image i WHERE i.key = $1`, imageId)
+	rows, err := p.db.Query(context.TODO(), `SELECT unlocked FROM image i WHERE i.key = $1`, imageId)
 	if err != nil {
 		return false, err
 	}
@@ -1039,7 +1098,8 @@ func (p *ImageMonkeyDatabase) IsImageUnlocked(imageId string) (bool, error) {
 }
 
 func (p *ImageMonkeyDatabase) IsImageInQuarantine(imageId string) (bool, error) {
-	rows, err := p.db.Query(`SELECT CASE 
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT CASE 
 									 WHEN COUNT(*) <> 0 THEN true 
 									 ELSE false
 									END as in_quarantine
@@ -1066,7 +1126,8 @@ func (p *ImageMonkeyDatabase) IsImageInQuarantine(imageId string) (bool, error) 
 }
 
 func (p *ImageMonkeyDatabase) DoLabelAccessorsBelongToMoreThanOneLabelId() (bool, error) {
-	rows, err := p.db.Query(`SELECT label_id 
+	rows, err := p.db.Query(context.TODO(),
+							   `SELECT label_id 
 								FROM label_accessor
 								GROUP BY label_id
 								HAVING COUNT(label_id) > 1`)
@@ -1085,7 +1146,8 @@ func (p *ImageMonkeyDatabase) DoLabelAccessorsBelongToMoreThanOneLabelId() (bool
 
 func (p *ImageMonkeyDatabase) GetNumOfMetaLabelImageValidations() (int, error) {
 	var num int 
-	err := p.db.QueryRow(`SELECT count(*) FROM 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT count(*) FROM 
 							image_validation v 
 							JOIN label l ON l.id = v.label_id
 							WHERE l.label_type = 'meta'`).Scan(&num)
@@ -1094,71 +1156,81 @@ func (p *ImageMonkeyDatabase) GetNumOfMetaLabelImageValidations() (int, error) {
 
 func (p *ImageMonkeyDatabase) GetNumOfDatesFromNowTilOneMonthAgo() (int, error) {
 	var num int
-	err := p.db.QueryRow(`SELECT COUNT(*)
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT COUNT(*)
                             FROM generate_series((CURRENT_DATE - interval '1 month'), CURRENT_DATE, '1 day')`).Scan(&num)
     return num, err
 }
 
 func (p *ImageMonkeyDatabase) RemoveLabel(labelName string) error {
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 	
-	_, err = tx.Exec("DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM label_accessor a WHERE a.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM quiz_answer q WHERE q.label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l WHERE l.name = $1 AND l.parent_id is null)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM quiz_question q WHERE q.refines_label_id IN (SELECT l.id FROM label l JOIN label pl ON pl.id = l.parent_id WHERE pl.name = $1)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM label l WHERE l.parent_id IN (SELECT id FROM label pl WHERE pl.name = $1)", labelName)
+	_, err = tx.Exec(context.TODO(),
+						"DELETE FROM label l WHERE l.parent_id IN (SELECT id FROM label pl WHERE pl.name = $1)", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
-	_, err = tx.Exec("DELETE FROM label l WHERE l.name = $1 AND l.parent_id is null", labelName)
+	_, err = tx.Exec(context.TODO(), 
+						"DELETE FROM label l WHERE l.name = $1 AND l.parent_id is null", labelName)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	return err
 } 
 
 func (p *ImageMonkeyDatabase) GetNumOfNotAnnotatable(uuid string) (int, error) {
-	rows, err := p.db.Query("SELECT num_of_not_annotatable FROM image_validation WHERE uuid = $1", uuid)
+	rows, err := p.db.Query(context.TODO(),
+								"SELECT num_of_not_annotatable FROM image_validation WHERE uuid = $1", uuid)
 	if err != nil {
 		return 0, err
 	}
@@ -1175,7 +1247,8 @@ func (p *ImageMonkeyDatabase) GetNumOfNotAnnotatable(uuid string) (int, error) {
 } 
 
 func (p *ImageMonkeyDatabase) GetTrendingLabelBotTaskState(labelSuggestion string) (string, error) {
-	rows, err := p.db.Query(`SELECT COALESCE(bt.state::text, '') 
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT COALESCE(bt.state::text, '') 
 							 FROM trending_label_bot_task bt 
 							 RIGHT JOIN trending_label_suggestion l ON l.id = bt.trending_label_suggestion_id
 							 RIGHT JOIN label_suggestion s ON s.id = l.label_suggestion_id
@@ -1199,7 +1272,8 @@ func (p *ImageMonkeyDatabase) GetTrendingLabelBotTaskState(labelSuggestion strin
 }
 
 func (p *ImageMonkeyDatabase) SetTrendingLabelBotTaskState(labelSuggestion string, state string) error {
-	_, err := p.db.Exec(`UPDATE trending_label_bot_task 
+	_, err := p.db.Exec(context.TODO(),
+							`UPDATE trending_label_bot_task 
 							 	SET state = $2
 							 		 FROM (
 							 			SELECT l.id as lid
@@ -1212,14 +1286,15 @@ func (p *ImageMonkeyDatabase) SetTrendingLabelBotTaskState(labelSuggestion strin
 }
 
 func (p *ImageMonkeyDatabase) Close() {
-	p.db.Close()
+	p.db.Close(context.TODO())
 }
 
 func (p *ImageMonkeyDatabase) AddDummyTrendingLabelBotTask(trendingLabelName string, renameTo string, 
 											branchName string, labelType string, state string) (int64, error) {
 	var trendingLabelBotTaskId int64
 	
-	rows, err := p.db.Query(`INSERT INTO trending_label_bot_task (trending_label_suggestion_id, branch_name, state, label_type, rename_to)
+	rows, err := p.db.Query(context.TODO(),
+						   `INSERT INTO trending_label_bot_task (trending_label_suggestion_id, branch_name, state, label_type, rename_to)
 							SELECT t.id, $1, $2 , $3, $4
 							FROM trending_label_suggestion t
 							JOIN label_suggestion l ON t.label_suggestion_id = l.id
@@ -1240,7 +1315,7 @@ func (p *ImageMonkeyDatabase) AddDummyTrendingLabelBotTask(trendingLabelName str
 
 type ImageAnnotationEntry struct {
 	Uuid string
-	ImageId string
+	ImageId int64
 	NumOfValid int32
 	NumOfInvalid int32
 	FingerprintOfLastModification string
@@ -1253,8 +1328,9 @@ type ImageAnnotationEntry struct {
 
 func (p *ImageMonkeyDatabase) GetImageAnnotationEntries() ([]ImageAnnotationEntry, error) {
 	imageAnnotationEntries :=[]ImageAnnotationEntry{}
-	rows, err := p.db.Query(`SELECT uuid, image_id, num_of_valid, num_of_invalid, 
-								COALESCE(fingerprint_of_last_modification, ''), sys_period, label_id, auto_generated, revision, id
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT uuid, image_id, num_of_valid, num_of_invalid, 
+								COALESCE(fingerprint_of_last_modification, ''), sys_period::text, label_id, auto_generated, revision, id
 							 FROM image_annotation
 							 ORDER BY uuid`)
 	if err != nil {
@@ -1279,8 +1355,9 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationEntries() ([]ImageAnnotationEntr
 
 func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionEntries() ([]ImageAnnotationEntry, error) {
 	imageAnnotationSuggestionEntries :=[]ImageAnnotationEntry{}
-	rows, err := p.db.Query(`SELECT uuid, image_id, num_of_valid, num_of_invalid, 
-								COALESCE(fingerprint_of_last_modification, ''), sys_period, label_suggestion_id, auto_generated, revision, id
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT uuid, image_id, num_of_valid, num_of_invalid, 
+								COALESCE(fingerprint_of_last_modification, ''), sys_period::text, label_suggestion_id, auto_generated, revision, id
 							 FROM image_annotation_suggestion
 							 ORDER BY uuid`)
 	if err != nil {
@@ -1315,7 +1392,8 @@ type AnnotationDataEntry struct {
 
 func (p *ImageMonkeyDatabase) GetAnnotationDataEntries() ([]AnnotationDataEntry, error) {
 	annotationDataEntries := []AnnotationDataEntry{}
-	rows, err := p.db.Query(`SELECT COALESCE(image_annotation_id, -1), annotation, 
+	rows, err := p.db.Query(context.TODO(),
+							 `SELECT COALESCE(image_annotation_id, -1), annotation, 
 								annotation_type_id, COALESCE(image_annotation_revision_id, 0), uuid
 							  FROM annotation_data
 							  ORDER BY uuid`)
@@ -1340,7 +1418,8 @@ func (p *ImageMonkeyDatabase) GetAnnotationDataEntries() ([]AnnotationDataEntry,
 
 func (p *ImageMonkeyDatabase) GetAnnotationSuggestionDataEntries() ([]AnnotationDataEntry, error) {
 	annotationSuggestionDataEntries := []AnnotationDataEntry{}
-	rows, err := p.db.Query(`SELECT COALESCE(image_annotation_suggestion_id, -1), annotation, 
+	rows, err := p.db.Query(context.TODO(),
+							 `SELECT COALESCE(image_annotation_suggestion_id, -1), annotation, 
 								annotation_type_id, COALESCE(image_annotation_suggestion_revision_id, 0), uuid
 							  FROM annotation_suggestion_data
 							  ORDER BY uuid`)
@@ -1373,7 +1452,8 @@ type ImageAnnotationRevisionEntry struct {
 func (p *ImageMonkeyDatabase) GetImageAnnotationRevisionEntries() ([]ImageAnnotationRevisionEntry, error) {
 	imageAnnotationRevisions := []ImageAnnotationRevisionEntry{}
 	
-	rows, err := p.db.Query(`SELECT r.id, r.image_annotation_id, r.revision 
+	rows, err := p.db.Query(context.TODO(),
+							   `SELECT r.id, r.image_annotation_id, r.revision 
 								FROM image_annotation_revision r
 								JOIN image_annotation a ON r.image_annotation_id = a.id
 								ORDER BY uuid`)
@@ -1399,7 +1479,8 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationRevisionEntries() ([]ImageAnnota
 func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionRevisionEntries() ([]ImageAnnotationRevisionEntry, error) {
 	imageAnnotationSuggestionRevisions := []ImageAnnotationRevisionEntry{}
 	
-	rows, err := p.db.Query(`SELECT r.id, r.image_annotation_suggestion_id, r.revision 
+	rows, err := p.db.Query(context.TODO(),
+							   `SELECT r.id, r.image_annotation_suggestion_id, r.revision 
 								FROM image_annotation_suggestion_revision r
 								JOIN image_annotation_suggestion a ON r.image_annotation_suggestion_id = a.id
 								ORDER BY uuid`)
@@ -1424,7 +1505,8 @@ func (p *ImageMonkeyDatabase) GetImageAnnotationSuggestionRevisionEntries() ([]I
 
 func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsForImage(imageId string) (int, error) {
 	var num int
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT count(*) 
 							FROM image_label_suggestion ils
 							JOIN label_suggestion l ON l.id = ils.label_suggestion_id
 							JOIN image i ON i.id = ils.image_id
@@ -1439,7 +1521,8 @@ func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsForImage(imageId string
 
 func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsWithLabelForImage(imageId string, labelName string) (int, error) {
 	var num int
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT count(*) 
 							FROM image_label_suggestion ils
 							JOIN label_suggestion l ON l.id = ils.label_suggestion_id
 							JOIN image i ON i.id = ils.image_id
@@ -1455,7 +1538,8 @@ func (p *ImageMonkeyDatabase) GetNumberOfLabelSuggestionsWithLabelForImage(image
 func (p *ImageMonkeyDatabase) GetLabelUuidsForImage(imageId string) ([]string, error) {
 	labelUuids := []string{}
 	
-	rows, err := p.db.Query(`SELECT l.uuid 
+	rows, err := p.db.Query(context.TODO(),
+							   `SELECT l.uuid 
 								FROM image_validation v 
 								JOIN label l ON v.label_id = l.id
 								JOIN image i ON v.image_id = i.id
@@ -1480,13 +1564,14 @@ func (p *ImageMonkeyDatabase) GetLabelUuidsForImage(imageId string) ([]string, e
 }
 
 func (p *ImageMonkeyDatabase) CloseAllTrendingLabelTasks() error {
-	_, err := p.db.Exec("UPDATE trending_label_suggestion SET closed = true")
+	_, err := p.db.Exec(context.TODO(), "UPDATE trending_label_suggestion SET closed = true")
 	return err
 }
 
 func (p *ImageMonkeyDatabase) GetNumOfImagesInImageCollection(username string, imageCollectionName string) (int, error) {
 	var num int
-	err := p.db.QueryRow(`SELECT count(*) 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT count(*) 
 							FROM image_collection_image ici
 							JOIN image i ON i.id = ici.image_id
 							JOIN user_image_collection u ON u.id = ici.user_image_collection_id

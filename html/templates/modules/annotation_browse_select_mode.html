@@ -50,6 +50,11 @@
     var elem = '';
     var val; 
     var labelUrl = '';
+	
+    // detach element from DOM. This is much faster..especially when we are inserting thousand of elements
+    const annotatedStatisticsPopupContentItem = $("#annotatedStatisticsPopupContent");
+    const annotatedStatisticsPopupContentParentItem =  annotatedStatisticsPopupContentItem.parent();
+    annotatedStatisticsPopupContentItem.detach();
     for(var i = 0; i < data.length; i++) {
       if(data[i].num.total === 0)
         val = 0;
@@ -67,8 +72,10 @@
                '</div>'));
       elem.progress();
 
-      $("#annotatedStatisticsPopupContent").append(elem);
+      annotatedStatisticsPopupContentItem.append(elem);
     }
+    //re-attach to DOM
+    annotatedStatisticsPopupContentItem.appendTo(annotatedStatisticsPopupContentParentItem);
 
     $("#annotatedStatisticsButton").removeClass("disabled");
   }
@@ -310,6 +317,10 @@
     $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
   }
 
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+
   $(document).ready(function(){
     //change label text (label is defined in annotate.html)
     $("#label").text("Browse");
@@ -363,6 +374,11 @@
     new AutoCompletion("#annotationQuery", availableLabels);
 
     getAnnotatedStatistics();
+    
+    $("#randomAnnotationQueryButton").click(function(e) {
+      var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
+      $("#annotationQuery").val(randomElem);
+    });
   });
 </script>
 
@@ -373,7 +389,12 @@
     <form class="ui form segment">
       <div class="field">
        <p>Search for annotation tasks you are interested in</p>
-       <input placeholder="Query..." type="text" id="annotationQuery">
+       <div class="ui action input">
+         <input placeholder="Query..." type="text" id="annotationQuery">
+         <div class="ui icon button" id="randomAnnotationQueryButton">
+           <i class="cube icon"></i>
+         </div>
+       </div>
       </div>
 
       {{ if eq .annotationView "unified" }}

@@ -58,7 +58,7 @@ var AnnotationView = (function() {
     AnnotationView.prototype.handleUpdateAnnotationsRes = function(res) {
         if (this.annotationMode === "browse") {
             $("#loadingSpinner").hide();
-            this.updateAnnotationsForImage(this.annotationInfo.annotationId, res);
+            updateAnnotationsForImage(this.annotationInfo.annotationId, res);
             showBrowseAnnotationImageGrid(null);
         }
 
@@ -317,6 +317,7 @@ var AnnotationView = (function() {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
             showBrowseAnnotationImageGrid(validationIds);
+            $("#isPluralContainer").hide();
         }
 
         if (this.onlyOnce) {
@@ -367,7 +368,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.populateDefaultsAndLoadData = function() {
         if (this.annotationMode === "browse")
-            $("#loadingSpinner").show();
+            $("#browseAnnotationsGoButton").addClass("loading");
 
         var inst = this;
         Promise.all([this.imageMonkeyApi.getPluralLabels(), this.imageMonkeyApi.getLabelAccessors(true)])
@@ -391,7 +392,7 @@ var AnnotationView = (function() {
                 }
 
                 if (inst.annotationMode === "browse")
-                    $("#loadingSpinner").hide();
+                    $("#browseAnnotationsGoButton").removeClass("loading");
 
             }).catch(function(e) {
                 Sentry.captureException(e);
@@ -804,7 +805,7 @@ var AnnotationView = (function() {
                             '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
 
                             '<div class="ui input">' +
-                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
+                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels">' +
                             '</div>' +
                             '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                             '</div>' +
@@ -1607,7 +1608,7 @@ var AnnotationView = (function() {
                     annotation["label"] = $('#label').attr('label');
                     annotation["sublabel"] = $('#label').attr('sublabel');
                     annotations.push(annotation);
-                    inst.addAnnotations(annotations);
+                    inst.addAnnotations(annotations, [inst.annotationInfo.validationId]);
                 }
             }
         });

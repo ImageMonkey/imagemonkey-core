@@ -135,9 +135,7 @@
       elem.progress();
 
       $("#validatedStatisticsPopupContent").append(elem);
-    }
-
-    $("#validatedStatisticsButton").removeClass("disabled");
+    }    
   }
 
   function getValidatedStatistics() {
@@ -151,6 +149,7 @@
       success: function(d) {
         if(d !== null)
           handleValidatedStatisticsRes(d);
+        $("#validatedStatisticsButton").removeClass("disabled");
       }
     });
   }
@@ -289,6 +288,10 @@
     return t;
   }
 
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+
   function loadNextImagesInImageGrid() {
     var from = numOfLastFetchedImg;
     var n = defaultBatchSize;
@@ -351,6 +354,12 @@
 
     new AutoCompletion("#validationQuery", availableLabels);
 
+    $("#randomValidationQueryButton").click(function(e) {
+      var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
+      $("#validationQuery").val(randomElem);
+    });
+
+
     getValidatedStatistics();
   });
 </script>
@@ -364,7 +373,12 @@
     <form class="ui form segment">
       <div class="field">
        <p>Search for images you are interested in</p>
-       <input placeholder="Query..." type="text" id="validationQuery">
+       <div class="ui action input">
+	     <input placeholder="Query..." type="text" id="validationQuery">
+         <div class="ui icon button" id="randomValidationQueryButton">
+           <i class="cube icon"></i>
+         </div>
+	   </div>
       </div>
 
       <div class="ui primary submit button" id="browseValidationGoButton" onclick="populateImageGrid();">Go</div>

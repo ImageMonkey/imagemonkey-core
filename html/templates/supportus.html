@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {{ template "favicon.html" .}}
+  
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>{{ .title }}</title>
+  
+  <link rel="stylesheet" href="css/semantic.min.css?v={{ .assetVersion }}"/>
+  <script src="js/jquery.min.js?v={{ .assetVersion }}"></script>
+  <script src="js/semantic.min.js?v={{ .assetVersion }}"></script> 
+  <link rel="stylesheet" href="css/common.css?v={{ .assetVersion }}"/>
+  <link rel="stylesheet" href="css/common_sub.css?v={{ .assetVersion }}"/>
+  <link rel="stylesheet" href="css/spinner/spinners/3-wave.css?v={{ .assetVersion }}"/>
+  <script src="/js/cookies.min.js?v={{ .assetVersion }}"></script>
+  <script src="js/common.js?v={{ .assetVersion }}"></script> 
+  <script src="js/sentry/sentry.min.js?v={{ .assetVersion }}"></script>
+  <script src="js/imagemonkey/views/supportus.js?v={{ .assetVersion }}"></script> 
+
+<script>
+  $(document).ready(function() {
+    var supportUsView = new SupportUsView({{ .apiBaseUrl }});
+    supportUsView.setSentryDSN();
+    supportUsView.exec();
+  });
+</script>
+</head>
+<body>
+
+  {{ template "menu.html" .}}
+
+  <!-- Page Contents -->
+  <div class="pusher">
+    <div class="ui inverted vertical masthead center aligned segment">
+     {{ template "pointing_menu.html" .}}
+     <div class="ui text container">
+      <h2 class="ui inverted header">
+        Support Us
+      </h2>
+    </div>
+  </div>
+  <div class="ui stackable grid" style="margin-top: 2em;">
+    <div class="row" id="loadingSpinner" style="display: none;">
+      <div class="sk-wave overlay">
+        <div class="sk-rect sk-rect1"></div>
+        <div class="sk-rect sk-rect2"></div>
+        <div class="sk-rect sk-rect3"></div>
+        <div class="sk-rect sk-rect4"></div>
+        <div class="sk-rect sk-rect5"></div>
+      </div>
+    </div>
+	
+	<div class="row">
+      <div class="five wide column"></div>
+	  <div class="six wide aligned column">
+
+        <!--<h1 class="ui center aligned header">Supporting ImageMonkey</h1>-->
+        <h3 class="ui header">USER AND COMPANY DONATIONS</h3>
+        The project lives of the free time of its contributors and maintainers, but also of the donations from the community. The possibility to donate money to the project was mainly created for people that find the project useful, but lack time to contribute to the project in other ways (upload pictures, label/annotate images..etc).<br><br>At the moment the server hosting costs are completely paid out of the main developer's pocket - so the project's future is save for now. However, adding bug fixes, maintaining the server and adding features takes a lot of time and energy - and with family and a full time job there's only so much time in a day to contribute to the project.<br><br>
+		
+		So, if you find this project useful, but lack time to contribute to the dataset and still want to show some appreciation to the project, please consider financially supporting the project.  
+		<br><br>
+		Donations are used for:
+		<div class="ui bulleted list">
+          <div class="item">
+		  Pay for hosting of the ImageMonkey services
+		  </div>
+		  <div class="item">
+		  Adding some additional GPU instances to train neural nets based on the data we collected.
+		  </div>
+		  <div class="item">
+		  Creating financial freedom for the main developer to invest more time into the project.
+		  </div>
+		  <div class="item">
+		  Giving something back to the (power-) users in form of micro payments. 
+		  <br><br> 
+		  There are users out there who invest a lot of time into the project by uploading/labeling/annotating images. They're investing hundreds of hours without getting any financial compensation for that - it's their strong believe in a public open source dataset that drives them. The idea would be to give something back to those people (e.g through micro payments) in order to value their time and effort.<br><br>
+		  This obviously raises some tough problems (e.g abuse prevention; gaming the system; etc..) which aren't completely solved yet - so it's more like a thought experiment at the moment. If there's enough community interest however, it's definitely something that could be implemented in the foreseeable future.
+		  </div>
+		</div>
+
+		<br>
+
+		You can donate monthly via Patreon, or directly via PayPal.
+		<br><br>
+        <h2 class="ui horizontal divider header">
+          <i class="paypal icon"></i>
+          Paypal
+        </h2> 
+		
+		If you want to donate something to the main developer, please select <b>Support ImageMonkey</b> in the below dropdown. If you want to support the experimental micro payment experiment (see explanation above), please select <b>Support Users</b>. In case you want to support both, select <b>Support ImageMonkey + Users</b>.
+		<br><br>
+		<div class="ui labeled input">
+          <label for="amount" class="ui label">$</label>
+          <input type="text" id="amount">
+        </div>
+		<p></p>
+		<div class="ui big labels">
+		  <div class="ui label">
+		    $2
+		  </div>
+		  <div class="ui label">
+			$5
+		  </div>
+		  <div class="ui label">
+			$10
+		  </div>
+		  <div class="ui label">
+			$25
+		  </div>
+		  <div class="ui label">
+			$50
+		  </div>
+		  <div class="ui label" id="customAmountButton" onclick="location.href='#';" style="cursor: pointer;">
+			Give a Custom Amount
+		  </div>
+		</div>
+
+
+		<form class="ui form" action="https://www.paypal.com/cgi-bin/webscr" method="post"> 
+		  <input type="hidden" name="cmd" value="_xclick">
+          <input type="hidden" name="business" value="paypal@imagemonkey.io">
+
+          <div class="field"><br></div>
+		  <div class="field">
+		    <label>Purpose (see explanation above)</label>
+			<div class="ui selection dropdown" id="selectPurposeDropdown">
+			  <input type="hidden" name="item_name" value="site">
+			  <i class="dropdown icon"></i>
+              <div class="default text">Purpose</div>
+              <div class="menu">
+                <div class="item" data-value="site">Support ImageMonkey</div>
+                <div class="item" data-value="users">Suport Users</div>
+				<div class="item" data-value="site+users">Support ImageMonkey + Users</div>
+              </div>
+			</div>
+		  </div>
+		  <div class="field"><br><br></div> 
+		  <div class="field">
+		    <div class="ui disabled labeled input">
+              <label for="totalAmount" class="ui label">Total $</label>
+              <input type="text" id="totalAmount" name="amount">
+            </div>
+	      </div>
+
+          <button class="ui centered blue button" id="submit">Pay with Paypal</button>
+		</form>	
+		<div hidden class="ui warning message" id="warningMsg">
+          <i class="close icon"></i>
+          <div class="header" id="warningMsgText">
+          
+		  </div>
+        </div>
+
+
+		<h2 class="ui horizontal divider header">
+          Patreon
+        </h2> 
+		Patreon is a platform for creators to crowdfund their work via monthly donations.
+		<br><br>
+		<button class="ui red button" onclick="location.href='https://www.patreon.com/imagemonkey';">Become a Patreon</button>
+
+      </div>
+	  <div class="five wide column"></div>
+    </div>
+	<div class="row"></div>
+
+
+
+  </div>
+</div>
+
+{{ template "footer.html" .}}
+
+</body>
+
+</html>

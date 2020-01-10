@@ -1,20 +1,22 @@
 package imagemonkeydb
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgconn"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"fmt"
 	"time"
+	"context"
 )
 
 func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser, apiBaseUrl string) ([]datastructures.ImageCollection, error) {
 	imageCollections := []datastructures.ImageCollection{}
 
-	rows, err := p.db.Query(`SELECT u.name, u.description, COALESCE(q.num, 0), COALESCE(q1.image_key, ''),
+	rows, err := p.db.Query(context.TODO(),
+                            `SELECT u.name, u.description, COALESCE(q.num, 0), COALESCE(q1.image_key, ''),
 							 COALESCE(q1.image_width, 0), COALESCE(q1.image_height, 0), COALESCE(q1.image_unlocked, false)
 							 FROM user_image_collection u
 							 JOIN account a ON a.id = u.account_id
@@ -72,17 +74,18 @@ func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser
 	return imageCollections, nil
 }
 
-func (p *ImageMonkeyDatabase) _addImageCollectionInTransaction(tx *sql.Tx, username string, name string, description string) error {
-	_, err := tx.Exec(`INSERT INTO user_image_collection(account_id, name, description)
+func (p *ImageMonkeyDatabase) _addImageCollectionInTransaction(tx pgx.Tx, username string, name string, description string) error {
+	_, err := tx.Exec(context.TODO(),
+                           `INSERT INTO user_image_collection(account_id, name, description)
 							SELECT id, $2, $3 FROM account WHERE name = $1`, username, name, description)
 	if err != nil {
-		if err, ok := err.(*pq.Error); ok {
+		if err, ok := err.(*pgconn.PgError); ok {
 			if err.Code == "23505" {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return &DuplicateImageCollectionError{Description: "An Image Collection with that name already exists"}
 			}
 		}
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
@@ -90,7 +93,7 @@ func (p *ImageMonkeyDatabase) _addImageCollectionInTransaction(tx *sql.Tx, usern
 }
 
 func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser, name string, description string) error {
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Error("[Image Collections] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -104,7 +107,7 @@ func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser,
 		return err
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Error("[Image Collections] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -114,7 +117,7 @@ func (p *ImageMonkeyDatabase) AddImageCollection(apiUser datastructures.APIUser,
 	return nil
 }
 
-func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx, username string,
+func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx pgx.Tx, username string,
 	imageCollectionName string, imageId string, failIfAlreadyAssigned bool) error {
 
 	currentUnixTimestamp := int64(time.Now().Unix())
@@ -132,18 +135,18 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 						   		 JOIN account a ON u.account_id = a.id
 						   		 WHERE u.name = $1 AND a.name = $2), (SELECT id FROM image WHERE key = $3), $4
 					  %s`, q1)
-	_, err := tx.Exec(q, queryValues...)
+	_, err := tx.Exec(context.TODO(), q, queryValues...)
 	if err != nil {
-		if err, ok := err.(*pq.Error); ok {
+		if err, ok := err.(*pgconn.PgError); ok {
 			if err.Code == "23502" {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return &InvalidImageCollectionInputError{Description: "Invalid Image Collection Input"}
 			} else if err.Code == "23505" {
-				tx.Rollback()
+				tx.Rollback(context.TODO())
 				return &DuplicateImageCollectionError{Description: "Image already assigned to Image Collection"}
 			}
 		}
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		return err
 	}
 
@@ -153,7 +156,7 @@ func (p *ImageMonkeyDatabase) _addImageToImageCollectionInTransaction(tx *sql.Tx
 func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.APIUser,
 	imageCollectionName string, imageId string, failIfAlreadyAssigned bool) error {
 
-	tx, err := p.db.Begin()
+	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
 		log.Error("[Add Image To Collection] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -167,7 +170,7 @@ func (p *ImageMonkeyDatabase) AddImageToImageCollection(apiUser datastructures.A
 		return err
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.TODO())
 	if err != nil {
 		log.Error("[Add Image to Collection] Couldn't commit transaction: ", err.Error())
 		raven.CaptureError(err, nil)

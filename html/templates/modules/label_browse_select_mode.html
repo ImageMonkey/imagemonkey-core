@@ -235,6 +235,10 @@
     $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
   }
 
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+
   $(document).ready(function(){
     var availableLabels = [];
 
@@ -272,6 +276,11 @@
 
 
     new AutoCompletion("#labelQuery", availableLabels);
+
+    $("#randomLabelQueryButton").click(function(e) {
+      var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
+      $("#labelQuery").val(randomElem);
+    });
   });
 </script>
 
@@ -284,7 +293,12 @@
     <form class="ui form segment">
       <div class="field">
        <p>Search for images you are interested in</p>
-       <input placeholder="Query..." type="text" id="labelQuery">
+       <div class="ui action input">
+	     <input placeholder="Query..." type="text" id="labelQuery">
+         <div class="ui icon button" id="randomLabelQueryButton">
+           <i class="cube icon"></i>
+         </div>
+       </div>
       </div>
 
       <div class="ui primary disabled submit button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>

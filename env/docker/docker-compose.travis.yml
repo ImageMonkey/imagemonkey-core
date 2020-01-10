@@ -58,8 +58,8 @@ services:
        dockerfile: env/docker/Dockerfile.api
        cache_from:
          - bbernhard/imagemonkey-api:latest
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
     entrypoint: ./run_api.sh --merge-labels-before-start 
     volumes:
       - ../../geoip_database:/home/imagemonkey/geoip_database

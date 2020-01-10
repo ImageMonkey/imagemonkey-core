@@ -1,29 +1,36 @@
 package imagemonkeydb
 
 import (
-	"database/sql"
+	"context"
 	"github.com/getsentry/raven-go"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type ImageMonkeyDatabase struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
 func NewImageMonkeyDatabase() *ImageMonkeyDatabase {
-    return &ImageMonkeyDatabase{} 
+	return &ImageMonkeyDatabase{}
 }
 
-func (p *ImageMonkeyDatabase) Open(connectionString string) error {
-	var err error
-    p.db, err = sql.Open("postgres", connectionString)
+func (p *ImageMonkeyDatabase) Open(connectionString string, maxNumConnections int32) error {
+	cfg, err := pgxpool.ParseConfig(connectionString)
 	if err != nil {
 		return err
 	}
 
-	err = p.db.Ping()
+	cfg.MaxConns = maxNumConnections
+	
+	p.db, err = pgxpool.ConnectConfig(context.Background(), cfg)
 	if err != nil {
 		return err
 	}
+
+	/*err = p.db.Ping(context.Background())
+	if err != nil {
+		return err
+	}*/
 
 	return nil
 }

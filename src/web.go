@@ -138,6 +138,7 @@ func main() {
 	trendingLabelsRepositoryUrl := flag.String("trending_labels_repository_url", "https://github.com/bbernhard/imagemonkey-trending-labels-test", "Trending Labels Repository")
 	redisAddress := flag.String("redis_address", ":6379", "Address to the Redis server")
 	redisMaxConnections := flag.Int("redis_max_connections", 5, "Max connections to Redis")
+	maxNumOfDatabaseConnections := flag.Int("db_max_connections", 5, "Max. number of database connections")
 
 	webAppIdentifier := "edd77e5fb6fc0775a00d2499b59b75d"
 	browserExtensionAppIdentifier := "adf78e53bd6fc0875a00d2499c59b75"
@@ -245,6 +246,20 @@ func main() {
 
 	assetVersion = strconv.FormatInt(int64(time.Now().Unix()), 10)
 
+
+	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
+
+	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
+	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
+	if err != nil {
+		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+	}
+	defer imageMonkeyDatabase.Close()
+	
+	if *useSentry {
+		imageMonkeyDatabase.InitializeSentry(sentryDsn, sentryEnvironment)
+	}
+
 	//create redis pool
 	redisPool := redis.NewPool(func() (redis.Conn, error) {
 		c, err := redis.Dial("tcp", *redisAddress)
@@ -263,8 +278,8 @@ func main() {
 	psc := redis.PubSubConn{Conn: redisConn}
 	defer psc.Close()
 
-	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"reloadlabels"})...); err != nil {
-        log.Fatal("Couldn't subscribe to topic 'reloadlabels': ", err.Error())
+	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"tasks"})...); err != nil {
+        log.Fatal("Couldn't subscribe to topic 'tasks': ", err.Error())
     }
 
     done := make(chan error, 1)
@@ -276,24 +291,38 @@ func main() {
                 done <- n
                 return
             case redis.Message:
-				log.Info("[Main] Reloading labels")
-				err := labelRepository.Load()
-				if err != nil {
-					log.Error("Couldn't read label map: ", err.Error())
-					raven.CaptureError(err, nil)
-				}
-				words = labelRepository.GetWords()
+				if n.Channel == "tasks" {
+					if string(n.Data) == "reloadlabels" {
+						log.Info("[Main] Reloading labels")
+						err := labelRepository.Load()
+						if err != nil {
+							log.Error("Couldn't read label map: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+						words = labelRepository.GetWords()
 
-				err = metaLabels.Load()
-				if err != nil {
-					log.Error("Couldn't read metalabels map: ", err.Error())
-					raven.CaptureError(err, nil)
-				}
+						err = metaLabels.Load()
+						if err != nil {
+							log.Error("Couldn't read metalabels map: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
 
-				labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
-				if err != nil {
-					log.Error("Couldn't read label refinements: ", err.Error())
-					raven.CaptureError(err, nil)
+						labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
+						if err != nil {
+							log.Error("Couldn't read label refinements: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+					} else if string(n.Data) == "reconnectdb" {
+						log.Info("Reconnecting to Database")
+
+						//close existing db handle + reconnect
+						imageMonkeyDatabase.Close()
+						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
+						if err != nil {
+							raven.CaptureError(err, nil)
+							log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+						}
+					}
 				}
             case redis.Subscription:
                 switch n.Count {
@@ -306,19 +335,6 @@ func main() {
         }
     }()
 
-	imageDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
-
-	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(imageDbConnectionString)
-	if err != nil {
-		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
-	}
-	defer imageMonkeyDatabase.Close()
-
-	if *useSentry {
-		imageMonkeyDatabase.InitializeSentry(sentryDsn, sentryEnvironment)
-	}
-	
 	jwtSecret := commons.MustGetEnv("JWT_SECRET")
 	sessionCookieHandler := NewSessionCookieHandler(imageMonkeyDatabase, jwtSecret)
 
@@ -853,6 +869,33 @@ func main() {
 			})
 		})
 
+		router.GET("/pgstat", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+
+			isAuthenticated := false
+			if sessionInformation.LoggedIn {
+				userInfo, _ := imageMonkeyDatabase.GetUserInfo(sessionInformation.Username)
+				if userInfo.IsModerator && userInfo.Permissions != nil && userInfo.Permissions.CanAccessPgStat {
+					isAuthenticated = true
+				}
+			}
+			
+			if !isAuthenticated {
+				ShowErrorPage(c)
+				return
+			}
+
+			c.HTML(http.StatusOK, "pgstat.html", gin.H{
+				"title": "PostgreSQL Statistics",
+				"clientSecret": clientSecret, 
+				"clientId": clientId, 
+				"apiBaseUrl": apiBaseUrl,
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+				"assetVersion": assetVersion,
+			})
+		})
+
 		router.GET("/image_unlock", func(c *gin.Context) {
 			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
 
@@ -893,6 +936,18 @@ func main() {
 				"models": availableModels,
 				"assetVersion": assetVersion,
 				"apiBaseUrl": apiBaseUrl,
+			})
+		})
+
+		router.GET("/supportus", func(c *gin.Context) {
+			sessionInformation := sessionCookieHandler.GetSessionInformation(c)
+			
+			c.HTML(http.StatusOK, "supportus.html", gin.H{
+				"title": "Support Us",
+				"activeMenuNr": -1,
+				"sessionInformation": sessionInformation,
+				"apiBaseUrl": apiBaseUrl,
+				"assetVersion": assetVersion,
 			})
 		})
 
