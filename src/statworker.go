@@ -22,6 +22,7 @@ func main(){
 	redisMaxConnections := flag.Int("redis_max_connections", 10, "Max connections to Redis")
 	singleshot := flag.Bool("singleshot", false, "Terminate after work is done")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry for error logging")
+	maxNumOfDatabaseConnections := flag.Int("db_max_connections", 5, "Max. number of database connections")
 
 	flag.Parse()
 
@@ -29,7 +30,7 @@ func main(){
 	
 	imageDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(imageDbConnectionString)
+	err = imageMonkeyDatabase.Open(imageDbConnectionString, int32(*maxNumOfDatabaseConnections))
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}

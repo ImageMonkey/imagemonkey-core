@@ -513,6 +513,7 @@ func main() {
 	apiBaseUrl := flag.String("api_base_url", "http://127.0.0.1:8081/", "API Base URL")
 	corsAllowOrigin := flag.String("cors_allow_origin", "*", "CORS Access-Control-Allow-Origin")
 	imageHuntAssetsDir := flag.String("imagehunt_assets_dir", "../img/game-assets/", "ImageHunt Game Assets Directory")
+	maxNumOfDatabaseConnections := flag.Int("db_max_connections", 5, "Max. number of database connections")
 
 	sentryEnvironment := "api"
 
@@ -559,7 +560,7 @@ func main() {
 
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	imageMonkeyDatabase := imagemonkeydb.NewImageMonkeyDatabase()
-	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString)
+	err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
 	}
@@ -600,8 +601,8 @@ func main() {
 	psc := redis.PubSubConn{Conn: redisConn}
 	defer psc.Close()
 
-	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"reloadlabels"})...); err != nil {
-		log.Fatal("Couldn't subscribe to topic 'reloadlabels': ", err.Error())
+	if err := psc.Subscribe(redis.Args{}.AddFlat([]string{"tasks"})...); err != nil {
+		log.Fatal("Couldn't subscribe to topic 'tasks': ", err.Error())
 	}
 
 	done := make(chan error, 1)
@@ -613,25 +614,38 @@ func main() {
 				done <- n
 				return
 			case redis.Message:
-				log.Info("[Main] Reloading labels")
-				err := labelRepository.Load()
-				if err != nil {
-					log.Error("Couldn't read label map: ", err.Error())
-					raven.CaptureError(err, nil)
-				}
-				labelMap = labelRepository.GetMapping()
-				words = labelRepository.GetWords()
+				if n.Channel == "tasks" {
+					if string(n.Data) == "reloadlabels" {
+						log.Info("[Main] Reloading labels")
+						err := labelRepository.Load()
+						if err != nil {
+							log.Error("Couldn't read label map: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+						labelMap = labelRepository.GetMapping()
+						words = labelRepository.GetWords()
 
-				err = metaLabels.Load()
-				if err != nil {
-					log.Error("Couldn't read metalabels map: ", err.Error())
-					raven.CaptureError(err, nil)
-				}
+						err = metaLabels.Load()
+						if err != nil {
+							log.Error("Couldn't read metalabels map: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
 
-				labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
-				if err != nil {
-					log.Error("Couldn't read label refinements: ", err.Error())
-					raven.CaptureError(err, nil)
+						labelRefinementsMap, err = commons.GetLabelRefinementsMap(*labelRefinementsPath)
+						if err != nil {
+							log.Error("Couldn't read label refinements: ", err.Error())
+							raven.CaptureError(err, nil)
+						}
+					} else if string(n.Data) == "reconnectdb" {
+						log.Info("Reconnecting to Database")
+						log.Info(string(n.Data))
+						imageMonkeyDatabase.Close()
+						err = imageMonkeyDatabase.Open(imageMonkeyDbConnectionString, int32(*maxNumOfDatabaseConnections))
+						if err != nil {
+							raven.CaptureError(err, nil)
+							log.Fatal("[Main] Couldn't ping ImageMonkey database: ", err.Error())
+						}
+					}
 				}
 			case redis.Subscription:
 				switch n.Count {

@@ -6,19 +6,20 @@ import (
 	"flag"
 	"github.com/gomodule/redigo/redis"
 	"time"
-	"database/sql"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v4"
 	"encoding/json"
 	"github.com/getsentry/raven-go"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
+	"context"
 )
 
-var db *sql.DB
+var db *pgx.Conn
 
 func subscribe(email string) error {
 	log.Debug("[Main] Got a new subscription: ", email)
-	_,err := db.Exec(`INSERT INTO blog.subscription(email) VALUES ($1)
+	_,err := db.Exec(context.TODO(),
+					 `INSERT INTO blog.subscription(email) VALUES ($1)
 			 		  ON CONFLICT DO NOTHING`, email)
 	if err != nil {
 		raven.CaptureError(err, nil)
@@ -51,16 +52,16 @@ func main(){
 
 	//open database and make sure that we can ping it
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
-	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
+	db, err = pgx.Connect(context.Background(), imageMonkeyDbConnectionString)
 	if err != nil {
 		log.Fatal("[Main] Couldn't open database: ", err.Error())
 	}
 
-	err = db.Ping()
+	err = db.Ping(context.Background())
 	if err != nil {
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 
 
 	//create redis pool

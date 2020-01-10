@@ -1,23 +1,23 @@
 package main
 
 import (
-	"time"
-	log "github.com/sirupsen/logrus"
-	"database/sql"
-	_ "github.com/lib/pq"
-	"github.com/getsentry/raven-go"
+	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
-	"os"
-	"encoding/json"
-	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+	"github.com/gomodule/redigo/redis"
+	"github.com/jackc/pgx/v4"
+	log "github.com/sirupsen/logrus"
+	"os"
+	"time"
 )
 
-var db *sql.DB
+var db *pgx.Conn
 
-func removeOldImageAnnotationCoverage(updateAnnotationCoverageRequest datastructures.UpdateAnnotationCoverageRequest, tx *sql.Tx) error {
+func removeOldImageAnnotationCoverage(updateAnnotationCoverageRequest datastructures.UpdateAnnotationCoverageRequest, tx pgx.Tx) error {
 	var queryValues []interface{}
 	q1 := ""
 	if updateAnnotationCoverageRequest.Uuid != "" {
@@ -30,15 +30,15 @@ func removeOldImageAnnotationCoverage(updateAnnotationCoverageRequest datastruct
 	}
 
 	q := fmt.Sprintf(`DELETE FROM image_annotation_coverage c %s`, q1)
-    _, err := tx.Exec(q, queryValues...)
-    if err != nil {
-    	tx.Rollback()
-    	log.Error("[Removing old Image Annotation coverage] Couldn't remove old image annotation coverage: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
+	_, err := tx.Exec(context.TODO(), q, queryValues...)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Error("[Removing old Image Annotation coverage] Couldn't remove old image annotation coverage: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func calculateImageAnnotationCoverage(updateAnnotationCoverageRequest datastructures.UpdateAnnotationCoverageRequest) error {
@@ -60,35 +60,34 @@ func calculateImageAnnotationCoverage(updateAnnotationCoverageRequest datastruct
 						SELECT image_id, area, annotated_percentage 
 			   				FROM sp_get_image_annotation_coverage(%s)`, q1)
 
-	tx, err := db.Begin()
-    if err != nil {
-    	log.Error("[Calculating Image Annotation coverage] Couldn't begin transaction: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
+	tx, err := db.Begin(context.TODO())
+	if err != nil {
+		log.Error("[Calculating Image Annotation coverage] Couldn't begin transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-    err = removeOldImageAnnotationCoverage(updateAnnotationCoverageRequest, tx)
+	err = removeOldImageAnnotationCoverage(updateAnnotationCoverageRequest, tx)
 	if err != nil { //transaction already rolled back, so nothing to do here
 		return err
 	}
 
-	
-	_, err = tx.Exec(q, queryValues...)
+	_, err = tx.Exec(context.TODO(), q, queryValues...)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(context.TODO())
 		log.Error("[Calculating Image Annotation coverage] Couldn't calculate image annotation coverage", err.Error())
 		raven.CaptureError(err, nil)
 		return err
 	}
 
-	err = tx.Commit()
-    if err != nil {
-    	log.Error("[Calculating Image Annotation coverage] Couldn't commit transaction: ", err.Error())
-        raven.CaptureError(err, nil)
-        return err
-    }
+	err = tx.Commit(context.TODO())
+	if err != nil {
+		log.Error("[Calculating Image Annotation coverage] Couldn't commit transaction: ", err.Error())
+		raven.CaptureError(err, nil)
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func main() {
@@ -108,18 +107,18 @@ func main() {
 
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	var err error
-	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
+	db, err = pgx.Connect(context.Background(), imageMonkeyDbConnectionString)
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal(err)
 	}
 
-	err = db.Ping()
+	err = db.Ping(context.Background())
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal("[Main] Couldn't ping database: ", err.Error())
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 
 	//create redis pool
 	redisPool := redis.NewPool(func() (redis.Conn, error) {
@@ -146,7 +145,7 @@ func main() {
 		//on startup, do a full re-calculate
 		for {
 			err := calculateImageAnnotationCoverage(datastructures.UpdateAnnotationCoverageRequest{})
-			if err == nil { 
+			if err == nil {
 				log.Info("[Main] Completely re-calculated image annotation coverage")
 				break
 			}
@@ -162,36 +161,35 @@ func main() {
 
 			redisConn := redisPool.Get()
 			data, err := redis.Bytes(redisConn.Do("LPOP", commons.UPDATE_IMAGE_ANNOTATION_COVERAGE_TOPIC))
-	    	if err == nil { //data available
-	    		retryImmediately = true //in case there is data available, try it again immediatelly to get more data
+			if err == nil { //data available
+				retryImmediately = true //in case there is data available, try it again immediatelly to get more data
 
-	    		var updateAnnotationCoverageRequest datastructures.UpdateAnnotationCoverageRequest
-		    	err = json.Unmarshal(data, &updateAnnotationCoverageRequest)
-		    	if err != nil{
-		    		retryImmediately = false //in case of an error, wait a bit (maybe it recovers in the meanwhile)
-		    		log.Error("[Main] Couldn't unmarshal request: ", err.Error())
-		    		raven.CaptureError(err, nil)
-		    	} else {
-		    		err := calculateImageAnnotationCoverage(updateAnnotationCoverageRequest)
-		    		if err == nil {
-		    			retryImmediately = false //in case of an error, wait a bit (maybe it recovers in the meanwhile)
-		    			log.Info("[Main] Re-calculated image annotation coverage for ", 
-		    						updateAnnotationCoverageRequest.Type, " with id: ", updateAnnotationCoverageRequest.Uuid)
-		    		}
-		    	}
-	    	}
+				var updateAnnotationCoverageRequest datastructures.UpdateAnnotationCoverageRequest
+				err = json.Unmarshal(data, &updateAnnotationCoverageRequest)
+				if err != nil {
+					retryImmediately = false //in case of an error, wait a bit (maybe it recovers in the meanwhile)
+					log.Error("[Main] Couldn't unmarshal request: ", err.Error())
+					raven.CaptureError(err, nil)
+				} else {
+					err := calculateImageAnnotationCoverage(updateAnnotationCoverageRequest)
+					if err == nil {
+						retryImmediately = false //in case of an error, wait a bit (maybe it recovers in the meanwhile)
+						log.Info("[Main] Re-calculated image annotation coverage for ",
+							updateAnnotationCoverageRequest.Type, " with id: ", updateAnnotationCoverageRequest.Uuid)
+					}
+				}
+			}
 
-	    	redisConn.Close()
+			redisConn.Close()
 
 			if !retryImmediately {
 				time.Sleep((time.Second * 2)) //sleep for two seconds
 			}
 
-
 		}
-		
+
 	} else {
-		select{} //sleep forever, without eating CPU
+		select {} //sleep forever, without eating CPU
 	}
 
 }

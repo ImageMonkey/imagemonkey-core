@@ -6,15 +6,15 @@ import (
 	clients "github.com/bbernhard/imagemonkey-core/clients"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	_ "github.com/lib/pq"	
+	"github.com/jackc/pgx/v4"
 	"time"
-	"database/sql"
 	"flag"
 	"os"
 	"strconv"
+	"context"
 )
 
-var db *sql.DB
+var db *pgx.Conn
 
 func createBackup(from string, to string) error {
 	return os.Rename(from, to)
@@ -37,7 +37,8 @@ type TrendingLabel struct {
 func getTrendingLabelsForDeployment() ([]TrendingLabel, error) {
 	trendingLabels := []TrendingLabel{}
 
-	rows, err := db.Query(`SELECT b.id, s.name, b.rename_to
+	rows, err := db.Query(context.TODO(),
+						  `SELECT b.id, s.name, b.rename_to
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
 					  	   JOIN label_suggestion s ON s.id = t.label_suggestion_id
@@ -72,7 +73,8 @@ func restoreBackupDueToError(labelsDir string, backupPath string) {
 }
 
 func setTrendingLabelBotTaskStateProductive(id int64) error {
-	_, err := db.Exec(`UPDATE trending_label_bot_task 
+	_, err := db.Exec(context.TODO(),
+					   `UPDATE trending_label_bot_task 
 					  	SET state = 'productive'
 						WHERE id = $1`, id)
 	return err
@@ -127,18 +129,18 @@ func main() {
 	var err error
 	//open database and make sure that we can ping it
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
-	db, err = sql.Open("postgres", imageMonkeyDbConnectionString)
+	db, err = pgx.Connect(context.Background(), imageMonkeyDbConnectionString)
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't open database: ", err.Error())
 	}
 
-	err = db.Ping()
+	err = db.Ping(context.Background())
 	if err != nil {
 		raven.CaptureError(err, nil)
 		log.Fatal("Couldn't ping database: ", err.Error())
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 	
 	labelsDownloader := clients.NewLabelsDownloader(*labelsRepositoryUrl, *downloadDir)
 	
@@ -286,7 +288,7 @@ func main() {
 			}
 			
 			redisConn := redisPool.Get()
-			_, err = redisConn.Do("PUBLISH", "reloadlabels", "reloadlabels")
+			_, err = redisConn.Do("PUBLISH", "tasks", "reloadlabels")
 			if err != nil {
 				raven.CaptureError(err, nil)
 				log.Error("Couldn't publish message: ", err.Error())

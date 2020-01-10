@@ -1,22 +1,19 @@
 package imagemonkeydb
 
 import (
-    "github.com/getsentry/raven-go"
-    log "github.com/sirupsen/logrus"
-    datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"context"
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+	log "github.com/sirupsen/logrus"
 	"time"
-    commons "github.com/bbernhard/imagemonkey-core/commons"
-    //parser "../parser"
-    /*"fmt"
-    "errors"
-    "encoding/json"
-    "github.com/lib/pq"*/
 )
 
 func (p *ImageMonkeyDatabase) GetImageHuntTasks(apiUser datastructures.APIUser, apiBaseUrl string) ([]datastructures.ImageHuntTask, error) {
 	imageHuntTasks := []datastructures.ImageHuntTask{}
 
-	rows, err := p.db.Query(`SELECT q.image_width, q.image_height, q.image_unlocked, q.image_key, q.label_accessor, q.label
+	rows, err := p.db.Query(context.TODO(),
+		`SELECT q.image_width, q.image_height, q.image_unlocked, q.image_key, q.label_accessor, q.label
 							 FROM
 							 (
 								SELECT i.width as image_width, i.height as image_height, i.unlocked as image_unlocked, 
@@ -53,22 +50,22 @@ func (p *ImageMonkeyDatabase) GetImageHuntTasks(apiUser datastructures.APIUser, 
 							`, apiUser.Name)
 	if err != nil {
 		log.Error("[Get ImageHunt Tasks] Couldn't get tasks: ", err.Error())
-        raven.CaptureError(err, nil)
-        return imageHuntTasks, err
+		raven.CaptureError(err, nil)
+		return imageHuntTasks, err
 	}
 
-	defer rows.Close() 
+	defer rows.Close()
 
 	for rows.Next() {
 		var imageHuntTask datastructures.ImageHuntTask
 		var imageHuntTaskImage datastructures.ImageHuntTaskImage
 
-		err = rows.Scan(&imageHuntTaskImage.Width, &imageHuntTaskImage.Height, &imageHuntTaskImage.Unlocked, 
-							&imageHuntTaskImage.Id, &imageHuntTask.Label.Accessor, &imageHuntTask.Label.Name)
+		err = rows.Scan(&imageHuntTaskImage.Width, &imageHuntTaskImage.Height, &imageHuntTaskImage.Unlocked,
+			&imageHuntTaskImage.Id, &imageHuntTask.Label.Accessor, &imageHuntTask.Label.Name)
 		if err != nil {
 			log.Error("[Get ImageHunt Tasks] Couldn't scan tasks: ", err.Error())
-        	raven.CaptureError(err, nil)
-        	return imageHuntTasks, err
+			raven.CaptureError(err, nil)
+			return imageHuntTasks, err
 		}
 
 		if imageHuntTaskImage.Id != "" {
@@ -99,10 +96,11 @@ func isValidationValid(numOfValid int, numOfInvalid int) bool {
 }
 
 func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, apiBaseUrl string,
-												numOfAvailableLabels int, utcOffset int64) (datastructures.ImageHuntStats, error) {
+	numOfAvailableLabels int, utcOffset int64) (datastructures.ImageHuntStats, error) {
 	var imageHuntStats datastructures.ImageHuntStats
 
-	rows, err := p.db.Query(`SELECT count(*) 
+	rows, err := p.db.Query(context.TODO(),
+		`SELECT count(*) 
 							FROM imagehunt_task h
 							JOIN image_validation v ON v.id = h.image_validation_id
 							JOIN user_image u ON u.image_id = v.image_id
@@ -111,8 +109,8 @@ func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, 
 
 	if err != nil {
 		log.Error("[Get ImageHunt Stats] Couldn't get stats: ", err.Error())
-        raven.CaptureError(err, nil)
-        return imageHuntStats, err
+		raven.CaptureError(err, nil)
+		return imageHuntStats, err
 	}
 
 	defer rows.Close()
@@ -121,15 +119,15 @@ func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, 
 		err = rows.Scan(&imageHuntStats.Stars)
 		if err != nil {
 			log.Error("[Get ImageHunt Stats] Couldn't scan row: ", err.Error())
-        	raven.CaptureError(err, nil)
-        	return imageHuntStats, err
+			raven.CaptureError(err, nil)
+			return imageHuntStats, err
 		}
 	}
 
 	rows.Close()
 
-
-	rows, err = p.db.Query(`SELECT h.created, v.num_of_valid, v.num_of_invalid
+	rows, err = p.db.Query(context.TODO(),
+		`SELECT h.created, v.num_of_valid, v.num_of_invalid
 								FROM image_validation v 
 								JOIN imagehunt_task h ON h.image_validation_id = v.id 
 								JOIN user_image u ON u.image_id = v.image_id
@@ -139,8 +137,8 @@ func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, 
 
 	if err != nil {
 		log.Error("[Get ImageHunt Stats] Couldn't get detailed stats: ", err.Error())
-        raven.CaptureError(err, nil)
-        return imageHuntStats, err
+		raven.CaptureError(err, nil)
+		return imageHuntStats, err
 	}
 
 	defer rows.Close()
@@ -154,29 +152,27 @@ func (p *ImageMonkeyDatabase) GetImageHuntStats(apiUser datastructures.APIUser, 
 		err = rows.Scan(&created, &numOfValid, &numOfInvalid)
 		if err != nil {
 			log.Error("[Get ImageHunt Stats] Couldn't scan detailed row: ", err.Error())
-        	raven.CaptureError(err, nil)
-        	return imageHuntStats, err
+			raven.CaptureError(err, nil)
+			return imageHuntStats, err
 		}
 
-		t := time.Unix(created, 0) //unix timestamp -> time
-		t.Add(time.Duration(utcOffset * 10^9)) //add utc offset (in ns)
+		t := time.Unix(created, 0)             //unix timestamp -> time
+		t.Add(time.Duration(utcOffset*10 ^ 9)) //add utc offset (in ns)
 		isValid := isValidationValid(numOfValid, numOfInvalid)
 
 		if isValid {
 			achievementsGenerator.Add(t)
-			
 
 		}
-		
+
 	}
 
 	imageHuntStats.Achievements, err = achievementsGenerator.GetAchievements(apiBaseUrl)
 	if err != nil {
 		log.Error("[Get ImageHunt Stats] Couldn't get achievements: ", err.Error())
-        raven.CaptureError(err, nil)
-        return imageHuntStats, err
+		raven.CaptureError(err, nil)
+		return imageHuntStats, err
 	}
-
 
 	return imageHuntStats, nil
 }
