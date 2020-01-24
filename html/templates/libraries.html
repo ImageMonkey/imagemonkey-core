@@ -58,9 +58,9 @@
     <div class="ui text container">
 
       <div class="row">
-        One of the best things about ImageMonkey is our tight integration with Machine learning frameworks like <a href="https://www.tensorflow.org/">Tensorflow</a> and <a href="https://github.com/matterport/Mask_RCNN">Mask RCNN</a>.<br>You want to train your own image classifier based on the ImageMonkey dataset?<br> <br>
-        It's as easy as that:<br><br>
-        <b>CPU version</b>
+        <p>One of the best things about ImageMonkey is our tight integration with Machine learning frameworks like <a href="https://www.tensorflow.org/">Tensorflow</a> and <a href="https://github.com/matterport/Mask_RCNN">Mask RCNN</a>.<br>You want to train your own image classifier based on the ImageMonkey dataset?<br> <br>
+        It's as easy as that:</p><br><br>
+        <p><b>CPU version:</b></p>
         <div class="ui segment">
           <pre><code class="bash">
     docker pull bbernhard/imagemonkey-train:latest
@@ -68,7 +68,7 @@
           </code></pre>
         </div>
         <br>
-        <b>GPU version</b>
+        <p><b>GPU version:</b></p>
         <div class="ui segment">
           <pre><code class="bash">
     docker pull bbernhard/imagemonkey-train:latest-gpu
@@ -76,10 +76,10 @@
           </code></pre>
         </div>
         <br>
-        This will download and run a docker image where we've already configured tensorflow and MaskRCNN to work seamlessly with ImageMonkey. 
+        <p>This will download and run a docker image where we've already configured tensorflow and MaskRCNN to work seamlessly with ImageMonkey. 
         After you've started the docker container, use the <strong>monkey</strong> script to interact with ImageMonkey dataset. <br><br>
 
-        Here's a list of all available commands:  
+        Here's a list of all available commands:</p>  
 
         <div class="ui segment">
           <pre><code class="bash">
@@ -99,8 +99,8 @@
 
         <h1 class="ui header">Example</h1>
 
-        Let's assume you want to train your image classifier on all images that are labeled with dog or cat. 
-        Then simply run 
+        <p>Let's assume you want to train your image classifier on all images that are labeled with dog or cat. 
+        Then simply run </p>
 
         <div class="ui segment">
           <pre><code class="bash">
@@ -108,27 +108,27 @@
           </code></pre>
         </div>
         <br>
-        lean back and go get yourself a coffee ;-)
+        <p>lean back and go get yourself a coffee ;-)</p>
         <br><br>
-        The script automatically downloads all ImageMonkey images that are labeled with dog or cat and uses transfer learning to retrain an 
+        <p>The script automatically downloads all ImageMonkey images that are labeled with dog or cat and uses transfer learning to retrain an 
         existing image classifier (inception v3) on these labels.
         <br><br>
         Umm, wait, I don't want to train an image classifier - I rather want to train a neural net that is able to do object segmentation. 
-        Nothing easier than that. Simply change the type 
+        Nothing easier than that. Simply change the type </p>
 
         <div class="ui segment">
           <pre><code class="bash">
       monkey train --labels="cat|dog" --type="object-segmentation"
           </code></pre>
         </div> 
-        and MaskRCNN will be used instead. 
+        <p>and MaskRCNN will be used instead. </p>
 
 
 
         <br><br><br>
-        <h1>P.S.</h1>
-        In case you want to access ImageMonkey via Python, have a look at our <a href="https://github.com/ImageMonkey/imagemonkey-libs">Python library</a>. 
-        But keep in mind, the library is still in an alpha stage and the API might change at any point!
+        <h1 class="ui header">P.S.</h1>
+        <p>In case you want to access ImageMonkey via Python, have a look at our <a href="https://github.com/ImageMonkey/imagemonkey-libs">Python library</a>. 
+        But keep in mind, the library is still in an alpha stage and the API might change at any point!</p>
       </div>
     </div>
   </div>
