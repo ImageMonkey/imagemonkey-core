@@ -23,6 +23,8 @@
   <script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
   <script src="js/jquery-ui.min.js?v={{ .assetVersion }}"></script>
   <link rel="stylesheet" href="css/jquery-ui.css?v={{ .assetVersion }}">
+  <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
+
 
   <style>
   .justified {
@@ -38,8 +40,7 @@
   </style>
 
   <script>
-  $(document).ready(function(){
-    var sampleExportQueries = [];
+  $(document).ready(function() {
     var canvas = [];
     var geometry, data;
     var numOfLastFetchedImg = 0;
@@ -77,7 +78,7 @@
       //return "https://api.imagemonkey.io/v1/donation/" + imageId;
     }
 
-    function getSelectDataType(){
+    function getSelectDataType() {
       var radioButtonId = $("#selectDataType :radio:checked").attr('id');
       if(radioButtonId === "browseDataRadioCheckbox"){
         return "browse";
@@ -88,11 +89,15 @@
       return "";
     }
 
-    function isAnnotationsOnlyChecked(){
+    function isAnnotationsOnlyChecked() {
       return $("#annotationsOnlyCheckbox").checkbox("is checked");
     }
 
-    function onCanvasClicked(data){
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+
+    function onCanvasClicked(data) {
       var jsonStr = JSON.stringify(data, null, 2);
       $("#detailedDataStructure").text(jsonStr);
 
@@ -112,19 +117,19 @@
       $("#browseShowDetailedDlg").modal('setting', { detachable:false }).modal("show");
     }
 
-    function drawAnnotationsCallback(canvas, annotations, scaleFactor){
+    function drawAnnotationsCallback(canvas, annotations, scaleFactor) {
       if(annotations !== undefined)
         canvas.drawAnnotations(annotations, scaleFactor);
     }
 
-    function newCanvasItem(id, top, left, width, height){
+    function newCanvasItem(id, top, left, width, height) {
       var d = ('<div class="canvas-wrapper" style="width: ' + width 
           +'px; height: ' + height + 'px; top: ' 
           + top  + 'px; left: ' +  left + 'px"><canvas id="' + id +'"></canvas></div>');
       return d;
     }
 
-    function loadNext(){
+    function loadNext() {
       var from = numOfLastFetchedImg;
       var n = defaultBatchSize;
       if((numOfLastFetchedImg + defaultBatchSize) > data.length){
@@ -157,60 +162,10 @@
 
     }
 
-    function split(val) {
-      return val.split( / \s*/ );
-    }
-    function extractLast(term) {
-      return split(term).pop();
-    }
-
-    $("#query")
-      // don't navigate away from the field on tab when selecting an item
-      .on("keydown", function(event) {
-        if (event.keyCode === $.ui.keyCode.TAB &&
-          $(this).autocomplete("instance").menu.active) {
-          event.preventDefault();
-      }
-    })
-      .autocomplete({
-        minLength: 0,
-        source: function(request, response) {
-          // delegate back to autocomplete, but extract the last term
-          response($.ui.autocomplete.filter(
-            availableLabels, extractLast(request.term)));
-        },
-        focus: function() {
-          // prevent value inserted on focus
-          return false;
-        },
-        select: function(event, ui) {
-          var terms = split(this.value);
-          // remove the current input
-          terms.pop();
-          // add the selected item
-          terms.push(ui.item.value);
-          // add placeholder to get the comma-and-space at the end
-          terms.push("");
-          this.value = terms.join(" ");
-          return false;
-        }
-      });
+    new AutoCompletion("#query", availableLabels);
 
 
-      $("#randomButton").click(function(e) {
-        var pos = randomIntBetweenInterval(0, (sampleExportQueries.length - 1));
-        $("#query").val(sampleExportQueries[pos]);
-        $("#goButton").trigger("click");
-      });
-
-      
-      sampleExportQueries.push("dog | cat");
-      sampleExportQueries.push("dog.has = 'mouth' | cat");
-      sampleExportQueries.push("dog.size = 'big' | dog.size = 'small'");
-      sampleExportQueries.push("dog.size = 'big' | dog.breed = 'Labrador'");
-
-
-      function loadData(query, annotationsOnly){
+      function loadData(query, annotationsOnly) {
         $("#dataStructureContainer").hide();
         $("#canvasContainer").hide();
         $("#loadingIndicator").show();
@@ -271,11 +226,16 @@
             $('#loadingIndicator').hide();
             clearCanvasContainer();
           }
-      });
-}
+        });
+      }
 
   $("#goButton").click(function(e) {
     loadData($("#query").val(), isAnnotationsOnlyChecked());
+  });
+
+  $("#randomExportQueryButton").click(function(e) {
+    var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
+    $("#query").val(randomElem);
   });
 
   //in case there are URL parameters prodvided, load when document
@@ -307,12 +267,17 @@
     <div class="row">
     </div>
     <div class="row">
-      <div class="eight wide column">
+      <div class="eight wide center aligned column">
         <form class="ui form segment">
           <div class="field">
-           <p>Select the data you are interested in</p>
-           <input placeholder="Query..." type="text" id="query">
-          </div>
+            <p class="default-text">Query the data you are interested in</p>
+            <div class="ui action input">
+		      <input placeholder="Query..." type="text" id="query">
+              <div class="ui icon button" id="randomExportQueryButton">
+                <i class="cube icon"></i>
+              </div>
+			</div>
+		  </div>
 
           <div class="inline fields">
             <div class="field">
@@ -338,7 +303,6 @@
           </div>
         </div>
         <div class="ui primary submit button" id="goButton">Go</div>
-        <div class="ui button" id="randomButton">Random</div>
         <p class="ui error message"></p>
 
 
