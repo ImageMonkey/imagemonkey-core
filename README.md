@@ -26,7 +26,7 @@ The following section contains some notes on how to set up your own instance to 
 This should only give you an idea how you *could* configure your system. Of course you are totally free in choosing 
 a different linux distribution, tools and scripts. If you are only interested in how to compile ImageMonkey, then you can jump directly to the *Build Application* section 
 
-*Info:* Some commands are distribution (Debian 9.1) specific and may not work on your system. 
+*Info:* Some commands are distribution (Debian 10) specific and may not work on your system. 
 
 ### Base System Configuration ###
 
