@@ -214,15 +214,21 @@
               infiniteScroll.activate();
               $("#loadingIndicator").hide();
             }
-            $('#browseSyntaxErrorMessage').hide();
+            
+            if(data.length === 0) {
+              $("#errorMessage").text("No images found for this label expression - please try another expression!");
+              $("#errorMessage").show();
+            } else {
+              $("#errorMessage").hide();
+            }
 
             
           },
           error: function(xhr, status, error) {
             var err = JSON.parse(xhr.responseText)["error"];
-            var obj = $('#browseSyntaxErrorMessage').text(err);
+            var obj = $('#errorMessage').text(err);
             obj.html(obj.html().replace(/\n/g,'<br/>'));
-            $('#browseSyntaxErrorMessage').show(200);
+            $('#errorMessage').show(200);
             $('#loadingIndicator').hide();
             clearCanvasContainer();
           }
@@ -241,7 +247,8 @@
   //in case there are URL parameters prodvided, load when document
   //gets loaded.
   {{if ne .queryInfo.Query "" }}
-    loadData({{.queryInfo.Query}}, {{.queryInfo.AnnotationsOnly}})
+    loadData({{.queryInfo.Query}}, {{.queryInfo.AnnotationsOnly}});
+    $("#query").val({{.queryInfo.Query}});
   {{ end }}
 
 });
@@ -308,7 +315,7 @@
 
       </form>
 
-      <div class="ui warning message" hidden id="browseSyntaxErrorMessage">
+      <div class="ui warning message" hidden id="errorMessage">
         <i class="close icon"></i>
         <div class="header"></div>
       </div>
