@@ -782,3 +782,14 @@ type PgStatStatementResult struct {
 	Avg   float64 `json:"avg"`
 	Query string  `json:"query"`
 }
+
+type ContributionProgress struct {
+	Count int    `json:"count"`
+	Date  string `json:"date"`
+}
+
+type TotalContributionProgress struct {
+	Donations   []ContributionProgress `json:"donations"`
+	Labels      []ContributionProgress `json:"labels"`
+	Validations []ContributionProgress `json:"validations"`
+}

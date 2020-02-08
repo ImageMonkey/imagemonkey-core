@@ -697,6 +697,15 @@ func main() {
 				"assetVersion": assetVersion,
 			})
 		})
+		router.GET("/statistics/contributions", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "contribution_statistics.html", gin.H{
+				"title": "Total Contributions",
+				"activeMenuNr": -1,
+				"apiBaseUrl": apiBaseUrl,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
+			})
+		})
 		router.GET("/explore", func(c *gin.Context) {
 			type QueryInfo struct {
 				Query string

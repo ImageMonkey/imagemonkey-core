@@ -3216,6 +3216,16 @@ func main() {
 			c.JSON(200, validatedStatistics)
 		})
 
+		router.GET("/v1/statistics/contributions", func(c *gin.Context) {
+			totalProgress, err := imageMonkeyDatabase.GetTotalContributions()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			c.JSON(200, totalProgress)
+		})
+
 		/*router.GET("/v1/activity/validation", func(c *gin.Context) {
 			//currently only last-month is allowed as period
 			activity, err := getValidationActivity("last-month")
