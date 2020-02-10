@@ -10,6 +10,8 @@ var ContributionStatisticsView = (function() {
                     label: "Donations",
                     fill: false,
                     borderColor: "black",
+                    borderWidth: 3,
+                    pointRadius: 0
                 },
                 {
                     data: [],
@@ -17,6 +19,8 @@ var ContributionStatisticsView = (function() {
                     label: "Labeled Objects",
                     fill: false,
                     borderColor: "violet",
+                    borderWidth: 3,
+                    pointRadius: 0
                 },
                 {
                     data: [],
@@ -24,6 +28,17 @@ var ContributionStatisticsView = (function() {
                     label: "Validations",
                     fill: false,
                     borderColor: "red",
+                    borderWidth: 3,
+                    pointRadius: 0
+                },
+                {
+                    data: [],
+                    backgroundColor: "blue",
+                    label: "Annotations",
+                    fill: false,
+                    borderColor: "blue",
+                    borderWidth: 3,
+                    pointRadius: 0
                 }
             ],
 
@@ -40,8 +55,9 @@ var ContributionStatisticsView = (function() {
             scales: {
                 xAxes: [{
                     type: "time",
+                    distribution: 'series',
                     time: {
-                        unit: "day"
+                        unit: "quarter"
                     },
                     ticks: {
                         fontColor: "black",
@@ -79,24 +95,39 @@ var ContributionStatisticsView = (function() {
                 const imageDonations = data["donations"];
                 const imageLabels = data["labels"];
                 const imageValidations = data["validations"];
+                const imageAnnotations = data["annotations"];
                 for (var i = 0; i < imageDonations.length; i++) {
                     totalContributionsChartConfig.data.datasets[0].data.push({
                         x: moment(imageDonations[i].date, "YYYY-MM-DD"),
                         y: imageDonations[i].count
                     });
                 }
+                totalContributionsChartConfig.data.datasets[0].data = simplify(totalContributionsChartConfig.data.datasets[0].data);
+
                 for (var i = 0; i < imageLabels.length; i++) {
                     totalContributionsChartConfig.data.datasets[1].data.push({
                         x: moment(imageLabels[i].date, "YYYY-MM-DD"),
                         y: imageLabels[i].count
                     });
                 }
+                totalContributionsChartConfig.data.datasets[1].data = simplify(totalContributionsChartConfig.data.datasets[1].data);
+
                 for (var i = 0; i < imageValidations.length; i++) {
                     totalContributionsChartConfig.data.datasets[2].data.push({
                         x: moment(imageValidations[i].date, "YYYY-MM-DD"),
                         y: imageValidations[i].count
                     });
                 }
+                totalContributionsChartConfig.data.datasets[2].data = simplify(totalContributionsChartConfig.data.datasets[2].data);
+
+                for (var i = 0; i < imageAnnotations.length; i++) {
+                    totalContributionsChartConfig.data.datasets[3].data.push({
+                        x: moment(imageAnnotations[i].date, "YYYY-MM-DD"),
+                        y: imageAnnotations[i].count
+                    });
+                }
+                totalContributionsChartConfig.data.datasets[3].data = simplify(totalContributionsChartConfig.data.datasets[3].data);
+
                 var totalContributionsChartCtx = document.getElementById("totalContributionsChart").getContext("2d");
                 window.totalContributionsChart = new Chart(totalContributionsChartCtx, totalContributionsChartConfig);
 
@@ -104,7 +135,6 @@ var ContributionStatisticsView = (function() {
                 Sentry.captureException(e);
             });
         $("#loadingSpinner").hide();
-
 
     }
 

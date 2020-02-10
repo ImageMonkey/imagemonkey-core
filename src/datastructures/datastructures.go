@@ -792,4 +792,5 @@ type TotalContributionProgress struct {
 	Donations   []ContributionProgress `json:"donations"`
 	Labels      []ContributionProgress `json:"labels"`
 	Validations []ContributionProgress `json:"validations"`
+	Annotations []ContributionProgress `json:"annotations"`
 }

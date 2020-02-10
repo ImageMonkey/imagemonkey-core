@@ -9,6 +9,7 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/jackc/pgx/v4"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 func (p *ImageMonkeyDatabase) GetNumOfDonatedImages() (int64, error) {
@@ -90,6 +91,9 @@ func (p *ImageMonkeyDatabase) GetAnnotationStatistics(period string) ([]datastru
                             UNION ALL 
                             SELECT sys_period FROM image_annotation h1
                             WHERE date(lower(h1.sys_period)) IN (SELECT date FROM dates)
+							UNION ALL
+							SELECT sys_period FROM image_annotation_suggestion h2
+							WHERE date(lower(h2.sys_period)) IN (SELECT date FROM dates)
                            )
                           SELECT to_char(date(date), 'YYYY-MM-DD'),
                            ( SELECT count(*) FROM num_of_annotations s
@@ -1369,6 +1373,38 @@ func getTotalDonationsProgress(tx pgx.Tx) ([]datastructures.ContributionProgress
 		contributionProgress = append(contributionProgress, c)
 	}
 
+	rows.Close()
+
+	var numOfImagesWithoutTimestamp int = 0
+	err = tx.QueryRow(context.TODO(),
+			"SELECT count(*) FROM image WHERE sys_period is null").Scan(&numOfImagesWithoutTimestamp)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Error("[Total Image Donations Progress] Couldn't scan total image donations progress without timesamp: ", err.Error())
+		raven.CaptureError(err, nil)
+		return contributionProgress, err
+	}
+
+	//the sys_period column in the image table was introduced later, so there are a bunch
+	//of entries in the table without a timestamp (i.e sys_period = null). The following code
+	//handles those entries
+	if numOfImagesWithoutTimestamp > 0 && len(contributionProgress) > 0 {
+		for i, _ := range contributionProgress {
+			contributionProgress[i].Count += numOfImagesWithoutTimestamp
+		}
+		
+		date, err := time.Parse("2006-01-02", contributionProgress[0].Date)
+		if err != nil {
+			tx.Rollback(context.TODO())
+			log.Error("[Total Image Donations Progress] Couldn't parse date: ", err.Error())
+			raven.CaptureError(err, nil)
+			return contributionProgress, err
+		}
+		prevDate := date.AddDate(0, 0, -1)
+		prevDateStr := prevDate.Format("2006-01-02")
+		totalContributionProgress := append([]datastructures.ContributionProgress{{Date: prevDateStr, Count: numOfImagesWithoutTimestamp}}, contributionProgress...)
+		return totalContributionProgress, nil
+	}
 	return contributionProgress, nil
 }
 
@@ -1377,17 +1413,20 @@ func getTotalLabelsProgress(tx pgx.Tx) ([]datastructures.ContributionProgress, e
 
 	rows, err := tx.Query(context.TODO(),
 		`WITH contributions_per_day AS (
-							 	SELECT date(lower(sys_period))::text as date, 
-								count(*) as count
-							 	FROM image_validation
-							 	GROUP BY date(lower(sys_period))
+							 	SELECT date, count(*) as count
+								FROM
+								(
+									SELECT date(lower(sys_period))::text as date, 
+									uuid as uuid
+							 		FROM image_validation
 
-								UNION ALL
+									UNION ALL
 
-								SELECT date(lower(sys_period))::text as date, 
-								count(*) as count
-							 	FROM image_label_suggestion
-							 	GROUP BY date(lower(sys_period))
+									SELECT date(lower(sys_period))::text as date, 
+									uuid as uuid
+							 		FROM image_label_suggestion
+							 	) q
+								GROUP BY date 
 							 )
 							 SELECT c1.date, SUM(c2.count) as sum
 							 FROM contributions_per_day c1
@@ -1410,6 +1449,59 @@ func getTotalLabelsProgress(tx pgx.Tx) ([]datastructures.ContributionProgress, e
 		if err != nil {
 			tx.Rollback(context.TODO())
 			log.Error("[Total Image Labels Progress] Couldn't scan total image labels progress: ", err.Error())
+			raven.CaptureError(err, nil)
+			return contributionProgress, err
+		}
+
+		contributionProgress = append(contributionProgress, c)
+	}
+
+	return contributionProgress, nil
+}
+
+func getTotalAnnotationsProgress(tx pgx.Tx) ([]datastructures.ContributionProgress, error) {
+	contributionProgress := []datastructures.ContributionProgress{}
+
+	rows, err := tx.Query(context.TODO(),
+		`WITH contributions_per_day AS (
+								SELECT date, count(*) as count
+								FROM
+								(
+							 		SELECT date(lower(sys_period))::text as date,
+									d.uuid as uuid
+									FROM annotation_data d
+									JOIN image_annotation a ON a.id = d.image_annotation_id
+
+									UNION ALL
+
+									SELECT date(lower(sys_period))::text as date,
+									d.uuid as uuid
+							 		FROM annotation_suggestion_data d
+									JOIN image_annotation_suggestion a ON a.id = d.image_annotation_suggestion_id
+							 	) q
+								GROUP BY date 
+							 )
+							 SELECT c1.date, SUM(c2.count) as sum
+							 FROM contributions_per_day c1
+							 INNER JOIN contributions_per_day c2 on c1.date >= c2.date
+							 GROUP BY c1.date, c1.count
+							 ORDER BY c1.date
+							`)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Error("[Total Image Annotations Progress] Couldn't get total image annotations progress: ", err.Error())
+		raven.CaptureError(err, nil)
+		return contributionProgress, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var c datastructures.ContributionProgress
+		err = rows.Scan(&c.Date, &c.Count)
+		if err != nil {
+			tx.Rollback(context.TODO())
+			log.Error("[Total Image Annotations Progress] Couldn't scan total image annotations progress: ", err.Error())
 			raven.CaptureError(err, nil)
 			return contributionProgress, err
 		}
@@ -1482,6 +1574,11 @@ func (p *ImageMonkeyDatabase) GetTotalContributions() (datastructures.TotalContr
 	}
 
 	totalContributionProgress.Validations, err = getTotalValidationsProgress(tx)
+	if err != nil { //transaction already rolled back, so we can return here
+		return totalContributionProgress, err
+	}
+
+	totalContributionProgress.Annotations, err = getTotalAnnotationsProgress(tx)
 	if err != nil { //transaction already rolled back, so we can return here
 		return totalContributionProgress, err
 	}
