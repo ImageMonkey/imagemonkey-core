@@ -6,9 +6,200 @@
 </description>
     <link>http://myblog.***.***/blog/</link>
     <atom:link href="http://myblog.***.***/blog/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 03 Dec 2017 20:34:08 +0100</pubDate>
-    <lastBuildDate>Sun, 03 Dec 2017 20:34:08 +0100</lastBuildDate>
+    <pubDate>Wed, 12 Feb 2020 21:53:01 +0100</pubDate>
+    <lastBuildDate>Wed, 12 Feb 2020 21:53:01 +0100</lastBuildDate>
     <generator>Jekyll v3.5.2</generator>
+    
+      <item>
+        <title>ImageMonkey reaches the 100k milestone</title>
+        <description>&lt;p&gt;&lt;a href=&quot;https://imagemonkey.io&quot;&gt;ImageMonkey&lt;/a&gt; is a public open source image dataset with powerful APIs and a tight integration of existing machine learning frameworks.&lt;/p&gt;
+
+&lt;p&gt;As of last week it seems that we’ve finally cracked the 100k milestone - the ImageMonkey dataset now contains over 100k CC0 licensed images, ~140k labeled objects, ~25k validations and over 100k annotated objects.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2020-02-09-ImageMonkey-100k/progress.png&quot; alt=&quot;Progress over time&amp;lt;br&amp;gt;(The timestamp for image uploads wasn't there at the beginning,&amp;lt;br&amp;gt;that's why the black line chart is missing some data points)&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;It’s now almost three years ago since I started working on ImageMonkey - at that time mainly to scratch my own itch. Back then, I was working on another project, which I thought had the potential to blow up (actually it flopped totally, but that’s a different story) and for that project I was looking for labeled gym equipment datasets to train a neural net on it. As it turned out annotated images are really hard to find - and it gets even harder if you are looking for a public domain dataset.&lt;/p&gt;
+
+&lt;p&gt;That’s when I thought to myself: Wouldn’t it be great if there exists such a public dataset? A dataset that’s not owned by a big company where you have to fear that at some point they will shut down the service and everything is lost (yeah, looking at you Yahoo). &lt;strong&gt;A dataset created by people for people.&lt;/strong&gt; A dataset where &lt;em&gt;eyerbody&lt;/em&gt; can contribute to. Something that’s easy to use.&lt;/p&gt;
+
+&lt;p&gt;There are millions of people in the world running around with their smartphones, snapping pictures of their dogs, cats and what they have for lunch. Wouldn’t that be great image material for a public domain dataset?&lt;/p&gt;
+
+&lt;p&gt;When creating ImageMonkey one of the primary goals was always simplicity and ease of use. ImageMonkey wasn’t primarily designed to be used by the “hardcore data labeler” (that’s not to say that that we do not provide tools for those as well), it was rather designed to be used the ordinary man and and woman. In order to accomplish that, the whole process of collecting data was split up in different tasks (“task based approach”).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2020-02-09-ImageMonkey-100k/annotation_rework.gif&quot; alt=&quot;Annotating objects&quot; /&gt;&lt;/p&gt;
+
+&lt;center&gt;&lt;img src=&quot;/blog/assets/article_images/2020-02-09-ImageMonkey-100k/validation.gif&quot; width=&quot;50%&quot; alt=&quot;Validating objects&quot; /&gt;&lt;/center&gt;
+
+&lt;p&gt;The traditional worflow of annotating an object usually looks like this:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;collect an image&lt;/li&gt;
+  &lt;li&gt;draw a bounding box around the object of interest&lt;/li&gt;
+  &lt;li&gt;label it appropriately.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;With ImageMonkey it’s different. Every of those tasks can be done individually. You love taking pictures, but don’t want to tag them with labels? No problem, just upload the pictures without labels - that’s perfectly fine. You enjoy labeling images (I’ve heard that some people find that quite relaxing) but don’t want to draw bounding boxes around the objects? That’s fine, just do the labeling. As you can see, the complex task of annotating objects is broken down in much simpler tasks. The cool thing about that is, that it’s now possible to build APIs around those functionalities and use those APIs to create other applications.&lt;/p&gt;
+
+&lt;p&gt;In the &lt;a href=&quot;https://www.youtube.com/watch?v=ji5_MqicxSo&quot;&gt;Last Lecture&lt;/a&gt; (if you haven’t seen it, I highly encourage you to do so), Randy Pausch talks about &lt;em&gt;head fake&lt;/em&gt; - a situation in which someone believes they are learning one thing, but are really learning something different. I am a huge fan of this concept and personally I think it not only works for learning something, but also for &lt;em&gt;doing&lt;/em&gt; something.&lt;/p&gt;
+
+&lt;p&gt;While working on ImageMonkey I tried to make use of head fakes and incorporate them into the software I was building. Then, let’s be honest here: Collecting data for a dataset can be tedious and boring - so why not make it more fun?&lt;/p&gt;
+
+&lt;p&gt;With the ImageMonkey Browser Extension and ImageMonkey - The Game I tried exactly that.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://github.com/bbernhard/imagemonkey-chrome-extension&quot;&gt;ImageMonkey Browser Extension&lt;/a&gt; shows a random validation each time you open a new browser tab. 
+&lt;img src=&quot;/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/google-chrome-extension.gif&quot; alt=&quot;ImageMonkey Browser Extension&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://play.google.com/store/apps/details?id=io.imagemonkey.thegame&quot;&gt;ImageMonkey - The Game&lt;/a&gt; uses gamification concepts to make image collecting more fun.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/article_images/2020-02-09-ImageMonkey-100k/imagemonkey_thegame.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;powerful-api-and-tight-integrations-of-existing-ml-frameworks&quot;&gt;Powerful API and tight integrations of existing ML frameworks&lt;/h1&gt;
+&lt;p&gt;ImageMonkey’s task based approach made it possible to build a REST API around all its functionality, which not only allows developers to easily export data, but also gives them the possibility to feed back data their own.&lt;/p&gt;
+
+&lt;p&gt;Due to the &lt;a href=&quot;https://imagemonkey.io/libraries&quot;&gt;tight integration&lt;/a&gt; of existing machine learning frameworks like &lt;a href=&quot;https://www.tensorflow.org/&quot;&gt;Tensorflow&lt;/a&gt; and &lt;a href=&quot;https://github.com/matterport/Mask_RCNN&quot;&gt;Mask RCNN&lt;/a&gt; it’s possible to train a neural net for image classification, object detection and object segmentation with just a handful of commands.&lt;/p&gt;
+
+&lt;p&gt;e.g If you want to train a cat/dog image classifier via transfer learning on a pre-trained inception-v3 model, all you need to do is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;bash&quot;&gt;
+      docker pull bbernhard/imagemonkey-train:latest-gpu
+      docker run --runtime=nvidia -it bbernhard/imagemonkey-train:latest-gpu
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;pre&gt;&lt;code class=&quot;bash&quot;&gt;
+      monkey train --labels=&quot;cat|dog&quot; --type=&quot;image-classification&quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The monkey script automatically downloads the necessary data from ImageMonkey, configures the tensorflow pipeline and then starts tensorflow for training. When the training is done, the script spits out a ready-to-go &lt;code&gt;graph.pb&lt;/code&gt; file.&lt;/p&gt;
+
+&lt;h1 id=&quot;what-exactly-is-a-public-open-source-image-dataset&quot;&gt;What exactly is a public open source image dataset?&lt;/h1&gt;
+
+&lt;p&gt;Every line of code that was ever written for the ImageMonkey project is available on &lt;a href=&quot;https://github.com/ImageMonkey&quot;&gt;Github&lt;/a&gt; - i.e if you want to spin up your own (private) ImageMonkey instance for collecting data you can easily do that. But it’s not only that. Every item in the ImageMonkey dataset is licensed under the CC0 license. Which basically means you can do the f*ck you want with it - no strings attached. Furthermore, the whole dataset (i.e the images + an obfuscated database dump) gets uploaded to the internet archive on a regular basis (see &lt;a href=&quot;https://imagemonkey.io/public_backup&quot;&gt;here&lt;/a&gt; for details).&lt;/p&gt;
+
+&lt;h1 id=&quot;whats-next&quot;&gt;What’s next?&lt;/h1&gt;
+
+&lt;p&gt;Hosting ImageMonkey (and all it’s services) costs money. At the moment everything’s running on two big Hetzner bare metal servers (one of them being a GPU instance). And while the server costs are still affordable for me, I would really like to see ImageMonkey getting &lt;a href=&quot;https://imagemonkey.io/supportus&quot;&gt;self sustainable&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Apart from that, I’ll be working on:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;a better annotation editor&lt;/li&gt;
+  &lt;li&gt;improve the ML pipeline to provide models for download on a regular basis&lt;/li&gt;
+  &lt;li&gt;some general improvements&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;thanks&quot;&gt;Thanks&lt;/h1&gt;
+&lt;p&gt;Last but not least I want to thank &lt;a href=&quot;https://github.com/dobkeratops&quot;&gt;@dobkeratops&lt;/a&gt; - ImageMonkey wouldn’t be where it is right now without your help. Thanks a lot for all your contributions!&lt;/p&gt;
+
+&lt;h1 id=&quot;want-to-contribute&quot;&gt;Want to contribute?&lt;/h1&gt;
+&lt;p&gt;Any help is really appreciated - whether it is &lt;a href=&quot;https://github.com/ImageMonkey&quot;&gt;help with the codebase&lt;/a&gt;, &lt;a href=&quot;https://imagemonkey.io/donate&quot;&gt;contributions to the dataset&lt;/a&gt; or &lt;a href=&quot;https://imagemonkey.io/supportus&quot;&gt;financial support&lt;/a&gt;. Let’s create our public image dataset together!&lt;/p&gt;
+
+&lt;script src=&quot;https://code.jquery.com/jquery-3.1.1.slim.min.js&quot; integrity=&quot;sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css&quot; integrity=&quot;sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u&quot; crossorigin=&quot;anonymous&quot; /&gt;
+
+&lt;script src=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js&quot; integrity=&quot;sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+
+&lt;!--&lt;script type=&quot;text/javascript&quot; src=&quot;/assets/js/toast.js&quot;&gt;&lt;/script&gt;--&gt;
+
+&lt;div class=&quot;divider-30&quot;&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Want to read more about ImageMonkey?&lt;/h5&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Subscribe now!&lt;/h5&gt;&lt;/center&gt;
+
+&lt;iframe name=&quot;hiddenFrame&quot; width=&quot;0&quot; height=&quot;0&quot; border=&quot;0&quot; style=&quot;display: none;&quot;&gt;&lt;/iframe&gt;
+&lt;center&gt;&lt;form id=&quot;register-newsletter&quot;&gt;
+    &lt;input id=&quot;email&quot; type=&quot;text&quot; name=&quot;newsletter&quot; required=&quot;&quot; placeholder=&quot;Enter your email address&quot; /&gt;
+    &lt;input type=&quot;submit&quot; class=&quot;btn btn-custom-3 submit-button&quot; value=&quot;SIGN UP&quot; /&gt;
+&lt;/form&gt;&lt;/center&gt;
+&lt;div id=&quot;register-successful&quot; class=&quot;hide&quot; role=&quot;alert&quot;&gt;
+    &lt;button type=&quot;button&quot; class=&quot;close&quot; data-dismiss=&quot;alert&quot; aria-label=&quot;Close&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&amp;times;&lt;/span&gt;&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+$('#register-newsletter').submit(function(e) {
+	subscribe();
+    return false;
+});
+
+function validateEmail(email) {
+    var re = /^(([^&lt;&gt;()\[\]\\.,;:\s@&quot;]+(\.[^&lt;&gt;()\[\]\\.,;:\s@&quot;]+)*)|(&quot;.+&quot;))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+}
+
+function postEmail(email){
+    var url = encodeURI(&quot;https://api.imagemonkey.io/v1/blog/subscribe&quot;);
+    $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'POST',
+        data: JSON.stringify({email: email}),
+        complete: function(data){
+        },
+        success: function(data){
+            $('#register-successful').html('&lt;center&gt;Successfully signed up&lt;/center&gt;');
+            $('#register-successful').removeClass('hide').addClass('alert alert-success').fadeTo(2000, 500).slideUp(500, function(){
+                $(&quot;#register-successful&quot;).slideUp(500);
+            });
+        },
+        error: function (xhr, status, errorThrown){
+            $('#register-successful').html(&quot;&lt;center&gt;Couldn't sign up&lt;/center&gt;&quot;);
+            $('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+                $(&quot;#register-successful&quot;).slideUp(500);
+            });
+        }
+    });
+}
+
+
+function subscribe() {
+	var emailAddress = $(&quot;#email&quot;).val();
+    console.log(emailAddress)
+    $(&quot;#register-newsletter&quot;).trigger(&quot;reset&quot;);
+	validateEmail(emailAddress);
+	if (!validateEmail(emailAddress)) {
+		$('#register-successful').html(&quot;&lt;center&gt;Please enter a valid email address&lt;/center&gt;&quot;);
+		$('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+	    	$(&quot;#register-successful&quot;).slideUp(500);
+		});
+		return;
+	}
+
+	postEmail(emailAddress);
+}
+
+&lt;/script&gt;
+
+&lt;style type=&quot;text/css&quot;&gt;
+.submit-button {
+  	color: #fff;
+  	background-color: #57ad68;
+  	border-color: #4cae4c;
+}
+
+.submit-button:hover {
+	color: #fff;
+	background-color: #449d44;
+	border-color: #398439;
+}
+
+.divider-30{ 
+	width:100%; 
+	min-height:1px; 
+	margin-top:30px; 
+	margin-bottom:30px;  
+	display:inline-block; 
+	position:relative;
+}
+&lt;/style&gt;
+
+</description>
+        <pubDate>Sun, 09 Feb 2020 13:34:25 +0100</pubDate>
+        <link>http://myblog.***.***/blog/general/2020/02/09/ImageMonkey-100k-0.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/blog/general/2020/02/09/ImageMonkey-100k-0.html</guid>
+        
+        
+        <category>general</category>
+        
+      </item>
     
       <item>
         <title>We made some progress</title>
