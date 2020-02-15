@@ -34,7 +34,7 @@ var ContributionStatisticsView = (function() {
                 {
                     data: [],
                     backgroundColor: "blue",
-                    label: "Annotations",
+                    label: "Annotated Objects",
                     fill: false,
                     borderColor: "blue",
                     borderWidth: 3,
