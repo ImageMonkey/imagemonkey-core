@@ -281,6 +281,11 @@
       var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
       $("#labelQuery").val(randomElem);
     });
+
+    {{if ne .query "" }}
+      $("#labelQuery").val({{ .query }});
+      $("#browseLabelsGoButton").click();
+    {{ end }}
   });
 </script>
 

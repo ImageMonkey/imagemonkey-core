@@ -485,6 +485,8 @@ func main() {
 				}
 			}
 
+			query := commons.GetUnescapedParamFromUrlParams(c, "query", "")
+
 			title := ""
 			subtitle := ""
 			activeMenuNr := 3
@@ -513,6 +515,7 @@ func main() {
 				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
 				"queryAttributes": parser.GetStaticQueryAttributes(parser.LabelView),
 				"assetVersion": assetVersion,
+				"query": query,
 			})
 		})
 
