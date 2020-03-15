@@ -7,6 +7,8 @@
     {{ if eq .type "object" }}
     settings.setAddLabelHotkey($("#recordAddLabelKeyInput").val());
     settings.setLabelSeparator($('#labelSeparatorDropdown').dropdown('get value'));
+
+    settings.setVimBindingsEnabled($('#vimBindingsCheckbox').checkbox('is checked'));
     {{ end }}
 
     {{ if eq .type "image" }}
@@ -22,6 +24,10 @@
     {{ if eq .type "object" }}
     $("#recordAddLabelKeyInput").val(settings.getAddLabelHotkey());
     $('#labelSeparatorDropdown').dropdown('set selected', settings.getLabelSeparator());
+    if(settings.vimBindingsEnabled())
+      $('#vimBindingsCheckbox').checkbox('set checked');
+    else
+      $('#vimBindingsCheckbox').checkbox('set unchecked');
     {{ end }}
 
     {{ if eq .type "image" }}
@@ -266,6 +272,19 @@
             <option value="|">| (pipe)</option>
             <option value=";">; (semicolon)</option>
           </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="ui raised segment">
+      <div class="ui grid">
+	    <div class="eight wide column">
+          <b>Vim Mode</b>
+		  <p>Enable/Disable Vim Bindings</p>
+          <div class="ui checkbox" id="vimBindingsCheckbox">
+            <input type="checkbox">
+            <label>Vim Bindings</label>
+          </div> 
         </div>
       </div>
     </div>
