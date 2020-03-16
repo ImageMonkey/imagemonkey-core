@@ -948,6 +948,12 @@
     
     if(!new Settings().vimBindingsEnabled())
       labelBrowseModeVimBindings.disableListeners();
+	
+    Mousetrap.bind("alt+enter", function(e, combo) {  
+      if($("#addLabelSuggestionButton").is(':visible')) {
+        $("#doneButton").click();
+      }
+    });
   });
 </script>
 </head>
