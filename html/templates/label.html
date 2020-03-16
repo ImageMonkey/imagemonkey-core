@@ -950,7 +950,7 @@
       labelBrowseModeVimBindings.disableListeners();
 	
     Mousetrap.bind("alt+enter", function(e, combo) {  
-      if($("#addLabelSuggestionButton").is(':visible')) {
+      if($("#addLabelSuggestionButton").is(":visible") || $("#addImageDescriptionButton").is(":visible")) {
         $("#doneButton").click();
       }
     });
