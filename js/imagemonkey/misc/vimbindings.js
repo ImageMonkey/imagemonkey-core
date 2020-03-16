@@ -18,6 +18,7 @@ var LabelBrowseModeVimBindings = (function() {
 	LabelBrowseModeVimBindings.prototype.reset = function() { 
 		this.disableListeners();
 		this.imageIds = [];
+		this.lastSelectedItemIdx = null;
 	}
 
 	LabelBrowseModeVimBindings.prototype.addImageId = function(imageId) { 
