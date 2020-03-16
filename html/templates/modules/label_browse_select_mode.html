@@ -284,10 +284,18 @@
 
 
     new AutoCompletion("#labelQuery", availableLabels);
+    $("#labelQueryForm").form("settings", {keyboardShortcuts: false});
 
     $("#randomLabelQueryButton").click(function(e) {
       var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
       $("#labelQuery").val(randomElem);
+    });
+
+    $("#labelQuery").keyup(function(event) {
+      if(event.keyCode === 13) { //when enter inside input field is pressed
+        event.preventDefault();
+        populateImageGrid();		
+      }
     });
 
     {{if ne .query "" }}
@@ -303,7 +311,7 @@
 <div class="row" id="labelQuerySearchContainer">
   <div class="four wide column"></div>
   <div class="eight wide center aligned column">
-    <form class="ui form segment">
+    <form class="ui form segment" id="labelQueryForm">
       <div class="field">
        <p class="default-text">Search for images you are interested in</p>
        <div class="ui action input">
@@ -314,7 +322,7 @@
        </div>
       </div>
 
-      <div class="ui primary disabled submit button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui primary disabled button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>
     </form>
     <p id="numberOfQueryResults"></p>
 

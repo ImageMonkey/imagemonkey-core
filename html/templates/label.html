@@ -343,8 +343,11 @@
 		
       if(new Settings().vimBindingsEnabled()) {
         $("#vimModeStatusBar").show();
+
+        {{ if (eq .sessionInformation.LoggedIn true) }}
         $("#doneButton").hide();
-        $("#addLabelButton").hide();
+        $("#addLabelSuggestionButton").hide();
+        {{ end }}
       } else {
         $("#vimModeStatusBar").hide();
         $("#doneButton").show();
