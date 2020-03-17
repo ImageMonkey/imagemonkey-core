@@ -294,7 +294,8 @@
     $("#labelQuery").keyup(function(event) {
       if(event.keyCode === 13) { //when enter inside input field is pressed
         event.preventDefault();
-        populateImageGrid();		
+        populateImageGrid();
+        $("#labelQuery").blur();		
       }
     });
 
