@@ -36,10 +36,11 @@
   <script src="js/imagemonkey/api.js?v={{ .assetVersion }}"></script>
   <script src="js/sentry/sentry.min.js?v={{ .assetVersion }}"></script>
   <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
+  <script src="js/imagemonkey/misc/vimbindings.js?v={{ .assetVersion }}"></script>
 
   <style type="text/css">
     .canvas-container{margin: 0 auto;}
-
+    .item-selected { border: 5px solid #00ff00; }
   </style>
 
   <script type="text/javascript">
@@ -55,6 +56,7 @@
   var annotationsShown = false;
   var annotationFetchingInProgress = false;
   var introductionTour = null;
+  var labelBrowseModeVimBindings = null; 
 
   buildColorMap();
 
@@ -332,9 +334,26 @@
       $('#doneButton').show();
       $('#labels').show();
       $('#loadingIndicator').hide();
-      $('#labelForm').show();
+      $('#labelForm').show(); 
 
       {{ if eq .type "object" }}
+      {{ if (eq .sessionInformation.LoggedIn true) }}
+      $('#labelSuggestion').focus();
+      {{ end }}
+		
+      if(new Settings().vimBindingsEnabled()) {
+        $("#vimModeStatusBar").show();
+
+        {{ if (eq .sessionInformation.LoggedIn true) }}
+        $("#doneButton").hide();
+        $("#addLabelSuggestionButton").hide();
+        {{ end }}
+      } else {
+        $("#vimModeStatusBar").hide();
+        $("#doneButton").show();
+        $("#addLabelButton").show();
+      }
+	  
       $('#objectsWithoutLabelText').show();
       {{ end }}
 
@@ -817,7 +836,12 @@
       
       {{ if eq .type "object" }}
         if(Object.keys(newlyAddedLabels).length === 0) {
+          {{ if eq .mode "default" }}
           getNextImage("");
+          {{ else }}
+          showHideMainArea(false);
+          showBrowseLabelImageGrid();
+          {{ end }}
         }
         else {
           addLabelsToImage(); 
@@ -915,6 +939,21 @@
     {{ end }}
     
     introductionTour = new Introduction({{ .sessionInformation.LoggedIn }});
+ 
+    {{ if eq .mode "browse" }}
+    labelBrowseModeVimBindings = new LabelBrowseModeVimBindings(LabelBrowseModeVimBindingsMode.Browse);
+    {{ else }}
+    labelBrowseModeVimBindings = new LabelBrowseModeVimBindings(LabelBrowseModeVimBindingsMode.Label);
+    {{ end }}
+    
+    if(!new Settings().vimBindingsEnabled())
+      labelBrowseModeVimBindings.disableListeners();
+	
+    Mousetrap.bind("alt+enter", function(e, combo) {  
+      if($("#addLabelSuggestionButton").is(":visible") || $("#addImageDescriptionButton").is(":visible")) {
+        $("#doneButton").click();
+      }
+    });
   });
 </script>
 </head>
@@ -1104,8 +1143,11 @@
       {{ template "img_info.html" .}}
     </div>
   </div>
+ 
+</div>
 
-
+<div class="ui fluid input" style="display: none;" id="vimModeStatusBar">
+  <input type="text" placeholder="Command..." id="vimModeStatusBarInput" class="mousetrap">
 </div>
 {{ template "footer.html" .}}
   
