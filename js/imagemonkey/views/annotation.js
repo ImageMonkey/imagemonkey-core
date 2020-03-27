@@ -166,6 +166,7 @@ var AnnotationView = (function() {
             this.canvas.fabric().selection = false;
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
+            enableDisableAnnotationsMenu(this.annotator);
         }
 
         var scaleFactor = getCanvasScaleFactor(this.annotationInfo);
@@ -359,8 +360,30 @@ var AnnotationView = (function() {
             }).catch(function() {
                 inst.handleUnannotatedImageResponse(null);
             });
-
     }
+
+    AnnotationView.prototype.loadUnannotatedImageWithNoLabelsFromImageUrl = function(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked) {
+        showHideControls(false, this.annotationInfo.imageUnlocked);
+
+        var data = {
+            uuid: imageId,
+            width: imageWidth,
+            height: imageHeight,
+            validation: {
+                id: null
+            },
+            url: imageUrl,
+            unlocked: imageUnlocked,
+            label: {
+                label: null,
+                sublabel: null,
+                accessor: null
+            }
+        };
+
+        this.handleUnannotatedImageResponse(data);
+    }
+
 
     AnnotationView.prototype.getAnnotationInfo = function() {
         return this.annotationInfo;
@@ -453,6 +476,9 @@ var AnnotationView = (function() {
         });
 
         setLabel($(elem).attr("data-label"), $(elem).attr("data-sublabel"), null);
+        showHideLabelControls();
+        enableDisableAnnotationsMenu(this.annotator);
+
         $(elem).addClass("grey inverted");
 
         //clear existing annotations
@@ -539,19 +565,30 @@ var AnnotationView = (function() {
                     }
                     inst.unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
 
-                    if (inst.unifiedModePopulated === UnifiedModeStates.initialized) {
-                        if (inst.canvas.fabric().backgroundImage && inst.canvas.fabric().backgroundImage !== undefined) {
-                            inst.initializeLabelsLstAftLoadDelayed = false;
-                            inst.selectLabelInUnifiedLabelsLstAfterLoad();
-                        } else { //image is not yet loaded (which we need before we can initialize the labels list),
-                            //so we need to initialize the labels list when the image is loaded
-                            inst.initializeLabelsLstAftLoadDelayed = true;
-                        }
-                    }
+                    inst.finishUnifiedModeInitialization();
                 }
             },
-            error: function(xhr, options, err) {}
+            error: function(xhr, options, err) {
+                if (xhr.status === 404) {
+                    inst.unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
+
+                    inst.finishUnifiedModeInitialization();
+
+                }
+            }
         });
+    }
+
+    AnnotationView.prototype.finishUnifiedModeInitialization = function() {
+        if (this.unifiedModePopulated === UnifiedModeStates.initialized) {
+            if (this.canvas.fabric().backgroundImage && this.canvas.fabric().backgroundImage !== undefined) {
+                this.initializeLabelsLstAftLoadDelayed = false;
+                this.selectLabelInUnifiedLabelsLstAfterLoad();
+            } else { //image is not yet loaded (which we need before we can initialize the labels list),
+                //so we need to initialize the labels list when the image is loaded
+                this.initializeLabelsLstAftLoadDelayed = true;
+            }
+        }
     }
 
     AnnotationView.prototype.getAnnotationsForImage = function(imageId) {
@@ -589,18 +626,15 @@ var AnnotationView = (function() {
                     }
                     inst.unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
 
-                    if (inst.unifiedModePopulated === UnifiedModeStates.initialized) {
-                        if (inst.canvas.fabric().backgroundImage && inst.canvas.fabric().backgroundImage !== undefined) {
-                            inst.initializeLabelsLstAftLoadDelayed = false;
-                            inst.selectLabelInUnifiedLabelsLstAfterLoad();
-                        } else { //image is not yet loaded (which we need before we can initialize the labels list),
-                            //so we need to initialize the labels list when the image is loaded
-                            inst.initializeLabelsLstAftLoadDelayed = true;
-                        }
-                    }
+                    inst.finishUnifiedModeInitialization();
                 }
             },
-            error: function(xhr, options, err) {}
+            error: function(xhr, options, err) {
+                if (xhr.status === 404) {
+                    inst.unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
+                    inst.finishUnifiedModeInitialization();
+                }
+            }
         });
     }
 
@@ -641,6 +675,8 @@ var AnnotationView = (function() {
         showHideAutoAnnotationsLoadButton(this.autoAnnotations);
 
         setLabel(data.validation.label, data.validation.sublabel, null);
+        showHideLabelControls();
+        enableDisableAnnotationsMenu(this.annotator);
 
         if (this.canvas !== undefined && this.canvas !== null) {
             this.annotator.reset();
@@ -922,10 +958,10 @@ var AnnotationView = (function() {
                 if (selectedElem === null) {
                     if (inst.loggedIn) {
                         var tempUuid = labelName
-										.replace(/\(/g, "-")
-										.replace(/\s/g, "-")
-										.replace(/\)/g, "-")
-										.replace(/\//g, "-"); //remove all whitespaces, '(', ')' and '/' with '-' (characters not allowed in html id tags)
+                            .replace(/\(/g, "-")
+                            .replace(/\s/g, "-")
+                            .replace(/\)/g, "-")
+                            .replace(/\//g, "-"); //remove all whitespaces, '(', ')' and '/' with '-' (characters not allowed in html id tags)
                         selectedElem = {
                             "uuid": tempUuid,
                             "label": labelName,
@@ -1035,6 +1071,9 @@ var AnnotationView = (function() {
             }
 
             setLabel(data.label.label, data.label.sublabel, data.label.accessor);
+            showHideLabelControls();
+            enableDisableAnnotationsMenu(this.annotator);
+
             changeNavHeader("default");
         } else {
             this.annotationInfo.imageId = "";
@@ -1376,6 +1415,11 @@ var AnnotationView = (function() {
                 var firstItem = unifiedModeToolboxChildren.first();
                 if (firstItem && firstItem.length === 1)
                     firstItem[0].click();
+                else {
+                    setLabel(null, null, null);
+                    showHideLabelControls();
+                    enableDisableAnnotationsMenu(inst.annotator);
+                }
             }
         });
 
