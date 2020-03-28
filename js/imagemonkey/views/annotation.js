@@ -945,9 +945,9 @@ var AnnotationView = (function() {
                         return
                     }
                 } else { //logged in
-                    var pattern = new RegExp("^[)a-zA-Z (\/]+$");
+                    var pattern = new RegExp("^[)a-zA-Z (\/_]+$");
                     if (!pattern.test(labelName)) {
-                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, ' ', '(', ')' and '/'");
+                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, ' ', '(', ')', '/' and '_'");
                         $("#warningMsg").show(200).delay(1500).hide(200);
                         return
                     }
