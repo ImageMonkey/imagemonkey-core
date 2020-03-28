@@ -706,3 +706,41 @@ func TestBrowseAnnotationBelongingToOtherImageCollection(t *testing.T) {
 
 	testBrowseAnnotation(t, "image.collection='mycollection'", 0, token2)
 }
+
+func TestBrowseAnnotationQueryNoLabelsImage(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, token, "", 200)
+
+	testBrowseAnnotation(t, "image.unlabeled='true'", 1, "")
+}
+
+func TestBrowseAnnotationQueryNoLabelsImage1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, token, "", 200)
+	testDonate(t, "./images/apples/apple3.jpeg", "apple", true, token, "", 200)
+
+	testBrowseAnnotation(t, "apple & image.unlabeled='true'", 0, "")
+}
+
+/*func TestBrowseAnnotationQueryNoLabelsImage2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "user", "pwd", "user@imagemonkey.io")
+	token := testLogin(t, "user", "pwd", 200)
+
+	testDonate(t, "./images/apples/apple2.jpeg", "", true, token, "", 200)
+	testDonate(t, "./images/apples/apple3.jpeg", "apple", true, token, "", 200)
+
+	testBrowseAnnotation(t, "apple | image.unlabeled='true'", 2, "")
+}*/
