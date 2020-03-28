@@ -841,7 +841,7 @@ var AnnotationView = (function() {
                             '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
 
                             '<div class="ui input">' +
-                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels">' +
+                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
                             '</div>' +
                             '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                             '</div>' +
@@ -1236,7 +1236,8 @@ var AnnotationView = (function() {
         $("#skipAnnotationDropdown").dropdown();
 
         Mousetrap.bind("r", function() {
-            $("#rectMenuItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#rectMenuItem").trigger("click");
         });
 
 
@@ -1278,7 +1279,9 @@ var AnnotationView = (function() {
             inst.annotator.setRefinements(refs);
         });
 
-
+        Mousetrap.bind(new Settings().getAddLabelHotkey(), function(e, combo) {
+            $("#addLabelToUnifiedModeListButton").click();
+        });
 
         $("#rectMenuItem").click(function(e) {
             if (inst.annotator !== undefined && inst.annotator) {
@@ -1290,7 +1293,8 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind("c", function() {
-            $("#circleMenuItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#circleMenuItem").trigger("click");
         });
 
         $("#circleMenuItem").click(function(e) {
@@ -1303,11 +1307,13 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind("p", function() {
-            $("#polygonMenuItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#polygonMenuItem").trigger("click");
         });
 
         Mousetrap.bind("s", function() {
-            $("#selectMoveMenutItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#selectMoveMenutItem").trigger("click");
         });
 
         $("#polygonMenuItem").click(function(e) {
