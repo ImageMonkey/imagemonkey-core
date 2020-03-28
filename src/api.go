@@ -1992,6 +1992,7 @@ func main() {
 				queryParser.AllowImageHeight(true)
 				queryParser.AllowAnnotationCoverage(true)
 				queryParser.AllowImageCollection(true)
+				queryParser.AllowImageHasLabels(true)
 				parseResult, err := queryParser.Parse()
 				if err != nil {
 					c.JSON(422, gin.H{"error": err.Error()})

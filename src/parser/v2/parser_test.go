@@ -604,3 +604,12 @@ func TestQueryImageUnlabeledShouldSucceedFalse(t *testing.T) {
 	equals(t, parseResult.Query, "is_unlabeled = $1")
 	equals(t, parseResult.QueryValues, []interface{}{"false"})
 }
+
+func TestQueryImageUnlabeledAndLabelShouldSucceed(t *testing.T) {
+	queryParser := NewQueryParser("apple | image.unlabeled='true'")
+	queryParser.AllowImageHasLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] OR is_unlabeled = $2")
+	equals(t, parseResult.QueryValues, []interface{}{"apple", "true"})
+}

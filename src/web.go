@@ -581,7 +581,7 @@ func main() {
 				"onlyOnce": onlyOnce,
 				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"queryAttributes": commons.GetStaticQueryAttributes(),
+				"queryAttributes": parser.GetStaticQueryAttributes(parser.AnnotationView),
 				"assetVersion": assetVersion,
 			})
 		})
