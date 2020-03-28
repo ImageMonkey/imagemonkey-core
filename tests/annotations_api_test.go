@@ -732,7 +732,7 @@ func TestBrowseAnnotationQueryNoLabelsImage1(t *testing.T) {
 	testBrowseAnnotation(t, "apple & image.unlabeled='true'", 0, "")
 }
 
-/*func TestBrowseAnnotationQueryNoLabelsImage2(t *testing.T) {
+func TestBrowseAnnotationQueryNoLabelsImage2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -743,4 +743,4 @@ func TestBrowseAnnotationQueryNoLabelsImage1(t *testing.T) {
 	testDonate(t, "./images/apples/apple3.jpeg", "apple", true, token, "", 200)
 
 	testBrowseAnnotation(t, "apple | image.unlabeled='true'", 2, "")
-}*/
+}
