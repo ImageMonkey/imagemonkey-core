@@ -1842,7 +1842,8 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                       (
                         SELECT qq.image_key, qq.image_width, qq.image_height, 
                         CASE WHEN qq.validation_uuids <> '' THEN unnest(string_to_array(qq.validation_uuids, ',')) ELSE null END as validation_uuid, 
-						qq.image_unlocked, unnest(qq.label_types) as label_types, unnest(qq.filtered_accessors) as accessor
+						qq.image_unlocked, CASE WHEN qq.label_types is not null THEN unnest(qq.label_types) ELSE unnest('{null}'::boolean[]) END as label_types, 
+						CASE WHEN qq.filtered_accessors is not null THEN unnest(qq.filtered_accessors) ELSE unnest('{null}'::text[]) END as accessor
                         FROM
                         (    
                               SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids, 
@@ -1857,7 +1858,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled
                                   FROM image i 
 
-								  LEFT JOIN (
+								  JOIN (
                                   	SELECT v.uuid as validation_uuid, a.accessor as accessor, 
 									c.annotated_percentage as annotated_percentage, v.image_id as image_id, true as is_productive
 									FROM image_validation v
@@ -1869,6 +1870,18 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 									  WHERE a.label_id = v.label_id AND a.image_id = v.image_id
 								    )%s
 
+									UNION ALL
+								   
+								    SELECT null as validation_uuid, NULL as accessor, 
+								    0 as annotated_percentage, i.id as image_id, true as is_productive
+								    FROM image i
+								    WHERE NOT EXISTS (
+								   	  SELECT 1 FROM image_validation v
+									  WHERE v.image_id = i.id
+								    ) AND NOT EXISTS (
+								      SELECT 1 FROM image_label_suggestion v
+									  WHERE v.image_id = i.id
+								    )
 
 									%s
                                   ) a ON a.image_id = i.id
@@ -1889,7 +1902,6 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                       GROUP BY image_key, image_width, image_height, validation_uuid, image_unlocked, accessor
                       %s`, parseResult.Subquery, parseResult.Subquery, parseResult.Subquery,
 		q2, q4, q3, includeOwnImageDonations, parseResult.Query, orderBy)
-
 
 	var rows pgx.Rows
 	var err error
