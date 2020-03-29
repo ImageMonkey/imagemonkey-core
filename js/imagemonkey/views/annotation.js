@@ -256,7 +256,7 @@ var AnnotationView = (function() {
 
 
     AnnotationView.prototype.addAnnotationsUnifiedMode = function() {
-        var validationIds = [];
+        var imageGridImageIdentifiers = [];
         var annotations = [];
         for (var key in this.unifiedModeAnnotations) {
             if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
@@ -268,18 +268,26 @@ var AnnotationView = (function() {
                     annotation["sublabel"] = entry.sublabel;
                     annotations.push(annotation);
 
-                    if ("validationUuid" in entry && entry.validationUuid !== null)
-                        validationIds.push(entry.validationUuid);
+                    if ("validationUuid" in entry && entry.validationUuid !== null && entry.validationUuid !== undefined) {
+                        imageGridImageIdentifiers.push(entry.validationUuid);
+                    }
                 }
             }
         }
 
+        if (imageGridImageIdentifiers.length === 0) {
+            if (this.annotationInfo.validationId !== undefined)
+                imageGridImageIdentifiers.push(this.annotationInfo.validationId);
+            else
+                imageGridImageIdentifiers.push(this.annotationInfo.imageId);
+        }
+
         this.unifiedModeLabels = {};
         this.unifiedModeAnnotations = {};
-        this.addAnnotations(annotations, validationIds);
+        this.addAnnotations(annotations, imageGridImageIdentifiers);
     }
 
-    AnnotationView.prototype.addAnnotations = function(annotations, validationIds = null) {
+    AnnotationView.prototype.addAnnotations = function(annotations, imageGridImageIdentifiers = null) {
         var headers = {}
         if (this.browserFingerprint !== null)
             headers["X-Browser-Fingerprint"] = this.browserFingerprint;
@@ -291,7 +299,7 @@ var AnnotationView = (function() {
         this.annotator.reset();
 
         if (annotations.length === 0) {
-            this.onAddAnnotationsDone();
+            this.onAddAnnotationsDone(imageGridImageIdentifiers);
             return;
         }
 
@@ -306,18 +314,18 @@ var AnnotationView = (function() {
                 xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
             },
             success: function(data) {
-                inst.onAddAnnotationsDone(validationIds);
+                inst.onAddAnnotationsDone(imageGridImageIdentifiers);
             }
         });
     }
 
-    AnnotationView.prototype.onAddAnnotationsDone = function(validationIds = null) {
+    AnnotationView.prototype.onAddAnnotationsDone = function(imageGridImageIdentifiers = null) {
         if (this.annotationMode === "default")
             this.loadUnannotatedImage();
         else {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
-            showBrowseAnnotationImageGrid(validationIds);
+            showBrowseAnnotationImageGrid(imageGridImageIdentifiers);
             $("#isPluralContainer").hide();
         }
 

@@ -94,14 +94,14 @@
     });
   }
 
-  function showBrowseAnnotationImageGrid(annotatedEntriesIds = null) {
+  function showBrowseAnnotationImageGrid(imageGridImageIdentifiers = null) {
     //if the image grid gets shown again, the image in question was successfully annotated/blacklisted or marked
     //as non-annotatable. We now grey the image out and change the mouse cursor to default again.
 
-    if(annotatedEntriesIds !== null) {
-      for(var i = 0; i < annotatedEntriesIds.length; i++) {
-        $("#"+annotatedEntriesIds[i]).addClass("grey-out");
-        $("#"+annotatedEntriesIds[i]).css('cursor', 'default');
+    if(imageGridImageIdentifiers !== null) {
+      for(var i = 0; i < imageGridImageIdentifiers.length; i++) {
+        $("#"+imageGridImageIdentifiers[i]).addClass("grey-out");
+        $("#"+imageGridImageIdentifiers[i]).css('cursor', 'default');
       }
     }
 
