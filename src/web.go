@@ -485,6 +485,8 @@ func main() {
 				}
 			}
 
+			query := commons.GetUnescapedParamFromUrlParams(c, "query", "")
+
 			title := ""
 			subtitle := ""
 			activeMenuNr := 3
@@ -513,6 +515,7 @@ func main() {
 				"labelAccessorsLookup": commons.Pick(imageMonkeyDatabase.GetLabelAccessorsMapping())[0],
 				"queryAttributes": parser.GetStaticQueryAttributes(parser.LabelView),
 				"assetVersion": assetVersion,
+				"query": query,
 			})
 		})
 
@@ -578,7 +581,7 @@ func main() {
 				"onlyOnce": onlyOnce,
 				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"queryAttributes": commons.GetStaticQueryAttributes(),
+				"queryAttributes": parser.GetStaticQueryAttributes(parser.AnnotationView),
 				"assetVersion": assetVersion,
 			})
 		})
@@ -692,6 +695,15 @@ func main() {
 				"words": words,
 				"activeMenuNr": 8,
 				"statistics": commons.Pick(imageMonkeyDatabase.Explore(words))[0],
+				"apiBaseUrl": apiBaseUrl,
+				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+				"assetVersion": assetVersion,
+			})
+		})
+		router.GET("/statistics/contributions", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "contribution_statistics.html", gin.H{
+				"title": "Total Contributions",
+				"activeMenuNr": -1,
 				"apiBaseUrl": apiBaseUrl,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"assetVersion": assetVersion,

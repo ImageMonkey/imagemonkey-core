@@ -63,5 +63,16 @@ var Settings = (function () {
     this.set("defaultimagedescriptionlanguage", language);
   }
 
+  Settings.prototype.vimBindingsEnabled = function() {
+	var val = this.get("vimbindingsenabled", false);
+	if(typeof(val) == "string")
+		return (val == "true" ? true : false);
+	return val;
+  }
+
+  Settings.prototype.setVimBindingsEnabled = function(enabled) {
+    this.set("vimbindingsenabled", enabled);
+  }
+
   return Settings;
 }());

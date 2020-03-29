@@ -151,3 +151,7 @@
 .pusher > .footer {
   flex: 1;
 }
+
+.default-text {
+  font-size: 1.33em;
+}

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>ImageMonkey reaches the 100k milestone</title>
+  <meta name="description" content="ImageMonkey is a public open source image dataset with powerful APIs and a tight integration of existing machine learning frameworks." />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="" />
+    <meta name="twitter:title" content="ImageMonkey reaches the 100k milestone" />
+    <meta name="twitter:image" content="http://myblog.***.***/blog" />
+    
+    <meta name="twitter:description"  content="ImageMonkey is a public open source image dataset with powerful APIs and a tight integration of existing machine learning frameworks." />
+    
+  
+  
+  <meta property="og:site_name" content="ImageMonkey - Blog" />
+  <meta property="og:title" content="ImageMonkey reaches the 100k milestone"/>
+  
+  <meta property="og:description" content="ImageMonkey is a public open source image dataset with powerful APIs and a tight integration of existing machine learning frameworks." />
+  
+  <meta property="og:image" content="http://myblog.***.***/blog/assets/article_images/2017-10-06-ImageMonkey-Introduction/taking_photo2.jpg" />
+  <meta property="og:url" content="http://myblog.***.***/blog/general/2020/02/09/ImageMonkey-100k-0.html" >
+  <meta property="og:type" content="blog" />
+  <meta property="article:published_time" content="2020-02-09T13:34:25+01:00">
+
+  <link rel="canonical" href="http://myblog.***.***/blog/general/2020/02/09/ImageMonkey-100k-0.html"/>
+  <!--<link rel="shortcut icon" href="/blog/assets/images/favicon.png" type="image/png"/>-->
+  <link rel="stylesheet" href="//brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/blog/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/blog/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/blog/assets/article_images/2017-10-06-ImageMonkey-Introduction/taking_photo2.jpg)">
+            Article Image
+          </div>
+          <div class="post-image-image2" style="background-image: url()">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">ImageMonkey reaches the 100k milestone</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/blog)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Bernhard</h4>
+              on
+              <time datetime="2020-02-09 12:34">09 Feb 2020</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <p><a href="https://imagemonkey.io">ImageMonkey</a> is a public open source image dataset with powerful APIs and a tight integration of existing machine learning frameworks.</p>
+
+<p>As of last week it seems that we’ve finally cracked the 100k milestone - the ImageMonkey dataset now contains over 100k CC0 licensed images, ~140k labeled objects, ~25k validations and over 100k annotated objects.</p>
+
+<p><img src="/blog/assets/article_images/2020-02-09-ImageMonkey-100k/progress.png" alt="Progress over time&lt;br&gt;(The timestamp for image uploads wasn't there at the beginning,&lt;br&gt;that's why the black line chart is missing some data points)" /></p>
+
+<p>It’s now almost three years ago since I started working on ImageMonkey - at that time mainly to scratch my own itch. Back then, I was working on another project, which I thought had the potential to blow up (actually it flopped totally, but that’s a different story) and for that project I was looking for labeled gym equipment datasets to train a neural net on it. As it turned out annotated images are really hard to find - and it gets even harder if you are looking for a public domain dataset.</p>
+
+<p>That’s when I thought to myself: Wouldn’t it be great if there exists such a public dataset? A dataset that’s not owned by a big company where you have to fear that at some point they will shut down the service and everything is lost (yeah, looking at you Yahoo). <strong>A dataset created by people for people.</strong> A dataset where <em>eyerbody</em> can contribute to. Something that’s easy to use.</p>
+
+<p>There are millions of people in the world running around with their smartphones, snapping pictures of their dogs, cats and what they have for lunch. Wouldn’t that be great image material for a public domain dataset?</p>
+
+<p>When creating ImageMonkey one of the primary goals was always simplicity and ease of use. ImageMonkey wasn’t primarily designed to be used by the “hardcore data labeler” (that’s not to say that that we do not provide tools for those as well), it was rather designed to be used the ordinary man and and woman. In order to accomplish that, the whole process of collecting data was split up in different tasks (“task based approach”).</p>
+
+<p><img src="/blog/assets/article_images/2020-02-09-ImageMonkey-100k/annotation_rework.gif" alt="Annotating objects" /></p>
+
+<center><img src="/blog/assets/article_images/2020-02-09-ImageMonkey-100k/validation.gif" width="50%" alt="Validating objects" /></center>
+
+<p>The traditional worflow of annotating an object usually looks like this:</p>
+<ul>
+  <li>collect an image</li>
+  <li>draw a bounding box around the object of interest</li>
+  <li>label it appropriately.</li>
+</ul>
+
+<p>With ImageMonkey it’s different. Every of those tasks can be done individually. You love taking pictures, but don’t want to tag them with labels? No problem, just upload the pictures without labels - that’s perfectly fine. You enjoy labeling images (I’ve heard that some people find that quite relaxing) but don’t want to draw bounding boxes around the objects? That’s fine, just do the labeling. As you can see, the complex task of annotating objects is broken down in much simpler tasks. The cool thing about that is, that it’s now possible to build APIs around those functionalities and use those APIs to create other applications.</p>
+
+<p>In the <a href="https://www.youtube.com/watch?v=ji5_MqicxSo">Last Lecture</a> (if you haven’t seen it, I highly encourage you to do so), Randy Pausch talks about <em>head fake</em> - a situation in which someone believes they are learning one thing, but are really learning something different. I am a huge fan of this concept and personally I think it not only works for learning something, but also for <em>doing</em> something.</p>
+
+<p>While working on ImageMonkey I tried to make use of head fakes and incorporate them into the software I was building. Then, let’s be honest here: Collecting data for a dataset can be tedious and boring - so why not make it more fun?</p>
+
+<p>With the ImageMonkey Browser Extension and ImageMonkey - The Game I tried exactly that.</p>
+
+<p>The <a href="https://github.com/bbernhard/imagemonkey-chrome-extension">ImageMonkey Browser Extension</a> shows a random validation each time you open a new browser tab. 
+<img src="/blog/assets/article_images/2017-10-28-ImageMonkey-v0.2/google-chrome-extension.gif" alt="ImageMonkey Browser Extension" /></p>
+
+<p><a href="https://play.google.com/store/apps/details?id=io.imagemonkey.thegame">ImageMonkey - The Game</a> uses gamification concepts to make image collecting more fun.</p>
+
+<p><img src="/blog/assets/article_images/2020-02-09-ImageMonkey-100k/imagemonkey_thegame.png" alt="" /></p>
+
+<h1 id="powerful-api-and-tight-integrations-of-existing-ml-frameworks">Powerful API and tight integrations of existing ML frameworks</h1>
+<p>ImageMonkey’s task based approach made it possible to build a REST API around all its functionality, which not only allows developers to easily export data, but also gives them the possibility to feed back data their own.</p>
+
+<p>Due to the <a href="https://imagemonkey.io/libraries">tight integration</a> of existing machine learning frameworks like <a href="https://www.tensorflow.org/">Tensorflow</a> and <a href="https://github.com/matterport/Mask_RCNN">Mask RCNN</a> it’s possible to train a neural net for image classification, object detection and object segmentation with just a handful of commands.</p>
+
+<p>e.g If you want to train a cat/dog image classifier via transfer learning on a pre-trained inception-v3 model, all you need to do is:</p>
+
+<pre><code class="bash">
+      docker pull bbernhard/imagemonkey-train:latest-gpu
+      docker run --runtime=nvidia -it bbernhard/imagemonkey-train:latest-gpu
+</code></pre>
+
+<pre><code class="bash">
+      monkey train --labels="cat|dog" --type="image-classification"
+</code></pre>
+
+<p>The monkey script automatically downloads the necessary data from ImageMonkey, configures the tensorflow pipeline and then starts tensorflow for training. When the training is done, the script spits out a ready-to-go <code>graph.pb</code> file.</p>
+
+<h1 id="what-exactly-is-a-public-open-source-image-dataset">What exactly is a public open source image dataset?</h1>
+
+<p>Every line of code that was ever written for the ImageMonkey project is available on <a href="https://github.com/ImageMonkey">Github</a> - i.e if you want to spin up your own (private) ImageMonkey instance for collecting data you can easily do that. But it’s not only that. Every item in the ImageMonkey dataset is licensed under the CC0 license. Which basically means you can do the f*ck you want with it - no strings attached. Furthermore, the whole dataset (i.e the images + an obfuscated database dump) gets uploaded to the internet archive on a regular basis (see <a href="https://imagemonkey.io/public_backup">here</a> for details).</p>
+
+<h1 id="whats-next">What’s next?</h1>
+
+<p>Hosting ImageMonkey (and all it’s services) costs money. At the moment everything’s running on two big Hetzner bare metal servers (one of them being a GPU instance). And while the server costs are still affordable for me, I would really like to see ImageMonkey getting <a href="https://imagemonkey.io/supportus">self sustainable</a>.</p>
+
+<p>Apart from that, I’ll be working on:</p>
+
+<ul>
+  <li>a better annotation editor</li>
+  <li>improve the ML pipeline to provide models for download on a regular basis</li>
+  <li>some general improvements</li>
+</ul>
+
+<h1 id="thanks">Thanks</h1>
+<p>Last but not least I want to thank <a href="https://github.com/dobkeratops">@dobkeratops</a> - ImageMonkey wouldn’t be where it is right now without your help. Thanks a lot for all your contributions!</p>
+
+<h1 id="want-to-contribute">Want to contribute?</h1>
+<p>Any help is really appreciated - whether it is <a href="https://github.com/ImageMonkey">help with the codebase</a>, <a href="https://imagemonkey.io/donate">contributions to the dataset</a> or <a href="https://imagemonkey.io/supportus">financial support</a>. Let’s create our public image dataset together!</p>
+
+<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous" />
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<!--<script type="text/javascript" src="/assets/js/toast.js"></script>-->
+
+<div class="divider-30"></div>
+
+<center><h5>Want to read more about ImageMonkey?</h5></center>
+<center><h5>Subscribe now!</h5></center>
+
+<iframe name="hiddenFrame" width="0" height="0" border="0" style="display: none;"></iframe>
+<center><form id="register-newsletter">
+    <input id="email" type="text" name="newsletter" required="" placeholder="Enter your email address" />
+    <input type="submit" class="btn btn-custom-3 submit-button" value="SIGN UP" />
+</form></center>
+<div id="register-successful" class="hide" role="alert">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+</div>
+
+<script>
+$('#register-newsletter').submit(function(e) {
+	subscribe();
+    return false;
+});
+
+function validateEmail(email) {
+    var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+}
+
+function postEmail(email){
+    var url = encodeURI("https://api.imagemonkey.io/v1/blog/subscribe");
+    $.ajax({
+        url: url,
+        dataType: 'json',
+        type: 'POST',
+        data: JSON.stringify({email: email}),
+        complete: function(data){
+        },
+        success: function(data){
+            $('#register-successful').html('<center>Successfully signed up</center>');
+            $('#register-successful').removeClass('hide').addClass('alert alert-success').fadeTo(2000, 500).slideUp(500, function(){
+                $("#register-successful").slideUp(500);
+            });
+        },
+        error: function (xhr, status, errorThrown){
+            $('#register-successful').html("<center>Couldn't sign up</center>");
+            $('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+                $("#register-successful").slideUp(500);
+            });
+        }
+    });
+}
+
+
+function subscribe() {
+	var emailAddress = $("#email").val();
+    console.log(emailAddress)
+    $("#register-newsletter").trigger("reset");
+	validateEmail(emailAddress);
+	if (!validateEmail(emailAddress)) {
+		$('#register-successful').html("<center>Please enter a valid email address</center>");
+		$('#register-successful').removeClass('hide').addClass('alert alert-danger').fadeTo(2000, 500).slideUp(500, function(){
+	    	$("#register-successful").slideUp(500);
+		});
+		return;
+	}
+
+	postEmail(emailAddress);
+}
+
+</script>
+
+<style type="text/css">
+.submit-button {
+  	color: #fff;
+  	background-color: #57ad68;
+  	border-color: #4cae4c;
+}
+
+.submit-button:hover {
+	color: #fff;
+	background-color: #449d44;
+	border-color: #398439;
+}
+
+.divider-30{ 
+	width:100%; 
+	min-height:1px; 
+	margin-top:30px; 
+	margin-bottom:30px;  
+	display:inline-block; 
+	position:relative;
+}
+</style>
+
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/blog)">Blog Logo</div>
+              <h4>Bernhard</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2020-02-09 12:34">09 Feb 2020</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Copyright</span></h5>
+            <footer class="site-footer">
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Bernhard</a> &copy; 2020<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+        
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/blog/assets/images/header.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">ImageMonkey - Blog</h1>
+        <h2 class="blog-description">ImageMonkey - a public, open source image dataset
+</h2>
+        <a href=/blog/ class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/blog/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/blog/assets/js/index.js"></script>
+<script type="text/javascript" src="/blog/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

@@ -20,7 +20,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 
 	tx, err := p.db.Begin(context.TODO())
 	if err != nil {
-		log.Debug("[Get Image to Label] Couldn't begin transaction: ", err.Error())
+		log.Error("[Get Image to Label] Couldn't begin transaction: ", err.Error())
 		raven.CaptureError(err, nil)
 		return image, err
 	}
@@ -47,7 +47,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 	var unlabeledRows pgx.Rows
 	if imageId == "" {
 		q := fmt.Sprintf(`WITH imgs AS (
-                            SELECT i.key, i.unlocked, i.width, i.height
+                            SELECT i.id as id, i.key as key, i.unlocked as unlocked, i.width as width, i.height as height
                             FROM image i 
                             WHERE (i.unlocked = true %s)
 
@@ -57,11 +57,19 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
                                 SELECT image_id FROM image_label_suggestion
                             )
 						  )
-                          SELECT i.key, i.unlocked, i.width, i.height
+                          SELECT i.key, i.unlocked, i.width, i.height, COALESCE(q1.image_descriptions, '[]')::jsonb
                           FROM imgs i
-                          OFFSET random() * (
+                          LEFT JOIN (
+                            SELECT jsonb_agg(jsonb_build_object('text', dsc.description, 'state', dsc.state::text, 'language', l.fullname)) as image_descriptions,
+                            dsc.image_id as image_id
+                            FROM image_description dsc
+                            JOIN language l ON l.id = dsc.language_id
+                            WHERE dsc.state != 'locked' --only show non locked image descriptions
+                            GROUP BY dsc.image_id
+                          ) q1 ON q1.image_id = i.id
+                          OFFSET floor(random() * (
                             SELECT count(*) FROM imgs
-                          ) LIMIT 1`, includeOwnImageDonations)
+                          )) LIMIT 1`, includeOwnImageDonations)
 
 		if username == "" {
 			unlabeledRows, err = tx.Query(context.TODO(), q)
@@ -72,7 +80,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 		if err != nil {
 			tx.Rollback(context.TODO())
 			raven.CaptureError(err, nil)
-			log.Debug("[Get Image to Label] Couldn't get unlabeled image: ", err.Error())
+			log.Error("[Get Image to Label] Couldn't get unlabeled image: ", err.Error())
 			return image, err
 		}
 
@@ -164,7 +172,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 		if err != nil {
 			tx.Rollback(context.TODO())
 			raven.CaptureError(err, nil)
-			log.Debug("[Get Image to Label] Couldn't get image: ", err.Error())
+			log.Error("[Get Image to Label] Couldn't get image: ", err.Error())
 			return image, err
 		}
 
@@ -190,7 +198,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 			if err != nil {
 				tx.Rollback(context.TODO())
 				raven.CaptureError(err, nil)
-				log.Debug("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
+				log.Error("[Get Image to Label] Couldn't scan labeled row: ", err.Error())
 				return image, err
 			}
 
@@ -201,7 +209,8 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 
 			err := json.Unmarshal(imageDescriptions, &image.ImageDescriptions)
 			if err != nil {
-				log.Debug("[Get Image to Label] Couldn't unmarshal image descriptions: ", err.Error())
+				tx.Rollback(context.TODO())
+				log.Error("[Get Image to Label] Couldn't unmarshal image descriptions: ", err.Error())
 				raven.CaptureError(err, nil)
 				return image, err
 			}
@@ -254,11 +263,20 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 		}
 
 	} else {
-		err = unlabeledRows.Scan(&image.Id, &image.Unlocked, &image.Width, &image.Height)
+		var imageDescriptions []byte
+		err = unlabeledRows.Scan(&image.Id, &image.Unlocked, &image.Width, &image.Height, &imageDescriptions)
 		if err != nil {
 			tx.Rollback(context.TODO())
 			raven.CaptureError(err, nil)
-			log.Debug("[Get Image to Label] Couldn't scan row: ", err.Error())
+			log.Error("[Get Image to Label] Couldn't scan row: ", err.Error())
+			return image, err
+		}
+
+		err := json.Unmarshal(imageDescriptions, &image.ImageDescriptions)
+		if err != nil {
+			tx.Rollback(context.TODO())
+			log.Error("[Get Image to Label] Couldn't unmarshal image descriptions: ", err.Error())
+			raven.CaptureError(err, nil)
 			return image, err
 		}
 		unlabeledRows.Close()
@@ -269,7 +287,7 @@ func (p *ImageMonkeyDatabase) GetImageToLabel(imageId string, username string, i
 	err = tx.Commit(context.TODO())
 	if err != nil {
 		raven.CaptureError(err, nil)
-		log.Debug("[Get Image to Label] Couldn't commit changes: ", err.Error())
+		log.Error("[Get Image to Label] Couldn't commit changes: ", err.Error())
 		return image, err
 	}
 

@@ -1836,24 +1836,26 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 		parseResult.Subquery = "1 = 1"
 	}
 
-	q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, qqq.validation_uuid, qqq.image_unlocked, 
-                      accessor
+	q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, COALESCE(qqq.validation_uuid, ''), qqq.image_unlocked, 
+                      COALESCE(accessor, '')
                       FROM
                       (
                         SELECT qq.image_key, qq.image_width, qq.image_height, 
-                        unnest(string_to_array(qq.validation_uuids, ',')) as validation_uuid, qq.image_unlocked, 
-						unnest(qq.label_types) as label_types, unnest(qq.filtered_accessors) as accessor
+                        CASE WHEN qq.validation_uuids <> '' THEN unnest(string_to_array(qq.validation_uuids, ',')) ELSE null END as validation_uuid, 
+						qq.image_unlocked, CASE WHEN qq.label_types is not null THEN unnest(qq.label_types) ELSE unnest('{null}'::boolean[]) END as label_types, 
+						CASE WHEN qq.filtered_accessors is not null THEN unnest(qq.filtered_accessors) ELSE unnest('{null}'::text[]) END as accessor
                         FROM
                         (    
                               SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids, 
-							  q.image_unlocked, image_collection, q.label_types, q.filtered_accessors
+							  q.image_unlocked, image_collection, q.label_types, q.filtered_accessors 
                               FROM
                               (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
                                   array_to_string(array_agg(CASE WHEN (%s) THEN a.validation_uuid ELSE NULL END), ',') as validation_uuids, 
                                   array_agg(a.accessor)::text[] as accessors, MAX(COALESCE(a.annotated_percentage, 0)) as annotated_percentage, 
                                   i.unlocked as image_unlocked, coll.image_collection as image_collection, 
 								  array_agg(a.is_productive) FILTER(WHERE %s) as label_types,
-								  array_agg(a.accessor) FILTER(WHERE %s) as filtered_accessors
+								  array_agg(a.accessor) FILTER(WHERE %s) as filtered_accessors,
+								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled
                                   FROM image i 
 
 								  JOIN (
@@ -1868,6 +1870,18 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 									  WHERE a.label_id = v.label_id AND a.image_id = v.image_id
 								    )%s
 
+									UNION ALL
+								   
+								    SELECT null as validation_uuid, NULL as accessor, 
+								    0 as annotated_percentage, i.id as image_id, true as is_productive
+								    FROM image i
+								    WHERE NOT EXISTS (
+								   	  SELECT 1 FROM image_validation v
+									  WHERE v.image_id = i.id
+								    ) AND NOT EXISTS (
+								      SELECT 1 FROM image_label_suggestion v
+									  WHERE v.image_id = i.id
+								    )
 
 									%s
                                   ) a ON a.image_id = i.id
@@ -1888,9 +1902,6 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                       GROUP BY image_key, image_width, image_height, validation_uuid, image_unlocked, accessor
                       %s`, parseResult.Subquery, parseResult.Subquery, parseResult.Subquery,
 		q2, q4, q3, includeOwnImageDonations, parseResult.Query, orderBy)
-
-	//first item in query value is the label we want to annotate
-	//parseResult.queryValues = append([]interface{}{parseResult.queryValues[0]}, parseResult.queryValues...)
 
 	var rows pgx.Rows
 	var err error
@@ -1918,15 +1929,14 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 			return annotationTasks, err
 		}
 
-		if annotationTask.Id == "" {
+		/*if annotationTask.Id == "" {
 			continue
-		}
+		}*/
 
 		annotationTask.Image.Url = commons.GetImageUrlFromImageId(apiBaseUrl, annotationTask.Image.Id, annotationTask.Image.Unlocked)
 
 		annotationTasks = append(annotationTasks, annotationTask)
 	}
-
 	return annotationTasks, nil
 }
 

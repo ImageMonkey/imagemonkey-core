@@ -333,6 +333,17 @@ func GetParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string
     return param
 }
 
+func GetUnescapedParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound string) string {
+    param := GetParamFromUrlParams(c, name, defaultIfNotFound)
+
+	unescapedParam, err := url.QueryUnescape(param)
+	if err != nil {
+		return ""
+	}
+
+    return unescapedParam
+}
+
 func GetIntParamFromUrlParams(c *gin.Context, name string, defaultIfNotFound int64) (int64, error) {
     params := c.Request.URL.Query()
 

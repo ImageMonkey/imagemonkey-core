@@ -44,7 +44,8 @@
       </h2>
     </div>
   </div>
-  <div class="ui stackable grid" style="margin-top: 2em;">
+  <div class="ui vertical stripe segment" style="margin-top: 2em;">
+    <div class="ui text container">
     <div class="row" id="loadingSpinner" style="display: none;">
       <div class="sk-wave overlay">
         <div class="sk-rect sk-rect1"></div>
@@ -61,39 +62,39 @@
 
         <!--<h1 class="ui center aligned header">Supporting ImageMonkey</h1>-->
         <h3 class="ui header">USER AND COMPANY DONATIONS</h3>
-        The project lives of the free time of its contributors and maintainers, but also of the donations from the community. The possibility to donate money to the project was mainly created for people that find the project useful, but lack time to contribute to the project in other ways (upload pictures, label/annotate images..etc).<br><br>At the moment the server hosting costs are completely paid out of the main developer's pocket - so the project's future is save for now. However, adding bug fixes, maintaining the server and adding features takes a lot of time and energy - and with family and a full time job there's only so much time in a day to contribute to the project.<br><br>
+        <p>The project lives of the free time of its contributors and maintainers, but also of the donations from the community. The possibility to donate money to the project was mainly created for people that find the project useful, but lack time to contribute to the project in other ways (upload pictures, label/annotate images..etc).<br><br>At the moment the server hosting costs are completely paid out of the main developer's pocket - so the project's future is save for now. However, adding bug fixes, maintaining the server and adding features takes a lot of time and energy - and with family and a full time job there's only so much time in a day to contribute to the project.</p><br><br>
 		
-		So, if you find this project useful, but lack time to contribute to the dataset and still want to show some appreciation to the project, please consider financially supporting the project.  
+		<p>So, if you find this project useful, but lack time to contribute to the dataset and still want to show some appreciation to the project, please consider financially supporting the project.</p>  
 		<br><br>
-		Donations are used for:
+		<p>Donations are used for:</p>
 		<div class="ui bulleted list">
           <div class="item">
-		  Pay for hosting of the ImageMonkey services
+		  <p>Pay for hosting of the ImageMonkey services</p>
 		  </div>
 		  <div class="item">
-		  Adding some additional GPU instances to train neural nets based on the data we collected.
+		  <p>Adding some additional GPU instances to train neural nets based on the data we collected.</p>
 		  </div>
 		  <div class="item">
-		  Creating financial freedom for the main developer to invest more time into the project.
+		  <p>Creating financial freedom for the main developer to invest more time into the project.</p>
 		  </div>
 		  <div class="item">
-		  Giving something back to the (power-) users in form of micro payments. 
+		  <p>Giving something back to the (power-) users in form of micro payments.</p>
 		  <br><br> 
-		  There are users out there who invest a lot of time into the project by uploading/labeling/annotating images. They're investing hundreds of hours without getting any financial compensation for that - it's their strong believe in a public open source dataset that drives them. The idea would be to give something back to those people (e.g through micro payments) in order to value their time and effort.<br><br>
-		  This obviously raises some tough problems (e.g abuse prevention; gaming the system; etc..) which aren't completely solved yet - so it's more like a thought experiment at the moment. If there's enough community interest however, it's definitely something that could be implemented in the foreseeable future.
+		  <p>There are users out there who invest a lot of time into the project by uploading/labeling/annotating images. They're investing hundreds of hours without getting any financial compensation for that - it's their strong believe in a public open source dataset that drives them. The idea would be to give something back to those people (e.g through micro payments) in order to value their time and effort.<br><br>
+		  This obviously raises some tough problems (e.g abuse prevention; gaming the system; etc..) which aren't completely solved yet - so it's more like a thought experiment at the moment. If there's enough community interest however, it's definitely something that could be implemented in the foreseeable future.</p>
 		  </div>
 		</div>
 
 		<br>
 
-		You can donate monthly via Patreon, or directly via PayPal.
+		<p>You can donate monthly via Patreon, or directly via PayPal.</p>
 		<br><br>
         <h2 class="ui horizontal divider header">
           <i class="paypal icon"></i>
           Paypal
         </h2> 
 		
-		If you want to donate something to the main developer, please select <b>Support ImageMonkey</b> in the below dropdown. If you want to support the experimental micro payment experiment (see explanation above), please select <b>Support Users</b>. In case you want to support both, select <b>Support ImageMonkey + Users</b>.
+		<p>If you want to donate something to the main developer, please select <b>Support ImageMonkey</b> in the below dropdown. If you want to support the experimental micro payment experiment (see explanation above), please select <b>Support Users</b>. In case you want to support both, select <b>Support ImageMonkey + Users</b>.</p>
 		<br><br>
 		<div class="ui labeled input">
           <label for="amount" class="ui label">$</label>
@@ -128,7 +129,7 @@
 
           <div class="field"><br></div>
 		  <div class="field">
-		    <label>Purpose (see explanation above)</label>
+		    <h4>Purpose (see explanation above)</h4>
 			<div class="ui selection dropdown" id="selectPurposeDropdown">
 			  <input type="hidden" name="item_name" value="site">
 			  <i class="dropdown icon"></i>
@@ -161,7 +162,7 @@
 		<h2 class="ui horizontal divider header">
           Patreon
         </h2> 
-		Patreon is a platform for creators to crowdfund their work via monthly donations.
+		<p>Patreon is a platform for creators to crowdfund their work via monthly donations.</p>
 		<br><br>
 		<button class="ui red button" onclick="location.href='https://www.patreon.com/imagemonkey';">Become a Patreon</button>
 
@@ -174,7 +175,7 @@
 
   </div>
 </div>
-
+</div>
 {{ template "footer.html" .}}
 
 </body>

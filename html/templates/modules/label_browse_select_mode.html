@@ -22,7 +22,7 @@
   var currentLabeledImageGridElement = null;
   var infiniteScroll = new InfiniteScroll(loadNextImagesInImageGrid, false);
   var numberOfQueryResults = 0;
-  var numberOfCurrentlyShownResults = 0;
+  var numberOfCurrentlyShownResults = 0; 
 
   var clearImageGrid = function() {
     justifiedLayoutGeometry = null;
@@ -46,10 +46,16 @@
     $("#labelQuerySearchContainer").show();
     infiniteScroll.resume();
     infiniteScroll.restoreScrollPosition();
+
+    //hide vim-mode status bar
+    $("#vimModeStatusBar").hide();
+    labelBrowseModeVimBindings.setMode(LabelBrowseModeVimBindingsMode.Browse);
   }
 
   function handleRes(d) {
     $("#imageGrid").show();
+    labelBrowseModeVimBindings.reset();
+    labelBrowseModeVimBindings.enableListeners();
 
     if(d !== null) {
       imageGridData = d;
@@ -114,6 +120,7 @@
     if($(elem).hasClass("grey-out"))
       return;
 
+    labelBrowseModeVimBindings.setMode(LabelBrowseModeVimBindingsMode.Label);
     var imageId = $(elem).attr("data-imageid");
     currentLabeledImageGridElement = $(elem).attr("id");
     $("#labelQuerySearchContainer").hide();
@@ -184,7 +191,7 @@
     var imageUrl;
     var annotationsScaleFactor;
     var item;
-    for(var i = from; i < (from + n); i++){
+    for(var i = from; i < (from + n); i++){ 
       var url = getUrlFromImageUrl(imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]) 
                 + ((imageGridData[i]["image"]["unlocked"] === true) ? '?' : '&') + "width="
                 +    Math.round(justifiedLayoutGeometry.boxes[i].width, 0)
@@ -220,11 +227,11 @@
       if(tooltipText.length > 2)
         tooltipText = tooltipText.substring(0, tooltipText.length - 2); //remove last comma + space
 
-      var imageId = ("galleryitem" + imageGridData[i]["image"]["uuid"]);
+      var imageId = ("galleryitem" + imageGridData[i]["image"]["uuid"]); 
       item = newImageItem(imageId, url, imageGridData[i]["image"]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
                               justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
       $("#imageGrid").append(item); 
-
+      labelBrowseModeVimBindings.addImageId(imageId);
       document.getElementById("imageGrid").style.height = (justifiedLayoutGeometry.boxes[(from + n - 1)].top 
                                                             + justifiedLayoutGeometry.boxes[(from + n - 1)].height)  + "px";
     }
@@ -233,6 +240,7 @@
     numberOfCurrentlyShownResults = numOfLastFetchedImg;
 
     $("#numberOfQueryResults").text(numberOfCurrentlyShownResults + "/" + numberOfQueryResults + " results shown");
+    
   }
 
   function getRandomInt(min, max) {
@@ -276,11 +284,25 @@
 
 
     new AutoCompletion("#labelQuery", availableLabels);
+    $("#labelQueryForm").form("settings", {keyboardShortcuts: false});
 
     $("#randomLabelQueryButton").click(function(e) {
       var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
       $("#labelQuery").val(randomElem);
     });
+
+    $("#labelQuery").keyup(function(event) {
+      if(event.keyCode === 13) { //when enter inside input field is pressed
+        event.preventDefault();
+        populateImageGrid();
+        $("#labelQuery").blur();		
+      }
+    });
+
+    {{if ne .query "" }}
+      $("#labelQuery").val({{ .query }});
+      $("#browseLabelsGoButton").click();
+    {{ end }}
   });
 </script>
 
@@ -290,9 +312,9 @@
 <div class="row" id="labelQuerySearchContainer">
   <div class="four wide column"></div>
   <div class="eight wide center aligned column">
-    <form class="ui form segment">
+    <form class="ui form segment" id="labelQueryForm">
       <div class="field">
-       <p>Search for images you are interested in</p>
+       <p class="default-text">Search for images you are interested in</p>
        <div class="ui action input">
 	     <input placeholder="Query..." type="text" id="labelQuery">
          <div class="ui icon button" id="randomLabelQueryButton">
@@ -301,7 +323,7 @@
        </div>
       </div>
 
-      <div class="ui primary disabled submit button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>
+      <div class="ui primary disabled button" id="browseLabelsGoButton" onclick="populateImageGrid();">Go</div>
     </form>
     <p id="numberOfQueryResults"></p>
 

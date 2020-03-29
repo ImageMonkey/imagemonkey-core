@@ -25,15 +25,58 @@ function setLabel(label, sublabel, accessor) {
     if (accessor !== null)
         $("#label").attr("accessor", accessor);
 
-    if (sublabel === "") {
-        $("#label").text(("Annotate all: " + label));
-        $("#bottomLabel").text(("Annotate all: " + label));
-        $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + label + " objects at once");
+    if (label !== null && sublabel !== null) {
+        if (sublabel === "") {
+            $("#label").text(("Annotate all: " + label));
+            $("#bottomLabel").text(("Annotate all: " + label));
+            $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + label + " objects at once");
+        } else {
+            $("#label").text(("Annotate all: " + sublabel + "/" + label));
+            $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
+            $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + sublabel + "/" + label + " objects at once");
+        }
     } else {
-        $("#label").text(("Annotate all: " + sublabel + "/" + label));
-        $("#bottomLabel").text(("Annotate all: " + sublabel + "/" + label));
-        $("#isPluralButton").attr("data-tooltip", "Set in case you want to annotate multiple " + sublabel + "/" + label + " objects at once");
+        $("#label").text("Please add a label first");
+        $("#bottomLabel").text("");
     }
+}
+
+function enableDisableAnnotationsMenu(annotator) {
+    if ($("#bottomLabel").text() === "") {
+        $("#annotatorMenu").children().each(function() {
+            $(this).addClass("disabled");
+        });
+
+        if (annotator) {
+            annotator.block();
+        }
+    } else {
+        $("#annotatorMenu").removeClass("disabled");
+        $("#annotatorMenu").children().each(function() {
+            $(this).removeClass("disabled");
+        });
+
+        if (annotator) {
+            annotator.unblock();
+        }
+    }
+
+
+}
+
+function showHideLabelControls() {
+    var label = $("#label").text();
+    var bottomLabel = $("#bottomLabel").text();
+
+    if (label === "")
+        $("#label").hide();
+    else
+        $("#label").show();
+
+    if (bottomLabel === "")
+        $("#bottomLabel").hide();
+    else
+        $("#bottomLabel").show();
 }
 
 function changeControl(annotator, imageId) {
@@ -46,9 +89,13 @@ function changeControl(annotator, imageId) {
     } else {
         $("#labelContainer").show();
         $("#doneButton").show();
-        $("#bottomLabel").show();
+
+        if ($("#bottomLabel").text() !== "")
+            $("#bottomLabel").show();
         $("#isPluralContainer").show();
-        annotator.unblock();
+
+        if ($("#bottomLabel").text() !== "")
+            annotator.unblock();
     }
 }
 

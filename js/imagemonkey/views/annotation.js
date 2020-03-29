@@ -166,6 +166,7 @@ var AnnotationView = (function() {
             this.canvas.fabric().selection = false;
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
+            enableDisableAnnotationsMenu(this.annotator);
         }
 
         var scaleFactor = getCanvasScaleFactor(this.annotationInfo);
@@ -255,7 +256,7 @@ var AnnotationView = (function() {
 
 
     AnnotationView.prototype.addAnnotationsUnifiedMode = function() {
-        var validationIds = [];
+        var imageGridImageIdentifiers = [];
         var annotations = [];
         for (var key in this.unifiedModeAnnotations) {
             if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
@@ -267,18 +268,26 @@ var AnnotationView = (function() {
                     annotation["sublabel"] = entry.sublabel;
                     annotations.push(annotation);
 
-                    if ("validationUuid" in entry && entry.validationUuid !== null)
-                        validationIds.push(entry.validationUuid);
+                    if ("validationUuid" in entry && entry.validationUuid !== null && entry.validationUuid !== undefined) {
+                        imageGridImageIdentifiers.push(entry.validationUuid);
+                    }
                 }
             }
         }
 
+        if (imageGridImageIdentifiers.length === 0) {
+            if (this.annotationInfo.validationId !== undefined)
+                imageGridImageIdentifiers.push(this.annotationInfo.validationId);
+            else
+                imageGridImageIdentifiers.push(this.annotationInfo.imageId);
+        }
+
         this.unifiedModeLabels = {};
         this.unifiedModeAnnotations = {};
-        this.addAnnotations(annotations, validationIds);
+        this.addAnnotations(annotations, imageGridImageIdentifiers);
     }
 
-    AnnotationView.prototype.addAnnotations = function(annotations, validationIds = null) {
+    AnnotationView.prototype.addAnnotations = function(annotations, imageGridImageIdentifiers = null) {
         var headers = {}
         if (this.browserFingerprint !== null)
             headers["X-Browser-Fingerprint"] = this.browserFingerprint;
@@ -290,7 +299,7 @@ var AnnotationView = (function() {
         this.annotator.reset();
 
         if (annotations.length === 0) {
-            this.onAddAnnotationsDone();
+            this.onAddAnnotationsDone(imageGridImageIdentifiers);
             return;
         }
 
@@ -305,18 +314,18 @@ var AnnotationView = (function() {
                 xhr.setRequestHeader("Authorization", "Bearer " + getCookie("imagemonkey"))
             },
             success: function(data) {
-                inst.onAddAnnotationsDone(validationIds);
+                inst.onAddAnnotationsDone(imageGridImageIdentifiers);
             }
         });
     }
 
-    AnnotationView.prototype.onAddAnnotationsDone = function(validationIds = null) {
+    AnnotationView.prototype.onAddAnnotationsDone = function(imageGridImageIdentifiers = null) {
         if (this.annotationMode === "default")
             this.loadUnannotatedImage();
         else {
             $("#loadingSpinner").hide();
             changeNavHeader("browse");
-            showBrowseAnnotationImageGrid(validationIds);
+            showBrowseAnnotationImageGrid(imageGridImageIdentifiers);
             $("#isPluralContainer").hide();
         }
 
@@ -359,8 +368,30 @@ var AnnotationView = (function() {
             }).catch(function() {
                 inst.handleUnannotatedImageResponse(null);
             });
-
     }
+
+    AnnotationView.prototype.loadUnannotatedImageWithNoLabelsFromImageUrl = function(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked) {
+        showHideControls(false, this.annotationInfo.imageUnlocked);
+
+        var data = {
+            uuid: imageId,
+            width: imageWidth,
+            height: imageHeight,
+            validation: {
+                id: null
+            },
+            url: imageUrl,
+            unlocked: imageUnlocked,
+            label: {
+                label: null,
+                sublabel: null,
+                accessor: null
+            }
+        };
+
+        this.handleUnannotatedImageResponse(data);
+    }
+
 
     AnnotationView.prototype.getAnnotationInfo = function() {
         return this.annotationInfo;
@@ -453,6 +484,9 @@ var AnnotationView = (function() {
         });
 
         setLabel($(elem).attr("data-label"), $(elem).attr("data-sublabel"), null);
+        showHideLabelControls();
+        enableDisableAnnotationsMenu(this.annotator);
+
         $(elem).addClass("grey inverted");
 
         //clear existing annotations
@@ -539,19 +573,30 @@ var AnnotationView = (function() {
                     }
                     inst.unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
 
-                    if (inst.unifiedModePopulated === UnifiedModeStates.initialized) {
-                        if (inst.canvas.fabric().backgroundImage && inst.canvas.fabric().backgroundImage !== undefined) {
-                            inst.initializeLabelsLstAftLoadDelayed = false;
-                            inst.selectLabelInUnifiedLabelsLstAfterLoad();
-                        } else { //image is not yet loaded (which we need before we can initialize the labels list),
-                            //so we need to initialize the labels list when the image is loaded
-                            inst.initializeLabelsLstAftLoadDelayed = true;
-                        }
-                    }
+                    inst.finishUnifiedModeInitialization();
                 }
             },
-            error: function(xhr, options, err) {}
+            error: function(xhr, options, err) {
+                if (xhr.status === 404) {
+                    inst.unifiedModePopulated |= UnifiedModeStates.fetchedLabels;
+
+                    inst.finishUnifiedModeInitialization();
+
+                }
+            }
         });
+    }
+
+    AnnotationView.prototype.finishUnifiedModeInitialization = function() {
+        if (this.unifiedModePopulated === UnifiedModeStates.initialized) {
+            if (this.canvas.fabric().backgroundImage && this.canvas.fabric().backgroundImage !== undefined) {
+                this.initializeLabelsLstAftLoadDelayed = false;
+                this.selectLabelInUnifiedLabelsLstAfterLoad();
+            } else { //image is not yet loaded (which we need before we can initialize the labels list),
+                //so we need to initialize the labels list when the image is loaded
+                this.initializeLabelsLstAftLoadDelayed = true;
+            }
+        }
     }
 
     AnnotationView.prototype.getAnnotationsForImage = function(imageId) {
@@ -589,18 +634,15 @@ var AnnotationView = (function() {
                     }
                     inst.unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
 
-                    if (inst.unifiedModePopulated === UnifiedModeStates.initialized) {
-                        if (inst.canvas.fabric().backgroundImage && inst.canvas.fabric().backgroundImage !== undefined) {
-                            inst.initializeLabelsLstAftLoadDelayed = false;
-                            inst.selectLabelInUnifiedLabelsLstAfterLoad();
-                        } else { //image is not yet loaded (which we need before we can initialize the labels list),
-                            //so we need to initialize the labels list when the image is loaded
-                            inst.initializeLabelsLstAftLoadDelayed = true;
-                        }
-                    }
+                    inst.finishUnifiedModeInitialization();
                 }
             },
-            error: function(xhr, options, err) {}
+            error: function(xhr, options, err) {
+                if (xhr.status === 404) {
+                    inst.unifiedModePopulated |= UnifiedModeStates.fetchedAnnotations;
+                    inst.finishUnifiedModeInitialization();
+                }
+            }
         });
     }
 
@@ -641,6 +683,8 @@ var AnnotationView = (function() {
         showHideAutoAnnotationsLoadButton(this.autoAnnotations);
 
         setLabel(data.validation.label, data.validation.sublabel, null);
+        showHideLabelControls();
+        enableDisableAnnotationsMenu(this.annotator);
 
         if (this.canvas !== undefined && this.canvas !== null) {
             this.annotator.reset();
@@ -805,7 +849,7 @@ var AnnotationView = (function() {
                             '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
 
                             '<div class="ui input">' +
-                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels">' +
+                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
                             '</div>' +
                             '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                             '</div>' +
@@ -909,9 +953,9 @@ var AnnotationView = (function() {
                         return
                     }
                 } else { //logged in
-                    var pattern = new RegExp("^[a-zA-Z ]+$");
+                    var pattern = new RegExp("^[)a-zA-Z (\/_]+$");
                     if (!pattern.test(labelName)) {
-                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z and ' ')");
+                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, ' ', '(', ')', '/' and '_'");
                         $("#warningMsg").show(200).delay(1500).hide(200);
                         return
                     }
@@ -921,7 +965,11 @@ var AnnotationView = (function() {
                     selectedElem = inst.availableLabelsLookupTable[labelName];
                 if (selectedElem === null) {
                     if (inst.loggedIn) {
-                        var tempUuid = labelName.replace(/\s/g, "-"); //remove all whitespaces with '-' (spaces are not allowed in html id tags)
+                        var tempUuid = labelName
+                            .replace(/\(/g, "-")
+                            .replace(/\s/g, "-")
+                            .replace(/\)/g, "-")
+                            .replace(/\//g, "-"); //remove all whitespaces, '(', ')' and '/' with '-' (characters not allowed in html id tags)
                         selectedElem = {
                             "uuid": tempUuid,
                             "label": labelName,
@@ -1031,6 +1079,9 @@ var AnnotationView = (function() {
             }
 
             setLabel(data.label.label, data.label.sublabel, data.label.accessor);
+            showHideLabelControls();
+            enableDisableAnnotationsMenu(this.annotator);
+
             changeNavHeader("default");
         } else {
             this.annotationInfo.imageId = "";
@@ -1193,7 +1244,8 @@ var AnnotationView = (function() {
         $("#skipAnnotationDropdown").dropdown();
 
         Mousetrap.bind("r", function() {
-            $("#rectMenuItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#rectMenuItem").trigger("click");
         });
 
 
@@ -1235,7 +1287,9 @@ var AnnotationView = (function() {
             inst.annotator.setRefinements(refs);
         });
 
-
+        Mousetrap.bind(new Settings().getAddLabelHotkey(), function(e, combo) {
+            $("#addLabelToUnifiedModeListButton").click();
+        });
 
         $("#rectMenuItem").click(function(e) {
             if (inst.annotator !== undefined && inst.annotator) {
@@ -1247,7 +1301,8 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind("c", function() {
-            $("#circleMenuItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#circleMenuItem").trigger("click");
         });
 
         $("#circleMenuItem").click(function(e) {
@@ -1260,11 +1315,13 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind("p", function() {
-            $("#polygonMenuItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#polygonMenuItem").trigger("click");
         });
 
         Mousetrap.bind("s", function() {
-            $("#selectMoveMenutItem").trigger("click");
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                $("#selectMoveMenutItem").trigger("click");
         });
 
         $("#polygonMenuItem").click(function(e) {
@@ -1372,6 +1429,11 @@ var AnnotationView = (function() {
                 var firstItem = unifiedModeToolboxChildren.first();
                 if (firstItem && firstItem.length === 1)
                     firstItem[0].click();
+                else {
+                    setLabel(null, null, null);
+                    showHideLabelControls();
+                    enableDisableAnnotationsMenu(inst.annotator);
+                }
             }
         });
 

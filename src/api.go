@@ -1992,6 +1992,7 @@ func main() {
 				queryParser.AllowImageHeight(true)
 				queryParser.AllowAnnotationCoverage(true)
 				queryParser.AllowImageCollection(true)
+				queryParser.AllowImageHasLabels(true)
 				parseResult, err := queryParser.Parse()
 				if err != nil {
 					c.JSON(422, gin.H{"error": err.Error()})
@@ -3214,6 +3215,16 @@ func main() {
 			}
 
 			c.JSON(200, validatedStatistics)
+		})
+
+		router.GET("/v1/statistics/contributions", func(c *gin.Context) {
+			totalProgress, err := imageMonkeyDatabase.GetTotalContributions()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+
+			c.JSON(200, totalProgress)
 		})
 
 		/*router.GET("/v1/activity/validation", func(c *gin.Context) {

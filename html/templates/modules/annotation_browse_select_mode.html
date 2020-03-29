@@ -94,14 +94,14 @@
     });
   }
 
-  function showBrowseAnnotationImageGrid(annotatedEntriesIds = null) {
+  function showBrowseAnnotationImageGrid(imageGridImageIdentifiers = null) {
     //if the image grid gets shown again, the image in question was successfully annotated/blacklisted or marked
     //as non-annotatable. We now grey the image out and change the mouse cursor to default again.
 
-    if(annotatedEntriesIds !== null) {
-      for(var i = 0; i < annotatedEntriesIds.length; i++) {
-        $("#"+annotatedEntriesIds[i]).addClass("grey-out");
-        $("#"+annotatedEntriesIds[i]).css('cursor', 'default');
+    if(imageGridImageIdentifiers !== null) {
+      for(var i = 0; i < imageGridImageIdentifiers.length; i++) {
+        $("#"+imageGridImageIdentifiers[i]).addClass("grey-out");
+        $("#"+imageGridImageIdentifiers[i]).css('cursor', 'default');
       }
     }
 
@@ -121,7 +121,6 @@
   }
   function handleRes(d) {
     $("#imageGrid").show();
-
     if(d && d.length > 0) {
       imageGridData = d;
       sizes = [];
@@ -196,13 +195,23 @@
     if($(elem).hasClass("grey-out"))
       return;
 
-    var validationId = $(elem).attr("data-validationid");
-    //currentAnnotatedImageGridElement = $(elem).attr("id");
+    var validationId = $(elem).attr("data-validationid");	
     $("#annotationQuerySearchContainer").hide();
     infiniteScroll.pause();
     infiniteScroll.saveScrollPosition();
     $("#imageGrid").hide();
-    annotationView.loadUnannotatedImage(validationId);
+
+    if(validationId === "") {
+      var imageId = $(elem).attr("data-image-id"); 
+      var imageUrl = $(elem).attr("data-orig-image-url");
+      var imageWidth = $(elem).attr("data-orig-image-width");
+      var imageHeight = $(elem).attr("data-orig-image-height");
+      var imageUnlocked = ($(elem).attr("data-image-unlocked") === "true") ? true : false;
+      annotationView.loadUnannotatedImageWithNoLabelsFromImageUrl(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked);
+    }
+    else {
+      annotationView.loadUnannotatedImage(validationId);
+    }
   }
 
   function onImageGridCanvasClicked(data) {
@@ -214,12 +223,18 @@
     annotationView.loadAnnotatedImage(annotationId, -1);
   }
 
-  function newImageItem(id, url, validationId, top, left, width, height, tooltip) {
+  function newImageItem(id, url, validationId, top, left, width, height, tooltip, imageId, origImageWidth, origImageHeight, origImageUrl, imageUnlocked) {
     var d = ('<div class="justified-layout-item" data-balloon-visible data-balloon="' + tooltip 
             + '" data-balloon-length="fit" data-balloon-pos="up" style="width: ' + width 
             +'px; height: ' + height + 'px; top: ' 
             + top  + 'px; left: ' +  left + 'px"><img id="' + id +'" src="' + url 
-            + '" data-validationid="' + validationId +'" onclick="onImageGridItemClicked(this);" style="cursor: pointer;"></div>');
+            + '" data-validationid="' + validationId 
+			+ '" data-orig-image-width="' + origImageWidth
+			+ '" data-orig-image-height="' + origImageHeight
+			+ '" data-image-unlocked="' + imageUnlocked
+			+ '" data-orig-image-url="' + origImageUrl
+			+ '" data-image-id="' + imageId
+			+ '" onclick="onImageGridItemClicked(this);" style="cursor: pointer;"></div>');
     return d;
   }
 
@@ -302,8 +317,13 @@
         }
 
         var itemId = imageGridData[i]["uuid"];
+        if(itemId === "")
+          itemId = imageGridData[i]["image"]["uuid"];
+
         item = newImageItem(itemId, url, imageGridData[i]["uuid"], justifiedLayoutGeometry.boxes[i].top, justifiedLayoutGeometry.boxes[i].left, 
-                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText);
+                              justifiedLayoutGeometry.boxes[i].width, justifiedLayoutGeometry.boxes[i].height, tooltipText, 
+							  imageGridData[i]["image"]["uuid"], imageGridData[i]["image"]["width"], imageGridData[i]["image"]["height"], 
+							  imageGridData[i]["image"]["url"], imageGridData[i]["image"]["unlocked"]);
         $("#imageGrid").append(item); 
       }
 
@@ -329,14 +349,9 @@
 
     imageMonkeyApi.setToken(getCookie("imagemonkey"));
 
-    var availableLabels = [];
 
     var staticQueryAttributes = {{ .queryAttributes }};
-    for(var key in staticQueryAttributes) {
-      if(staticQueryAttributes.hasOwnProperty(key)) {
-        availableLabels.push(staticQueryAttributes[key].name);
-      }
-    }
+    var availableLabels = staticQueryAttributes;
    
     var promises = [imageMonkeyApi.getLabelAccessors(true)];
     {{ if ne .sessionInformation.Username "" }}
@@ -388,7 +403,7 @@
   <div class="eight wide center aligned column">
     <form class="ui form segment">
       <div class="field">
-       <p>Search for annotation tasks you are interested in</p>
+       <p class="default-text">Search for annotation tasks you are interested in</p>
        <div class="ui action input">
          <input placeholder="Query..." type="text" id="annotationQuery">
          <div class="ui icon button" id="randomAnnotationQueryButton">
