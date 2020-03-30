@@ -101,7 +101,6 @@
     if(imageGridImageIdentifiers !== null) {
       for(var i = 0; i < imageGridImageIdentifiers.length; i++) {
         $("#"+imageGridImageIdentifiers[i]).addClass("grey-out");
-        $("#"+imageGridImageIdentifiers[i]).css('cursor', 'default');
       }
     }
 
@@ -192,9 +191,6 @@
   }
 
   function onImageGridItemClicked(elem) {
-    if($(elem).hasClass("grey-out"))
-      return;
-
     var validationId = $(elem).attr("data-validationid");	
     $("#annotationQuerySearchContainer").hide();
     infiniteScroll.pause();
