@@ -713,15 +713,15 @@
       if (newlyAddedLabels.hasOwnProperty(key)) {
         var sublabels = newlyAddedLabels[key];
         var s = [];
-        strLabelsLst += (escapeHtml(key) + ", ");
+        strLabelsLst += (unescapeHtml(key) + ", ");
         for(var i = 0; i < sublabels.length; i++) {
-          s.push({"name": sublabels[i]});
-          strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
+          s.push({"name": unescapeHtml(sublabels[i])});
+          strLabelsLst += (unescapeHtml(sublabels[i]) + "/" + unescapeHtml(key) + ", ");
         }
-        labelsLst.push({label: key, annotatable: true, sublabels: s});
+        labelsLst.push({label: unescapeHtml(key), annotatable: true, sublabels: s});
       }
     }
-
+    
     if(strLabelsLst.length > 2)
       strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
 
