@@ -5,6 +5,18 @@ var UnifiedModeStates = {
     initialized: 3
 };
 
+String.prototype.hexEncode = function() {
+    var hex, i;
+
+    var result = "";
+    for (i = 0; i < this.length; i++) {
+        hex = this.charCodeAt(i).toString(16);
+        result += ("000" + hex).slice(-4);
+    }
+
+    return result
+}
+
 
 var AnnotationView = (function() {
     function AnnotationView(apiBaseUrl, playgroundBaseUrl, annotationMode, annotationView, annotationId, annotationRevision, validationId, loggedIn) {
@@ -953,9 +965,9 @@ var AnnotationView = (function() {
                         return
                     }
                 } else { //logged in
-                    var pattern = new RegExp("^[)a-zA-Z (\/_]+$");
-                    if (!pattern.test(labelName)) {
-                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, ' ', '(', ')', '/' and '_'");
+                    var pattern = new RegExp("^[)a-zA-Z (\/_><-]+$");
+                    if (!pattern.test($("#addLabelsToUnifiedModeListLabels").val())) {
+                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, '-', ' ', '(', ')', '/', '<', '>' and '_'");
                         $("#warningMsg").show(200).delay(1500).hide(200);
                         return
                     }
@@ -965,11 +977,7 @@ var AnnotationView = (function() {
                     selectedElem = inst.availableLabelsLookupTable[labelName];
                 if (selectedElem === null) {
                     if (inst.loggedIn) {
-                        var tempUuid = labelName
-                            .replace(/\(/g, "-")
-                            .replace(/\s/g, "-")
-                            .replace(/\)/g, "-")
-                            .replace(/\//g, "-"); //remove all whitespaces, '(', ')' and '/' with '-' (characters not allowed in html id tags)
+                        var tempUuid = "i" + $("#addLabelsToUnifiedModeListLabels").val().hexEncode(); //id must start with a letter
                         selectedElem = {
                             "uuid": tempUuid,
                             "label": labelName,
@@ -993,7 +1001,7 @@ var AnnotationView = (function() {
                     }
 
                     //if it's a non productive label, we need to do it a bit differently
-                    if (selectedElem.uuid === labelName && $(this).attr("data-label") === selectedElem.uuid &&
+                    if (unescapeHtml(selectedElem.label) === unescapeHtml($(this).attr("data-label")) &&
                         $(this).attr("data-sublabel") === "") {
 
                         alreadyExistsInUnifiedModeLabelsLst = true;
@@ -1416,8 +1424,8 @@ var AnnotationView = (function() {
                     toBeRemovedAnnotationId = inst.unifiedModeLabels[removedElemUuid].sublabel + "/" + inst.unifiedModeLabels[removedElemUuid].label;
                 else
                     toBeRemovedAnnotationId = inst.unifiedModeLabels[removedElemUuid].label;
-                if (toBeRemovedAnnotationId in inst.unifiedModeAnnotations) {
-                    delete inst.unifiedModeAnnotations[toBeRemovedAnnotationId];
+                if (unescapeHtml(toBeRemovedAnnotationId) in inst.unifiedModeAnnotations) {
+                    delete inst.unifiedModeAnnotations[unescapeHtml(toBeRemovedAnnotationId)];
                     inst.annotator.deleteAll();
                 }
 
@@ -1650,7 +1658,9 @@ var AnnotationView = (function() {
                     if (Object.keys(inst.unifiedModeLabels).length > 0) {
                         var newlyAddedLabelsUnifiedMode = [];
                         for (var key in inst.unifiedModeLabels) {
-                            newlyAddedLabelsUnifiedMode.push(inst.unifiedModeLabels[key]);
+                            var unifiedModeLabelsEntry = inst.unifiedModeLabels[key];
+                            unifiedModeLabelsEntry.label = unescapeHtml(unifiedModeLabelsEntry.label);
+                            newlyAddedLabelsUnifiedMode.push(unifiedModeLabelsEntry);
                         }
                         showHideControls(false, inst.annotationInfo.imageUnlocked);
                         //add missing labels first, then add annotations

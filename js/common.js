@@ -23,6 +23,10 @@ function escapeHtml(str) {
     return jQuery('<div/>').text(str).html();
 }
 
+function unescapeHtml(safe) {
+    return $('<div />').html(safe).text();
+}
+
 function parseJwt(token) {
     var base64Url = token.split('.')[1];
     var base64 = base64Url.replace('-', '+').replace('_', '/');
