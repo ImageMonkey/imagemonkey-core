@@ -228,7 +228,7 @@ function onLabelInLabelLstRemoveClicked(elem) {
 function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false,
     isUnlocked = false, loggedIn = false, validationId = null) {
     var id = "labellstitem-" + uuid;
-    var displayedLabel = ((sublabel === "") ? label : sublabel + "/" + label);
+    var displayedLabel = escapeHtml(((sublabel === "") ? label : sublabel + "/" + label));
     if (allowRemove) {
         displayedLabel = ('<span class="left-floated">' + displayedLabel +
             '</span><span class="right-floated" onclick="onLabelInLabelLstRemoveClicked(this);">' +
@@ -251,8 +251,8 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCre
         validationIdStr = '" data-validation-uuid="' + validationId;
 
     var elem = $('<div class="ui' + disabledStr + 'segment center aligned labelslstitem" id="' + id + '"' + tooltip +
-        ' data-label="' + label + '" data-uuid="' + uuid +
-        '" data-sublabel="' + sublabel +
+        ' data-label="' + escapeHtml(label) + '" data-uuid="' + uuid +
+        '" data-sublabel="' + escapeHtml(sublabel) +
         '" data-newly-created="' + newlyCreated +
         validationIdStr +
         '" onclick="' + onClickCallback + '"' +

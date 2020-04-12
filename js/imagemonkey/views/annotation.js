@@ -1001,9 +1001,8 @@ var AnnotationView = (function() {
                     }
 
                     //if it's a non productive label, we need to do it a bit differently
-                    if (unescapeHtml(selectedElem.label) === unescapeHtml($(this).attr("data-label")) &&
+                    if (unescapeHtml(selectedElem.label) === $(this).attr("data-label") &&
                         $(this).attr("data-sublabel") === "") {
-
                         alreadyExistsInUnifiedModeLabelsLst = true;
                         elem = $(this);
                         return false;
@@ -1025,7 +1024,9 @@ var AnnotationView = (function() {
                             "annotatable": true
                         };
                     }
-                    elem = addLabelToLabelLst(selectedElem.label, selectedElem.sublabel,
+
+                    //label will be escaped in the addLabelToLabelLst function 
+                    elem = addLabelToLabelLst(unescapeHtml(selectedElem.label), unescapeHtml(selectedElem.sublabel),
                         selectedElem.uuid, true, true, false, inst.loggedIn, null);
                 }
 
