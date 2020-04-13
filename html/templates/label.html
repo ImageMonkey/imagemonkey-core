@@ -562,30 +562,33 @@
         escapedSublabel = null;
     }
 
+    var unescapedLabel = unescapeHtml(escapedLabel);
+    var unescapedSublabel = unescapeHtml(escapedSublabel);
+
     var baseLabelExists = labelExists(escapedLabel);
     var added = false;
     var color = colorMap[escapedLabel];
 
 
     if(escapedSublabel !== null) {
-      if(!sublabelExists(escapedLabel, escapedSublabel)) {
+      if(!sublabelExists(unescapedLabel, unescapedSublabel)) {
         $('#labels').prepend($(('<div class="ui huge ' + color + ' label" sublabel="' + escapedSublabel + 
                                 '" label="' + escapedLabel + '"' + '>' + escapedSublabel + '/' + escapedLabel + 
                                 '<i class="delete icon" onclick="removeLabel(this)"></i></div>')));
         added = true;
 
-        if(escapedLabel in newlyAddedLabels) {
-          var alreadyAvailableSubLabels = newlyAddedLabels[escapedLabel];
-          alreadyAvailableSubLabels.push(escapedSublabel)
-          newlyAddedLabels[escapedLabel] = alreadyAvailableSubLabels;
+        if(unescapedLabel in newlyAddedLabels) {
+          var alreadyAvailableSubLabels = newlyAddedLabels[unescapedLabel];
+          alreadyAvailableSubLabels.push(unescapedSublabel)
+          newlyAddedLabels[unescapedLabel] = alreadyAvailableSubLabels;
         }
         else {
-          newlyAddedLabels[escapedLabel] = [escapedSublabel];
+          newlyAddedLabels[unescapedLabel] = [unescapedSublabel];
         }
       }
     } else {
       if(!baseLabelExists)
-        newlyAddedLabels[escapedLabel] = [];
+        newlyAddedLabels[unescapedLabel] = [];
     }
 
     if(!baseLabelExists) {
@@ -713,15 +716,15 @@
       if (newlyAddedLabels.hasOwnProperty(key)) {
         var sublabels = newlyAddedLabels[key];
         var s = [];
-        strLabelsLst += (escapeHtml(key) + ", ");
+        strLabelsLst += (key + ", ");
         for(var i = 0; i < sublabels.length; i++) {
           s.push({"name": sublabels[i]});
-          strLabelsLst += (escapeHtml(sublabels[i]) + "/" + escapeHtml(key) + ", ");
+          strLabelsLst += (sublabels[i] + "/" + key + ", ");
         }
         labelsLst.push({label: key, annotatable: true, sublabels: s});
       }
     }
-
+    
     if(strLabelsLst.length > 2)
       strLabelsLst = strLabelsLst.substring(0, strLabelsLst.length - 2); //remove last comma + space
 
