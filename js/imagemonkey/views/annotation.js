@@ -1401,7 +1401,8 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind('+', function() {
-            zoomIn(inst.canvas);
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                zoomIn(inst.canvas);
         });
 
         $("#zoomInMenuItem").click(function(e) {
@@ -1409,7 +1410,8 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind('-', function() {
-            zoomOut(inst.canvas);
+            if (!$("#addLabelsToUnifiedModeListLabels").is(":focus"))
+                zoomOut(inst.canvas);
         });
 
         $("#zoomOutMenuItem").click(function(e) {

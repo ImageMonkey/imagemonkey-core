@@ -20,7 +20,18 @@ $(document)
     });
 
 function escapeHtml(str) {
-    return jQuery('<div/>').text(str).html();
+    var entityMap = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': '&quot;',
+        "'": '&#39;',
+        "/": '&#x2F;'
+    };
+
+    return String(str).replace(/[&<>"'\/]/g, function(s) {
+        return entityMap[s];
+    });
 }
 
 function unescapeHtml(safe) {
