@@ -955,83 +955,87 @@ var AnnotationView = (function() {
 
         if (this.annotationView === "unified") {
             $("#addLabelToUnifiedModeListButton").click(function(e) {
-                var selectedElem = null;
-                var labelName = escapeHtml($("#addLabelsToUnifiedModeListLabels").val());
+                var labelNames = $("#addLabelsToUnifiedModeListLabels").val();
 
-                if (!inst.loggedIn) {
-                    if (!(labelName in inst.availableLabelsLookupTable)) {
-                        $("#warningMsgText").text("Please sign in first to add new labels!");
-                        $("#warningMsg").show(200).delay(1500).hide(200);
-                        return
-                    }
-                } else { //logged in
-                    var pattern = new RegExp("^[)a-zA-Z (\/_><-]+$");
-                    if (!pattern.test($("#addLabelsToUnifiedModeListLabels").val())) {
-                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, '-', ' ', '(', ')', '/', '<', '>' and '_'");
-                        $("#warningMsg").show(200).delay(1500).hide(200);
-                        return
-                    }
-                }
-
-                if (labelName in inst.availableLabelsLookupTable)
-                    selectedElem = inst.availableLabelsLookupTable[labelName];
-                if (selectedElem === null) {
-                    if (inst.loggedIn) {
-                        var tempUuid = "i" + $("#addLabelsToUnifiedModeListLabels").val().hexEncode(); //id must start with a letter
-                        selectedElem = {
-                            "uuid": tempUuid,
-                            "label": labelName,
-                            "sublabel": "",
-                            "newly_created": true
+                //split by delimiter and remove surrouding spaces around each label
+                var splittedLabels = labelNames.split(new Settings().getLabelSeparator()).map(item => item.trim());
+                for (var i = 0; i < splittedLabels.length; i++) {
+                    var labelName = escapeHtml(splittedLabels[i]);
+                    if (!inst.loggedIn) {
+                        if (!(labelName in inst.availableLabelsLookupTable)) {
+                            $("#warningMsgText").text("Please sign in first to add new labels!");
+                            $("#warningMsg").show(200).delay(1500).hide(200);
+                            return
                         }
-                    } else {
-                        $("#warningMsgText").text("Please sign in first to add new labels!");
-                        $("#warningMsg").show(200).delay(1500).hide(200);
-                        return
                     }
+                    /*else { //logged in
+						var pattern = new RegExp("^[)a-zA-Z (\/_><-]+$");
+						if (!pattern.test($("#addLabelsToUnifiedModeListLabels").val())) {
+							$("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, '-', ' ', '(', ')', '/', '<', '>' and '_'");
+							$("#warningMsg").show(200).delay(1500).hide(200);
+							return
+						}
+					}*/
+                    var selectedElem = null;
+                    if (labelName in inst.availableLabelsLookupTable)
+                        selectedElem = inst.availableLabelsLookupTable[labelName];
+                    if (selectedElem === null) {
+                        if (inst.loggedIn) {
+                            var tempUuid = "i" + unescapeHtml(labelName).hexEncode(); //id must start with a letter
+                            selectedElem = {
+                                "uuid": tempUuid,
+                                "label": labelName,
+                                "sublabel": "",
+                                "newly_created": true
+                            }
+                        } else {
+                            $("#warningMsgText").text("Please sign in first to add new labels!");
+                            $("#warningMsg").show(200).delay(1500).hide(200);
+                            return
+                        }
+                    }
+
+                    var alreadyExistsInUnifiedModeLabelsLst = false;
+                    var elem;
+                    $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
+                        if ($(this).attr("data-uuid") === selectedElem.uuid) {
+                            alreadyExistsInUnifiedModeLabelsLst = true;
+                            elem = $(this);
+                            return false;
+                        }
+
+                        //if it's a non productive label, we need to do it a bit differently
+                        if (unescapeHtml(selectedElem.label) === $(this).attr("data-label") &&
+                            $(this).attr("data-sublabel") === "") {
+                            alreadyExistsInUnifiedModeLabelsLst = true;
+                            elem = $(this);
+                            return false;
+                        }
+                    });
+
+                    if (!alreadyExistsInUnifiedModeLabelsLst) {
+                        if (selectedElem.sublabel !== "") {
+                            inst.unifiedModeLabels[selectedElem.uuid] = {
+                                "label": selectedElem.label,
+                                "sublabels": [{
+                                    "name": selectedElem.sublabel
+                                }],
+                                "annotatable": true
+                            };
+                        } else {
+                            inst.unifiedModeLabels[selectedElem.uuid] = {
+                                "label": selectedElem.label,
+                                "annotatable": true
+                            };
+                        }
+                        //label will be escaped in the addLabelToLabelLst function 
+                        elem = addLabelToLabelLst(unescapeHtml(selectedElem.label), unescapeHtml(selectedElem.sublabel),
+                            selectedElem.uuid, true, true, false, inst.loggedIn, null);
+                    }
+
+                    //select newly added (or already existing) label
+                    inst.onLabelInLabelLstClicked(elem);
                 }
-
-                var alreadyExistsInUnifiedModeLabelsLst = false;
-                var elem;
-                $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
-                    if ($(this).attr("data-uuid") === selectedElem.uuid) {
-                        alreadyExistsInUnifiedModeLabelsLst = true;
-                        elem = $(this);
-                        return false;
-                    }
-
-                    //if it's a non productive label, we need to do it a bit differently
-                    if (unescapeHtml(selectedElem.label) === $(this).attr("data-label") &&
-                        $(this).attr("data-sublabel") === "") {
-                        alreadyExistsInUnifiedModeLabelsLst = true;
-                        elem = $(this);
-                        return false;
-                    }
-                });
-
-                if (!alreadyExistsInUnifiedModeLabelsLst) {
-                    if (selectedElem.sublabel !== "") {
-                        inst.unifiedModeLabels[selectedElem.uuid] = {
-                            "label": selectedElem.label,
-                            "sublabels": [{
-                                "name": selectedElem.sublabel
-                            }],
-                            "annotatable": true
-                        };
-                    } else {
-                        inst.unifiedModeLabels[selectedElem.uuid] = {
-                            "label": selectedElem.label,
-                            "annotatable": true
-                        };
-                    }
-
-                    //label will be escaped in the addLabelToLabelLst function 
-                    elem = addLabelToLabelLst(unescapeHtml(selectedElem.label), unescapeHtml(selectedElem.sublabel),
-                        selectedElem.uuid, true, true, false, inst.loggedIn, null);
-                }
-
-                //select newly added (or already existing) label
-                inst.onLabelInLabelLstClicked(elem);
 
                 $("#addLabelsToUnifiedModeListLabels").val("");
             });
