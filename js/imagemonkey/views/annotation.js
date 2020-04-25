@@ -881,7 +881,7 @@ var AnnotationView = (function() {
                     'Labels' +
                     '</div>' +
                     '</h2>' +
-                    '<div class="ui basic segment">' +
+                    '<div class="ui basic segment" id="annotationLabelsLstBasicSegment">' +
                     '<div class="ui segments">' +
                     '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
                     '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
@@ -899,7 +899,7 @@ var AnnotationView = (function() {
                     'Properties' +
                     '</div>' +
                     '</h2>' +
-                    '<div class="ui basic segment">' +
+                    '<div class="ui basic segment" id="annotationPropertiesLstBasicSegment">' +
                     '<div class="ui segments">' +
                     '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
                     '</div>' +
@@ -1192,6 +1192,54 @@ var AnnotationView = (function() {
             }).catch(function(e) {
                 Sentry.captureException(e);
             });
+    }
+
+    AnnotationView.prototype.showHideAllAnnotations = function(show) {
+        if (show) {
+            this.saveCurrentSelectLabelInUnifiedModeList();
+
+            var allAnnotations = [];
+            if (this.annotationMode === "refine") {
+                allAnnotations.push(...this.existingAnnotations);
+
+            } else {
+                for (var key in this.unifiedModeAnnotations) {
+                    if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
+                        allAnnotations.push(...this.unifiedModeAnnotations[key].annotations);
+                    }
+                }
+            }
+            $("#addLabelToUnifiedModeListForm").addClass("disabled");
+            $("#annotationLabelsLstBasicSegment").addClass("disabled");
+            $("#addRefinementForm").addClass("disabled");
+            $("#annotationPropertiesLstBasicSegment").addClass("disabled");
+            this.annotator.loadAnnotations(allAnnotations, this.canvas.fabric().backgroundImage.scaleX);
+            $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
+        } else {
+            $("#addLabelToUnifiedModeListForm").removeClass("disabled");
+            $("#annotationLabelsLstBasicSegment").removeClass("disabled");
+            $("#addRefinementForm").removeClass("disabled");
+            $("#annotationPropertiesLstBasicSegment").removeClass("disabled");
+            $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "auto");
+
+
+            if (this.annotationMode === "refine") {
+                this.annotator.toJSON()
+            } else {
+                var foundElem = null;
+                $("#annotationLabelsLst").children().each(function(i) {
+                    if ($(this).hasClass("grey inverted")) {
+                        foundElem = $(this);
+                        return;
+                    }
+                });
+
+                if (foundElem) {
+                    this.annotator.deleteAll();
+                    this.onLabelInLabelLstClicked(foundElem);
+                }
+            }
+        }
     }
 
     AnnotationView.prototype.exec = function() {
@@ -1513,6 +1561,16 @@ var AnnotationView = (function() {
                 inst.annotator.setShape("");
                 inst.changeMenuItem("PanMode");
             }
+        });
+
+        $("#showAllAnnotationsMenuItem").mousedown(function() {
+            if (inst.canvas && inst.canvas.fabric().backgroundImage)
+                inst.showHideAllAnnotations(true);
+        });
+
+        $("#showAllAnnotationsMenuItem").mouseup(function() {
+            if (inst.canvas && inst.canvas.fabric().backgroundImage)
+                inst.showHideAllAnnotations(false);
         });
 
         $("#blockSelectMenuItem").click(function(e) {
