@@ -1213,7 +1213,7 @@ var AnnotationView = (function() {
             $("#annotationLabelsLstBasicSegment").addClass("disabled");
             $("#addRefinementForm").addClass("disabled");
             $("#annotationPropertiesLstBasicSegment").addClass("disabled");
-            this.annotator.loadAnnotations(allAnnotations, this.canvas.fabric().backgroundImage.scaleX);
+            drawAnnotations(this.canvas.fabric(), allAnnotations, 1.0, null);
             $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
         } else {
             $("#addLabelToUnifiedModeListForm").removeClass("disabled");
@@ -1563,14 +1563,16 @@ var AnnotationView = (function() {
             }
         });
 
-        $("#showAllAnnotationsMenuItem").mousedown(function() {
-            if (inst.canvas && inst.canvas.fabric().backgroundImage)
-                inst.showHideAllAnnotations(true);
-        });
-
-        $("#showAllAnnotationsMenuItem").mouseup(function() {
-            if (inst.canvas && inst.canvas.fabric().backgroundImage)
-                inst.showHideAllAnnotations(false);
+        $("#showAllAnnotationsMenuItem").click(function() {
+            if (inst.canvas && inst.canvas.fabric().backgroundImage) {
+                if ($("#showAllAnnotationsMenuItemIcon").hasClass("orange")) {
+                    $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
+                    inst.showHideAllAnnotations(false);
+                } else {
+                    $("#showAllAnnotationsMenuItemIcon").addClass("orange");
+                    inst.showHideAllAnnotations(true);
+                }
+            }
         });
 
         $("#blockSelectMenuItem").click(function(e) {
