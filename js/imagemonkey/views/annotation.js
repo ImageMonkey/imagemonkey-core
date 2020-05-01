@@ -1209,6 +1209,9 @@ var AnnotationView = (function() {
                     }
                 }
             }
+
+            this.annotator.block();
+
             $("#addLabelToUnifiedModeListForm").addClass("disabled");
             $("#annotationLabelsLstBasicSegment").addClass("disabled");
             $("#addRefinementForm").addClass("disabled");
@@ -1216,6 +1219,8 @@ var AnnotationView = (function() {
             drawAnnotations(this.canvas.fabric(), allAnnotations, 1.0, null);
             $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
         } else {
+            this.annotator.unblock();
+
             $("#addLabelToUnifiedModeListForm").removeClass("disabled");
             $("#annotationLabelsLstBasicSegment").removeClass("disabled");
             $("#addRefinementForm").removeClass("disabled");
@@ -1349,7 +1354,8 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind(new Settings().getAddLabelHotkey(), function(e, combo) {
-            $("#addLabelToUnifiedModeListButton").click();
+            if (!$("#addLabelToUnifiedModeListForm").hasClass("disabled"))
+                $("#addLabelToUnifiedModeListButton").click();
         });
 
         $("#rectMenuItem").click(function(e) {
