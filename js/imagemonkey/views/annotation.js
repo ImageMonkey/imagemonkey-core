@@ -1210,13 +1210,14 @@ var AnnotationView = (function() {
                 }
             }
 
+            this.annotator.deleteAll();
             this.annotator.block();
 
             $("#addLabelToUnifiedModeListForm").addClass("disabled");
             $("#annotationLabelsLstBasicSegment").addClass("disabled");
             $("#addRefinementForm").addClass("disabled");
             $("#annotationPropertiesLstBasicSegment").addClass("disabled");
-            this.annotator.loadAnnotationsOverview(allAnnotations);
+            this.annotator.loadAnnotationsOverview(allAnnotations, this.canvas.fabric().backgroundImage.scaleX);
             $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
         } else {
             this.annotator.unblock();

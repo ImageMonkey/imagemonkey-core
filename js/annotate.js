@@ -695,15 +695,17 @@ var Annotator = (function() {
                 if (o.target) {
                     o.target.set("fill", o.target.get("stroke"));
                     if (o.target.id !== undefined) {
-                        var label = inst._annotationLabelOverviewMapping[o.target.id];
-                        inst.canvas.add(new fabric.Text(label, {
-                            id: "annotationsoverviewlabeltext",
-                            fontSize: 20,
-                            left: 2,
-                            top: 2,
-                            fill: o.target.get("stroke"),
-                            fontFamily: "Arial"
-                        }));
+                        if (o.target.id in inst._annotationLabelOverviewMapping) {
+                            var label = inst._annotationLabelOverviewMapping[o.target.id];
+                            inst.canvas.add(new fabric.Text(label, {
+                                id: "annotationsoverviewlabeltext",
+                                fontSize: 20,
+                                left: 2,
+                                top: 2,
+                                fill: o.target.get("stroke"),
+                                fontFamily: "Arial"
+                            }));
+                        }
                     }
                     inst.canvas.renderAll();
                 }
