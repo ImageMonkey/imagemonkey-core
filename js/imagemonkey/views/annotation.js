@@ -1205,7 +1205,7 @@ var AnnotationView = (function() {
             } else {
                 for (var key in this.unifiedModeAnnotations) {
                     if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
-                        allAnnotations.push(...this.unifiedModeAnnotations[key].annotations);
+                        allAnnotations.push(this.unifiedModeAnnotations[key]);
                     }
                 }
             }
@@ -1216,7 +1216,7 @@ var AnnotationView = (function() {
             $("#annotationLabelsLstBasicSegment").addClass("disabled");
             $("#addRefinementForm").addClass("disabled");
             $("#annotationPropertiesLstBasicSegment").addClass("disabled");
-            drawAnnotations(this.canvas.fabric(), allAnnotations, 1.0, null);
+            this.annotator.loadAnnotationsOverview(allAnnotations);
             $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
         } else {
             this.annotator.unblock();

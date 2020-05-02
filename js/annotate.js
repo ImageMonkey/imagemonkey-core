@@ -487,6 +487,8 @@ var Annotator = (function () {
     this.isSelectMoveMode = false;
     this.refinementsPerAnnotation = {};
     this._refAnnotations = [];
+	this._highlightOnMouseOver = false;
+	this._annotationLabelOverviewMapping = {};
 
     this.setBrushType(this.brushType);
     this.setBrushColor(this.brushColor);
@@ -660,10 +662,36 @@ var Annotator = (function () {
       else{
         inst.canvas.hoverCursor = 'default';
       }
+
+	  if(inst._highlightOnMouseOver) {	
+		inst.canvas.removeItemsByAttr("id", "annotationsoverviewlabeltext");
+		if(o.target) {
+			o.target.set("fill", o.target.get("stroke"));
+			if(o.target.id !== undefined) {	
+				var label = inst._annotationLabelOverviewMapping[o.target.id];
+				inst.canvas.add(new fabric.Text(label, {
+				 id: "annotationsoverviewlabeltext",
+				 fontSize: 20,
+             	 left: 2,
+              	 top: 2,
+				 fill: o.target.get("stroke"),
+				 fontFamily: "Arial"
+            	}));
+			}
+    		inst.canvas.renderAll();
+		}
+	  }
     })
     inst.canvas.on('mouse:out', function(o) {
-      if(o.target)
+      if(o.target) {
         inst.out();
+	 	 if(inst._highlightOnMouseOver) {	
+			inst.canvas.removeItemsByAttr("id", "annotationsoverviewlabeltext");
+			
+			o.target.set("fill", "");
+    		inst.canvas.renderAll();	
+		 }
+	  }
     })
   }
   Annotator.prototype.onMouseUp = function (o) {
@@ -905,6 +933,7 @@ var Annotator = (function () {
     this.canvas.absolutePan(new fabric.Point(0,0));
     this._refAnnotations = [];
     this.refinementsPerAnnotation = {};
+	this._annotationLabelOverviewMapping = {};
   };
 
   Annotator.prototype.deleteAll = function () {
@@ -918,6 +947,7 @@ var Annotator = (function () {
     this.canvas.renderAll();
     this._refAnnotations = [];
     this.refinementsPerAnnotation = {};
+	this._annotationLabelOverviewMapping = {};
   };
 
   Annotator.prototype.deleteSelected = function (o) {
@@ -1343,6 +1373,13 @@ var Annotator = (function () {
     }
   }
 
+  Annotator.prototype._handleLoadedAnnotationOverview = function(label, obj) {
+  	obj.id = generateRandomId();
+	obj.objectCaching = false;
+	this.canvas.renderAll();
+	this._annotationLabelOverviewMapping[obj.id] = label;
+  }
+
   Annotator.prototype._simplifyAutoAnnotations = function(autoAnnotations) {
     for(var i = 0; i < autoAnnotations.length; i++){
       autoAnnotations[i].points = simplify(autoAnnotations[i].points, 4.0, false);
@@ -1357,6 +1394,16 @@ var Annotator = (function () {
     }
 
     this._refAnnotations = this.toJSON();
+  }
+
+  Annotator.prototype.loadAnnotationsOverview = function(annotationsWithLabel, scaleFactor = 1.0) {
+	this._highlightOnMouseOver = true;
+	for(var i = 0; i < annotationsWithLabel.length; i++) {
+		for(var j = 0; j < annotationsWithLabel[i].annotations.length; j++) {
+			drawAnnotations(this.canvas, [annotationsWithLabel[i].annotations[j]], scaleFactor, 
+				this._handleLoadedAnnotationOverview.bind(this, annotationsWithLabel[i].label));
+		}
+	}
   }
 
   Annotator.prototype.loadAutoAnnotations = function(autoAnnotations, scaleFactor = 1.0) {
