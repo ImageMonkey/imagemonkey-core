@@ -373,6 +373,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.loadUnannotatedImage = function(validationId) {
         showHideControls(false, this.annotationInfo.imageUnlocked);
+        $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
         var inst = this;
         this.imageMonkeyApi.getUnannotatedImage(validationId, inst.labelId)
             .then(function(data) {
@@ -384,7 +385,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.loadUnannotatedImageWithNoLabelsFromImageUrl = function(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked) {
         showHideControls(false, this.annotationInfo.imageUnlocked);
-
+        $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
         var data = {
             uuid: imageId,
             width: imageWidth,
@@ -1702,7 +1703,8 @@ var AnnotationView = (function() {
             var res = null;
 
             if (inst.annotationView === "unified") {
-                inst.saveCurrentSelectLabelInUnifiedModeList();
+                if (!$("#showAllAnnotationsMenuItemIcon").hasClass("orange"))
+                    inst.saveCurrentSelectLabelInUnifiedModeList();
                 if (Object.keys(inst.unifiedModeLabels).length === 0 && Object.keys(inst.unifiedModeAnnotations).length === 0) {
                     $('#warningMsgText').text('Please annotate the image first.');
                     $('#warningMsg').show(200).delay(1500).hide(200);
