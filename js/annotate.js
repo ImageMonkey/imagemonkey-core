@@ -10,6 +10,42 @@ fabric.Canvas.prototype.getItemByAttr = function(attr, name) {
     return object;
 };
 
+
+/**
+ * Creates an instance of fabric.Image from its object representation
+ * @static
+ * @param {Object} object Object to create an instance from
+ * @param {Function} callback Callback to invoke when an image instance is created
+ *
+ * see: http://fabricjs.com/v2-breaking-changes
+ */
+fabric.Image.fromObject = function(object, callback) {
+    fabric.util.loadImage(object.src, function(img, error) {
+        if (error) {
+            callback && callback(null, error);
+            return;
+        }
+        fabric.Image.prototype._initFilters.call(object, object.filters, function(filters) {
+            object.filters = filters || [];
+            fabric.Image.prototype._initFilters.call(object, [object.resizeFilter], function(resizeFilters) {
+                object.resizeFilter = resizeFilters[0];
+                if (typeof object.version === 'undefined') {
+                    var elWidth = img.naturalWidth || img.width;
+                    var elHeight = img.naturalHeight || img.height;
+                    var scaleX = (object.scaleX || 1) * object.width / elWidth;
+                    var scaleY = (object.scaleY || 1) * object.height / elHeight;
+                    object.width = elWidth;
+                    object.height = elHeight;
+                    object.scaleX = scaleX;
+                    object.scaleY = scaleY;
+                }
+                var image = new fabric.Image(img, object);
+                callback(image);
+            });
+        });
+    }, null, object.crossOrigin);
+};
+
 fabric.Canvas.prototype.removeItemsByAttr = function(attr, name) {
     var object = null,
         objects = this.getObjects();
@@ -566,7 +602,6 @@ var Annotator = (function() {
         }
 
         this.canvas.discardActiveObject();
-        this.canvas.discardActiveGroup();
         this.canvas.renderAll();
     }
 
@@ -997,7 +1032,6 @@ var Annotator = (function() {
         var objects = this.canvas.getObjects();
         while (objects.length != 0) {
             this.canvas.remove(objects[0]);
-            this.canvas.discardActiveGroup();
         }
         this.polygon.reset();
         this.canvas.renderAll();
@@ -1574,4 +1608,3 @@ var Annotator = (function() {
 
     return Annotator;
 }());
-
