@@ -186,7 +186,7 @@ var Polygon = (function() {
             this.canvas.remove(this.activeShape);
             this.canvas.add(polygon);
             this.activeShape = polygon;
-            this.canvas.renderAll();
+            this.canvas.requestRenderAll();
         } else {
             //var polyPoint = [{x:(options.e.layerX/this.canvas.getZoom()),y:(options.e.layerY/this.canvas.getZoom())}];
             var polyPoint = [{
@@ -224,7 +224,7 @@ var Polygon = (function() {
             inst.canvas.add(point);
             point.setCoords();
         });
-        inst.canvas.renderAll();
+        inst.canvas.requestRenderAll();
     }
 
     Polygon.prototype.movePolyPoints = function(polygonId, moveX, moveY) {
@@ -244,7 +244,7 @@ var Polygon = (function() {
         $.each(points, function(index, point) {
             inst.canvas.remove(point);
         });
-        inst.canvas.renderAll();
+        inst.canvas.requestRenderAll();
     }
 
     Polygon.prototype.removePolygonById = function(polygonId) {
@@ -277,7 +277,7 @@ var Polygon = (function() {
     Polygon.prototype.updatePolygonPoints = function(id, points) {
         var oldPolygon = this.canvas.getItemByAttr("id", id);
         oldPolygon.points = points;
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
     }
 
     Polygon.prototype.addPolygon = function(polygon) {
@@ -391,7 +391,7 @@ var Polygon = (function() {
             this.activeShape.set({
                 points: points
             });
-            this.canvas.renderAll();
+            this.canvas.requestRenderAll();
         }
     };
 
@@ -602,7 +602,7 @@ var Annotator = (function() {
         }
 
         this.canvas.discardActiveObject();
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
     }
 
     Annotator.prototype.bindEvents = function() {
@@ -667,7 +667,7 @@ var Annotator = (function() {
                     if (obj.type === "polygon") {
                         inst.polygon.movePolyPoints(obj.id, o.e.movementX, o.e.movementY);
                         obj.setCoords();
-                        inst.canvas.renderAll();
+                        inst.canvas.requestRenderAll();
                     }
                 }
             }
@@ -742,7 +742,7 @@ var Annotator = (function() {
                             }));
                         }
                     }
-                    inst.canvas.renderAll();
+                    inst.canvas.requestRenderAll();
                 }
             }
         })
@@ -753,7 +753,7 @@ var Annotator = (function() {
                     inst.canvas.removeItemsByAttr("id", "annotationsoverviewlabeltext");
 
                     o.target.set("fill", "");
-                    inst.canvas.renderAll();
+                    inst.canvas.requestRenderAll();
                 }
             }
         })
@@ -915,7 +915,7 @@ var Annotator = (function() {
             "id": "hull"
         });
         this.canvas.add(polyline);
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
     };
 
 
@@ -945,7 +945,7 @@ var Annotator = (function() {
                     }
                 }
 
-                inst.canvas.renderAll();
+                inst.canvas.requestRenderAll();
             }
 
             if (inst.type === 'Rectangle') {
@@ -959,7 +959,7 @@ var Annotator = (function() {
 
                     activeObj.setCoords();
                 }
-                inst.canvas.renderAll();
+                inst.canvas.requestRenderAll();
             }
             if (inst.type === 'Circle') {
                 if (activeObj) {
@@ -973,12 +973,12 @@ var Annotator = (function() {
                     activeObj.setCoords();
                 }
 
-                inst.canvas.renderAll();
+                inst.canvas.requestRenderAll();
             }
             if (inst.type === 'Polygon') {
                 this.polygon.move(pointer);
 
-                inst.canvas.renderAll();
+                inst.canvas.requestRenderAll();
             }
             if (inst.type === "Blocks") {
                 this.handleBlocks(pointer.x, pointer.y);
@@ -991,7 +991,7 @@ var Annotator = (function() {
                     } else {
                         this.freeDrawing.move(pointer);
                     }
-                    inst.canvas.renderAll();
+                    inst.canvas.requestRenderAll();
                 }
             }
         } else {
@@ -1032,7 +1032,7 @@ var Annotator = (function() {
         var objects = this.canvas.getObjects();
         this.canvas.remove(...objects);
         this.polygon.reset();
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
         this._refAnnotations = [];
         this.refinementsPerAnnotation = {};
         this._annotationLabelOverviewMapping = {};
@@ -1304,7 +1304,7 @@ var Annotator = (function() {
                 id: "grid"
             }));
         }
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
     }
 
     Annotator.prototype.hideGrid = function() {
@@ -1319,7 +1319,7 @@ var Annotator = (function() {
             activeObj.set({
                 strokeWidth: strokeWidth
             });
-            this.canvas.renderAll();
+            this.canvas.requestRenderAll();
         }
     }
 
@@ -1329,7 +1329,7 @@ var Annotator = (function() {
             activeObj.set({
                 stroke: strokeColor
             });
-            this.canvas.renderAll();
+            this.canvas.requestRenderAll();
         }
     }
 
@@ -1508,7 +1508,7 @@ var Annotator = (function() {
     Annotator.prototype._handleLoadedAnnotationOverview = function(label, obj) {
         obj.id = generateRandomId();
         obj.objectCaching = false;
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
         this._annotationLabelOverviewMapping[obj.id] = label;
     }
 
@@ -1600,7 +1600,7 @@ var Annotator = (function() {
 
         this.canvas.backgroundColor = oldBgColor;
         this.canvas.backgroundImage = img;
-        this.canvas.renderAll();
+        this.canvas.requestRenderAll();
         return res;
     }
 

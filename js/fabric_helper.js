@@ -5,7 +5,7 @@ function setCanvasBackgroundImageUrl(canvas, url, callback) {
         });
     } else {
         canvas.backgroundImage = 0;
-        canvas.setBackgroundImage('', canvas.renderAll.bind(canvas));
+        canvas.setBackgroundImage('', canvas.requestRenderAll.bind(canvas));
 
     }
 }
@@ -34,7 +34,7 @@ function registerColorPickerOnMove(canvas, ctx, callback){
 function scaleAndPositionImage(canvas, img, callback) {
     var scaleFactor = calcScaleFactor(img, 600.0);
     canvas.setBackgroundImage(img,
-        canvas.renderAll.bind(canvas), {
+        canvas.requestRenderAll.bind(canvas), {
             scaleX: scaleFactor,
             scaleY: scaleFactor
         }
@@ -43,7 +43,7 @@ function scaleAndPositionImage(canvas, img, callback) {
     canvas.setHeight(img.height * scaleFactor);
     canvas.calcOffset();
 
-    canvas.renderAll();
+    canvas.requestRenderAll();
     typeof callback === 'function' && callback();
 }
 
@@ -255,7 +255,7 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
     }
 }
 
-canvas.renderAll();
+canvas.requestRenderAll();
 }
 
 
@@ -305,7 +305,7 @@ var CanvasDrawer = (function () {
             scaleFactor = 1.0;
 
         canvas.setBackgroundImage(img,
-            canvas.renderAll.bind(canvas), {
+            canvas.requestRenderAll.bind(canvas), {
                 scaleX: scaleFactor,
                 scaleY: scaleFactor
             }
@@ -315,7 +315,7 @@ var CanvasDrawer = (function () {
 
         canvas.calcOffset();
 
-        canvas.renderAll();
+        canvas.requestRenderAll();
         typeof callback === 'function' && callback();
     }
     
@@ -332,7 +332,7 @@ var CanvasDrawer = (function () {
         }, { crossOrigin: 'Anonymous' });
         } else {
             this.canvas.backgroundImage = 0;
-            this.canvas.setBackgroundImage('', this.canvas.renderAll.bind(this.canvas));
+            this.canvas.setBackgroundImage('', this.canvas.requestRenderAll.bind(this.canvas));
 
         }
     }
