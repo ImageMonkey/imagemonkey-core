@@ -47,14 +47,16 @@ fabric.Image.fromObject = function(object, callback) {
 };
 
 fabric.Canvas.prototype.removeItemsByAttr = function(attr, name) {
-    var object = null,
-        objects = this.getObjects();
+    var objects = this.getObjects();
+    var toBeDeletedObjects = [];
     var i = this.size();
     while (i--) {
         if (objects[i][attr] && objects[i][attr] === name) {
-            objects[i].remove();
+            toBeDeletedObjects.push(objects[i]);
         }
     }
+
+    this.remove(...toBeDeletedObjects);
 };
 
 
