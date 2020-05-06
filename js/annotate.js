@@ -1030,9 +1030,7 @@ var Annotator = (function() {
     Annotator.prototype.deleteAll = function() {
         //remove all objects from canvas
         var objects = this.canvas.getObjects();
-        while (objects.length != 0) {
-            this.canvas.remove(objects[0]);
-        }
+        this.canvas.remove(...objects);
         this.polygon.reset();
         this.canvas.renderAll();
         this._refAnnotations = [];
