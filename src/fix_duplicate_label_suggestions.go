@@ -6,10 +6,85 @@ import (
 	log "github.com/sirupsen/logrus"
 	"context"
 	"flag"
+	"github.com/jackc/pgtype"
+	"errors"
 )
 
-func unifyDuplicateLabelSuggestions(souce []int64, target int64) {
+
+func removeElemFromSlice(s []int64, r int64) []int64 {
+    for i, v := range s {
+        if v == r {
+            return append(s[:i], s[i+1:]...)
+        }
+    }
+    return s
+}
+
+//TODO: add unique constraint to label_suggestion table
+
+func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) error {
+	sourceIds := &pgtype.Int8Array{}
+	sourceIds.Set(source)
 	
+	temp := []int64{}
+	temp = append(temp, source...)
+	temp = append(temp, target)
+	allIds := &pgtype.Int8Array{}
+	allIds.Set(temp)
+
+	rows, err := tx.Query(context.TODO(), `SELECT count(*) FROM image_label_suggestion WHERE label_suggestion_id = ANY($1) GROUP BY image_id`, allIds)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var count int
+		err := rows.Scan(&count)
+		if err != nil {
+			return err
+		}
+
+		if count > 1 {
+			return errors.New("damn")
+		}
+	}
+
+	rows.Close()
+	
+	rows, err = tx.Query(context.TODO(), `SELECT id FROM image_label_suggestion i WHERE label_suggestion_id = ANY($1)`, sourceIds)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	imageLabelSuggestionIds := []int64{}
+	for rows.Next() {
+		var imageLabelSuggestionId int64
+		err := rows.Scan(&imageLabelSuggestionId)
+		if err != nil {
+			return err
+		}
+		imageLabelSuggestionIds = append(imageLabelSuggestionIds, imageLabelSuggestionId)
+	}
+
+	rows.Close()
+
+	for _, imageLabelSuggestionId := range imageLabelSuggestionIds {
+		_, err := tx.Exec(context.TODO(), `UPDATE image_label_suggestion SET label_suggestion_id = $1 WHERE id = $2`, target, imageLabelSuggestionId)
+		if err != nil {
+			return err
+		}
+	}
+	
+	log.Info("here")
+	log.Info(sourceIds)
+	_, err = tx.Exec(context.TODO(), `DELETE FROM label_suggestion WHERE id = ANY($1)`, sourceIds)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getDuplicateLabelSuggestions(tx pgx.Tx) ([]string, error) {
@@ -118,9 +193,32 @@ func main() {
 		}
 
 		if productiveLabelSuggestionId != -1 {
+			err = unifyDuplicateLabelSuggestions(tx, removeElemFromSlice(labelSuggestionIds, productiveLabelSuggestionId), productiveLabelSuggestionId)
+			if err != nil {
+				tx.Rollback(context.TODO())
+				log.Fatal("Couldn't unify: ", err.Error())
+			}
 		} else {
+			err = unifyDuplicateLabelSuggestions(tx, labelSuggestionIds[1:], labelSuggestionIds[0])
+			if err != nil {
+				tx.Rollback(context.TODO())
+				log.Fatal("Couldn't unify: ", err.Error())
+			}
 		}
 	}
+
+
+	//just a sanity check if everything is clean now
+	duplicateLabelSuggestionsAfterUnification, err := getDuplicateLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("[Verify] Couldn't get duplicate label suggestions: ", err.Error())
+	}
+	if len(duplicateLabelSuggestionsAfterUnification) > 0 {
+		tx.Rollback(context.TODO())
+		log.Fatal("Verification failed. There are still duplicates!")
+	}
+
 
 	if *dryRun {
 		log.Info("Just a dry run..rolling back transaction")
