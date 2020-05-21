@@ -7,7 +7,7 @@ import (
 	"context"
 	"flag"
 	"github.com/jackc/pgtype"
-	"errors"
+	//"errors"
 )
 
 
@@ -22,37 +22,45 @@ func removeElemFromSlice(s []int64, r int64) []int64 {
 
 //TODO: add unique constraint to label_suggestion table
 
-func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) error {
-	sourceIds := &pgtype.Int8Array{}
-	sourceIds.Set(source)
-	
-	temp := []int64{}
-	temp = append(temp, source...)
-	temp = append(temp, target)
-	allIds := &pgtype.Int8Array{}
-	allIds.Set(temp)
-
-	rows, err := tx.Query(context.TODO(), `SELECT count(*) FROM image_label_suggestion WHERE label_suggestion_id = ANY($1) GROUP BY image_id`, allIds)
+func unifyTrendingLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array) error {
+	rows, err := tx.Query(context.TODO(), `SELECT id, github_issue_id 
+											FROM trending_label_suggestion 
+											WHERE label_suggestion_id = ANY($1)`, sourceIds)
 	if err != nil {
 		return err
 	}
+
 	defer rows.Close()
 
+	trendingLabelSuggestionIds := []int64{}
+	githubIssueIds := []int64{}
 	for rows.Next() {
-		var count int
-		err := rows.Scan(&count)
+		var trendingLabelSuggestionId int64
+		var githubIssueId int64
+		err := rows.Scan(&trendingLabelSuggestionId, &githubIssueId)
 		if err != nil {
 			return err
 		}
 
-		if count > 1 {
-			return errors.New("damn")
-		}
+		trendingLabelSuggestionIds = append(trendingLabelSuggestionIds, trendingLabelSuggestionId)
+		githubIssueIds = append(githubIssueIds, githubIssueId)
 	}
 
-	rows.Close()
+	for _, trendingLabelSuggestionId := range trendingLabelSuggestionIds {
+		_, err = tx.Exec(context.TODO(), `DELETE FROM trending_label_suggestion 
+											WHERE id = $1`, trendingLabelSuggestionId)
+		if err != nil {
+			return err
+		}
+	}
 	
-	rows, err = tx.Query(context.TODO(), `SELECT id FROM image_label_suggestion i WHERE label_suggestion_id = ANY($1)`, sourceIds)
+	return nil
+}
+
+func unifyImagesWithNoDuplicateLabels(tx pgx.Tx, imageIdsThatHaveNoDuplicateLabels []int64, sourceIds *pgtype.Int8Array, target int64) error {
+	//unify images with no duplicate labels
+	rows, err := tx.Query(context.TODO(), `SELECT id FROM image_label_suggestion i 
+											WHERE label_suggestion_id = ANY($1) AND image_id = ANY($2)`, sourceIds, imageIdsThatHaveNoDuplicateLabels)
 	if err != nil {
 		return err
 	}
@@ -76,9 +84,148 @@ func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) err
 			return err
 		}
 	}
+
+	return nil
+}
+
+func unifyImagesWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLabels []int64, sourceIds *pgtype.Int8Array, allIds *pgtype.Int8Array, target int64) error {
+	for _, imageIdWithDuplicateLabels := range imageIdsWithDuplicateLabels {
+		rows, err := tx.Query(context.TODO(),
+					`			SELECT id 
+									FROM image_label_suggestion 
+									WHERE image_id = $1 AND label_suggestion_id = ANY($2)`, imageIdWithDuplicateLabels, allIds)
+		if err != nil {
+			return err
+		}
+
+		imageLabelSuggestionIds := []int64{}
+		for rows.Next() {
+			var imageLabelSuggestionId int64
+			err = rows.Scan(&imageLabelSuggestionId)
+			if err != nil {
+				return err
+			}
+			imageLabelSuggestionIds = append(imageLabelSuggestionIds, imageLabelSuggestionId)
+		}
+		rows.Close()
+
+		//delate all occurences, except one
+		for i := 0; i < len(imageLabelSuggestionIds)-1; i++ {
+			_, err = tx.Exec(context.TODO(), `DELETE FROM image_label_suggestion WHERE id = $1`, imageLabelSuggestionIds[i])
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = tx.Exec(context.TODO(), 
+						`UPDATE image_label_suggestion 
+							SET label_suggestion_id = $1 
+							WHERE id = $2`, target, imageLabelSuggestionIds[len(imageLabelSuggestionIds)-1])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func unifyImageLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, allIds *pgtype.Int8Array, target int64) error {
+	rows, err := tx.Query(context.TODO(), `SELECT a.image_id, count(*) FROM image_label_suggestion a
+											WHERE label_suggestion_id = ANY($1) GROUP BY image_id`, allIds)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	imageIdsThatHaveNoDuplicateLabels := []int64{}
+	imageIdsWithDuplicateLabels := []int64{}
+	for rows.Next() {
+		var count int
+		var imageId int64
+		err := rows.Scan(&imageId, &count)
+		if err != nil {
+			return err
+		}
+
+		if count > 1 {
+			imageIdsWithDuplicateLabels = append(imageIdsWithDuplicateLabels, imageId)
+		} else {
+			imageIdsThatHaveNoDuplicateLabels = append(imageIdsThatHaveNoDuplicateLabels, imageId)
+		}
+	}
+
+	rows.Close()
+
+	err = unifyImagesWithNoDuplicateLabels(tx, imageIdsThatHaveNoDuplicateLabels, sourceIds, target)
+	if err != nil {
+		return err
+	}
+
+	err = unifyImagesWithDuplicateLabels(tx, imageIdsWithDuplicateLabels, sourceIds, allIds, target)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, target int64) error {
+	rows, err := tx.Query(context.TODO(), `SELECT id 
+											FROM image_annotation_suggestion a 
+											WHERE label_suggestion_id = ANY($1)`, sourceIds)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	imageAnnotationLabelSuggestionIds := []int64{}
+	for rows.Next() {
+		var imageAnnotationLabelSuggestionId int64
+		err := rows.Scan(&imageAnnotationLabelSuggestionId)
+		if err != nil {
+			return err
+		}
+		imageAnnotationLabelSuggestionIds = append(imageAnnotationLabelSuggestionIds, imageAnnotationLabelSuggestionId)
+	}
+
+	rows.Close()
+
+	for _, imageAnnotationLabelSuggestionId := range imageAnnotationLabelSuggestionIds {
+		_, err = tx.Exec(context.TODO(), `UPDATE image_annotation_suggestion
+										SET label_suggestion_id = $1 WHERE id = $2`, target, imageAnnotationLabelSuggestionId)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) error {
+	sourceIds := &pgtype.Int8Array{}
+	sourceIds.Set(source)
+
+	temp := []int64{}
+	temp = append(temp, source...)
+	temp = append(temp, target)
+	allIds := &pgtype.Int8Array{}
+	allIds.Set(temp)
+
+	err := unifyImageLabelSuggestions(tx, sourceIds, allIds, target)
+	if err != nil {
+		return err
+	}
+
+	err = unifyImageAnnotationSuggestions(tx, sourceIds, target)
+	if err != nil {
+		return err
+	}
+
+	err = unifyTrendingLabelSuggestions(tx, sourceIds)
+	if err != nil {
+		return err
+	}
 	
-	log.Info("here")
-	log.Info(sourceIds)
 	_, err = tx.Exec(context.TODO(), `DELETE FROM label_suggestion WHERE id = ANY($1)`, sourceIds)
 	if err != nil {
 		return err
