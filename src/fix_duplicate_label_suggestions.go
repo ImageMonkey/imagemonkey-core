@@ -169,7 +169,7 @@ func unifyImageLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, allIds *
 	return nil
 }
 
-func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, target int64) error {
+func unifyImageAnnotationsWithNoDuplicateLabels(tx pgx.Tx, imageIdsThatHaveNoDuplicateLabels []int64, sourceIds *pgtype.Int8Array, target int64) error {
 	rows, err := tx.Query(context.TODO(), `SELECT id 
 											FROM image_annotation_suggestion a 
 											WHERE label_suggestion_id = ANY($1)`, sourceIds)
@@ -198,6 +198,47 @@ func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, tar
 		}
 	}
 
+	return nil
+}
+
+func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, target int64) error {
+	rows, err := tx.Query(context.TODO(), `SELECT a.image_id, count(*) FROM image_annotation_suggestion a
+											WHERE label_suggestion_id = ANY($1) GROUP BY image_id`, allIds)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	imageIdsThatHaveNoDuplicateLabels := []int64{}
+	imageIdsWithDuplicateLabels := []int64{}
+	for rows.Next() {
+		var count int
+		var imageId int64
+		err := rows.Scan(&imageId, &count)
+		if err != nil {
+			return err
+		}
+
+		if count > 1 {
+			imageIdsWithDuplicateLabels = append(imageIdsWithDuplicateLabels, imageId)
+		} else {
+			imageIdsThatHaveNoDuplicateLabels = append(imageIdsThatHaveNoDuplicateLabels, imageId)
+		}
+	}
+
+	rows.Close()
+
+
+	err = unifyImageAnnotationsWithNoDuplicateLabels(tx, imageIdsThatHaveNoDuplicateLabels, sourceIds, target)
+	if err != nil {
+		return err
+	}
+
+	err = unifyImageAnnotationsWithDuplicateLabels(tx, imageIdsWithDuplicateLabels, sourceIds, target)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
