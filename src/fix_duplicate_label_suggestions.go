@@ -11,6 +11,7 @@ import (
 )
 
 var unrecoverableDeletedAnnotations int = 0
+var githubIssueIds []int64
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
     for i, v := range s {
@@ -25,6 +26,18 @@ func removeElemFromSlice(s []int64, r int64) []int64 {
 
 //TODO: verify num of image labels + annotations before and after
 
+func getNumOfImageAnnotationSuggestions(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image_annotation_suggestion`).Scan(&num)
+	return num, err
+}
+
+func getNumOfImages(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image`).Scan(&num)
+	return num, err
+}
+
 func unifyTrendingLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array) error {
 	rows, err := tx.Query(context.TODO(), `SELECT id, github_issue_id 
 											FROM trending_label_suggestion 
@@ -36,7 +49,6 @@ func unifyTrendingLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array) error
 	defer rows.Close()
 
 	trendingLabelSuggestionIds := []int64{}
-	githubIssueIds := []int64{}
 	for rows.Next() {
 		var trendingLabelSuggestionId int64
 		var githubIssueId int64
@@ -398,6 +410,18 @@ func main() {
 		log.Fatal("Couldn't begin transaction: ", err.Error())
 	}
 
+	numOfImagesBefore, err := getNumOfImages(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of images: ", err.Error())
+	}
+
+	numOfImageAnnotationSuggestionsBefore, err := getNumOfImageAnnotationSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of image annotation suggestions: ", err.Error())
+	}
+
 	duplicateLabelSuggestions, err := getDuplicateLabelSuggestions(tx)
 	if err != nil {
 		tx.Rollback(context.TODO())
@@ -454,12 +478,40 @@ func main() {
 		tx.Rollback(context.TODO())
 		log.Fatal("Verification failed. There are still duplicates!")
 	}
+
+	numOfImagesAfter, err := getNumOfImages(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of images: ", err.Error())
+	}
+
+	if numOfImagesBefore != numOfImagesAfter {
+		tx.Rollback(context.TODO())
+		log.Fatal("Num of images doesn't match!")
+	}
+
+	numOfImageAnnotationSuggestionsAfter, err := getNumOfImageAnnotationSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of image annotation suggestions: ", err.Error())
+	}
+
+	if numOfImageAnnotationSuggestionsBefore != (numOfImageAnnotationSuggestionsAfter + unrecoverableDeletedAnnotations) {
+		tx.Rollback(context.TODO())
+		log.Fatal("Num of image annotation suggestions do not match!")
+	}
+
 	log.Info("Verification successful")
 	log.Info("")
 	log.Info("Statistics:")
 	log.Info("Unrecoverable deleted annotations: ", unrecoverableDeletedAnnotations)
 	log.Info("-----------------------------------")
 	log.Info("")
+
+	log.Info("The following ", len(githubIssueIds) , " github issues can be closed:")
+	for _, githubIssueId := range githubIssueIds {
+		log.Info(githubIssueId)
+	}
 
 	if *dryRun {
 		log.Info("Just a dry run..rolling back transaction")
