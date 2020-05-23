@@ -10,6 +10,7 @@ import (
 	//"errors"
 )
 
+var unrecoverableDeletedAnnotations int = 0
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
     for i, v := range s {
@@ -21,6 +22,8 @@ func removeElemFromSlice(s []int64, r int64) []int64 {
 }
 
 //TODO: add unique constraint to label_suggestion table
+
+//TODO: verify num of image labels + annotations before and after
 
 func unifyTrendingLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array) error {
 	rows, err := tx.Query(context.TODO(), `SELECT id, github_issue_id 
@@ -172,7 +175,8 @@ func unifyImageLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, allIds *
 func unifyImageAnnotationsWithNoDuplicateLabels(tx pgx.Tx, imageIdsThatHaveNoDuplicateLabels []int64, sourceIds *pgtype.Int8Array, target int64) error {
 	rows, err := tx.Query(context.TODO(), `SELECT id 
 											FROM image_annotation_suggestion a 
-											WHERE label_suggestion_id = ANY($1)`, sourceIds)
+											WHERE label_suggestion_id = ANY($1)
+											AND a.image_id = ANY($2)`, sourceIds, imageIdsThatHaveNoDuplicateLabels)
 	if err != nil {
 		return err
 	}
@@ -201,7 +205,52 @@ func unifyImageAnnotationsWithNoDuplicateLabels(tx pgx.Tx, imageIdsThatHaveNoDup
 	return nil
 }
 
-func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, target int64) error {
+func unifyImageAnnotationsWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLabels []int64, allIds *pgtype.Int8Array, target int64) error {
+	 for _, imageIdWithDuplicateLabels := range imageIdsWithDuplicateLabels {
+		rows, err := tx.Query(context.TODO(),
+					`			SELECT id 
+									FROM image_annotation_suggestion 
+									WHERE image_id = $1 AND label_suggestion_id = ANY($2)`, imageIdWithDuplicateLabels, allIds)
+		if err != nil {
+			return err
+		}
+
+		imageAnnotationSuggestionIds := []int64{}
+		for rows.Next() {
+			var imageAnnotationSuggestionId int64
+			err = rows.Scan(&imageAnnotationSuggestionId)
+			if err != nil {
+				return err
+			}
+			imageAnnotationSuggestionIds = append(imageAnnotationSuggestionIds, imageAnnotationSuggestionId)
+		}
+		rows.Close()
+		for _, imageAnnotationSuggestionId := range imageAnnotationSuggestionIds { 
+			unrecoverableDeletedAnnotations += 1
+
+			_, err = tx.Exec(context.TODO(), `DELETE FROM annotation_suggestion_data
+												WHERE image_annotation_suggestion_id = $1`, imageAnnotationSuggestionId)
+			if err != nil {
+				return err
+			}
+
+			_, err = tx.Exec(context.TODO(), `DELETE FROM user_image_annotation_suggestion 
+												WHERE image_annotation_suggestion_id = $1`, imageAnnotationSuggestionId)
+			if err != nil {
+				return err
+			}
+
+			_, err = tx.Exec(context.TODO(), `DELETE FROM image_annotation_suggestion WHERE id = $1`, imageAnnotationSuggestionId)
+			if err != nil {
+				return err
+			}
+		}
+	 }
+
+	return nil
+}
+
+func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, allIds *pgtype.Int8Array, target int64) error {
 	rows, err := tx.Query(context.TODO(), `SELECT a.image_id, count(*) FROM image_annotation_suggestion a
 											WHERE label_suggestion_id = ANY($1) GROUP BY image_id`, allIds)
 	if err != nil {
@@ -234,7 +283,7 @@ func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, tar
 		return err
 	}
 
-	err = unifyImageAnnotationsWithDuplicateLabels(tx, imageIdsWithDuplicateLabels, sourceIds, target)
+	err = unifyImageAnnotationsWithDuplicateLabels(tx, imageIdsWithDuplicateLabels, allIds, target)
 	if err != nil {
 		return err
 	}
@@ -257,7 +306,7 @@ func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) err
 		return err
 	}
 
-	err = unifyImageAnnotationSuggestions(tx, sourceIds, target)
+	err = unifyImageAnnotationSuggestions(tx, sourceIds, allIds, target)
 	if err != nil {
 		return err
 	}
@@ -395,7 +444,6 @@ func main() {
 		}
 	}
 
-
 	//just a sanity check if everything is clean now
 	duplicateLabelSuggestionsAfterUnification, err := getDuplicateLabelSuggestions(tx)
 	if err != nil {
@@ -406,7 +454,12 @@ func main() {
 		tx.Rollback(context.TODO())
 		log.Fatal("Verification failed. There are still duplicates!")
 	}
-
+	log.Info("Verification successful")
+	log.Info("")
+	log.Info("Statistics:")
+	log.Info("Unrecoverable deleted annotations: ", unrecoverableDeletedAnnotations)
+	log.Info("-----------------------------------")
+	log.Info("")
 
 	if *dryRun {
 		log.Info("Just a dry run..rolling back transaction")
