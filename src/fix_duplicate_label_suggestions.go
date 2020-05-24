@@ -7,9 +7,11 @@ import (
 	"context"
 	"flag"
 	"github.com/jackc/pgtype"
-	//"errors"
+	"golang.org/x/oauth2"
+	"github.com/google/go-github/github"
 )
 
+var unrecoverableDeletedAnnotationData int = 0
 var unrecoverableDeletedAnnotations int = 0
 var githubIssueIds []int64
 
@@ -20,6 +22,39 @@ func removeElemFromSlice(s []int64, r int64) []int64 {
         }
     }
     return s
+}
+
+func closeGithubIssue(githubIssueId int, repository string, githubProjectOwner string, githubApiToken string) error {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: githubApiToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	client := github.NewClient(tc)
+
+	body := "Label is a duplicate."
+
+	//create a new comment
+	commentRequest := &github.IssueComment{
+		Body:    github.String(body),
+	}
+
+	//we do not care whether we can successfully close the github issue..if it doesn't work, one can always close it
+	//manually.
+	_, _, err := client.Issues.CreateComment(ctx, githubProjectOwner, repository, githubIssueId, commentRequest)
+	if err == nil { //if comment was successfully created, close issue
+		issueRequest := &github.IssueRequest{
+			State: github.String("closed"),
+		}
+
+		_, _, err = client.Issues.Edit(ctx, githubProjectOwner, repository, githubIssueId, issueRequest)
+		return err
+	} else {
+		return err
+	}
+
+	return nil
 }
 
 //TODO: add unique constraint to label_suggestion table
@@ -35,6 +70,12 @@ func getNumOfImageAnnotationSuggestions(tx pgx.Tx) (int, error) {
 func getNumOfImages(tx pgx.Tx) (int, error) {
 	var num int
 	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image`).Scan(&num)
+	return num, err
+}
+
+func getNumOfAnnotationSuggestionData(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM annotation_suggestion_data`).Scan(&num)
 	return num, err
 }
 
@@ -239,7 +280,17 @@ func unifyImageAnnotationsWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLa
 		rows.Close()
 		for _, imageAnnotationSuggestionId := range imageAnnotationSuggestionIds { 
 			unrecoverableDeletedAnnotations += 1
+			var unrecoverableDeletedAnnotationDataTemp int
 
+			err = tx.QueryRow(context.TODO(), 
+						`SELECT count(*) FROM annotation_suggestion_data WHERE image_annotation_suggestion_id = $1`, 
+							imageAnnotationSuggestionId).Scan(&unrecoverableDeletedAnnotationDataTemp)
+			if err != nil {
+				return err
+			}
+
+			unrecoverableDeletedAnnotationData += unrecoverableDeletedAnnotationDataTemp
+			
 			_, err = tx.Exec(context.TODO(), `DELETE FROM annotation_suggestion_data
 												WHERE image_annotation_suggestion_id = $1`, imageAnnotationSuggestionId)
 			if err != nil {
@@ -396,9 +447,22 @@ func isLabelSuggestionIdProductive(tx pgx.Tx, labelSuggestionId int64) (bool, er
 
 func main() {
 	dryRun := flag.Bool("dryrun", true, "Do a dry run")
+	closeIssue := flag.Bool("close-github-issue", false, "Close github issue")
+	githubRepository := flag.String("repository", "", "Github repository")
 	
 	flag.Parse()
-	
+
+	githubProjectOwner := ""
+	githubApiToken := ""
+	if *closeIssue {
+		githubApiToken = commons.MustGetEnv("GITHUB_API_TOKEN")
+		githubProjectOwner = commons.MustGetEnv("GITHUB_PROJECT_OWNER")
+
+		if *githubRepository == "" {
+			log.Fatal("Please provide a github repository!")
+		}
+	}
+
 	imageMonkeyDbConnectionString := commons.MustGetEnv("IMAGEMONKEY_DB_CONNECTION_STRING")
 	db, err := pgx.Connect(context.TODO(), imageMonkeyDbConnectionString)
 	if err != nil {
@@ -420,6 +484,12 @@ func main() {
 	if err != nil {
 		tx.Rollback(context.TODO())
 		log.Fatal("Couldn't get num of image annotation suggestions: ", err.Error())
+	}
+
+	numOfAnnotationSuggestionDataBefore, err := getNumOfAnnotationSuggestionData(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of annotation suggestion data: ", err.Error())
 	}
 
 	duplicateLabelSuggestions, err := getDuplicateLabelSuggestions(tx)
@@ -501,10 +571,22 @@ func main() {
 		log.Fatal("Num of image annotation suggestions do not match!")
 	}
 
+	numOfAnnotationSuggestionDataAfter, err := getNumOfAnnotationSuggestionData(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of annotation suggestion data: ", err.Error())
+	}
+
+	if numOfAnnotationSuggestionDataBefore != (numOfAnnotationSuggestionDataAfter +  unrecoverableDeletedAnnotationData) {
+		tx.Rollback(context.TODO())
+		log.Fatal("fail: ")
+	}
+
 	log.Info("Verification successful")
 	log.Info("")
 	log.Info("Statistics:")
 	log.Info("Unrecoverable deleted annotations: ", unrecoverableDeletedAnnotations)
+	log.Info("Unrecoverable deleted annotation data: ", unrecoverableDeletedAnnotationData)
 	log.Info("-----------------------------------")
 	log.Info("")
 
@@ -524,6 +606,23 @@ func main() {
 		if err != nil {
 			log.Fatal("Couldn't commit transaction: ", err.Error())
 		}
+
+
+		unclosedGithubIssues := []int64{}
+		if *closeIssue {
+			for _, githubIssueId := range githubIssueIds {
+				err := closeGithubIssue(int(githubIssueId), *githubRepository, githubProjectOwner, githubApiToken)
+				if err != nil {
+					unclosedGithubIssues = append(unclosedGithubIssues, githubIssueId)
+				}
+			}
+		}
+
+		log.Error("The following github issues couldn't be closed: ")
+		for _, unclosedGithubIssue := range unclosedGithubIssues {
+			log.Error(unclosedGithubIssue)
+		}
+
 		log.Info("done")
 	}
 
