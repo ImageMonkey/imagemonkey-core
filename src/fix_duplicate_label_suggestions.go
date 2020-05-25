@@ -14,6 +14,7 @@ import (
 var unrecoverableDeletedAnnotationData int = 0
 var unrecoverableDeletedAnnotations int = 0
 var githubIssueIds []int64
+var numOfDeleteLabelSuggestions int = 0
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
     for i, v := range s {
@@ -70,6 +71,12 @@ func getNumOfImageAnnotationSuggestions(tx pgx.Tx) (int, error) {
 func getNumOfImages(tx pgx.Tx) (int, error) {
 	var num int
 	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image`).Scan(&num)
+	return num, err
+}
+
+func getNumOfLabelSuggestions(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) from label_suggestion`).Scan(&num)
 	return num, err
 }
 
@@ -379,6 +386,7 @@ func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) err
 		return err
 	}
 	
+	numOfDeleteLabelSuggestions += len(source)
 	_, err = tx.Exec(context.TODO(), `DELETE FROM label_suggestion WHERE id = ANY($1)`, sourceIds)
 	if err != nil {
 		return err
@@ -486,6 +494,12 @@ func main() {
 		log.Fatal("Couldn't get num of image annotation suggestions: ", err.Error())
 	}
 
+	numOfLabelSuggestionsBefore, err := getNumOfLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of label suggestions: ", err.Error())
+	}
+
 	numOfAnnotationSuggestionDataBefore, err := getNumOfAnnotationSuggestionData(tx)
 	if err != nil {
 		tx.Rollback(context.TODO())
@@ -582,11 +596,23 @@ func main() {
 		log.Fatal("fail: ")
 	}
 
+	numOfLabelSuggestionsAfter, err := getNumOfLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of label suggestions: ", err.Error())
+	}
+
+	if numOfLabelSuggestionsBefore != (numOfLabelSuggestionsAfter + numOfDeleteLabelSuggestions)  {
+		tx.Rollback(context.TODO())
+		log.Fatal("Num of label suggestions do not match!")
+	}
+
 	log.Info("Verification successful")
 	log.Info("")
 	log.Info("Statistics:")
 	log.Info("Unrecoverable deleted annotations: ", unrecoverableDeletedAnnotations)
 	log.Info("Unrecoverable deleted annotation data: ", unrecoverableDeletedAnnotationData)
+	log.Info("Num of deleted label suggestions: ", numOfDeleteLabelSuggestions)
 	log.Info("-----------------------------------")
 	log.Info("")
 
