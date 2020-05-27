@@ -108,6 +108,14 @@
       {{ end }}
       {{ end }}
 
+	  {{ if .sessionInformation.UserPermissions }}
+	  {{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
+	  <div class="item" onclick="window.location='/labelrepository';"><i class="chart line icon"></i>
+	  Label Repository
+	  </div>
+	  {{ end }}
+	  {{ end }}
+
       <div class="item" id="mainMenuLogoutButton"><i class="sign out icon"></i>Logout</div>
     </div>
   </div>

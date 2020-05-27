@@ -373,6 +373,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.loadUnannotatedImage = function(validationId) {
         showHideControls(false, this.annotationInfo.imageUnlocked);
+        $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
         var inst = this;
         this.imageMonkeyApi.getUnannotatedImage(validationId, inst.labelId)
             .then(function(data) {
@@ -384,7 +385,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.loadUnannotatedImageWithNoLabelsFromImageUrl = function(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked) {
         showHideControls(false, this.annotationInfo.imageUnlocked);
-
+        $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
         var data = {
             uuid: imageId,
             width: imageWidth,
@@ -881,7 +882,7 @@ var AnnotationView = (function() {
                     'Labels' +
                     '</div>' +
                     '</h2>' +
-                    '<div class="ui basic segment">' +
+                    '<div class="ui basic segment" id="annotationLabelsLstBasicSegment">' +
                     '<div class="ui segments">' +
                     '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationLabelsLst">' +
                     '<div class="ui active indeterminate loader" id="unifiedModeLabelsLstLoadingIndicator"></div>' +
@@ -899,7 +900,7 @@ var AnnotationView = (function() {
                     'Properties' +
                     '</div>' +
                     '</h2>' +
-                    '<div class="ui basic segment">' +
+                    '<div class="ui basic segment" id="annotationPropertiesLstBasicSegment">' +
                     '<div class="ui segments">' +
                     '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationPropertiesLst">' +
                     '</div>' +
@@ -955,83 +956,87 @@ var AnnotationView = (function() {
 
         if (this.annotationView === "unified") {
             $("#addLabelToUnifiedModeListButton").click(function(e) {
-                var selectedElem = null;
-                var labelName = escapeHtml($("#addLabelsToUnifiedModeListLabels").val());
+                var labelNames = $("#addLabelsToUnifiedModeListLabels").val();
 
-                if (!inst.loggedIn) {
-                    if (!(labelName in inst.availableLabelsLookupTable)) {
-                        $("#warningMsgText").text("Please sign in first to add new labels!");
-                        $("#warningMsg").show(200).delay(1500).hide(200);
-                        return
-                    }
-                } else { //logged in
-                    var pattern = new RegExp("^[)a-zA-Z (\/_><-]+$");
-                    if (!pattern.test($("#addLabelsToUnifiedModeListLabels").val())) {
-                        $("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, '-', ' ', '(', ')', '/', '<', '>' and '_'");
-                        $("#warningMsg").show(200).delay(1500).hide(200);
-                        return
-                    }
-                }
-
-                if (labelName in inst.availableLabelsLookupTable)
-                    selectedElem = inst.availableLabelsLookupTable[labelName];
-                if (selectedElem === null) {
-                    if (inst.loggedIn) {
-                        var tempUuid = "i" + $("#addLabelsToUnifiedModeListLabels").val().hexEncode(); //id must start with a letter
-                        selectedElem = {
-                            "uuid": tempUuid,
-                            "label": labelName,
-                            "sublabel": "",
-                            "newly_created": true
+                //split by delimiter and remove surrouding spaces around each label
+                var splittedLabels = labelNames.split(new Settings().getLabelSeparator()).map(item => item.trim());
+                for (var i = 0; i < splittedLabels.length; i++) {
+                    var labelName = escapeHtml(splittedLabels[i]);
+                    if (!inst.loggedIn) {
+                        if (!(labelName in inst.availableLabelsLookupTable)) {
+                            $("#warningMsgText").text("Please sign in first to add new labels!");
+                            $("#warningMsg").show(200).delay(1500).hide(200);
+                            return
                         }
-                    } else {
-                        $("#warningMsgText").text("Please sign in first to add new labels!");
-                        $("#warningMsg").show(200).delay(1500).hide(200);
-                        return
                     }
+                    /*else { //logged in
+						var pattern = new RegExp("^[)a-zA-Z (\/_><-]+$");
+						if (!pattern.test($("#addLabelsToUnifiedModeListLabels").val())) {
+							$("#warningMsgText").text("Invalid label name " + labelName + ". (supported characters: a-zA-Z, '-', ' ', '(', ')', '/', '<', '>' and '_'");
+							$("#warningMsg").show(200).delay(1500).hide(200);
+							return
+						}
+					}*/
+                    var selectedElem = null;
+                    if (labelName in inst.availableLabelsLookupTable)
+                        selectedElem = inst.availableLabelsLookupTable[labelName];
+                    if (selectedElem === null) {
+                        if (inst.loggedIn) {
+                            var tempUuid = "i" + unescapeHtml(labelName).hexEncode(); //id must start with a letter
+                            selectedElem = {
+                                "uuid": tempUuid,
+                                "label": labelName,
+                                "sublabel": "",
+                                "newly_created": true
+                            }
+                        } else {
+                            $("#warningMsgText").text("Please sign in first to add new labels!");
+                            $("#warningMsg").show(200).delay(1500).hide(200);
+                            return
+                        }
+                    }
+
+                    var alreadyExistsInUnifiedModeLabelsLst = false;
+                    var elem;
+                    $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
+                        if ($(this).attr("data-uuid") === selectedElem.uuid) {
+                            alreadyExistsInUnifiedModeLabelsLst = true;
+                            elem = $(this);
+                            return false;
+                        }
+
+                        //if it's a non productive label, we need to do it a bit differently
+                        if (unescapeHtml(selectedElem.label) === $(this).attr("data-label") &&
+                            $(this).attr("data-sublabel") === "") {
+                            alreadyExistsInUnifiedModeLabelsLst = true;
+                            elem = $(this);
+                            return false;
+                        }
+                    });
+
+                    if (!alreadyExistsInUnifiedModeLabelsLst) {
+                        if (selectedElem.sublabel !== "") {
+                            inst.unifiedModeLabels[selectedElem.uuid] = {
+                                "label": selectedElem.label,
+                                "sublabels": [{
+                                    "name": selectedElem.sublabel
+                                }],
+                                "annotatable": true
+                            };
+                        } else {
+                            inst.unifiedModeLabels[selectedElem.uuid] = {
+                                "label": selectedElem.label,
+                                "annotatable": true
+                            };
+                        }
+                        //label will be escaped in the addLabelToLabelLst function 
+                        elem = addLabelToLabelLst(unescapeHtml(selectedElem.label), unescapeHtml(selectedElem.sublabel),
+                            selectedElem.uuid, true, true, false, inst.loggedIn, null);
+                    }
+
+                    //select newly added (or already existing) label
+                    inst.onLabelInLabelLstClicked(elem);
                 }
-
-                var alreadyExistsInUnifiedModeLabelsLst = false;
-                var elem;
-                $("#annotationLabelsLst").children('.labelslstitem').each(function(idx) {
-                    if ($(this).attr("data-uuid") === selectedElem.uuid) {
-                        alreadyExistsInUnifiedModeLabelsLst = true;
-                        elem = $(this);
-                        return false;
-                    }
-
-                    //if it's a non productive label, we need to do it a bit differently
-                    if (unescapeHtml(selectedElem.label) === $(this).attr("data-label") &&
-                        $(this).attr("data-sublabel") === "") {
-                        alreadyExistsInUnifiedModeLabelsLst = true;
-                        elem = $(this);
-                        return false;
-                    }
-                });
-
-                if (!alreadyExistsInUnifiedModeLabelsLst) {
-                    if (selectedElem.sublabel !== "") {
-                        inst.unifiedModeLabels[selectedElem.uuid] = {
-                            "label": selectedElem.label,
-                            "sublabels": [{
-                                "name": selectedElem.sublabel
-                            }],
-                            "annotatable": true
-                        };
-                    } else {
-                        inst.unifiedModeLabels[selectedElem.uuid] = {
-                            "label": selectedElem.label,
-                            "annotatable": true
-                        };
-                    }
-
-                    //label will be escaped in the addLabelToLabelLst function 
-                    elem = addLabelToLabelLst(unescapeHtml(selectedElem.label), unescapeHtml(selectedElem.sublabel),
-                        selectedElem.uuid, true, true, false, inst.loggedIn, null);
-                }
-
-                //select newly added (or already existing) label
-                inst.onLabelInLabelLstClicked(elem);
 
                 $("#addLabelsToUnifiedModeListLabels").val("");
             });
@@ -1190,6 +1195,60 @@ var AnnotationView = (function() {
             });
     }
 
+    AnnotationView.prototype.showHideAllAnnotations = function(show) {
+        if (show) {
+            this.saveCurrentSelectLabelInUnifiedModeList();
+
+            var allAnnotations = [];
+            if (this.annotationMode === "refine") {
+                allAnnotations.push(...this.existingAnnotations);
+
+            } else {
+                for (var key in this.unifiedModeAnnotations) {
+                    if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
+                        allAnnotations.push(this.unifiedModeAnnotations[key]);
+                    }
+                }
+            }
+
+            this.annotator.deleteAll();
+            this.annotator.block();
+
+            $("#addLabelToUnifiedModeListForm").addClass("disabled");
+            $("#annotationLabelsLstBasicSegment").addClass("disabled");
+            $("#addRefinementForm").addClass("disabled");
+            $("#annotationPropertiesLstBasicSegment").addClass("disabled");
+            this.annotator.loadAnnotationsOverview(allAnnotations, this.canvas.fabric().backgroundImage.scaleX);
+            $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
+        } else {
+            this.annotator.unblock();
+
+            $("#addLabelToUnifiedModeListForm").removeClass("disabled");
+            $("#annotationLabelsLstBasicSegment").removeClass("disabled");
+            $("#addRefinementForm").removeClass("disabled");
+            $("#annotationPropertiesLstBasicSegment").removeClass("disabled");
+            $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "auto");
+
+
+            if (this.annotationMode === "refine") {
+                this.annotator.toJSON()
+            } else {
+                var foundElem = null;
+                $("#annotationLabelsLst").children().each(function(i) {
+                    if ($(this).hasClass("grey inverted")) {
+                        foundElem = $(this);
+                        return;
+                    }
+                });
+
+                if (foundElem) {
+                    this.annotator.deleteAll();
+                    this.onLabelInLabelLstClicked(foundElem);
+                }
+            }
+        }
+    }
+
     AnnotationView.prototype.exec = function() {
         var inst = this;
         var lastActiveMenuItem = "";
@@ -1297,7 +1356,8 @@ var AnnotationView = (function() {
         });
 
         Mousetrap.bind(new Settings().getAddLabelHotkey(), function(e, combo) {
-            $("#addLabelToUnifiedModeListButton").click();
+            if (!$("#addLabelToUnifiedModeListForm").hasClass("disabled"))
+                $("#addLabelToUnifiedModeListButton").click();
         });
 
         $("#rectMenuItem").click(function(e) {
@@ -1511,6 +1571,18 @@ var AnnotationView = (function() {
             }
         });
 
+        $("#showAllAnnotationsMenuItem").click(function() {
+            if (inst.canvas && inst.canvas.fabric().backgroundImage) {
+                if ($("#showAllAnnotationsMenuItemIcon").hasClass("orange")) {
+                    $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
+                    inst.showHideAllAnnotations(false);
+                } else {
+                    $("#showAllAnnotationsMenuItemIcon").addClass("orange");
+                    inst.showHideAllAnnotations(true);
+                }
+            }
+        });
+
         $("#blockSelectMenuItem").click(function(e) {
             if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
@@ -1631,7 +1703,8 @@ var AnnotationView = (function() {
             var res = null;
 
             if (inst.annotationView === "unified") {
-                inst.saveCurrentSelectLabelInUnifiedModeList();
+                if (!$("#showAllAnnotationsMenuItemIcon").hasClass("orange"))
+                    inst.saveCurrentSelectLabelInUnifiedModeList();
                 if (Object.keys(inst.unifiedModeLabels).length === 0 && Object.keys(inst.unifiedModeAnnotations).length === 0) {
                     $('#warningMsgText').text('Please annotate the image first.');
                     $('#warningMsg').show(200).delay(1500).hide(200);

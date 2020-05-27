@@ -50,6 +50,12 @@
       </div>
   </div>
 
+  {{ if eq .annotationView "unified" }}
+  <a class="active eye popup icon item mobile hidden" id="showAllAnnotationsMenuItem" data-content="Show All Annotations">
+    <i class="eye icon" id="showAllAnnotationsMenuItemIcon"></i>
+  </a>
+  {{ end }}
+
   <a class="settings popup icon item mobile hidden" id="settingsMenuItem" data-content="Settings">
     <i class="settings icon"></i>
   </a>
