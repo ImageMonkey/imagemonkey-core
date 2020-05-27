@@ -15,6 +15,7 @@ var unrecoverableDeletedAnnotationData int = 0
 var unrecoverableDeletedAnnotations int = 0
 var githubIssueIds []int64
 var numOfDeleteLabelSuggestions int = 0
+var numOfDeletedImageLabelSuggestions int = 0
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
     for i, v := range s {
@@ -83,6 +84,18 @@ func getNumOfLabelSuggestions(tx pgx.Tx) (int, error) {
 func getNumOfAnnotationSuggestionData(tx pgx.Tx) (int, error) {
 	var num int
 	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM annotation_suggestion_data`).Scan(&num)
+	return num, err
+}
+
+func getNumOfImageLabelSuggestions(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image_label_suggestion`).Scan(&num)
+	return num, err
+}
+
+func getNumOfProductiveLabelSuggestions(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM trending_label_suggestion WHERE closed = true`).Scan(&num)
 	return num, err
 }
 
@@ -174,6 +187,7 @@ func unifyImagesWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLabels []int
 
 		//delate all occurences, except one
 		for i := 0; i < len(imageLabelSuggestionIds)-1; i++ {
+			numOfDeletedImageLabelSuggestions += 1
 			_, err = tx.Exec(context.TODO(), `DELETE FROM image_label_suggestion WHERE id = $1`, imageLabelSuggestionIds[i])
 			if err != nil {
 				return err
@@ -506,6 +520,18 @@ func main() {
 		log.Fatal("Couldn't get num of annotation suggestion data: ", err.Error())
 	}
 
+	numOfProductiveLabelSuggestionsBefore, err := getNumOfProductiveLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of productive label suggestions: ", err.Error())
+	}
+
+	numOfImageLabelSuggestionsBefore, err := getNumOfImageLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of image label suggestions: ", err.Error())
+	}
+
 	duplicateLabelSuggestions, err := getDuplicateLabelSuggestions(tx)
 	if err != nil {
 		tx.Rollback(context.TODO())
@@ -607,12 +633,34 @@ func main() {
 		log.Fatal("Num of label suggestions do not match!")
 	}
 
+	numOfProductiveLabelSuggestionsAfter, err := getNumOfProductiveLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of productive label suggestions: ", err.Error())
+	}
+
+	if numOfProductiveLabelSuggestionsBefore != numOfProductiveLabelSuggestionsAfter {
+		tx.Rollback(context.TODO())
+		log.Fatal("Num of production label suggestions do not match!")
+	}
+
+	numOfImageLabelSuggestionsAfter, err := getNumOfImageLabelSuggestions(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of image label suggestions")
+	}
+
+	if numOfImageLabelSuggestionsBefore != (numOfImageLabelSuggestionsAfter + numOfDeletedImageLabelSuggestions) {
+		log.Fatal("Num of image label suggestions do not match!")
+	}
+
 	log.Info("Verification successful")
 	log.Info("")
 	log.Info("Statistics:")
 	log.Info("Unrecoverable deleted annotations: ", unrecoverableDeletedAnnotations)
 	log.Info("Unrecoverable deleted annotation data: ", unrecoverableDeletedAnnotationData)
 	log.Info("Num of deleted label suggestions: ", numOfDeleteLabelSuggestions)
+	log.Info("Num of deleted image label suggestions: ", numOfDeletedImageLabelSuggestions)
 	log.Info("-----------------------------------")
 	log.Info("")
 
