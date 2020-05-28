@@ -16,6 +16,7 @@ var unrecoverableDeletedAnnotations int = 0
 var githubIssueIds []int64
 var numOfDeleteLabelSuggestions int = 0
 var numOfDeletedImageLabelSuggestions int = 0
+var numOfDeletedImageAnnotationSuggestionHistoryEntries int = 0
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
     for i, v := range s {
@@ -24,6 +25,27 @@ func removeElemFromSlice(s []int64, r int64) []int64 {
         }
     }
     return s
+}
+
+func removeImageAnnotationSuggestionHistoryEntry(tx pgx.Tx, imageAnnotationSuggestionId int64) error {
+	var num int = 0
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image_annotation_suggestion_history WHERE id = $1`, imageAnnotationSuggestionId).Scan(&num)
+
+	if num > 0 {
+		_, err = tx.Exec(context.TODO(), `DELETE FROM image_annotation_suggestion_history WHERE id = $1`, imageAnnotationSuggestionId)
+		numOfDeletedImageAnnotationSuggestionHistoryEntries += 1
+	}
+	return err
+}
+
+func disableTriggers(tx pgx.Tx) error {
+	_, err := tx.Exec(context.TODO(), `ALTER TABLE image_annotation_suggestion DISABLE TRIGGER image_annotation_suggestion_versioning_trigger`)
+	return err
+}
+
+func enableTriggers(tx pgx.Tx) error {
+	_, err := tx.Exec(context.TODO(), `ALTER TABLE image_annotation_suggestion ENABLE TRIGGER image_annotation_suggestion_versioning_trigger`)
+	return err
 }
 
 func closeGithubIssue(githubIssueId int, repository string, githubProjectOwner string, githubApiToken string) error {
@@ -66,6 +88,12 @@ func closeGithubIssue(githubIssueId int, repository string, githubProjectOwner s
 func getNumOfImageAnnotationSuggestions(tx pgx.Tx) (int, error) {
 	var num int
 	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image_annotation_suggestion`).Scan(&num)
+	return num, err
+}
+
+func getNumOfImageAnnotationSuggestionHistoryEntries(tx pgx.Tx) (int, error) {
+	var num int
+	err := tx.QueryRow(context.TODO(), `SELECT count(*) FROM image_annotation_suggestion_history`).Scan(&num)
 	return num, err
 }
 
@@ -328,6 +356,11 @@ func unifyImageAnnotationsWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLa
 			if err != nil {
 				return err
 			}
+
+			err = removeImageAnnotationSuggestionHistoryEntry(tx, imageAnnotationSuggestionId)
+			if err != nil {
+				return err
+			}
 		}
 	 }
 
@@ -496,6 +529,12 @@ func main() {
 		log.Fatal("Couldn't begin transaction: ", err.Error())
 	}
 
+	err = disableTriggers(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't disable triggers: ", err.Error())
+	}
+
 	numOfImagesBefore, err := getNumOfImages(tx)
 	if err != nil {
 		tx.Rollback(context.TODO())
@@ -530,6 +569,12 @@ func main() {
 	if err != nil {
 		tx.Rollback(context.TODO())
 		log.Fatal("Couldn't get num of image label suggestions: ", err.Error())
+	}
+
+	numOfImageAnnotationSuggestionHistoryEntriesBefore, err := getNumOfImageAnnotationSuggestionHistoryEntries(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of image annotation suggestion history entries: ", err.Error())
 	}
 
 	duplicateLabelSuggestions, err := getDuplicateLabelSuggestions(tx)
@@ -654,6 +699,18 @@ func main() {
 		log.Fatal("Num of image label suggestions do not match!")
 	}
 
+	numOfImageAnnotationSuggestionHistoryEntriesAfter, err := getNumOfImageAnnotationSuggestionHistoryEntries(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't get num of image annotation suggestion history entries: ", err.Error())
+	}
+
+	if numOfImageAnnotationSuggestionHistoryEntriesBefore != 
+		(numOfImageAnnotationSuggestionHistoryEntriesAfter + numOfDeletedImageAnnotationSuggestionHistoryEntries) {
+		tx.Rollback(context.TODO())
+		log.Fatal("Num of image annotation suggestion history entries do not match!")
+	}
+
 	log.Info("Verification successful")
 	log.Info("")
 	log.Info("Statistics:")
@@ -661,12 +718,19 @@ func main() {
 	log.Info("Unrecoverable deleted annotation data: ", unrecoverableDeletedAnnotationData)
 	log.Info("Num of deleted label suggestions: ", numOfDeleteLabelSuggestions)
 	log.Info("Num of deleted image label suggestions: ", numOfDeletedImageLabelSuggestions)
+	log.Info("Num of deleted image annotation suggestion history entries: ", numOfDeletedImageAnnotationSuggestionHistoryEntries)
 	log.Info("-----------------------------------")
 	log.Info("")
 
 	log.Info("The following ", len(githubIssueIds) , " github issues can be closed:")
 	for _, githubIssueId := range githubIssueIds {
 		log.Info(githubIssueId)
+	}
+
+	err = enableTriggers(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't disable triggers: ", err.Error())
 	}
 
 	if *dryRun {
