@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"context"
 	"flag"
+	"fmt"
 	"github.com/jackc/pgtype"
 	"golang.org/x/oauth2"
 	"github.com/google/go-github/github"
@@ -17,6 +18,7 @@ var githubIssueIds []int64
 var numOfDeleteLabelSuggestions int = 0
 var numOfDeletedImageLabelSuggestions int = 0
 var numOfDeletedImageAnnotationSuggestionHistoryEntries int = 0
+var typeOfScans []string = []string{"enable_indexscan", "enable_indexonlyscan"}
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
     for i, v := range s {
@@ -500,6 +502,28 @@ func isLabelSuggestionIdProductive(tx pgx.Tx, labelSuggestionId int64) (bool, er
 	return false, nil
 }
 
+func disableIndexScans(tx pgx.Tx) error {
+	for _, typeOfScan := range typeOfScans {
+		q := fmt.Sprintf(`SET %s = OFF`, typeOfScan)
+		_, err := tx.Exec(context.TODO(), q)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func enableIndexScans(tx pgx.Tx) error {
+	for _, typeOfScan := range typeOfScans {
+		q := fmt.Sprintf(`SET %s = ON`, typeOfScan)
+		_, err := tx.Exec(context.TODO(), q)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	dryRun := flag.Bool("dryrun", true, "Do a dry run")
 	closeIssue := flag.Bool("close-github-issue", false, "Close github issue")
@@ -527,6 +551,12 @@ func main() {
 	tx, err := db.Begin(context.TODO())
 	if err != nil {
 		log.Fatal("Couldn't begin transaction: ", err.Error())
+	}
+
+	err = disableIndexScans(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't disable index scans: ", err.Error())
 	}
 
 	err = disableTriggers(tx)
@@ -731,6 +761,12 @@ func main() {
 	if err != nil {
 		tx.Rollback(context.TODO())
 		log.Fatal("Couldn't disable triggers: ", err.Error())
+	}
+
+	err = enableIndexScans(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't enable index scans: ", err.Error())
 	}
 
 	if *dryRun {
