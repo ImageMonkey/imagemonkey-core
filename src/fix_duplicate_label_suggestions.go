@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"context"
 	"flag"
+	"os"
 	"fmt"
 	"github.com/jackc/pgtype"
 	"golang.org/x/oauth2"
@@ -48,6 +49,25 @@ func disableTriggers(tx pgx.Tx) error {
 func enableTriggers(tx pgx.Tx) error {
 	_, err := tx.Exec(context.TODO(), `ALTER TABLE image_annotation_suggestion ENABLE TRIGGER image_annotation_suggestion_versioning_trigger`)
 	return err
+}
+
+func persistDuplicateLabels(duplicateLabels []string) error {
+	f, err := os.Create("/tmp/duplicate_labels.txt")
+	if err != nil {
+		return err
+	}
+	
+	s := ""
+	for _, duplicateLabel := range duplicateLabels {
+		s += duplicateLabel + "\n"
+	}
+
+	_, err = f.WriteString(s)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func closeGithubIssue(githubIssueId int, repository string, githubProjectOwner string, githubApiToken string) error {
@@ -767,6 +787,12 @@ func main() {
 	if err != nil {
 		tx.Rollback(context.TODO())
 		log.Fatal("Couldn't enable index scans: ", err.Error())
+	}
+
+	err = persistDuplicateLabels(duplicateLabelSuggestions)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't persist duplicate labels: ", err.Error())
 	}
 
 	if *dryRun {
