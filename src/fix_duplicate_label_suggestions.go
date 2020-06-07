@@ -19,6 +19,14 @@ var githubIssueIds []int64
 var numOfDeleteLabelSuggestions int = 0
 var numOfDeletedImageLabelSuggestions int = 0
 var numOfDeletedImageAnnotationSuggestionHistoryEntries int = 0
+var numOfUpdatedImageAnnotationSuggestionEntries int = 0
+var numOfUpdatedImageLabelSuggestionEntries int = 0
+var numOfDeletedTrendingLabelSuggestionEntries int = 0
+var numOfDeletedImageLabelSuggestionEntries int = 0
+var numOfDeletedAnnotationSuggestionDataEntries int = 0
+var numOfDeletedUserImageAnnotationSuggestionEntries int = 0
+var numOfDeletedImageAnnotationSuggestionEntries int = 0
+
 var typeOfScans []string = []string{"enable_indexscan", "enable_indexonlyscan"}
 
 func removeElemFromSlice(s []int64, r int64) []int64 {
@@ -175,6 +183,7 @@ func unifyTrendingLabelSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array) error
 	for _, trendingLabelSuggestionId := range trendingLabelSuggestionIds {
 		_, err = tx.Exec(context.TODO(), `DELETE FROM trending_label_suggestion 
 											WHERE id = $1`, trendingLabelSuggestionId)
+		numOfDeletedTrendingLabelSuggestionEntries += 1
 		if err != nil {
 			return err
 		}
@@ -206,6 +215,7 @@ func unifyImagesWithNoDuplicateLabels(tx pgx.Tx, imageIdsThatHaveNoDuplicateLabe
 
 	for _, imageLabelSuggestionId := range imageLabelSuggestionIds {
 		_, err := tx.Exec(context.TODO(), `UPDATE image_label_suggestion SET label_suggestion_id = $1 WHERE id = $2`, target, imageLabelSuggestionId)
+		numOfUpdatedImageLabelSuggestionEntries+= 1
 		if err != nil {
 			return err
 		}
@@ -239,6 +249,7 @@ func unifyImagesWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLabels []int
 		for i := 0; i < len(imageLabelSuggestionIds)-1; i++ {
 			numOfDeletedImageLabelSuggestions += 1
 			_, err = tx.Exec(context.TODO(), `DELETE FROM image_label_suggestion WHERE id = $1`, imageLabelSuggestionIds[i])
+			numOfDeletedImageLabelSuggestionEntries += 1
 			if err != nil {
 				return err
 			}
@@ -248,6 +259,7 @@ func unifyImagesWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLabels []int
 						`UPDATE image_label_suggestion 
 							SET label_suggestion_id = $1 
 							WHERE id = $2`, target, imageLabelSuggestionIds[len(imageLabelSuggestionIds)-1])
+		numOfUpdatedImageLabelSuggestionEntries += 1
 		if err != nil {
 			return err
 		}
@@ -321,6 +333,7 @@ func unifyImageAnnotationsWithNoDuplicateLabels(tx pgx.Tx, imageIdsThatHaveNoDup
 	for _, imageAnnotationLabelSuggestionId := range imageAnnotationLabelSuggestionIds {
 		_, err = tx.Exec(context.TODO(), `UPDATE image_annotation_suggestion
 										SET label_suggestion_id = $1 WHERE id = $2`, target, imageAnnotationLabelSuggestionId)
+		numOfUpdatedImageAnnotationSuggestionEntries += 1
 		if err != nil {
 			return err
 		}
@@ -364,17 +377,20 @@ func unifyImageAnnotationsWithDuplicateLabels(tx pgx.Tx, imageIdsWithDuplicateLa
 			
 			_, err = tx.Exec(context.TODO(), `DELETE FROM annotation_suggestion_data
 												WHERE image_annotation_suggestion_id = $1`, imageAnnotationSuggestionId)
+			numOfDeletedAnnotationSuggestionDataEntries += 1
 			if err != nil {
 				return err
 			}
 
 			_, err = tx.Exec(context.TODO(), `DELETE FROM user_image_annotation_suggestion 
 												WHERE image_annotation_suggestion_id = $1`, imageAnnotationSuggestionId)
+			numOfDeletedUserImageAnnotationSuggestionEntries += 1
 			if err != nil {
 				return err
 			}
 
 			_, err = tx.Exec(context.TODO(), `DELETE FROM image_annotation_suggestion WHERE id = $1`, imageAnnotationSuggestionId)
+			numOfDeletedImageAnnotationSuggestionEntries += 1
 			if err != nil {
 				return err
 			}
@@ -522,6 +538,11 @@ func isLabelSuggestionIdProductive(tx pgx.Tx, labelSuggestionId int64) (bool, er
 	return false, nil
 }
 
+func dropUniqueConstraint(tx pgx.Tx) error {
+	_, err := tx.Exec(context.TODO(), `DROP INDEX label_suggestion_name_unique`)
+	return err
+}
+
 func disableIndexScans(tx pgx.Tx) error {
 	for _, typeOfScan := range typeOfScans {
 		q := fmt.Sprintf(`SET %s = OFF`, typeOfScan)
@@ -571,6 +592,12 @@ func main() {
 	tx, err := db.Begin(context.TODO())
 	if err != nil {
 		log.Fatal("Couldn't begin transaction: ", err.Error())
+	}
+
+	err = dropUniqueConstraint(tx)
+	if err != nil {
+		tx.Rollback(context.TODO())
+		log.Fatal("Couldn't drop unique constraint: ", err.Error())
 	}
 
 	err = disableIndexScans(tx)
@@ -633,6 +660,8 @@ func main() {
 		log.Fatal("Couldn't get duplicate label suggestions: ", err.Error())
 	}
 
+	log.Info("Found ", len(duplicateLabelSuggestions), " duplicate labels")
+
 	for _, duplicateLabelSuggestion := range duplicateLabelSuggestions {
 		labelSuggestionIds, err := getLabelSuggestionIdsForLabelSuggestion(tx, duplicateLabelSuggestion)
 		if err != nil {
@@ -681,7 +710,7 @@ func main() {
 	}
 	if len(duplicateLabelSuggestionsAfterUnification) > 0 {
 		tx.Rollback(context.TODO())
-		log.Fatal("Verification failed. There are still duplicates!")
+		log.Fatal("Verification failed. There are still duplicates! (", len(duplicateLabelSuggestionsAfterUnification), ")")
 	}
 
 	numOfImagesAfter, err := getNumOfImages(tx)
@@ -769,6 +798,13 @@ func main() {
 	log.Info("Num of deleted label suggestions: ", numOfDeleteLabelSuggestions)
 	log.Info("Num of deleted image label suggestions: ", numOfDeletedImageLabelSuggestions)
 	log.Info("Num of deleted image annotation suggestion history entries: ", numOfDeletedImageAnnotationSuggestionHistoryEntries)
+	log.Info("Num of updated image annotation suggestion entries: ", numOfUpdatedImageAnnotationSuggestionEntries)
+	log.Info("Num of updated image label suggestion entries: ", numOfUpdatedImageLabelSuggestionEntries)
+	log.Info("Num of deleted trending label suggestion entries: ", numOfDeletedTrendingLabelSuggestionEntries)
+	log.Info("Num of deleted image label suggestion entries: ", numOfDeletedImageLabelSuggestionEntries)
+	log.Info("Num of deleted image annotation suggestion data entries: ", numOfDeletedAnnotationSuggestionDataEntries)
+	log.Info("Num of deleted user image annotation suggestion entries: ", numOfDeletedUserImageAnnotationSuggestionEntries)
+	log.Info("Num of deleted image annotation suggestion entries: ", numOfDeletedImageAnnotationSuggestionEntries)
 	log.Info("-----------------------------------")
 	log.Info("")
 
