@@ -18,11 +18,11 @@ var X_CLIENT_SECRET string
 var DB_PORT string = "5432"
 var REDIS_ADDRESS string = ":6379"
 
-func init() {
-	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Path to unverified donations directory")
-	donationsDir := flag.String("donations_dir", "../donations/", "Path to donations directory")
-	flag.Parse()
+var unverifiedDonationsDir = flag.String("unverified_donations_dir", "../unverified_donations/", "Path to unverified donations directory")
+var donationsDir = flag.String("donations_dir", "../donations/", "Path to donations directory")
 
+
+func setupInfrastructure() {
 	UNVERIFIED_DONATIONS_DIR = *unverifiedDonationsDir
 	DONATIONS_DIR = *donationsDir
 

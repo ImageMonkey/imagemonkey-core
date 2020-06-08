@@ -1,4 +1,4 @@
-FROM golang:1.12.14-buster
+FROM golang:1.14.4-buster
 
 ENV REDIS_ADDRESS=:6379
 ENV SENTRY_DSN=

@@ -78,6 +78,8 @@ func notEquals(tb testing.TB, exp, act interface{}) {
 }
 
 func setupTestCase(t *testing.T) func(t *testing.T) {
+	setupInfrastructure()
+	
 	t.Log("setup test case..clearing all database tables")
 
 	err := db.ClearAll()

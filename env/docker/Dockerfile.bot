@@ -1,4 +1,4 @@
-FROM golang:1.12.14-buster
+FROM golang:1.14.4-buster
 
 RUN mkdir -p /home/go/bin
 ENV GOPATH=/home/go

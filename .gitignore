@@ -16,3 +16,7 @@ src/data_processor
 src/trendinglabelsworker
 src/populate_labels
 src/statworker
+src/labels_downloader
+src/labels_merger
+src/make_labels_productive
+src/bot

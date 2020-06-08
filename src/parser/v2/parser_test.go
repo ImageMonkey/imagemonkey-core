@@ -613,3 +613,27 @@ func TestQueryImageUnlabeledAndLabelShouldSucceed(t *testing.T) {
 	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] OR is_unlabeled = $2")
 	equals(t, parseResult.QueryValues, []interface{}{"apple", "true"})
 }
+
+func TestQueryImageWithUnderscoreInLabelName(t *testing.T) {
+	queryParser := NewQueryParser("blue_fish")
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[]")
+	equals(t, parseResult.QueryValues, []interface{}{"blue_fish"})
+}
+
+func TestQueryImageWithSlashInLabelName(t *testing.T) {
+	queryParser := NewQueryParser("blue/fish")
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[]")
+	equals(t, parseResult.QueryValues, []interface{}{"blue/fish"})
+}
+
+func TestQueryImageWithSlashAndUnderscoreInLabelName(t *testing.T) {
+	queryParser := NewQueryParser("blue/red_fish")
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[]")
+	equals(t, parseResult.QueryValues, []interface{}{"blue/red_fish"})
+}
