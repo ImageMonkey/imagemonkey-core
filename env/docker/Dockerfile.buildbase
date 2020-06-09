@@ -18,7 +18,7 @@ RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
 RUN mkdir -p /home/go/bin \
 	&& cd /tmp/src \
 	&& go get -u -d gocv.io/x/gocv \
-	&& cd /home/go/pkg/mod/gocv.io/x/gocv\@v0.20.0/ \
+	&& cd /home/go/pkg/mod/gocv.io/x/* \
 	&& make install \
 	&& rm -rf /tmp/src \
 	&& rm -rf /home/go/bin
