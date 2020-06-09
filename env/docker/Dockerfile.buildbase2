@@ -1,0 +1,7 @@
+FROM bbernhard/imagemonkey-buildbase:latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	postgresql-client-9.6 \
+	# until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
+	&& curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash - \
+	&& rm -rf /var/lib/apt/lists/*

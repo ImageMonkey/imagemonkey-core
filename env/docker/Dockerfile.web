@@ -1,4 +1,4 @@
-FROM bbernhard/imagemonkey-buildbase:latest
+FROM bbernhard/imagemonkey-buildbase2:latest
 
 ENV SENTRY_DSN=
 ENV X_CLIENT_ID=
@@ -18,12 +18,6 @@ ENV GOPATH=/home/go
 ENV GOBIN=/home/go/bin
 
 RUN mkdir -p /home/imagemonkey
-
-RUN apt-get update && apt-get install -y pkg-config postgresql-client-9.6 --no-install-recommends \
-	# until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
-	&& curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash - \ 
-    && rm -rf /var/lib/apt/lists/* 
-
 
 COPY src/web.go /tmp/src/web.go
 COPY src/auth.go /tmp/src/auth.go
