@@ -268,13 +268,13 @@
 
         if(data[1] !== null) {
           for(var i = 0; i < data[1].length; i++) {
-            availableLabels.push(escapeHtml(data[1][i]));	
+            availableLabels.push(data[1][i]);	
           }
         }
         
         if(data.length > 2) {
           for(var i = 0; i < data[2].length; i++) {
-            availableLabels.push("image.collection='" + escapeHtml(data[2][i].name) + "'");	
+            availableLabels.push("image.collection='" + data[2][i].name + "'");	
           }
         }
         $("#browseLabelsGoButton").removeClass("disabled");
