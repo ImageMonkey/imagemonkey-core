@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 )
 
 func equalJson(s1, s2 string) (bool, error) {
@@ -78,8 +79,15 @@ func notEquals(tb testing.TB, exp, act interface{}) {
 }
 
 func setupTestCase(t *testing.T) func(t *testing.T) {
-	setupInfrastructure()
-	
+	if(!infrastructureInitialized) {
+		err := setupInfrastructure()
+		if err != nil {
+			log.Fatal(err.Error())
+		} else {
+			infrastructureInitialized = true
+		}
+	}
+
 	t.Log("setup test case..clearing all database tables")
 
 	err := db.ClearAll()
