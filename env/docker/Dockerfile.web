@@ -33,9 +33,6 @@ COPY html /home/imagemonkey/html
 COPY js /home/imagemonkey/js
 COPY css /home/imagemonkey/css
 COPY img /home/imagemonkey/img
-	
-RUN cd /tmp/src/ \
-	&& go get -d
 
 RUN cd /tmp/src/ && go install web.go auth.go
 
