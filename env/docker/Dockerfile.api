@@ -17,10 +17,6 @@ ENV GOBIN=/home/go/bin
 COPY src/go.mod /tmp/src/go.mod
 COPY src/go.sum /tmp/src/go.sum
 
-RUN cd /tmp/src/ \
-	&& go get -d
-
-
 COPY src/api.go /tmp/src/api.go
 COPY src/label_graph.go /tmp/src/label_graph.go
 COPY src/auth.go /tmp/src/auth.go

@@ -14,9 +14,6 @@ COPY src/datastructures /tmp/src/datastructures
 COPY src/go.mod /tmp/src/go.mod
 COPY src/go.sum /tmp/src/go.sum
 
-RUN cd /tmp/src/ \
-	&& go get -d
-
 RUN cd /tmp/src/ && go install blogsubscriptionworker.go
 
 RUN mkdir -p /home/imagemonkey/bin/ \

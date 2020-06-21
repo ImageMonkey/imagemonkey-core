@@ -19,9 +19,6 @@ COPY src/commons /tmp/src/commons
 COPY src/go.mod /tmp/src/go.mod
 COPY src/go.sum /tmp/src/go.sum
 
-RUN cd /tmp/src/ \
-	&& go get -d
-
 RUN cd /tmp/src/ && go install statworker.go
 
 RUN mkdir -p /home/imagemonkey/bin/ \
