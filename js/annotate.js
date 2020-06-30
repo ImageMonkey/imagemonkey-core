@@ -1006,6 +1006,10 @@ var Annotator = (function() {
         this._annotationLabelOverviewMapping = {};
     };
 
+    Annotator.prototype.disableHighlightOnMouseOver = function() {
+        this._highlightOnMouseOver = false;
+    }
+
     Annotator.prototype.deleteSelected = function(o) {
         var activeObj = this.canvas.getActiveObject();
         if ("id" in activeObj) {
@@ -1497,6 +1501,8 @@ var Annotator = (function() {
     }
 
     Annotator.prototype.loadAnnotationsOverview = function(annotationsWithLabel, scaleFactor = 1.0) {
+        this.deleteAll();
+
         this._highlightOnMouseOver = true;
         for (var i = 0; i < annotationsWithLabel.length; i++) {
             for (var j = 0; j < annotationsWithLabel[i].annotations.length; j++) {
