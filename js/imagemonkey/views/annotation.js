@@ -1211,7 +1211,6 @@ var AnnotationView = (function() {
                 }
             }
 
-            this.annotator.deleteAll();
             this.annotator.block();
 
             $("#addLabelToUnifiedModeListForm").addClass("disabled");
@@ -1222,7 +1221,7 @@ var AnnotationView = (function() {
             $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
         } else {
             this.annotator.unblock();
-
+            this.annotator.disableHighlightOnMouseOver();
             $("#addLabelToUnifiedModeListForm").removeClass("disabled");
             $("#annotationLabelsLstBasicSegment").removeClass("disabled");
             $("#addRefinementForm").removeClass("disabled");
