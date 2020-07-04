@@ -155,6 +155,7 @@ var ImageMonkeyApi = (function() {
             xhr.send();
         });
     }
+
     ImageMonkeyApi.prototype.getLabelSuggestions = function(includeUnlocked = true) {
         var inst = this;
         return new Promise(function(resolve, reject) {
@@ -186,6 +187,30 @@ var ImageMonkeyApi = (function() {
         var inst = this;
         return new Promise(function(resolve, reject) {
             var url = inst.baseUrl + "/" + inst.apiVersion + "/label/plurals";
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+	ImageMonkeyApi.prototype.getLabelJoints = function() {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/label/joints";
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";
             xhr.open("GET", url);

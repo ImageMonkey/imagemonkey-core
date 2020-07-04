@@ -1010,6 +1010,10 @@ var Annotator = (function() {
         this._highlightOnMouseOver = false;
     }
 
+	Annotator.prototype.enableHighlightOnMouseOver = function() {
+        this._highlightOnMouseOver = true;
+    }
+
     Annotator.prototype.deleteSelected = function(o) {
         var activeObj = this.canvas.getActiveObject();
         if ("id" in activeObj) {
@@ -1503,7 +1507,6 @@ var Annotator = (function() {
     Annotator.prototype.loadAnnotationsOverview = function(annotationsWithLabel, scaleFactor = 1.0) {
         this.deleteAll();
 
-        this._highlightOnMouseOver = true;
         for (var i = 0; i < annotationsWithLabel.length; i++) {
             for (var j = 0; j < annotationsWithLabel[i].annotations.length; j++) {
                 drawAnnotations(this.canvas, [annotationsWithLabel[i].annotations[j]], scaleFactor,
@@ -1523,6 +1526,13 @@ var Annotator = (function() {
         return true;
     }
 
+	Annotator.prototype.changeStrokeColorOfAllObjects = function(color) {
+		var objects = this.canvas.getObjects();
+        for (var i = 0; i < objects.length; i++) {
+			objects[i].set("stroke", color);
+		}
+		this.canvas.renderAll();
+	}
 
     Annotator.prototype.getMask = function() {
         var img = this.canvas.backgroundImage;
