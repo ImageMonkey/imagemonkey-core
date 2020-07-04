@@ -1010,7 +1010,7 @@ var Annotator = (function() {
         this._highlightOnMouseOver = false;
     }
 
-	Annotator.prototype.enableHighlightOnMouseOver = function() {
+    Annotator.prototype.enableHighlightOnMouseOver = function() {
         this._highlightOnMouseOver = true;
     }
 
@@ -1526,13 +1526,13 @@ var Annotator = (function() {
         return true;
     }
 
-	Annotator.prototype.changeStrokeColorOfAllObjects = function(color) {
-		var objects = this.canvas.getObjects();
+    Annotator.prototype.changeStrokeColorOfAllObjects = function(color) {
+        var objects = this.canvas.getObjects();
         for (var i = 0; i < objects.length; i++) {
-			objects[i].set("stroke", color);
-		}
-		this.canvas.renderAll();
-	}
+            objects[i].set("stroke", color);
+        }
+        this.canvas.renderAll();
+    }
 
     Annotator.prototype.getMask = function() {
         var img = this.canvas.backgroundImage;
