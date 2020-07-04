@@ -56,6 +56,8 @@ var AnnotationView = (function() {
         this.availableLabels = [];
         this.availableLabelsLookupTable = {};
         this.labelsAutoCompletion = null;
+        this.availableLabelJoints = {};
+        this.jointsModeEnabled = false;
     }
 
     AnnotationView.prototype.setSentryDSN = function(sentryDSN) {
@@ -75,7 +77,7 @@ var AnnotationView = (function() {
         }
 
         if (this.onlyOnce) {
-            showHideControls(false, this.annotationInfo.imageUnlocked);
+            showHideControls(false, this);
             $("#onlyOnceDoneMessageContainer").show();
             $("#onlyOnceDoneMessage").fadeIn("slow");
             $("#loadingSpinner").hide();
@@ -94,7 +96,7 @@ var AnnotationView = (function() {
             //a rounding errors as changes.
         }
 
-        showHideControls(true, this.annotationInfo.imageUnlocked);
+        showHideControls(true, this);
         $("#annotationArea").css({
             "border-width": "1px",
             "border-style": "solid",
@@ -111,7 +113,7 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.loadAnnotatedImage = function(annotationId, annotationRevision) {
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         var inst = this;
         this.imageMonkeyApi.getAnnotatedImage(annotationId, annotationRevision)
             .then(function(data) {
@@ -204,7 +206,7 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.markAsNotAnnotatable = function(validationId) {
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         var url = this.apiBaseUrl + '/v1/validation/' + validationId + '/not-annotatable';
         var inst = this;
         $.ajax({
@@ -230,7 +232,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.updateAnnotations = function(res) {
         if (_.isEqual(res, this.existingAnnotations)) {
-            showHideControls(false, this.annotationInfo.imageUnlocked);
+            showHideControls(false, this);
             clearDetailedCanvas(this.detailedCanvas);
             this.annotator.reset();
             this.handleUpdateAnnotationsRes(this.existingAnnotations);
@@ -246,7 +248,7 @@ var AnnotationView = (function() {
 
         headers['X-App-Identifier'] = this.appIdentifier;
 
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         clearDetailedCanvas(this.detailedCanvas);
         this.annotator.reset();
 
@@ -306,7 +308,7 @@ var AnnotationView = (function() {
 
         headers['X-App-Identifier'] = this.appIdentifier;
 
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         clearDetailedCanvas(this.detailedCanvas);
         this.annotator.reset();
 
@@ -343,13 +345,13 @@ var AnnotationView = (function() {
 
         if (this.onlyOnce) {
             $("#onlyOnceDoneMessage").fadeIn("slow");
-            showHideControls(false);
+            showHideControls(false, this);
             $("#loadingSpinner").hide();
         }
     }
 
     AnnotationView.prototype.blacklistAnnotation = function(validationId) {
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         var url = this.apiBaseUrl + '/v1/validation/' + validationId + '/blacklist-annotation';
         var inst = this;
         $.ajax({
@@ -372,7 +374,7 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.loadUnannotatedImage = function(validationId) {
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
         var inst = this;
         this.imageMonkeyApi.getUnannotatedImage(validationId, inst.labelId)
@@ -384,7 +386,7 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.loadUnannotatedImageWithNoLabelsFromImageUrl = function(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked) {
-        showHideControls(false, this.annotationInfo.imageUnlocked);
+        showHideControls(false, this);
         $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
         var data = {
             uuid: imageId,
@@ -415,13 +417,15 @@ var AnnotationView = (function() {
             $("#browseAnnotationsGoButton").addClass("loading");
 
         var inst = this;
-        Promise.all([this.imageMonkeyApi.getPluralLabels(), this.imageMonkeyApi.getLabelAccessors(true)])
+        Promise.all([this.imageMonkeyApi.getPluralLabels(), this.imageMonkeyApi.getLabelAccessors(true), this.imageMonkeyApi.getLabelJoints()])
             .then(function(data) {
                 inst.pluralLabels = data[0];
 
                 for (var i = 0; i < data[1].length; i++) {
                     inst.labelAccessorsLookupTable[data[1][i].accessor] = data[1][i].parent_accessor;
                 }
+
+                inst.availableLabelJoints = data[2].joints;
 
                 if (inst.annotationMode === "default") {
                     if (inst.validationId === "")
@@ -706,7 +710,7 @@ var AnnotationView = (function() {
         this.populateCanvas(getUrlFromImageUrl(data.image.url, data.image.unlocked, this.annotationMode, this.labelAccessorsLookupTable), false);
         changeControl(this.annotator, this.annotationInfo.imageId);
         this.numOfPendingRequests = 0;
-        showHideControls(true, this.annotationInfo.imageUnlocked);
+        showHideControls(true, this);
 
         if (this.annotationMode === "browse") {
             if (this.browseModeLastSelectedAnnotatorMenuItem === null) {
@@ -815,17 +819,20 @@ var AnnotationView = (function() {
     AnnotationView.prototype.addMainCanvas = function() {
         $("#annotationColumnSpacer").remove();
         $("#annotationPropertiesColumnSpacer").remove();
+        $("#annotationJointsColumnSpacer").remove();
         $("#annotationColumnContent").remove();
 
         var spacer = '';
         var inst = this;
         var unifiedModePropertiesLst = '';
+        var unifiedModeJointsLst = '';
         var w = "sixteen";
         if (isSmartAnnotationEnabled()) {
             w = "eight";
 
         } else {
             var unifiedModePropertiesLstWidth = 'four';
+            var unifiedModeJointsLstWidth = unifiedModePropertiesLstWidth;
             var workspaceSize = this.annotationSettings.loadWorkspaceSize();
             if (this.annotationView === "unified") {
                 var spacerWidth = "three";
@@ -842,6 +849,7 @@ var AnnotationView = (function() {
                     spacerWidth = "four";
                     unifiedModePropertiesLstWidth = 'four';
                 }
+                unifieModeJointsLstWidth = unifiedModePropertiesLstWidth;
 
                 var unifiedModeLabelsLstUiElems = '';
                 if (this.annotationMode !== "refine") {
@@ -931,6 +939,56 @@ var AnnotationView = (function() {
                     '</div>' +
                     '</div>';
 
+                unifiedModeJointsLst = '<div class="' + unifiedModeJointsLstWidth + ' wide column" id="annotationJointsColumnSpacer">' +
+                    '<h2 class="ui center aligned header">' +
+                    '<div class="content">' +
+                    'Joint Connections' +
+                    '</div>' +
+                    '</h2>' +
+                    '<div class="ui basic segment" id="annotationJointsLstBasicSegment">' +
+                    '<div class="ui segments">' +
+                    '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationJointsLst">' +
+                    '</div>' +
+
+                    '<div class="ui center aligned grid">' +
+                    '<div class="twelve wide centered column">' +
+                    //'<div class="ui form">' +
+                    //'<div class="fields">' +
+                    //'<div class="field">' +
+                    //'<div class="ui search">' +
+                    //'<div class="ui center aligned action input" id="addJointForm">' +
+                    //'<div class="ui small search selection dropdown" id="addJointDropdown">' +
+                    //'<div class="default text">Select Refinement</div>' +
+                    //'<div class="menu" id="addJointDropdownMenu">' +
+                    //'</div>' +
+                    //'</div>' +
+                    '<div class="ui equal width form" id="jointConnectionButtonsForm" style="display: none;">' +
+                    '<div class="fields">' +
+
+                    '<div class="field">' +
+                    '<div class="ui red button" id="jointConnectionCancelButton">Cancel</div>' +
+                    '</div>' +
+
+                    '<div class="field">' +
+                    '<div class="ui green fluid button" id="jointConnectionDoneButton">Done</div>' +
+                    '</div>' +
+
+                    '</div>' +
+                    '</div>' +
+
+                    '<div class="ui center aligned fluid button" id="jointConnectionNewButton">New</div>' +
+                    '<br>' +
+                    //'</div>' + //ui small search selection dropdown
+                    //'</div>' + //ui center aligned action input
+                    //'</div>' + //ui search
+                    //'</div>' + //field
+                    //'</div>' + //fields
+                    //'</div>' + //ui form
+                    '</div>' + //twelve wide centered column
+                    '</div>' + //ui center aligned grid
+                    '</div>' + //ui segments 
+                    '</div>'; //annotationJointsLstBasicSegment
+
             } else {
                 if (workspaceSize === "small") {
                     w = "eight";
@@ -949,7 +1007,7 @@ var AnnotationView = (function() {
             '<div id="annotationAreaContainer">' +
             '<canvas id="annotationArea" imageId=""></canvas>' +
             '</div>' +
-            '</div>' + unifiedModePropertiesLst;
+            '</div>' + unifiedModePropertiesLst + unifiedModeJointsLst;
 
         $("#annotationColumn").show();
         $("#annotationColumn").append(data);
@@ -1039,6 +1097,29 @@ var AnnotationView = (function() {
                 }
 
                 $("#addLabelsToUnifiedModeListLabels").val("");
+            });
+
+            $("#jointConnectionNewButton").click(function(e) {
+                inst.annotator.changeStrokeColorOfAllObjects("red");
+                inst.annotator.enableHighlightOnMouseOver();
+                $("#jointConnectionNewButton").hide();
+                $("#jointConnectionButtonsForm").show();
+            });
+
+            $("#jointConnectionDoneButton").click(function(e) {
+                inst.annotator.changeStrokeColorOfAllObjects("grey");
+                inst.annotator.disableHighlightOnMouseOver();
+
+                $("#jointConnectionNewButton").show();
+                $("#jointConnectionButtonsForm").hide();
+            });
+
+            $("#jointConnectionCancelButton").click(function(e) {
+                inst.annotator.changeStrokeColorOfAllObjects("grey");
+                inst.annotator.disableHighlightOnMouseOver();
+
+                $("#jointConnectionNewButton").show();
+                $("#jointConnectionButtonsForm").hide();
             });
 
             $("#addRefinementButton").click(function(e) {
@@ -1218,6 +1299,7 @@ var AnnotationView = (function() {
             $("#annotationLabelsLstBasicSegment").addClass("disabled");
             $("#addRefinementForm").addClass("disabled");
             $("#annotationPropertiesLstBasicSegment").addClass("disabled");
+            this.annotator.enableHighlightOnMouseOver();
             this.annotator.loadAnnotationsOverview(allAnnotations, this.canvas.fabric().backgroundImage.scaleX);
             $("#annotationLabelsLstBasicSegment").children().css("pointer-events", "none");
         } else {
@@ -1583,6 +1665,22 @@ var AnnotationView = (function() {
             }
         });
 
+        $("#jointsMenuItem").click(function() {
+            if (inst.canvas && inst.canvas.fabric().backgroundImage) {
+                if (inst.jointsModeEnabled) {
+                    $("#jointsMenuItemIcon").removeClass("orange");
+                    inst.showHideAllAnnotations(false);
+                } else {
+                    $("#jointsMenuItemIcon").addClass("orange");
+                    inst.showHideAllAnnotations(true);
+                    inst.annotator.changeStrokeColorOfAllObjects("grey");
+                    inst.annotator.disableHighlightOnMouseOver();
+                }
+                inst.jointsModeEnabled = !inst.jointsModeEnabled;
+                showHideControls(true, inst);
+            }
+        });
+
         $("#blockSelectMenuItem").click(function(e) {
             if (inst.annotator !== undefined && inst.annotator) {
                 inst.annotator.disablePanMode();
@@ -1738,7 +1836,7 @@ var AnnotationView = (function() {
                             unifiedModeLabelsEntry.label = unescapeHtml(unifiedModeLabelsEntry.label);
                             newlyAddedLabelsUnifiedMode.push(unifiedModeLabelsEntry);
                         }
-                        showHideControls(false, inst.annotationInfo.imageUnlocked);
+                        showHideControls(false, inst);
                         //add missing labels first, then add annotations
                         inst.imageMonkeyApi.labelImage(inst.annotationInfo.imageId, newlyAddedLabelsUnifiedMode)
                             .then(function() {

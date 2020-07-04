@@ -150,7 +150,7 @@ function getUrlFromImageUrl(imageUrl, imageUnlocked, annotationMode, lookupTable
     return url;
 }
 
-function showHideControls(show, imageUnlocked) {
+function showHideControls(show, annotationView) {
     if (show) {
         $("#doneButton").show();
         $("#blacklistButton").show();
@@ -163,14 +163,21 @@ function showHideControls(show, imageUnlocked) {
         $("#annotationButtons").show();
         $("#loadingSpinner").hide();
 
-        if (imageUnlocked)
+        if (annotationView.annotationInfo.imageUnlocked)
             $("#imageLockedLabel").hide();
         else
             $("#imageLockedLabel").show();
 
         $("#annotationColumnContent").show();
         $("#annotationColumnSpacer").show();
-        $("#annotationPropertiesColumnSpacer").show();
+
+        if (annotationView.jointsModeEnabled) {
+            $("#annotationJointsColumnSpacer").show();
+            $("#annotationPropertiesColumnSpacer").hide();
+        } else {
+            $("#annotationPropertiesColumnSpacer").show();
+            $("#annotationJointsColumnSpacer").hide();
+        }
     } else {
         $("#doneButton").hide();
         $("#blacklistButton").hide();
@@ -185,7 +192,9 @@ function showHideControls(show, imageUnlocked) {
         $("#imageLockedLabel").hide();
         $("#annotationColumnContent").hide();
         $("#annotationColumnSpacer").hide();
+
         $("#annotationPropertiesColumnSpacer").hide();
+        $("#annotationJointsColumnSpacer").hide();
     }
 }
 
