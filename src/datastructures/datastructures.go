@@ -794,3 +794,12 @@ type TotalContributionProgress struct {
 	Validations []ContributionProgress `json:"validations"`
 	Annotations []ContributionProgress `json:"annotations"`
 }
+
+type LabelJointEntry struct {
+	Name string `json:"name"`
+	Uuid string `json:"uuid"`
+}
+
+type LabelJoints struct {
+	Entries map[string][]LabelJointEntry `json:"joints"`
+}

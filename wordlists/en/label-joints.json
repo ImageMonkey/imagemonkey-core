@@ -1,0 +1,24 @@
+{
+	"joints": {
+		"join-0": [
+			{
+				"name": "joint-0.0",
+				"uuid": "b314e584-856a-4369-ab61-97e8243a4101"
+			},
+			{
+				"name": "joint-0.1",
+				"uuid": "85a5e5a5-5678-4ae6-bcf9-09df3cd958dc"
+			}
+		],
+		"join-1": [
+			{
+				"name": "joint-1.0",
+				"uuid": "19564e9d-c236-4386-a1ee-07c0435913f0"
+			},
+			{
+				"name": "joint-1.1",
+				"uuid": "b7e0b802-e687-4cd5-93c6-7e4f6ad904fb"
+			}
+		]
+	}
+}

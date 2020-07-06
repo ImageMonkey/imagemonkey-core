@@ -16,15 +16,19 @@ type LabelsPopulatorClient struct {
 	labels *commons.LabelRepository
 	labelRefinements map[string]datastructures.LabelMapRefinementEntry
 	metalabels *commons.MetaLabels
+	labelJoints *commons.LabelJoints
 	dbConnectionString string
+	labelJointsPath string
 	db *pgx.Conn
 }
 
-func NewLabelsPopulatorClient(dbConnectionString string, labelsPath string, labelRefinementsPath string, metalabelsPath string) *LabelsPopulatorClient {
+func NewLabelsPopulatorClient(dbConnectionString string, labelsPath string, labelRefinementsPath string, metalabelsPath string, 
+								labelJointsPath string) *LabelsPopulatorClient {
 	return &LabelsPopulatorClient {
 		labelsPath: labelsPath,	
 		labelRefinementsPath: labelRefinementsPath,
 		metalabelsPath: metalabelsPath,
+		labelJointsPath: labelJointsPath,
 		dbConnectionString: dbConnectionString,
 	}
 }
@@ -38,18 +42,24 @@ func (p *LabelsPopulatorClient) Load() error {
 
 	p.labelRefinements, err = commons.GetLabelRefinementsMap(p.labelRefinementsPath)
 	if err != nil {
-		return errors.New("Couldn't get label map refinements: " + err.Error())
+		return errors.New("Couldn't load label map refinements: " + err.Error())
 	}
 
 	p.metalabels = commons.NewMetaLabels(p.metalabelsPath)
 	err = p.metalabels.Load()
 	if err != nil {
-		return errors.New("Couldn't get meta labels: " + err.Error())
+		return errors.New("Couldn't load meta labels: " + err.Error())
 	}
 
 	p.db, err = pgx.Connect(context.TODO(), p.dbConnectionString)
 	if err != nil {
 		return err
+	}
+
+	p.labelJoints = commons.NewLabelJoints(p.labelJointsPath)
+	err = p.labelJoints.Load()
+	if err != nil {
+		return errors.New("Couldn't load label joints: " + err.Error())
 	}
 
 
@@ -71,6 +81,11 @@ func (p *LabelsPopulatorClient) Populate(dryRun bool) error {
 		return err
 	}
 	err = addMetaLabels(tx, p.metalabels.GetMapping())
+	if err != nil {
+		return err
+	}
+
+	err = addLabelJoints(tx, p.labelJoints.GetMapping())
 	if err != nil {
 		return err
 	}
@@ -510,6 +525,35 @@ func addLabelRefinementAccessors(tx pgx.Tx, labelUuid string, label string, acce
 		}
 
 		rows.Close()
+	}
+
+	return nil
+}
+
+func addLabelJoints(tx pgx.Tx, labelJoints datastructures.LabelJoints) error {
+	for _, values := range labelJoints.Entries {
+		for _,v := range values {
+			var num int
+			err := tx.QueryRow(context.TODO(), 
+					`SELECT count(*) FROM label WHERE parent_id is null AND name = $1 AND label_type = 'refinement'`, v.Name).Scan(&num)
+			if err != nil {
+				tx.Rollback(context.TODO())
+				return err
+			}
+
+			if num == 0 {
+				log.Info("Adding joint ", v.Name, " with uuid ", v.Uuid)
+				_, err := tx.Exec(context.TODO(),
+									`INSERT INTO label(name, uuid, label_type)
+										VALUES($1,$2, 'refinement')`, v.Name, v.Uuid)
+				if err != nil {
+					tx.Rollback(context.TODO())
+					return err
+				}
+			} else {
+				log.Debug("Skipping joint ", v.Name, " as it already exists")
+			}
+		}
 	}
 
 	return nil

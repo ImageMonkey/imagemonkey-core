@@ -496,6 +496,7 @@ func main() {
 	releaseMode := flag.Bool("release", false, "Run in release mode")
 	wordlistPath := flag.String("wordlist", "../wordlists/en/labels.jsonnet", "Path to label map")
 	labelRefinementsPath := flag.String("label_refinements", "../wordlists/en/label-refinements.json", "Path to label refinements")
+	labelJointsPath := flag.String("label_joints", "../wordlists/en/label-joints.json", "Path to the label joints")
 	metalabelsPath := flag.String("metalabels", "../wordlists/en/metalabels.jsonnet", "Path to metalabels")
 	donationsDir := flag.String("donations_dir", "../donations/", "Location of the uploaded donations")
 	unverifiedDonationsDir := flag.String("unverified_donations_dir", "../unverified_donations/", "Location of the uploaded but unverified donations")
@@ -549,6 +550,13 @@ func main() {
 	if err != nil {
 		fmt.Printf("[Main] Couldn't read metalabel map...terminating!")
 		log.Fatal(err)
+	}
+
+	log.Debug("[Main] Reading label joints")
+	labelJoints := commons.NewLabelJoints(*labelJointsPath)
+	err = labelJoints.Load()
+	if err != nil {
+		log.Fatal("Couldn't read label joints: ", err)
 	}
 
 	log.Debug("[Main] Reading label refinements")
@@ -1760,6 +1768,10 @@ func main() {
 		router.GET("/v1/label/plurals", func(c *gin.Context) {
 			pluralsMapping := labelRepository.GetPluralsMapping()
 			c.JSON(200, pluralsMapping)
+		})
+
+		router.GET("/v1/label/joints", func(c *gin.Context) {
+			c.JSON(200, labelJoints.GetMapping())
 		})
 
 		router.GET("/v1/label/refinements", func(c *gin.Context) {

@@ -342,4 +342,31 @@ func (p *MetaLabelsDirectoryMerger) Merge() error {
 	return err
 }
 
+type LabelJoints struct {
+    labelJoints datastructures.LabelJoints
+    path string
+}
 
+func NewLabelJoints(path string) *LabelJoints {
+    return &LabelJoints {
+        path: path,
+    } 
+}
+
+func (p *LabelJoints) Load() error {
+	data, err := ioutil.ReadFile(p.path)
+    if err != nil {
+        return err
+    }
+
+	err = json.Unmarshal([]byte(data), &p.labelJoints)
+	if err != nil {
+		return err
+	}
+
+    return nil
+}
+
+func (p *LabelJoints) GetMapping() datastructures.LabelJoints {
+	return p.labelJoints
+}
