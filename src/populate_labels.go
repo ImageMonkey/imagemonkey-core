@@ -28,7 +28,8 @@ func main() {
 	labelsPopulator := clients.NewLabelsPopulatorClient(imageMonkeyDbConnectionString,
 		"../wordlists/en/labels.jsonnet",
 		"../wordlists/en/label-refinements.json",
-		"../wordlists/en/metalabels.jsonnet")
+		"../wordlists/en/metalabels.jsonnet",
+		"../wordlists/en/label-joints.json")
 	err := labelsPopulator.Load()
 	if err != nil {
 		log.Fatal(err.Error())
