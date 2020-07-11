@@ -945,9 +945,9 @@ var AnnotationView = (function() {
                     'Joint Connections' +
                     '</div>' +
                     '</h2>' +
-                    '<div class="ui basic segment" id="annotationJointsLstBasicSegment">' +
+                    '<div class="ui basic segment" id="jointConnectionLstBasicSegment">' +
                     '<div class="ui segments">' +
-                    '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="annotationJointsLst">' +
+                    '<div class="ui raised segments" style="overflow: auto; height: 50vh;" id="jointConnectionLst">' +
                     '</div>' +
 
                     '<div class="ui center aligned grid">' +
@@ -1102,6 +1102,7 @@ var AnnotationView = (function() {
             $("#jointConnectionNewButton").click(function(e) {
                 inst.annotator.changeStrokeColorOfAllObjects("red");
                 inst.annotator.enableHighlightOnMouseOver();
+                inst.annotator.beginJointConnection();
                 $("#jointConnectionNewButton").hide();
                 $("#jointConnectionButtonsForm").show();
             });
@@ -1109,6 +1110,17 @@ var AnnotationView = (function() {
             $("#jointConnectionDoneButton").click(function(e) {
                 inst.annotator.changeStrokeColorOfAllObjects("grey");
                 inst.annotator.disableHighlightOnMouseOver();
+                let jointConnectionLabels = inst.annotator.getJointConnectionLabels();
+                inst.annotator.endJointConnection();
+
+                let name = "";
+                for (var i = 0; i < jointConnectionLabels.length; i++) {
+                    name += jointConnectionLabels[i];
+
+                    if (i + 1 < jointConnectionLabels.length - 1)
+                        name += "->";
+                }
+                addJointConnectionToJointConnectionLst(name, "1");
 
                 $("#jointConnectionNewButton").show();
                 $("#jointConnectionButtonsForm").hide();

@@ -287,6 +287,28 @@ function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCre
     return elem;
 }
 
+
+function addJointConnectionToJointConnectionLst(name, uuid) {
+    let id = "jointconnectionlstitem-" + uuid;
+    let onClickCallback = "annotationView.onJointConnectionInJointConnectionLstClicked(this);";
+
+    let elem = $('<div class="ui segment center aligned jointconnectionlstitem" id="' + id + '"' +
+        ' data-uuid="' + uuid +
+        '" onclick="' + onClickCallback + '"' +
+        ' onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
+        ' onmouseout="this.style.backgroundColor=\'white\';"' +
+        ' style="overflow: auto;">' +
+        '<span class="left-floated">' +
+        '<p>' + name + '</p>' +
+        '</span><span class="right-floated"><i class="right icon delete ui red"></i></span></div>');
+
+
+    $("#jointConnectionLst").append(elem);
+
+    return elem;
+}
+
+
 function addRefinementToRefinementsLst(name, uuid, icon) {
     var id = "refinementlstitem-" + uuid;
     $("#annotationPropertiesLst").append('<div class="ui segment center aligned refinementlstitem" id="' + id + '"' +

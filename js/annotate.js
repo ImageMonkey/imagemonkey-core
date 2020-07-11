@@ -496,12 +496,19 @@ var Annotator = (function() {
         this._refAnnotations = [];
         this._highlightOnMouseOver = false;
         this._annotationLabelOverviewMapping = {};
+        this._createJointConnection = false;
+        this._jointConnectionPoints = [];
+        this._jointConnectionLabels = [];
 
         this.setBrushType(this.brushType);
         this.setBrushColor(this.brushColor);
         this.setBrushWidth(this.brushWidth);
 
         this.bindEvents();
+    }
+
+    Annotator.prototype.getJointConnectionLabels = function() {
+        return this._jointConnectionLabels;
     }
 
     Annotator.prototype.setPolygonVertexSize = function(polygonVertexSize) {
@@ -1014,6 +1021,16 @@ var Annotator = (function() {
         this._highlightOnMouseOver = true;
     }
 
+    Annotator.prototype.beginJointConnection = function() {
+        this._createJointConnection = true;
+    }
+
+    Annotator.prototype.endJointConnection = function() {
+        this._createJointConnection = false;
+        this._jointConnectionPoints = [];
+        this._jointConnectionLabels = [];
+    }
+
     Annotator.prototype.deleteSelected = function(o) {
         var activeObj = this.canvas.getActiveObject();
         if ("id" in activeObj) {
@@ -1106,6 +1123,36 @@ var Annotator = (function() {
                 }
             }
 
+        }
+
+        if (this._createJointConnection) {
+            if (o.target && o.target.id !== undefined) {
+                let label = null;
+                if (o.target.id in inst._annotationLabelOverviewMapping)
+                    label = inst._annotationLabelOverviewMapping[o.target.id];
+
+                if (label !== null) {
+                    o.target.set("stroke", "blue");
+                    o.target.set("fill", "blue");
+                    this._jointConnectionPoints.push(o.target.getCenterPoint());
+                    this._jointConnectionLabels.push(label);
+
+                    if (this._jointConnectionPoints.length >= 2) {
+                        var p1 = this._jointConnectionPoints[this._jointConnectionPoints.length - 1];
+                        var p2 = this._jointConnectionPoints[this._jointConnectionPoints.length - 2];
+                        this.canvas.add(new fabric.Line([p1.x, p1.y, p2.x, p2.y], {
+                            stroke: 'green',
+                            hasControls: false,
+                            hasBorders: false,
+                            lockMovementX: true,
+                            lockMovementY: true,
+                            hoverCursor: 'default',
+                            strokeWidth: 5
+                        }));
+                    }
+                    this.canvas.renderAll();
+                }
+            }
         }
     };
 
