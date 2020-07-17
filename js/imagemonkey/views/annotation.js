@@ -56,8 +56,9 @@ var AnnotationView = (function() {
         this.availableLabels = [];
         this.availableLabelsLookupTable = {};
         this.labelsAutoCompletion = null;
-        this.availableLabelJoints = {};
-        this.jointsModeEnabled = false;
+        this.labelJoints = null;
+        this.jointConnections = new JointConnections();
+        //this.jointConnections = {};
     }
 
     AnnotationView.prototype.setSentryDSN = function(sentryDSN) {
@@ -425,7 +426,7 @@ var AnnotationView = (function() {
                     inst.labelAccessorsLookupTable[data[1][i].accessor] = data[1][i].parent_accessor;
                 }
 
-                inst.availableLabelJoints = data[2].joints;
+                inst.labelJoints = new LabelJoints(data[2].joints);
 
                 if (inst.annotationMode === "default") {
                     if (inst.validationId === "")
@@ -816,6 +817,20 @@ var AnnotationView = (function() {
         });
     }
 
+    AnnotationView.prototype.onJointConnectionInJointConnectionLstClicked = function(elem) {
+        let uuid = $(elem).attr("data-uuid");
+        let jointConnection = this.jointConnections.getJointConnection(uuid);
+        if (jointConnection !== null) {
+            this.annotator.highlightJointConnection(jointConnection);
+        }
+
+        $("#jointConnectionLst").children().each(function(i) {
+            $(this).removeClass("grey inverted");
+        });
+
+        $(elem).addClass("grey inverted");
+    }
+
     AnnotationView.prototype.addMainCanvas = function() {
         $("#annotationColumnSpacer").remove();
         $("#annotationPropertiesColumnSpacer").remove();
@@ -1110,7 +1125,9 @@ var AnnotationView = (function() {
             $("#jointConnectionDoneButton").click(function(e) {
                 inst.annotator.changeStrokeColorOfAllObjects("grey");
                 inst.annotator.disableHighlightOnMouseOver();
-                let jointConnectionLabels = inst.annotator.getJointConnectionLabels();
+                let jointConnection = inst.annotator.getJointConnection();
+                let jointConnectionLabels = jointConnection.getLabels();
+                let jointConnectionIds = jointConnection.getIds();
                 inst.annotator.endJointConnection();
 
                 let name = "";
@@ -1120,7 +1137,13 @@ var AnnotationView = (function() {
                     if (i + 1 < jointConnectionLabels.length - 1)
                         name += "->";
                 }
-                addJointConnectionToJointConnectionLst(name, "1");
+
+                let uuid = inst.labelJoints.acquireLabelJoint();
+
+                inst.jointConnections.add(jointConnection);
+                addJointConnectionToJointConnectionLst(name, uuid);
+                /*inst.jointConnections[uuid] = jointConnectionIds;
+                addJointConnectionToJointConnectionLst(name, uuid);*/
 
                 $("#jointConnectionNewButton").show();
                 $("#jointConnectionButtonsForm").hide();
@@ -1572,6 +1595,12 @@ var AnnotationView = (function() {
             zoomOut(inst.canvas);
         });
 
+        $("#removeJointConnectionFromJointLstDlgYesButton").click(function(e) {
+            var removedElemUuid = $("#removeJointConnectionFromJointLstDlg").attr("data-to-be-removed-uuid");
+            $("#jointconnectionlstitem-" + removedElemUuid).remove();
+            inst.labelJoints.releaseLabelJoint(removedElemUuid);
+        });
+
         $("#removeLabelFromUnifiedModeLstDlgYesButton").click(function(e) {
             var removedElemUuid = $("#removeLabelFromUnifiedModeLstDlg").attr("data-to-be-removed-uuid");
             $("#labellstitem-" + removedElemUuid).remove();
@@ -1679,16 +1708,17 @@ var AnnotationView = (function() {
 
         $("#jointsMenuItem").click(function() {
             if (inst.canvas && inst.canvas.fabric().backgroundImage) {
-                if (inst.jointsModeEnabled) {
+                if (inst.jointConnections.isEnabled()) {
                     $("#jointsMenuItemIcon").removeClass("orange");
                     inst.showHideAllAnnotations(false);
+                    inst.jointConnections.disable();
                 } else {
                     $("#jointsMenuItemIcon").addClass("orange");
                     inst.showHideAllAnnotations(true);
                     inst.annotator.changeStrokeColorOfAllObjects("grey");
                     inst.annotator.disableHighlightOnMouseOver();
+                    inst.jointConnections.enable();
                 }
-                inst.jointsModeEnabled = !inst.jointsModeEnabled;
                 showHideControls(true, inst);
             }
         });

@@ -497,8 +497,7 @@ var Annotator = (function() {
         this._highlightOnMouseOver = false;
         this._annotationLabelOverviewMapping = {};
         this._createJointConnection = false;
-        this._jointConnectionPoints = [];
-        this._jointConnectionLabels = [];
+        this._jointConnection = null;
 
         this.setBrushType(this.brushType);
         this.setBrushColor(this.brushColor);
@@ -507,8 +506,8 @@ var Annotator = (function() {
         this.bindEvents();
     }
 
-    Annotator.prototype.getJointConnectionLabels = function() {
-        return this._jointConnectionLabels;
+    Annotator.prototype.getJointConnection = function() {
+        return this._jointConnection;
     }
 
     Annotator.prototype.setPolygonVertexSize = function(polygonVertexSize) {
@@ -1023,12 +1022,23 @@ var Annotator = (function() {
 
     Annotator.prototype.beginJointConnection = function() {
         this._createJointConnection = true;
+        this._jointConnection = new JointConnection();
     }
 
     Annotator.prototype.endJointConnection = function() {
         this._createJointConnection = false;
-        this._jointConnectionPoints = [];
-        this._jointConnectionLabels = [];
+    }
+
+    Annotator.prototype.highlightJointConnection = function(jointConnection) {
+        var objects = this.canvas.getObjects();
+        for (var i = 0; i < objects.length; i++) {
+            if (jointConnection.getIds().includes(objects[i].id)) {
+                objects[i].set("stroke", "green");
+            } else {
+                objects[i].set("stroke", "grey");
+            }
+        }
+        this.canvas.renderAll();
     }
 
     Annotator.prototype.deleteSelected = function(o) {
@@ -1134,12 +1144,15 @@ var Annotator = (function() {
                 if (label !== null) {
                     o.target.set("stroke", "blue");
                     o.target.set("fill", "blue");
-                    this._jointConnectionPoints.push(o.target.getCenterPoint());
-                    this._jointConnectionLabels.push(label);
+                    this._jointConnection.addPoint(o.target.getCenterPoint());
+                    this._jointConnection.addLabel(label);
+                    if (this._jointConnection.getPoints().length >= 2) {
+                        let lineId = generateRandomId();
+                        let p1 = this._jointConnection.getPoint(this._jointConnection.getPoints().length - 1);
+                        let p2 = this._jointConnection.getPoint(this._jointConnection.getPoints().length - 2);
+                        this._jointConnection.addId(lineId);
 
-                    if (this._jointConnectionPoints.length >= 2) {
-                        var p1 = this._jointConnectionPoints[this._jointConnectionPoints.length - 1];
-                        var p2 = this._jointConnectionPoints[this._jointConnectionPoints.length - 2];
+                        this._jointConnection.addAnnotationId(o.target.id);
                         this.canvas.add(new fabric.Line([p1.x, p1.y, p2.x, p2.y], {
                             stroke: 'green',
                             hasControls: false,
@@ -1147,7 +1160,8 @@ var Annotator = (function() {
                             lockMovementX: true,
                             lockMovementY: true,
                             hoverCursor: 'default',
-                            strokeWidth: 5
+                            strokeWidth: 5,
+                            id: lineId
                         }));
                     }
                     this.canvas.renderAll();
@@ -1553,7 +1567,6 @@ var Annotator = (function() {
 
     Annotator.prototype.loadAnnotationsOverview = function(annotationsWithLabel, scaleFactor = 1.0) {
         this.deleteAll();
-
         for (var i = 0; i < annotationsWithLabel.length; i++) {
             for (var j = 0; j < annotationsWithLabel[i].annotations.length; j++) {
                 drawAnnotations(this.canvas, [annotationsWithLabel[i].annotations[j]], scaleFactor,

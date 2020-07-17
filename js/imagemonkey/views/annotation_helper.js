@@ -171,7 +171,7 @@ function showHideControls(show, annotationView) {
         $("#annotationColumnContent").show();
         $("#annotationColumnSpacer").show();
 
-        if (annotationView.jointsModeEnabled) {
+        if (annotationView.jointConnections.isEnabled()) {
             $("#annotationJointsColumnSpacer").show();
             $("#annotationPropertiesColumnSpacer").hide();
         } else {
@@ -234,6 +234,11 @@ function onLabelInLabelLstRemoveClicked(elem) {
     $("#removeLabelFromUnifiedModeLstDlg").modal("show");
 }
 
+function onJointInJointConnectionLstRemoveClicked(elem) {
+    $("#removeJointConnectionFromJointLstDlg").attr("data-to-be-removed-uuid", $(elem).parent().attr("data-uuid"));
+    $("#removeJointConnectionFromJointLstDlg").modal("show");
+}
+
 function addLabelToLabelLst(label, sublabel, uuid, allowRemove = false, newlyCreated = false,
     isUnlocked = false, loggedIn = false, validationId = null) {
     var id = "labellstitem-" + uuid;
@@ -292,15 +297,16 @@ function addJointConnectionToJointConnectionLst(name, uuid) {
     let id = "jointconnectionlstitem-" + uuid;
     let onClickCallback = "annotationView.onJointConnectionInJointConnectionLstClicked(this);";
 
+    let displayedName = ('<span class="left-floated">' + name +
+        '</span><span class="right-floated" onclick="onJointInJointConnectionLstRemoveClicked(this);">' +
+        '<i class="right icon delete ui red"></i></span>');
+
     let elem = $('<div class="ui segment center aligned jointconnectionlstitem" id="' + id + '"' +
         ' data-uuid="' + uuid +
         '" onclick="' + onClickCallback + '"' +
         ' onmouseover="this.style.backgroundColor=\'#e6e6e6\';"' +
         ' onmouseout="this.style.backgroundColor=\'white\';"' +
-        ' style="overflow: auto;">' +
-        '<span class="left-floated">' +
-        '<p>' + name + '</p>' +
-        '</span><span class="right-floated"><i class="right icon delete ui red"></i></span></div>');
+        ' style="overflow: auto;">' + displayedName + '</div>');
 
 
     $("#jointConnectionLst").append(elem);

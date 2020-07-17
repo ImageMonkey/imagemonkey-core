@@ -36,6 +36,8 @@
   <script src="js/imagemonkey/api.js?v={{ .assetVersion }}"></script>
   <script src="js/imagemonkey/views/annotation.min.js?v={{ .assetVersion }}"></script>
   <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
+  <script src="js/imagemonkey/misc/labeljoints.js?v={{ .assetVersion }}"></script>
+  <script src="js/imagemonkey/misc/jointconnections.js?v={{ .assetVersion }}"></script>
   <link rel="stylesheet" href="css/contextjs/context.standalone.css?v={{ .assetVersion }}">
   <link rel="stylesheet" href="css/balloon/balloon.min.css?v={{ .assetVersion }}">
 
@@ -178,6 +180,7 @@
       {{ template "annotation_refinement_dlg.html" .}}
       {{ if eq .annotationView "unified" }}
       {{ template "unified_mode_label_remove_dlg.html" .}}
+      {{ template "unified_mode_joint_connection_remove_dlg.html" .}}
       {{ end  }}
 
       <div class="row" id="annotationColumn" style="display: none;">
