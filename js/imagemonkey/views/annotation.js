@@ -819,7 +819,7 @@ var AnnotationView = (function() {
 
     AnnotationView.prototype.onJointConnectionInJointConnectionLstClicked = function(elem) {
         let uuid = $(elem).attr("data-uuid");
-        let jointConnection = this.jointConnections.getJointConnection(uuid);
+        let jointConnection = this.jointConnections.get(uuid);
         if (jointConnection !== null) {
             this.annotator.highlightJointConnection(jointConnection);
         }
@@ -1140,7 +1140,8 @@ var AnnotationView = (function() {
 
                 let uuid = inst.labelJoints.acquireLabelJoint();
 
-                inst.jointConnections.add(jointConnection);
+                inst.jointConnections.add(jointConnection, uuid);
+
                 addJointConnectionToJointConnectionLst(name, uuid);
                 /*inst.jointConnections[uuid] = jointConnectionIds;
                 addJointConnectionToJointConnectionLst(name, uuid);*/
@@ -1596,9 +1597,17 @@ var AnnotationView = (function() {
         });
 
         $("#removeJointConnectionFromJointLstDlgYesButton").click(function(e) {
-            var removedElemUuid = $("#removeJointConnectionFromJointLstDlg").attr("data-to-be-removed-uuid");
+            let removedElemUuid = $("#removeJointConnectionFromJointLstDlg").attr("data-to-be-removed-uuid");
             $("#jointconnectionlstitem-" + removedElemUuid).remove();
             inst.labelJoints.releaseLabelJoint(removedElemUuid);
+            let jointConnection = inst.jointConnections.get(removedElemUuid);
+            let jointConnectionIds = jointConnection.getIds();
+            let jointConnectionPoints = jointConnection.getPoints();
+            let toBeRemovedEntries = jointConnectionIds;
+            for (const entry of jointConnectionPoints) {
+                toBeRemovedEntries.push(entry.getId());
+            }
+            inst.annotator.deleteObjectsByIds(toBeRemovedEntries);
         });
 
         $("#removeLabelFromUnifiedModeLstDlgYesButton").click(function(e) {

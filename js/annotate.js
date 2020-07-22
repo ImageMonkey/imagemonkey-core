@@ -1012,6 +1012,13 @@ var Annotator = (function() {
         this._annotationLabelOverviewMapping = {};
     };
 
+    Annotator.prototype.deleteObjectsByIds = function(ids) {
+        for (const id of ids) {
+            this.canvas.removeItemsByAttr("id", id);
+        }
+        this.canvas.renderAll();
+    }
+
     Annotator.prototype.disableHighlightOnMouseOver = function() {
         this._highlightOnMouseOver = false;
     }
@@ -1144,7 +1151,7 @@ var Annotator = (function() {
                 if (label !== null) {
                     o.target.set("stroke", "blue");
                     o.target.set("fill", "blue");
-                    this._jointConnection.addPoint(o.target.getCenterPoint());
+                    this._jointConnection.addPoint(new JointConnectionPoint(o.target.getCenterPoint(), o.target.id));
                     this._jointConnection.addLabel(label);
                     if (this._jointConnection.getPoints().length >= 2) {
                         let lineId = generateRandomId();
@@ -1153,7 +1160,7 @@ var Annotator = (function() {
                         this._jointConnection.addId(lineId);
 
                         this._jointConnection.addAnnotationId(o.target.id);
-                        this.canvas.add(new fabric.Line([p1.x, p1.y, p2.x, p2.y], {
+                        this.canvas.add(new fabric.Line([p1.getPoint().x, p1.getPoint().y, p2.getPoint().x, p2.getPoint().y], {
                             stroke: 'green',
                             hasControls: false,
                             hasBorders: false,
