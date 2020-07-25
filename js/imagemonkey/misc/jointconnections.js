@@ -79,6 +79,7 @@ var JointConnections = (function() {
     function JointConnections() {
         this._jointConnectionsEnabled = false;
         this._jointConnections = new Map();
+        this._modified = false;
     }
 
     JointConnections.prototype.enable = function() {
@@ -94,6 +95,7 @@ var JointConnections = (function() {
     }
 
     JointConnections.prototype.add = function(jointConnection, uuid) {
+        this._modified = true;
         this._jointConnections.set(uuid, jointConnection);
     }
 
@@ -101,6 +103,14 @@ var JointConnections = (function() {
         if (this._jointConnections.has(uuid))
             return this._jointConnections.get(uuid);
         return null;
+    }
+
+    JointConnections.prototype.getAll = function() {
+        return this._jointConnections;
+    }
+
+    JointConnections.prototype.modified = function() {
+        return this._modified;
     }
 
     return JointConnections;
