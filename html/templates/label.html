@@ -553,7 +553,7 @@
       escapedLabel = escapedLabelAccessor;
       escapedSublabel = null;
     } else {
-      var labelItem = labelAccessorsLookupTable[escapedLabelAccessor];
+      var labelItem = labelAccessorsLookupTable[labelAccessor];
       escapedLabel = escapeHtml(labelItem.label);
 
       if(labelItem.sublabel !== null)
@@ -776,7 +776,7 @@
     for (var key in labelAccessorsLookupTable) {
       if (labelAccessorsLookupTable.hasOwnProperty(key)) {
         availableLabelsLookupTable[key] = true;
-        availableLabels.push(escapeHtml(key));
+        availableLabels.push(key);
 
         if(typeof addLabelsToDropdown !== typeof undefined && addLabelsToDropdown) {
           $("#labelDropdownMenu").append(('<div class="item" data-value="' + 
