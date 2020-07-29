@@ -56,7 +56,7 @@ var AnnotationView = (function() {
         this.availableLabels = [];
         this.availableLabelsLookupTable = {};
         this.labelsAutoCompletion = null;
-        this.labelJoints = null;
+        //this.labelJoints = null;
         this.jointConnections = new JointConnections();
         //this.jointConnections = {};
     }
@@ -114,6 +114,7 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.loadAnnotatedImage = function(annotationId, annotationRevision) {
+        this.jointConnections.reset();
         showHideControls(false, this);
         var inst = this;
         this.imageMonkeyApi.getAnnotatedImage(annotationId, annotationRevision)
@@ -271,16 +272,41 @@ var AnnotationView = (function() {
 
 
     AnnotationView.prototype.addAnnotationsUnifiedMode = function() {
-        var imageGridImageIdentifiers = [];
-        var annotations = [];
+        let jointConnections = [];
+        if (this.jointConnections.modified())
+            jointConnections = this.jointConnections.getAll();
+
+        let imageGridImageIdentifiers = [];
+        let annotations = [];
+
         for (var key in this.unifiedModeAnnotations) {
             if (this.unifiedModeAnnotations.hasOwnProperty(key)) {
-                if (this.unifiedModeAnnotations[key].dirty) {
-                    var annotation = {};
-                    var entry = this.unifiedModeAnnotations[key];
-                    annotation["annotations"] = entry.annotations;
-                    annotation["label"] = entry.label;
-                    annotation["sublabel"] = entry.sublabel;
+
+                let annotation = {};
+                let entry = this.unifiedModeAnnotations[key];
+                annotation["annotations"] = entry.annotations;
+                annotation["label"] = entry.label;
+                annotation["sublabel"] = entry.sublabel;
+
+                let jointConnectionsAdded = false
+                for (const [jointConnectionKey, jointConnectionValue] of jointConnections.entries()) {
+                    let pos = jointConnectionValue.getLabels().indexOf(key)
+                    if (pos !== -1) {
+                        jointConnectionsAdded = true;
+                        let refinements = [];
+                        if ("refinements" in annotation)
+                            refinements = annotation["refinements"];
+
+                        let uuids = this.jointConnections.getLabelJoints().getLabelJointUuids(jointConnectionKey);
+
+                        refinements.push({
+                            "label_uuid": uuids[pos]
+                        });
+                        annotation["refinements"] = refinements;
+                    }
+                }
+
+                if (this.unifiedModeAnnotations[key].dirty || jointConnectionsAdded) {
                     annotations.push(annotation);
 
                     if ("validationUuid" in entry && entry.validationUuid !== null && entry.validationUuid !== undefined) {
@@ -375,8 +401,10 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.loadUnannotatedImage = function(validationId) {
+        this.jointConnections.reset();
         showHideControls(false, this);
         $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
+        $("#jointsMenuItemIcon").removeClass("orange");
         var inst = this;
         this.imageMonkeyApi.getUnannotatedImage(validationId, inst.labelId)
             .then(function(data) {
@@ -387,8 +415,10 @@ var AnnotationView = (function() {
     }
 
     AnnotationView.prototype.loadUnannotatedImageWithNoLabelsFromImageUrl = function(imageId, imageWidth, imageHeight, imageUrl, imageUnlocked) {
+        this.jointConnections.reset();
         showHideControls(false, this);
         $("#showAllAnnotationsMenuItemIcon").removeClass("orange");
+        $("#jointsMenuItemIcon").removeClass("orange");
         var data = {
             uuid: imageId,
             width: imageWidth,
@@ -426,7 +456,8 @@ var AnnotationView = (function() {
                     inst.labelAccessorsLookupTable[data[1][i].accessor] = data[1][i].parent_accessor;
                 }
 
-                inst.labelJoints = new LabelJoints(data[2].joints);
+                let labelJoints = new LabelJoints(data[2].joints);
+                inst.jointConnections.setLabelJoints(labelJoints);
 
                 if (inst.annotationMode === "default") {
                     if (inst.validationId === "")
@@ -1138,13 +1169,11 @@ var AnnotationView = (function() {
                         name += "->";
                 }
 
-                let uuid = inst.labelJoints.acquireLabelJoint();
+                let uuid = inst.jointConnections.getLabelJoints().acquireLabelJoint();
 
                 inst.jointConnections.add(jointConnection, uuid);
 
                 addJointConnectionToJointConnectionLst(name, uuid);
-                /*inst.jointConnections[uuid] = jointConnectionIds;
-                addJointConnectionToJointConnectionLst(name, uuid);*/
 
                 $("#jointConnectionNewButton").show();
                 $("#jointConnectionButtonsForm").hide();
@@ -1598,7 +1627,7 @@ var AnnotationView = (function() {
         $("#removeJointConnectionFromJointLstDlgYesButton").click(function(e) {
             let removedElemUuid = $("#removeJointConnectionFromJointLstDlg").attr("data-to-be-removed-uuid");
             $("#jointconnectionlstitem-" + removedElemUuid).remove();
-            inst.labelJoints.releaseLabelJoint(removedElemUuid);
+            inst.jointConnections.getLabelJoints().releaseLabelJoint(removedElemUuid);
             let jointConnection = inst.jointConnections.get(removedElemUuid);
             let jointConnectionIds = jointConnection.getIds();
             let jointConnectionPoints = jointConnection.getPoints();
@@ -1851,7 +1880,7 @@ var AnnotationView = (function() {
             var res = null;
 
             if (inst.annotationView === "unified") {
-                if (!$("#showAllAnnotationsMenuItemIcon").hasClass("orange"))
+                if (!$("#showAllAnnotationsMenuItemIcon").hasClass("orange") && !inst.jointConnections.isEnabled())
                     inst.saveCurrentSelectLabelInUnifiedModeList();
                 if (Object.keys(inst.unifiedModeLabels).length === 0 && Object.keys(inst.unifiedModeAnnotations).length === 0) {
                     $('#warningMsgText').text('Please annotate the image first.');

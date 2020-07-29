@@ -4,7 +4,7 @@ var LabelJoints = (function() {
         this.usedLabelJoints = new Map();
     }
 
-    LabelJoints.prototype.acquireLabelJoint = function(mode) {
+    LabelJoints.prototype.acquireLabelJoint = function() {
         let inst = this;
         for (const [key, value] of inst.availableLabelJoints.entries()) {
             if (!inst.usedLabelJoints.has(key)) {
@@ -15,10 +15,21 @@ var LabelJoints = (function() {
         return null;
     }
 
-    LabelJoints.prototype.releaseLabelJoint = function(uuid) {
-        this.usedLabelJoints.delete(uuid);
+    LabelJoints.prototype.releaseLabelJoint = function(identifier) {
+        this.usedLabelJoints.delete(identifier);
     }
 
+    LabelJoints.prototype.getLabelJointUuids = function(identifier) {
+        if (!this.usedLabelJoints.has(identifier))
+            return null;
+
+        let items = this.availableLabelJoints.get(identifier);
+        let uuids = [];
+        for (item of items) {
+            uuids.push(item.uuid);
+        }
+        return uuids;
+    }
 
     return LabelJoints;
 }());

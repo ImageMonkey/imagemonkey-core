@@ -80,6 +80,21 @@ var JointConnections = (function() {
         this._jointConnectionsEnabled = false;
         this._jointConnections = new Map();
         this._modified = false;
+        this._labelJoints = null;
+    }
+
+    JointConnections.prototype.reset = function() {
+        this._jointConnectionsEnabled = false;
+        this._jointConnections = new Map();
+        this._modified = false;
+    }
+
+    JointConnections.prototype.setLabelJoints = function(labelJoints) {
+        this._labelJoints = labelJoints;
+    }
+
+    JointConnections.prototype.getLabelJoints = function() {
+        return this._labelJoints;
     }
 
     JointConnections.prototype.enable = function() {
