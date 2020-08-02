@@ -1,6 +1,6 @@
 function setCanvasBackgroundImageUrl(canvas, url, callback) {
     if (url && url.length > 0) {
-        fabric.Image.fromURL(url, function (img) {
+        fabric.Image.fromURL(url, function(img) {
             scaleAndPositionImage(canvas, img, callback);
         });
     } else {
@@ -19,15 +19,15 @@ function rgbToHex(r, g, b) {
     return "#" + colorComponentToHex(r) + colorComponentToHex(g) + colorComponentToHex(b);
 }
 
-function registerColorPickerOnMove(canvas, ctx, callback){
+function registerColorPickerOnMove(canvas, ctx, callback) {
     canvas.on('mouse:move', function(o) {
-      var pointer = canvas.getPointer(o.e);
-      var x = parseInt(pointer.x);
-      var y = parseInt(pointer.y);
+        var pointer = canvas.getPointer(o.e);
+        var x = parseInt(pointer.x);
+        var y = parseInt(pointer.y);
 
-      // get the color array for the pixel under the mouse
-      var px = ctx.getImageData(x, y, 1, 1).data;
-      callback(rgbToHex(px[0], px[1], px[2]))
+        // get the color array for the pixel under the mouse
+        var px = ctx.getImageData(x, y, 1, 1).data;
+        callback(rgbToHex(px[0], px[1], px[2]))
     });
 }
 
@@ -47,193 +47,67 @@ function scaleAndPositionImage(canvas, img, callback) {
     typeof callback === 'function' && callback();
 }
 
-function calcScaleFactor(img, maxImageWidth){
+function calcScaleFactor(img, maxImageWidth) {
     //on mobile, make image full width
     var isMobile = window.matchMedia("only screen and (max-width: 760px)");
     if (isMobile.matches) {
         maxImageWidth = document.body.clientWidth - 70;
     }
-    var scaleFactor = maxImageWidth/img.width;
-    if(scaleFactor > 1.0)
+    var scaleFactor = maxImageWidth / img.width;
+    if (scaleFactor > 1.0)
         scaleFactor = 1.0;
 
     return scaleFactor;
 }
 
-function drawAnnotations(canvas, annotations, scaleFactor, callback){
-  for(var i = 0; i < annotations.length; i++){
-    var type = annotations[i]["type"];
-    var hasRefinements = false;
+function drawAnnotations(canvas, annotations, scaleFactor, callback) {
+    for (var i = 0; i < annotations.length; i++) {
+        var type = annotations[i]["type"];
+        var hasRefinements = false;
 
-    if("refinements" in annotations[i]) {
-        if(annotations[i].refinements.length !== 0)
-            hasRefinements = true;
-    }
-
-    if(type === "rect"){
-        var top = (annotations[i]["top"] * scaleFactor);
-        var left = (annotations[i]["left"] * scaleFactor);
-        var height = (annotations[i]["height"] * scaleFactor);
-        var width = (annotations[i]["width"] * scaleFactor);
-
-        var angle = 0;
-        if("angle" in annotations[i]) 
-            angle = annotations[i]["angle"];
-
-        var fillColor = "transparent";
-        var fillOpacity = 1.0;
-        var fillInfo = annotations[i]["fill"];
-        if(fillInfo && "color" in fillInfo)
-            fillColor = fillInfo["color"];
-        if(fillInfo && "opacity" in fillInfo)
-            fillOpacity = fillInfo["opacity"];
-
-
-        var strokeWidth = 5;
-        var strokeColor = "red";
-        var strokeInfo = annotations[i]["stroke"];
-        if(strokeInfo && "width" in strokeInfo)
-            strokeWidth = strokeInfo["width"];
-        if(strokeInfo && "color" in strokeInfo)
-            strokeColor = strokeInfo["color"];
-
-        var rect = new fabric.Rect({
-            left: left,
-            top: top,
-            originX: 'left',
-            originY: 'top',
-            width: width,
-            height: height,
-            angle: angle,
-            stroke: strokeColor,
-            strokeWidth: strokeWidth,
-            fill: fillColor,
-            opacity: fillOpacity,
-            transparentCorners: false,
-            hasBorders: false,
-            hasControls: false,
-            selectable: false
-        });
-
-        //in case annotation has refinements, highlight with a different stroke style
-        if(hasRefinements)
-            rect.set({strokeDashArray: [6, 3]});
-
-        canvas.add(rect);
-        typeof callback === 'function' && callback(rect);     
-    }
-    else if(type === "ellipse"){
-        var top = (annotations[i]["top"] * scaleFactor);
-        var left = (annotations[i]["left"] * scaleFactor);
-        var rx = (annotations[i]["rx"] * scaleFactor);
-        var ry = (annotations[i]["ry"] * scaleFactor);
-        
-        var angle = 0;
-        if("angle" in annotations[i]) 
-            angle = annotations[i]["angle"];
-
-        var fillColor = "transparent";
-        var fillOpacity = 1.0;
-        var fillInfo = annotations[i]["fill"];
-        if(fillInfo && "color" in fillInfo)
-            fillColor = fillInfo["color"];
-        if(fillInfo && "opacity" in fillInfo)
-            fillOpacity = fillInfo["opacity"];
-
-        var strokeWidth = 5;
-        var strokeColor = "red";
-        var strokeInfo = annotations[i]["stroke"];
-        if(strokeInfo && "width" in strokeInfo)
-            strokeWidth = strokeInfo["width"];
-        if(strokeInfo && "color" in strokeInfo)
-            strokeColor = strokeInfo["color"];
-
-        var ellipsis = new fabric.Ellipse({
-            left: left,
-            top: top,
-            originX: 'left',
-            originY: 'top',
-            rx: rx,
-            ry: ry,
-            angle: angle,
-            stroke: strokeColor,
-            strokeWidth: strokeWidth,
-            fill: fillColor,
-            opacity: fillOpacity,
-            transparentCorners: false,
-            hasBorders: false,
-            hasControls: false,
-            selectable: false
-        });
-
-        //in case annotation has refinements, highlight with a different stroke style
-        if(hasRefinements)
-            ellipsis.set({strokeDashArray: [6, 3]});
-
-        canvas.add(ellipsis);
-        typeof callback === 'function' && callback(ellipsis);
-    }
-    else if(type === "polygon"){
-        var top = undefined;
-        var left = undefined;
-        
-        if(annotations[i]["top"] !== undefined)
-            top = (annotations[i]["top"] * scaleFactor);
-        
-        if(annotations[i]["left"] !== undefined)
-            left = (annotations[i]["left"] * scaleFactor);
-        
-        var angle = 0;
-        if("angle" in annotations[i]) 
-            angle = annotations[i]["angle"];
-        
-        var points = annotations[i]["points"];
-
-        var fillColor = "transparent";
-        var fillOpacity = 1.0;
-        var fillInfo = annotations[i]["fill"];
-        if(fillInfo && "color" in fillInfo)
-            fillColor = fillInfo["color"];
-        if(fillInfo && "opacity" in fillInfo)
-            fillOpacity = fillInfo["opacity"];
-
-        var strokeWidth = 5;
-        var strokeColor = "red";
-        var strokeInfo = annotations[i]["stroke"];
-        if(strokeInfo && "width" in strokeInfo)
-            strokeWidth = strokeInfo["width"];
-        if(strokeInfo && "color" in strokeInfo)
-            strokeColor = strokeInfo["color"];
-
-
-        var scaledPoints = [];
-
-        for(var j = 0; j < points.length; j++){
-            scaledPoints.push({"x": (points[j]["x"] * scaleFactor), "y": (points[j]["y"] * scaleFactor)});
+        if ("refinements" in annotations[i]) {
+            if (annotations[i].refinements.length !== 0)
+                hasRefinements = true;
         }
 
-        var polygon;
-        if((left === undefined) && (top === undefined)){
-            polygon = new fabric.Polygon(scaledPoints, {
-                originX: 'left',
-                originY: 'top',
-                angle: angle,
-                stroke: strokeColor,
-                strokeWidth: strokeWidth,
-                fill: fillColor,
-                opacity: fillOpacity,
-                transparentCorners: false,
-                hasBorders: false,
-                hasControls: false,
-                selectable: false
-            });
-        }
-        else{
-            polygon = new fabric.Polygon(scaledPoints, {
+        let id = null;
+        if ("id" in annotations[i])
+            id = annotations[i]["id"];
+
+        if (type === "rect") {
+            var top = (annotations[i]["top"] * scaleFactor);
+            var left = (annotations[i]["left"] * scaleFactor);
+            var height = (annotations[i]["height"] * scaleFactor);
+            var width = (annotations[i]["width"] * scaleFactor);
+
+            var angle = 0;
+            if ("angle" in annotations[i])
+                angle = annotations[i]["angle"];
+
+            var fillColor = "transparent";
+            var fillOpacity = 1.0;
+            var fillInfo = annotations[i]["fill"];
+            if (fillInfo && "color" in fillInfo)
+                fillColor = fillInfo["color"];
+            if (fillInfo && "opacity" in fillInfo)
+                fillOpacity = fillInfo["opacity"];
+
+
+            var strokeWidth = 5;
+            var strokeColor = "red";
+            var strokeInfo = annotations[i]["stroke"];
+            if (strokeInfo && "width" in strokeInfo)
+                strokeWidth = strokeInfo["width"];
+            if (strokeInfo && "color" in strokeInfo)
+                strokeColor = strokeInfo["color"];
+
+            var rect = new fabric.Rect({
                 left: left,
                 top: top,
                 originX: 'left',
                 originY: 'top',
+                width: width,
+                height: height,
                 angle: angle,
                 stroke: strokeColor,
                 strokeWidth: strokeWidth,
@@ -244,26 +118,171 @@ function drawAnnotations(canvas, annotations, scaleFactor, callback){
                 hasControls: false,
                 selectable: false
             });
-        } 
 
-        //in case annotation has refinements, highlight with a different stroke style
-        if(hasRefinements)
-            polygon.set({strokeDashArray: [6, 3]});
+            //in case annotation has refinements, highlight with a different stroke style
+            if (hasRefinements)
+                rect.set({
+                    strokeDashArray: [6, 3]
+                });
 
-        canvas.add(polygon);
-        typeof callback === 'function' && callback(polygon);
+            if (id !== null)
+                rect.set("id", id);
+
+            canvas.add(rect);
+            typeof callback === 'function' && callback(rect);
+        } else if (type === "ellipse") {
+            var top = (annotations[i]["top"] * scaleFactor);
+            var left = (annotations[i]["left"] * scaleFactor);
+            var rx = (annotations[i]["rx"] * scaleFactor);
+            var ry = (annotations[i]["ry"] * scaleFactor);
+
+            var angle = 0;
+            if ("angle" in annotations[i])
+                angle = annotations[i]["angle"];
+
+            var fillColor = "transparent";
+            var fillOpacity = 1.0;
+            var fillInfo = annotations[i]["fill"];
+            if (fillInfo && "color" in fillInfo)
+                fillColor = fillInfo["color"];
+            if (fillInfo && "opacity" in fillInfo)
+                fillOpacity = fillInfo["opacity"];
+
+            var strokeWidth = 5;
+            var strokeColor = "red";
+            var strokeInfo = annotations[i]["stroke"];
+            if (strokeInfo && "width" in strokeInfo)
+                strokeWidth = strokeInfo["width"];
+            if (strokeInfo && "color" in strokeInfo)
+                strokeColor = strokeInfo["color"];
+
+            var ellipsis = new fabric.Ellipse({
+                left: left,
+                top: top,
+                originX: 'left',
+                originY: 'top',
+                rx: rx,
+                ry: ry,
+                angle: angle,
+                stroke: strokeColor,
+                strokeWidth: strokeWidth,
+                fill: fillColor,
+                opacity: fillOpacity,
+                transparentCorners: false,
+                hasBorders: false,
+                hasControls: false,
+                selectable: false
+            });
+
+            if (id !== null)
+                ellipsis.set("id", id);
+
+            //in case annotation has refinements, highlight with a different stroke style
+            if (hasRefinements)
+                ellipsis.set({
+                    strokeDashArray: [6, 3]
+                });
+
+            canvas.add(ellipsis);
+            typeof callback === 'function' && callback(ellipsis);
+        } else if (type === "polygon") {
+            var top = undefined;
+            var left = undefined;
+
+            if (annotations[i]["top"] !== undefined)
+                top = (annotations[i]["top"] * scaleFactor);
+
+            if (annotations[i]["left"] !== undefined)
+                left = (annotations[i]["left"] * scaleFactor);
+
+            var angle = 0;
+            if ("angle" in annotations[i])
+                angle = annotations[i]["angle"];
+
+            var points = annotations[i]["points"];
+
+            var fillColor = "transparent";
+            var fillOpacity = 1.0;
+            var fillInfo = annotations[i]["fill"];
+            if (fillInfo && "color" in fillInfo)
+                fillColor = fillInfo["color"];
+            if (fillInfo && "opacity" in fillInfo)
+                fillOpacity = fillInfo["opacity"];
+
+            var strokeWidth = 5;
+            var strokeColor = "red";
+            var strokeInfo = annotations[i]["stroke"];
+            if (strokeInfo && "width" in strokeInfo)
+                strokeWidth = strokeInfo["width"];
+            if (strokeInfo && "color" in strokeInfo)
+                strokeColor = strokeInfo["color"];
+
+
+            var scaledPoints = [];
+
+            for (var j = 0; j < points.length; j++) {
+                scaledPoints.push({
+                    "x": (points[j]["x"] * scaleFactor),
+                    "y": (points[j]["y"] * scaleFactor)
+                });
+            }
+
+            var polygon;
+            if ((left === undefined) && (top === undefined)) {
+                polygon = new fabric.Polygon(scaledPoints, {
+                    originX: 'left',
+                    originY: 'top',
+                    angle: angle,
+                    stroke: strokeColor,
+                    strokeWidth: strokeWidth,
+                    fill: fillColor,
+                    opacity: fillOpacity,
+                    transparentCorners: false,
+                    hasBorders: false,
+                    hasControls: false,
+                    selectable: false
+                });
+            } else {
+                polygon = new fabric.Polygon(scaledPoints, {
+                    left: left,
+                    top: top,
+                    originX: 'left',
+                    originY: 'top',
+                    angle: angle,
+                    stroke: strokeColor,
+                    strokeWidth: strokeWidth,
+                    fill: fillColor,
+                    opacity: fillOpacity,
+                    transparentCorners: false,
+                    hasBorders: false,
+                    hasControls: false,
+                    selectable: false
+                });
+            }
+
+            //in case annotation has refinements, highlight with a different stroke style
+            if (hasRefinements)
+                polygon.set({
+                    strokeDashArray: [6, 3]
+                });
+
+            if (id !== null)
+                polygon.set("id", id);
+
+            canvas.add(polygon);
+            typeof callback === 'function' && callback(polygon);
+        }
     }
+
+    canvas.renderAll();
 }
 
-canvas.renderAll();
-}
 
 
 
 
-
-var CanvasDrawer = (function () {
-    function CanvasDrawer(id, width, height){
+var CanvasDrawer = (function() {
+    function CanvasDrawer(id, width, height) {
         this.canvas = new fabric.Canvas(id);
         this.backgroundImageUrl = null;
         this.callback = null;
@@ -271,37 +290,37 @@ var CanvasDrawer = (function () {
         this.maxImageWidth = 600;
         this.canvasId = id;
         this.canvasWidth = width;
-        this.canvasHeight = height;  
+        this.canvasHeight = height;
         this.data = null;
     }
 
-    CanvasDrawer.prototype.fabric = function(){
+    CanvasDrawer.prototype.fabric = function() {
         return this.canvas;
     }
 
-    CanvasDrawer.prototype.setWidth = function(width){
+    CanvasDrawer.prototype.setWidth = function(width) {
         this.canvasWidth = width;
     }
 
-    CanvasDrawer.prototype.setHeight = function(height){
+    CanvasDrawer.prototype.setHeight = function(height) {
         this.canvasHeight = height;
     }
 
-    CanvasDrawer.prototype.makeClickable = function(callback){
+    CanvasDrawer.prototype.makeClickable = function(callback) {
         var inst = this;
         inst.canvas.on('mouse:over', function(o) {
-          inst.canvas.hoverCursor = 'pointer';
+            inst.canvas.hoverCursor = 'pointer';
         });
 
         inst.canvas.on('mouse:down', function(o) {
-          typeof callback === 'function' && callback(inst.data);
-          //$(this).trigger("clicked");
+            typeof callback === 'function' && callback(inst.data);
+            //$(this).trigger("clicked");
         });
     }
 
-    function scaleAndPositionImg(canvas, img, canvasWidth, canvasHeight, callback){
-        var scaleFactor = canvasWidth/img.width;
-        if(scaleFactor > 1.0)
+    function scaleAndPositionImg(canvas, img, canvasWidth, canvasHeight, callback) {
+        var scaleFactor = canvasWidth / img.width;
+        if (scaleFactor > 1.0)
             scaleFactor = 1.0;
 
         canvas.setBackgroundImage(img,
@@ -318,7 +337,7 @@ var CanvasDrawer = (function () {
         canvas.renderAll();
         typeof callback === 'function' && callback();
     }
-    
+
 
     CanvasDrawer.prototype.setCanvasBackgroundImageUrl = function(url, callback) {
         var inst = this;
@@ -326,10 +345,12 @@ var CanvasDrawer = (function () {
         this.callback = callback;
 
         if (url && url.length > 0) {
-        fabric.Image.fromURL(url, function (img) {
-            this.img = img;
-            scaleAndPositionImg(inst.canvas, img, inst.canvasWidth, inst.canvasHeight, callback);
-        }, { crossOrigin: 'Anonymous' });
+            fabric.Image.fromURL(url, function(img) {
+                this.img = img;
+                scaleAndPositionImg(inst.canvas, img, inst.canvasWidth, inst.canvasHeight, callback);
+            }, {
+                crossOrigin: 'Anonymous'
+            });
         } else {
             this.canvas.backgroundImage = 0;
             this.canvas.setBackgroundImage('', this.canvas.renderAll.bind(this.canvas));
@@ -355,15 +376,15 @@ var CanvasDrawer = (function () {
     }
 
 
-    CanvasDrawer.prototype.drawAnnotations = function(annotations, scaleFactor = 1.0){
+    CanvasDrawer.prototype.drawAnnotations = function(annotations, scaleFactor = 1.0) {
         drawAnnotations(this.canvas, annotations, scaleFactor);
     }
 
-    CanvasDrawer.prototype.maxImageWidth = function(maxImageWidth){
+    CanvasDrawer.prototype.maxImageWidth = function(maxImageWidth) {
         this.maxImageWidth = maxImageWidth;
     }
 
-    CanvasDrawer.prototype.clearObjects = function(){
+    CanvasDrawer.prototype.clearObjects = function() {
         objects = this.canvas.getObjects();
         var i = objects.length;
         while (i--) {
@@ -371,7 +392,7 @@ var CanvasDrawer = (function () {
         }
     }
 
-    CanvasDrawer.prototype.clear = function(){
+    CanvasDrawer.prototype.clear = function() {
         this.canvas.clear();
     }
 

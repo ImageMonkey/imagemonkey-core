@@ -369,6 +369,25 @@ function getActiveAnnotationMenuItem(ignoreAutoLoadButton) {
     return ret;
 }
 
+function addIdToAnnotations(data) {
+    for (let entry of data) {
+        let annos = entry.annotations;
+        for (let annotation of annos) {
+            annotation["id"] = generateRandomId();
+        }
+    }
+}
+
+function removeIdFromAnnotations(data) {
+    for (let entry of data) {
+        let annos = entry.annotations;
+        for (let annotation of annos) {
+            if ("id" in annotation)
+                delete annotation["id"];
+        }
+    }
+}
+
 function zoomIn(canvas) {
     canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
 }

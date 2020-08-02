@@ -288,21 +288,33 @@ var AnnotationView = (function() {
                 annotation["label"] = entry.label;
                 annotation["sublabel"] = entry.sublabel;
 
-                let jointConnectionsAdded = false
+                let jointConnectionEntryValue = null;
+                let jointConnectionUuids = null;
                 for (const [jointConnectionKey, jointConnectionValue] of jointConnections.entries()) {
-                    let pos = jointConnectionValue.getLabels().indexOf(key)
-                    if (pos !== -1) {
-                        jointConnectionsAdded = true;
-                        let refinements = [];
-                        if ("refinements" in annotation)
-                            refinements = annotation["refinements"];
+                    if (jointConnectionValue.getLabels().includes(key)) {
+                        jointConnectionEntryValue = jointConnectionValue;
+                        jointConnectionUuids = this.jointConnections.getLabelJoints().getLabelJointUuids(jointConnectionKey);
+                        break;
+                    }
+                }
 
-                        let uuids = this.jointConnections.getLabelJoints().getLabelJointUuids(jointConnectionKey);
+                let jointConnectionsAdded = false;
+                if (jointConnectionEntryValue !== null && jointConnectionUuids !== null) {
+                    for (const annotationEntry of annotation["annotations"]) {
+                        let jointConnectionAnnotationIds = jointConnectionEntryValue.getAnnotationIds();
+                        let pos = jointConnectionAnnotationIds.indexOf(annotationEntry["id"]);
+                        if (pos !== -1) {
+                            jointConnectionsAdded = true;
 
-                        refinements.push({
-                            "label_uuid": uuids[pos]
-                        });
-                        annotation["refinements"] = refinements;
+                            let refinements = [];
+                            if ("refinements" in annotation)
+                                refinements = annotationEntry["refinements"];
+
+                            refinements.push({
+                                "label_uuid": jointConnectionUuids[pos]
+                            });
+                            annotationEntry["refinements"] = refinements;
+                        }
                     }
                 }
 
@@ -315,6 +327,8 @@ var AnnotationView = (function() {
                 }
             }
         }
+
+        removeIdFromAnnotations(annotations);
 
         if (imageGridImageIdentifiers.length === 0) {
             if (this.annotationInfo.validationId !== undefined)
@@ -664,6 +678,7 @@ var AnnotationView = (function() {
             },
             success: function(data) {
                 if (inst.annotationView === "unified") {
+                    addIdToAnnotations(data);
                     for (var i = 0; i < data.length; i++) {
                         if (data[i].validation.sublabel !== "")
                             inst.unifiedModeAnnotations[data[i].validation.sublabel + "/" + data[i].validation.label] = {

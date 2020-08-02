@@ -1396,7 +1396,7 @@ var Annotator = (function() {
         this.smartAnnotationData = smartAnnotationData;
     }
 
-    Annotator.prototype.toJSON = function(includeRefinementUuid = null) {
+    Annotator.prototype.toJSON = function(includeRefinementUuid = null, addAnnotationIds = false) {
         var data = this.canvas.toJSON(["id"]); //include custom property "id" when converting to json
         var imgScaleX = data["backgroundImage"]["scaleX"];
         var imgScaleY = data["backgroundImage"]["scaleY"];
@@ -1410,7 +1410,7 @@ var Annotator = (function() {
 
         } else {
             var left, top, width, height, rx, ry, type, points, pointX, pointY, angle, color,
-                pointX, pointY, pX, pY, strokeWidth, strokeColor, annotationId, refinements;
+                pointX, pointY, pX, pY, strokeWidth, strokeColor, annotationId, refinements, entry;
 
             for (var i = 0; i < objs.length; i++) {
                 //skip polygon handles
@@ -1447,7 +1447,7 @@ var Annotator = (function() {
                     strokeColor = objs[i]["stroke"];
 
                     if ((width != 0) && (height != 0))
-                        res.push({
+                        entry = {
                             "refinements": refinements,
                             "left": left,
                             "top": top,
@@ -1459,7 +1459,7 @@ var Annotator = (function() {
                                 "width": strokeWidth,
                                 "color": strokeColor
                             }
-                        });
+                        };
 
                 } else if (type === "ellipse") {
                     left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
@@ -1470,7 +1470,7 @@ var Annotator = (function() {
                     strokeColor = objs[i]["stroke"];
 
                     if ((rx != 0) && (ry != 0))
-                        res.push({
+                        entry = {
                             "refinements": refinements,
                             "left": left,
                             "top": top,
@@ -1482,7 +1482,7 @@ var Annotator = (function() {
                                 "width": strokeWidth,
                                 "color": strokeColor
                             }
-                        });
+                        };
                 } else if (type === "polygon") {
                     left = Math.round(((objs[i]["left"] / imgScaleX)), 0);
                     top = Math.round(((objs[i]["top"] / imgScaleY)), 0);
@@ -1506,7 +1506,7 @@ var Annotator = (function() {
                         });
                     }
 
-                    res.push({
+                    entry = {
                         "refinements": refinements,
                         "points": scaledPoints,
                         "angle": angle,
@@ -1515,8 +1515,13 @@ var Annotator = (function() {
                             "width": strokeWidth,
                             "color": strokeColor
                         }
-                    });
+                    };
                 }
+
+                if (addAnnotationIds)
+                    entry["id"] = annotationId;
+
+                res.push(entry);
             }
         }
         return res;
@@ -1532,7 +1537,6 @@ var Annotator = (function() {
     }
 
     Annotator.prototype._handleLoadedAnnotation = function(annotation, obj) {
-        obj.id = generateRandomId();
         if (obj.type === "polygon") {
             obj.objectCaching = false;
             this.polygon.addPolygon(obj);
@@ -1550,7 +1554,6 @@ var Annotator = (function() {
     }
 
     Annotator.prototype._handleLoadedAnnotationOverview = function(label, obj) {
-        obj.id = generateRandomId();
         obj.objectCaching = false;
         this.canvas.renderAll();
         this._annotationLabelOverviewMapping[obj.id] = label;
@@ -1569,7 +1572,7 @@ var Annotator = (function() {
             drawAnnotations(this.canvas, [annotations[i]], scaleFactor, this._handleLoadedAnnotation.bind(this, annotations[i]));
         }
 
-        this._refAnnotations = this.toJSON();
+        this._refAnnotations = this.toJSON(null, true);
     }
 
     Annotator.prototype.loadAnnotationsOverview = function(annotationsWithLabel, scaleFactor = 1.0) {
@@ -1588,7 +1591,7 @@ var Annotator = (function() {
     }
 
     Annotator.prototype.isDirty = function() {
-        if (_.isEqual(this._refAnnotations, this.toJSON()))
+        if (_.isEqual(this._refAnnotations, this.toJSON(null, true)))
             return false;
         return true;
     }
