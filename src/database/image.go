@@ -658,7 +658,8 @@ func (p *ImageMonkeyDatabase) Export(parseResult parser.ParseResult, annotations
                      GROUP BY i.key, q3.validations, i.width, i.height`, identifier, q1, parseResult.Query, identifier, q2, parseResult.Query, joinType, identifier, q3, parseResult.Query)
 	rows, err := p.db.Query(context.TODO(), q, parseResult.QueryValues...)
 	if err != nil {
-		log.Debug("[Export] Couldn't export data: ", err.Error())
+		log.Debug("Couldn't export data: ", err.Error())
+		log.Error("Export Query: ", q)
 		raven.CaptureError(err, nil)
 		return nil, err
 	}
