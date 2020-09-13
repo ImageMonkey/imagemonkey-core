@@ -715,13 +715,21 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
 func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabel, error) {
 	trendingLabels := []datastructures.TrendingLabel{}
 	rows, err := p.db.Query(context.TODO(),
-		`SELECT s.name, t.github_issue_id, t.closed, COALESCE(tb.state::text, ''), 
+		`WITH num_label_suggestions AS (
+			SELECT l.id as label_suggestion_id, COUNT(*) as num
+			FROM image_label_suggestion s
+			JOIN label_suggestion l ON l.id = s.label_suggestion_id
+			GROUP BY l.id
+		 )
+		 SELECT s.name, t.github_issue_id, t.closed, COALESCE(tb.state::text, ''), 
 									COALESCE(tb.job_url, ''), COALESCE(tb.label_type::text, ''),
 									COALESCE(tb.branch_name, ''), COALESCE(tb.description, ''),
-									COALESCE(tb.plural, ''), COALESCE(tb.rename_to, '')
+									COALESCE(tb.plural, ''), COALESCE(tb.rename_to, ''), COALESCE(n.num, 0) as num
 							 FROM trending_label_suggestion t
 							 JOIN label_suggestion s ON s.id = t.label_suggestion_id
-							 LEFT JOIN trending_label_bot_task tb ON tb.trending_label_suggestion_id = t.id`)
+							 LEFT JOIN num_label_suggestions n ON n.label_suggestion_id = s.id
+							 LEFT JOIN trending_label_bot_task tb ON tb.trending_label_suggestion_id = t.id
+							 `)
 	if err != nil {
 		log.Error("[Get Trending Labels] Couldn't get trending labels: ", err.Error())
 		raven.CaptureError(err, nil)
@@ -735,7 +743,7 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 		err = rows.Scan(&trendingLabel.Name, &trendingLabel.Github.Issue.Id,
 			&trendingLabel.Github.Issue.Closed, &trendingLabel.Status, &trendingLabel.Ci.JobUrl,
 			&trendingLabel.Label.Type, &trendingLabel.Github.BranchName, &trendingLabel.Label.Description,
-			&trendingLabel.Label.Plural, &trendingLabel.RenameTo)
+			&trendingLabel.Label.Plural, &trendingLabel.RenameTo, &trendingLabel.Count)
 		if err != nil {
 			log.Error("[Get Trending Labels] Couldn't scan trending labels: ", err.Error())
 			raven.CaptureError(err, nil)

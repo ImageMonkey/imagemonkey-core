@@ -139,6 +139,7 @@
 		var escapedTrendingLabelDescription = escapeHtml(data[i].label.description);
 		var escapedTrendingLabelPlural = escapeHtml(data[i].label.plural);
 		var escapedTrendingLabelRenameTo = escapeHtml(data[i].rename_to);
+		let labelCount = data[i].count;
 		if(data[i].github.issue.closed) {
 			status = 'closed';
 			button = '';
@@ -186,6 +187,7 @@
 
         elem = $(('<tr>' +
                     '<td>' + escapedTrendingLabel  + '</td>' +	
+					'<td class="center aligned">' + labelCount + '</td>' + 
 					'<td class="center aligned">' + githubIssueUrl + '</td>' +
 					'<td class="center aligned">' + githubBranchUrl + '</td>' +
 					'<td class="center aligned" bgcolor="' + cellColor + '">' + status + '</td>' +
@@ -267,6 +269,7 @@
             <thead>
               <tr>
                 <th>Name</th>
+                <th class="center aligned">Count</th>
                 <th class="center aligned"><i class="github icon"></i>Github Issue</th>
 				<th class="center aligned"><i class="github icon"></i>Github Branch</th>
 				<th class="center aligned"><i class="question circle icon"></i>Status</th>
