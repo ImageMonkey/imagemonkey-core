@@ -59,14 +59,19 @@ func main() {
 		log.Fatal(*outputDir, " is not a directory!")
 	}
 
-	for _, entry := range labels.LabelMapEntries {
+	for key, entry := range labels.LabelMapEntries {
 		u, err := uuid.NewV4()
 		if err != nil {
 			log.Fatal("Couldn't create UUID")
 		}
 		outputPath := *outputDir + "/" + u.String() + ".json"
 		
-		j, err := json.MarshalIndent(&entry, "", "  ")
+
+		var e map[string]datastructures.LabelMapEntry
+		e = make(map[string]datastructures.LabelMapEntry)
+		e[key] = entry
+
+		j, err := json.MarshalIndent(&e, "", "  ")
 		if err != nil {
 			log.Fatal("Couldn't marshal json")
 		}
