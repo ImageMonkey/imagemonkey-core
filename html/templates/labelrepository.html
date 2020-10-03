@@ -199,8 +199,12 @@
       $("#loadingIndicator").hide();
 	  $("#labelRepositoryTable").show();
     }
-    $(document).ready(function() {
-      imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
+    $(document).ready(function() {	  
+	  $("thead th.count").data("sortBy", function(th, td, tablesort) {
+		return parseInt(td.text(), 10);
+	  });
+	  
+	  imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
 	  imageMonkeyApi.setToken(getCookie("imagemonkey"));
 	  getTrendingLabels();
 
@@ -269,7 +273,7 @@
             <thead>
               <tr>
                 <th>Name</th>
-                <th class="center aligned">Count</th>
+                <th class="count center aligned">Count</th>
                 <th class="center aligned"><i class="github icon"></i>Github Issue</th>
 				<th class="center aligned"><i class="github icon"></i>Github Branch</th>
 				<th class="center aligned"><i class="question circle icon"></i>Status</th>
