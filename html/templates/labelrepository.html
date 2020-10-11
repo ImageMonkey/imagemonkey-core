@@ -23,7 +23,8 @@
   <script src="js/imagemonkey/views/labelrepository.js?v={{ .assetVersion }}"></script> 
 
   <script> 
-    $(document).ready(function() {	  
+    let labelRepositoryView = null;
+	$(document).ready(function() {	  
 
     let canAcceptTrendingLabelPermission = false;
     {{ if .sessionInformation.UserPermissions }}
@@ -32,7 +33,7 @@
       {{ end }}
     {{ end }}
 
-      let labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, canAcceptTrendingLabelPermission, 
+      labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, canAcceptTrendingLabelPermission, 
 	  	{{ .trendingLabelsRepositoryUrl }}, {{ .labelsRepositoryUrl }});
       labelRepositoryView.setSentryDSN({{ .sentrDSN }});
       labelRepositoryView.exec();
@@ -140,11 +141,25 @@
 	
 		<br>	
 		<br>
+		<b>(optional) parent label</b>
+		<br>
+		<div class="ui input">
+		  <div class="ui fluid search selection dropdown">
+            <input type="hidden" name="country">
+            <i class="dropdown icon"></i>
+            <div class="default text" id="addTrendingLabelDlgParentLabelFormInput">Optional parent label</div>
+            <div class="menu" id="addTrendingLabelDlgParentLabelFormInputMenuContent">
+            </div>
+		  </div>
+        </div>	
+	
+		<br>	
+		<br>
 		<b>plural form</b>
 		<br>
 		<div class="ui input">
           <input type="text" placeholder="The plural form of the label" id="addTrendingLabelDlgPluralFormInput">
-        </div>	
+        </div>	 
 
 		<br>	
 		<br>

@@ -7,6 +7,7 @@ var LabelRepositoryView = (function() {
         this.canAcceptTrendingLabelPermission = canAcceptTrendingLabelPermission;
         this.trendingLabelsRepositoryUrl = trendingLabelsRepositoryUrl;
         this.labelsRepositoryUrl = labelsRepositoryUrl;
+        this.parentLabels = new Set();
 
         this.imageMonkeyApi = new ImageMonkeyApi(this.apiBaseUrl);
         this.imageMonkeyApi.setToken(getCookie("imagemonkey"));
@@ -43,6 +44,27 @@ var LabelRepositoryView = (function() {
             return "meta";
         }
         return "";
+    }
+
+    LabelRepositoryView.prototype.populateParentLabels = function() {
+        let inst = this;
+        $("#loadingIndicator").show();
+        this.imageMonkeyApi.getProductiveLabels()
+            .then(function(labels) {
+                $("#loadingIndicator").hide();
+
+                labels.forEach(function(label, index) {
+                    inst.parentLabels.add(label);
+                    let elem = $('<div class="item" data-value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</div>');
+                    $("#addTrendingLabelDlgParentLabelFormInputMenuContent").append(elem);
+                });
+                $("#addTrendingLabelDlgParentLabelFormDlgDropdown").dropdown();
+
+            }).catch(function(msg = "Couldn't load labels - please try again later") {
+                $("#loadingIndicator").hide();
+                $("#warningMessageBoxContent").text(msg);
+                $("#warningMessageBox").show(200).delay(1500).hide(200);
+            });
     }
 
     LabelRepositoryView.prototype.onAddTrendingLabel = function(elem) {
@@ -94,7 +116,7 @@ var LabelRepositoryView = (function() {
         $("#loadingIndicator").show();
         $("#labelRepositoryTableContent").empty();
         let inst = this;
-		this.imageMonkeyApi.getTrendingLabels()
+        this.imageMonkeyApi.getTrendingLabels()
             .then(function(data) {
                 $("#loadingIndicator").hide();
                 inst.populateLabelRepositoryTable(data);
@@ -147,7 +169,7 @@ var LabelRepositoryView = (function() {
                     '" data-label-plural="' + escapedTrendingLabel.trim() + 's' +
                     '" data-label-description="' + '' +
                     '" data-label-renameto="' + escapedTrendingLabel.trim() +
-                    '" onclick="this.onAddTrendingLabel(this);">Add</div>');
+                    '" onclick="labelRepositoryView.onAddTrendingLabel(this);">Add</div>');
             } else if (status === 'waiting for moderator approval') {
                 var labelType = data[i].label.type;
                 if (this.canAcceptTrendingLabelPermission) {
@@ -203,6 +225,7 @@ var LabelRepositoryView = (function() {
         });
 
         this.getTrendingLabels();
+        this.populateParentLabels();
 
         let inst = this;
         $("#addTrendingLabelDlgYesButton").click(function(e) {

@@ -129,6 +129,25 @@ var ImageMonkeyApi = (function() {
         });
     }
 
+    ImageMonkeyApi.prototype.getProductiveLabels = function(detailed) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/label";
+            if (detailed)
+                url += "?detailed=true";
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = reject;
+            xhr.send();
+        });
+    }
+
     ImageMonkeyApi.prototype.getLabelAccessors = function(detailed) {
         var inst = this;
         return new Promise(function(resolve, reject) {
