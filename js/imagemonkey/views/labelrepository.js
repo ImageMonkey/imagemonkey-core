@@ -7,7 +7,6 @@ var LabelRepositoryView = (function() {
         this.canAcceptTrendingLabelPermission = canAcceptTrendingLabelPermission;
         this.trendingLabelsRepositoryUrl = trendingLabelsRepositoryUrl;
         this.labelsRepositoryUrl = labelsRepositoryUrl;
-        this.parentLabels = new Set();
 
         this.imageMonkeyApi = new ImageMonkeyApi(this.apiBaseUrl);
         this.imageMonkeyApi.setToken(getCookie("imagemonkey"));
@@ -35,6 +34,10 @@ var LabelRepositoryView = (function() {
         return $("#addTrendingLabelDlgPluralFormInput").val();
     }
 
+    LabelRepositoryView.prototype.getParentLabel = function() {
+        return $("#addTrendingLabelDlgParentLabelFormDlgDropdown").val();
+    }
+
     LabelRepositoryView.prototype.getSelectedLabelType = function() {
         var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
         if (radioButtonId === "labelTypeNormalRadioButtonInput") {
@@ -53,9 +56,8 @@ var LabelRepositoryView = (function() {
             .then(function(labels) {
                 $("#loadingIndicator").hide();
 
-                labels.forEach(function(label, index) {
-                    inst.parentLabels.add(label);
-                    let elem = $('<div class="item" data-value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</div>');
+                labels.forEach(function(labelName, index) {
+                    let elem = $('<div class="item" data-value="' + escapeHtml(labelName) + '">' + escapeHtml(labelName) + '</div>');
                     $("#addTrendingLabelDlgParentLabelFormInputMenuContent").append(elem);
                 });
                 $("#addTrendingLabelDlgParentLabelFormDlgDropdown").dropdown();
@@ -98,10 +100,11 @@ var LabelRepositoryView = (function() {
         $("#addTrendingLabelDlg").modal("show");
     }
 
-    LabelRepositoryView.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription, labelPlural, labelRenameTo) {
+    LabelRepositoryView.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription,
+        labelPlural, labelRenameTo, parentLabelName) {
         let inst = this;
         $("#loadingIndicator").show();
-        this.imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo)
+        this.imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo, parentLabelName)
             .then(function() {
                 $("#loadingIndicator").hide();
                 inst.getTrendingLabels();
@@ -232,7 +235,7 @@ var LabelRepositoryView = (function() {
             e.preventDefault();
             inst.acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"),
                 inst.getSelectedLabelType(), inst.getLabelDescription(), inst.getLabelPlural(),
-                inst.getRenameToLabel());
+                inst.getRenameToLabel(), inst.getParentLabel());
 
         });
 

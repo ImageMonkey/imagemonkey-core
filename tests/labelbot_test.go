@@ -68,9 +68,10 @@ func testGetTrendingLabels(t *testing.T, token string, requiredStatusCode int) [
 
 func testAcceptTrendingLabel(t *testing.T, name string, description string, plural string, renameTo string, 
 								token string, labelType string, requiredStatusCode int) {
-	url := BASE_URL + API_VERSION + "/trendinglabels/" + name + "/accept" 	
+	url := BASE_URL + API_VERSION + "/trendinglabels/accept" 
 
 	var acceptTrendingLabel datastructures.AcceptTrendingLabel
+	acceptTrendingLabel.Label.Name = name
 	acceptTrendingLabel.Label.Type = labelType
 	acceptTrendingLabel.Label.Description = description 
 	acceptTrendingLabel.Label.Plural = plural
