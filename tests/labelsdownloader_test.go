@@ -124,7 +124,7 @@ func TestLabelsDownloaderSuccess(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -167,7 +167,7 @@ func TestLabelsDownloaderFailure(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -210,7 +210,7 @@ func TestLabelsDownloaderFailureCanBeRetried(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -228,7 +228,7 @@ func TestLabelsDownloaderFailureCanBeRetried(t *testing.T) {
 	ok(t, err)
 	equals(t, numberOfLabelsBefore, numberOfLabelsAfter)
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201) 
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201) 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -259,7 +259,7 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -277,7 +277,7 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	ok(t, err)
 	equals(t, numberOfLabelsBefore+1, numberOfLabelsAfter)
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201) 
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201) 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -325,7 +325,7 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -397,7 +397,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	equals(t, len(trendingLabels), 13)
 
 	for i, _ := range imageIds {
-		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), token, "normal", 201)
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "", token, "normal", 201)
 	}
 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
@@ -476,7 +476,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinements
 	equals(t, len(trendingLabels), 13)
 
 	for i, _ := range imageIds {
-		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), token, "normal", 201)
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "", token, "normal", 201)
 	}
 
 	trendingLabels = testGetTrendingLabels(t, token, 200)

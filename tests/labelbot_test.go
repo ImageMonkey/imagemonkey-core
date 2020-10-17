@@ -66,8 +66,8 @@ func testGetTrendingLabels(t *testing.T, token string, requiredStatusCode int) [
     return trendingLabels
 }
 
-func testAcceptTrendingLabel(t *testing.T, name string, description string, plural string, renameTo string, 
-								token string, labelType string, requiredStatusCode int) {
+func testAcceptTrendingLabel(t *testing.T, name string, description string, plural string, renameTo string,
+								parentLabel string, token string, labelType string, requiredStatusCode int) {
 	url := BASE_URL + API_VERSION + "/trendinglabels/accept" 
 
 	var acceptTrendingLabel datastructures.AcceptTrendingLabel
@@ -76,6 +76,7 @@ func testAcceptTrendingLabel(t *testing.T, name string, description string, plur
 	acceptTrendingLabel.Label.Description = description 
 	acceptTrendingLabel.Label.Plural = plural
 	acceptTrendingLabel.Label.RenameTo = renameTo
+	acceptTrendingLabel.Label.Parent = parentLabel
 
 	req := resty.R().
 			SetBody(&acceptTrendingLabel)	
@@ -133,7 +134,42 @@ func TestAcceptTrendingLabelForBot(t *testing.T) {
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
+
+	parentLabelId, err := db.GetTrendingLabelBotTaskParentId("hallowelt 1")
+	ok(t, err)
+	equals(t, parentLabelId, int64(-1))
+}
+
+func TestAcceptTrendingLabelWithParentForBot(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for _, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "hallowelt", true, token, 200)
+		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token, 200)
+	}
+	runTrendingLabelsWorker(t, 5)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 2)
+
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "car", token, "normal", 201)
+
+	parentLabelId, err := db.GetTrendingLabelBotTaskParentId("hallowelt 1")
+	ok(t, err)
+
+	labelId, err := db.GetLabelIdFromName("car")
+	ok(t, err)
+	equals(t, labelId, parentLabelId)
 }
 
 func TestAcceptTrendingLabelForBot2(t *testing.T) {
@@ -161,7 +197,7 @@ func TestAcceptTrendingLabelForBot2(t *testing.T) {
 	ok(t, err)
 	equals(t, beforeState, "")
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -196,7 +232,7 @@ func TestAcceptTrendingLabelForBotWithModeratorPermissions(t *testing.T) {
 	err = db.GiveUserModeratorRights("testuser")
 	ok(t, err)
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -224,7 +260,7 @@ func TestCouldntAcceptTrendingLabelForBotAsNotAuthenticated(t *testing.T) {
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "invalid token", "normal", 401)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", "invalid token", "normal", 401)
 }
 
 func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
@@ -249,7 +285,7 @@ func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
 	equals(t, len(trendingLabels), 2)
 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 
 	err = db.SetTrendingLabelBotTaskState("hallowelt 1", "build-failed")
 	ok(t, err)
@@ -258,7 +294,7 @@ func TestAcceptTrendingLabelForBotRetryFailedBuild(t *testing.T) {
 	ok(t, err)
 	equals(t, beforeState, "build-failed") 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -286,7 +322,7 @@ func TestCouldntAcceptTrendingLabelForBotAsWrongLabelName(t *testing.T) {
 	trendingLabels := testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 2)
 
-	testAcceptTrendingLabel(t, "not-existing", "", "not-existing-plural", "not-existing", token, "normal", 404)
+	testAcceptTrendingLabel(t, "not-existing", "", "not-existing-plural", "not-existing", "", token, "normal", 404)
 }
 
 
@@ -312,7 +348,7 @@ func TestCannotChangeTrendingLabelBotTaskStateWhileBuilding(t *testing.T) {
 	equals(t, len(trendingLabels), 2)
 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 
 	err = db.SetTrendingLabelBotTaskState("hallowelt 1", "building")
 	ok(t, err)
@@ -321,7 +357,7 @@ func TestCannotChangeTrendingLabelBotTaskStateWhileBuilding(t *testing.T) {
 	ok(t, err)
 	equals(t, beforeState, "building") 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 
 	afterState, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
@@ -353,7 +389,7 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExists(t *testing.T) {
 	equals(t, len(trendingLabels), 2)
 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "apples", "apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "apples", "apple", "", token, "normal", 201)
 
 	runLabelBot(t, "cisuccess")
 
@@ -387,14 +423,14 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExistsButNotProductive(t *t
 	equals(t, len(trendingLabels), 2)
 
 
-	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 	runLabelBot(t, "cisuccess")
 
 	state, err := db.GetTrendingLabelBotTaskState("hallowelt 1")
 	ok(t, err)
 	equals(t, state, "merged")
 
-	testAcceptTrendingLabel(t, "hallowelt", "", "hallowelt 1s", "hallowelt 1", token, "normal", 201)
+	testAcceptTrendingLabel(t, "hallowelt", "", "hallowelt 1s", "hallowelt 1", "", token, "normal", 201)
 	runLabelBot(t, "cisuccess")
 
 	state, err = db.GetTrendingLabelBotTaskState("hallowelt")
