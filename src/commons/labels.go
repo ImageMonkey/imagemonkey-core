@@ -7,7 +7,18 @@ import (
 	"io/ioutil"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"os"
+	"io"
+	"errors"
+	"strconv"
 )
+
+type LabelNotFoundError struct {
+	Description string
+}
+
+func (e *LabelNotFoundError) Error() string {
+	return e.Description
+}
 
 type LabelRepository struct {
     labelMap datastructures.LabelMap
@@ -342,4 +353,48 @@ func (p *MetaLabelsDirectoryMerger) Merge() error {
 	return err
 }
 
+func GetFilenameForLabel(dir string, labelName string) (string, error) {
+	foundFilename := ""
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			if filepath.Ext(path) != ".json" {
+				return nil
+			}
+			
+			raw, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
 
+			var labelMap map[string]datastructures.LabelMapEntry
+			err = json.Unmarshal(raw, &labelMap)
+			if err != nil {
+				return err
+			}
+
+			if len(labelMap) != 1 {
+				return errors.New(path + ": Expected one label entry by file, but got " + strconv.Itoa(len(labelMap)))
+			}
+
+			label := ""
+			for k,_ := range labelMap {
+				label = k
+			}
+
+			if label == labelName {
+				foundFilename = path
+				return io.EOF
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		if err == io.EOF {
+			return foundFilename, nil
+		}
+		return "", err
+	}
+
+	return "", &LabelNotFoundError{Description: "Couldn't find " + labelName + " in directory " + dir}
+}
