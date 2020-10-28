@@ -438,3 +438,32 @@ func TestAcceptTrendingLabelForBotFailsAsLabelAlreadyExistsButNotProductive(t *t
 	equals(t, state, "already exists")
 }
 
+func TestAcceptTrendingLabelWithParentForBot2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for _, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "hallowelt", true, token, 200)
+		testSuggestLabelForImage(t, imageId, "hallowelt 1", true, token, 200)
+	}
+	runTrendingLabelsWorker(t, 5)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 2)
+
+
+	testAcceptTrendingLabel(t, "hallowelt 1", "", "hallowelt 1", "hallowelt 1s", "car", token, "normal", 201)
+
+	runLabelBot(t, "cisuccess")
+}

@@ -46,11 +46,13 @@ func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 	trendingLabels := []datastructures.TrendingLabelBotTask{}
 
 	rows, err := db.Query(context.TODO(),
-						   `SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), label_type,
-						   COALESCE(b.plural) as plural, COALESCE(b.description, ''), COALESCE(b.rename_to, '')
+						   `SELECT s.name, b.id, b.state, COALESCE(b.branch_name, ''), b.label_type,
+						   COALESCE(b.plural) as plural, COALESCE(b.description, ''), COALESCE(b.rename_to, ''),
+						   COALESCE(l.name, '')
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
 					  	   JOIN label_suggestion s ON s.id = t.label_suggestion_id
+						   LEFT JOIN label l ON l.id = b.parent_label_id
 						   WHERE t.closed = false AND 
 						   (b.state = 'accepted' OR b.state='pending' OR b.state='building' 
 						   	OR b.state='build-success' OR b.state='retry')`)
@@ -64,7 +66,7 @@ func getTrendingLabels() ([]datastructures.TrendingLabelBotTask, error) {
 		var trendingLabel datastructures.TrendingLabelBotTask
 		err = rows.Scan(&trendingLabel.Name, &trendingLabel.BotTaskId, &trendingLabel.State, 
 							&trendingLabel.BranchName, &trendingLabel.LabelType, &trendingLabel.Plural,
-							&trendingLabel.Description, &trendingLabel.RenameTo)
+							&trendingLabel.Description, &trendingLabel.RenameTo, &trendingLabel.Parent)
 		if err != nil {
 			return trendingLabels, err
 		}
