@@ -29,19 +29,35 @@ func removeBackup(backup string) error {
 }
 
 type TrendingLabel struct {
-	Name       string `json:"name"`
-	RenameTo   string `json:"rename_to"`
-	BotTaskId  int64  `json:"bot_task_id"`
+	Name                string `json:"name"`
+	RenameTo            string `json:"rename_to"`
+	BotTaskId           int64  `json:"bot_task_id"`
+	ParentLabelId       int64  `json:"parent_label_id"`
+}
+
+func getLabelUuid(name string, parentLabelId int64) (string, error) {
+	var uuid string
+	err := db.QueryRow(context.TODO(),
+				`SELECT l.uuid
+					FROM label l
+					JOIN label pl ON l.parent_id = pl.id
+					WHERE l.name = $1 AND pl.id = $2`, name, parentLabelId).Scan(&uuid)
+	if err != nil {
+		return "", err
+	}
+
+	return uuid, nil
 }
 
 func getTrendingLabelsForDeployment() ([]TrendingLabel, error) {
 	trendingLabels := []TrendingLabel{}
 
 	rows, err := db.Query(context.TODO(),
-						  `SELECT b.id, s.name, b.rename_to
+						  `SELECT b.id, s.name, b.rename_to, COALESCE(pl.id, -1) 
 					  	   FROM trending_label_suggestion t
 					  	   JOIN trending_label_bot_task b ON b.trending_label_suggestion_id = t.id 
 					  	   JOIN label_suggestion s ON s.id = t.label_suggestion_id
+						   LEFT JOIN label pl ON pl.id = b.parent_label_id
 						   WHERE t.closed = false AND b.state='merged'`)
 	if err != nil {
 		return trendingLabels, err
@@ -51,7 +67,7 @@ func getTrendingLabelsForDeployment() ([]TrendingLabel, error) {
 
 	for rows.Next() {
 		var trendingLabel TrendingLabel
-		err = rows.Scan(&trendingLabel.BotTaskId, &trendingLabel.Name, &trendingLabel.RenameTo)
+		err = rows.Scan(&trendingLabel.BotTaskId, &trendingLabel.Name, &trendingLabel.RenameTo, &trendingLabel.ParentLabelId)
 		if err != nil {
 			return trendingLabels, err
 		}
@@ -264,7 +280,17 @@ func main() {
 					dryRun = false
 				}
 				for _, trendingLabel := range trendingLabelsForDeployment {
-					err = makeLabelsProductive.DoIt(trendingLabel.Name, trendingLabel.RenameTo, dryRun)
+					renameTo := trendingLabel.RenameTo
+					if trendingLabel.ParentLabelId != -1 {
+						renameTo, err = getLabelUuid(trendingLabel.RenameTo, trendingLabel.ParentLabelId)
+						if err != nil {
+							raven.CaptureError(err, nil)
+							log.Error("Couldn't get label uuid: ", err.Error()) 
+							continue
+						}
+					}
+
+					err = makeLabelsProductive.DoIt(trendingLabel.Name, renameTo, dryRun)
 					if err != nil {
 						raven.CaptureError(err, nil)
 						log.Error("Couldn't make trending label productive: ", err.Error()) 

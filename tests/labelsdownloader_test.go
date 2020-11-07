@@ -508,3 +508,46 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinements
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
 								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
 }
+
+func TestLabelsDownloaderLabelHasParentLabelSuccess(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for _, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "supercar", true, token, 200)
+	}
+	runTrendingLabelsWorker(t, 5)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+
+
+	testAcceptTrendingLabel(t, "supercar", "", "supercars", "supercar", "car", token, "normal", 201)
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+1, numberOfLabelsAfter)
+}
