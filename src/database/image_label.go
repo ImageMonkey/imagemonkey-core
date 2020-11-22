@@ -787,9 +787,17 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string,
 
 	defer rows.Close()
 
+	trendingLabelBotTaskId := -1
 	success := false
 	if rows.Next() {
 		success = true
+		err = rows.Scan(&trendingLabelBotTaskId)
+		if err != nil {
+			tx.Rollback(context.TODO())
+			log.Error("[Accept Trending Label] Couldn't accept trending label: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
 	}
 
 	rows.Close()
@@ -834,7 +842,7 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string,
 										SELECT id 
 										FROM label l
 										WHERE l.name = $1 AND l.parent_id is null
-									 )`, parentLabel)
+									 ) WHERE id = $2`, parentLabel, trendingLabelBotTaskId)
 			if err != nil {
 				tx.Rollback(context.TODO())
 				log.Error("[Accept Trending Label] Couldn't add parent label: ", err.Error())
