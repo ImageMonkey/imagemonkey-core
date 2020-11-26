@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	"os/exec"	
+	"os/exec"
 	"time"
 	"os"
 	"strconv"
@@ -47,7 +47,7 @@ func runLabelsDownloader(t *testing.T) {
 func verifyProductiveAnnotations(t *testing.T, imageAnnotationSuggestionEntries []ImageAnnotationEntry, imageAnnotationEntries []ImageAnnotationEntry, 
 									annotationSuggestionDataEntries []AnnotationDataEntry, annotationDataEntries []AnnotationDataEntry,
 									imageAnnotationSuggestionRevisionEntries []ImageAnnotationRevisionEntry, 
-									imageAnnotationRevisionEntries []ImageAnnotationRevisionEntry) {
+									imageAnnotationRevisionEntries []ImageAnnotationRevisionEntry, parentLabel string) {
 	equals(t, len(imageAnnotationSuggestionEntries), len(imageAnnotationEntries))
 	equals(t, len(annotationSuggestionDataEntries), len(annotationDataEntries))
 	equals(t, len(imageAnnotationSuggestionRevisionEntries), len(imageAnnotationRevisionEntries))
@@ -76,7 +76,13 @@ func verifyProductiveAnnotations(t *testing.T, imageAnnotationSuggestionEntries 
 
 		labelName, err := db.GetLabelSuggestionNameFromId(imageAnnotationSuggestionEntries[i].LabelId)
 		ok(t, err)
-		labelId, err := db.GetLabelIdFromName(labelName)
+		
+		var labelId int64
+		if parentLabel != "" {
+			labelId, err = db.GetLabelIdFromSublabelName(labelName, parentLabel)
+		} else {
+			labelId, err = db.GetLabelIdFromName(labelName)
+		}
 		ok(t, err)
 		equals(t, imageAnnotationEntry.LabelId, labelId)
 	}
@@ -353,7 +359,7 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "")
 }
 
 
@@ -427,7 +433,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "")
 }
 
 
@@ -506,7 +512,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinements
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "")
 }
 
 func TestLabelsDownloaderLabelHasParentLabelSuccess(t *testing.T) {
@@ -617,7 +623,7 @@ func TestLabelsDownloaderParentLabelWithAnnotationsAndRefinementsSuccess(t *test
 
 	//annotate label suggestions
 	for i, imageId := range imageIds {
-		testAnnotate(t, imageId, "red apple " + strconv.Itoa(i), "", 
+		testAnnotate(t, imageId, "red apple " + strconv.Itoa(i), "",
 					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
 		annotationIds, err := db.GetImageAnnotationSuggestionIdsForImage(imageId)
 		ok(t, err)
@@ -671,5 +677,5 @@ func TestLabelsDownloaderParentLabelWithAnnotationsAndRefinementsSuccess(t *test
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "apple")
 }

@@ -907,6 +907,16 @@ func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
 	return labelId, err
 }
 
+func (p *ImageMonkeyDatabase) GetLabelIdFromSublabelName(label string, parentLabel string) (int64, error) {
+	var labelId int64 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.id 
+							FROM label l
+							JOIN label pl ON pl.id = l.parent_id
+							WHERE l.name = $1 and pl.name = $2`, label, parentLabel).Scan(&labelId)
+	return labelId, err
+}
+
 func (p *ImageMonkeyDatabase) GetLabelIdFromUuid(labelUuid string) (int64, error) {
 	var labelId int64 
 	err := p.db.QueryRow(context.TODO(),
