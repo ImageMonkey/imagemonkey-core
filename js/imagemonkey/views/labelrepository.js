@@ -35,7 +35,7 @@ var LabelRepositoryView = (function() {
     }
 
     LabelRepositoryView.prototype.getParentLabel = function() {
-        return $("#addTrendingLabelDlgParentLabelFormDlgDropdown").val();
+        return $("#addTrendingLabelDlgParentLabelFormDlgDropdown").dropdown("get value");
     }
 
     LabelRepositoryView.prototype.getSelectedLabelType = function() {
