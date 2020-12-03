@@ -679,3 +679,120 @@ func TestLabelsDownloaderParentLabelWithAnnotationsAndRefinementsSuccess(t *test
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
 								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "apple")
 }
+
+func TestLabelsDownloaderParentLabelWithAnnotationsAndRefinementsRecurringSuccess(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token, 200)
+	}
+
+	//annotate label suggestions
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+
+		testAnnotate(t, imageId, "red apple " + strconv.Itoa(i), "",
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+		annotationIds, err := db.GetImageAnnotationSuggestionIdsForImage(imageId)
+		ok(t, err)
+		equals(t, len(annotationIds), 1)
+		newAnnotations := `[{"top":55,"left":310,"type":"rect","angle":16,"width":244,"height":120,"stroke":{"color":"red","width":1}}]`
+		testAnnotationRework(t, annotationIds[0], newAnnotations, token)
+	}
+
+	imageAnnotationSuggestionEntries, err := db.GetImageAnnotationSuggestionEntries()
+	ok(t, err)
+
+	annotationSuggestionDataEntries, err := db.GetAnnotationSuggestionDataEntries()
+	ok(t, err)
+
+	imageAnnotationSuggestionRevisionEntries, err := db.GetImageAnnotationSuggestionRevisionEntries()
+	ok(t, err)
+
+	runTrendingLabelsWorker(t, 0)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 12)
+
+	for i, _ := range imageIds {
+		if i == 0 {
+			continue
+		}
+
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "apple", token, "normal", 201)
+	}
+
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 12)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 12)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+12, numberOfLabelsAfter)
+
+	imageAnnotationEntries, err := db.GetImageAnnotationEntries()
+	ok(t, err)
+
+	annotationDataEntries, err := db.GetAnnotationDataEntries()
+	ok(t, err)
+
+	imageAnnotationRevisionEntries, err := db.GetImageAnnotationRevisionEntries()
+	ok(t, err)
+
+	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "apple")
+
+
+	//add recurring label + annotation
+	testSuggestLabelForImage(t, imageIds[0], "red apple 12", true, token, 200)
+	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("red apple 12")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
+
+	numOfAnnotationsBefore, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(numOfAnnotationsBefore), 12)
+
+	testAnnotate(t, imageIds[0], "red apple 12", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+
+	runTrendingLabelsWorker(t, 5)
+
+	recurringLabelSuggestionNumAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple 12")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumAfter), int(0))
+
+	numLabelsAfterRecurringLabelSuggestion, err := db.GetNumberOfImagesWithLabel("apple")
+	ok(t, err)
+	equals(t, int(numLabelsAfterRecurringLabelSuggestion), int(13))
+
+	numOfAnnotationsAfter, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(numOfAnnotationsAfter), len(numOfAnnotationsBefore)+1)
+}
