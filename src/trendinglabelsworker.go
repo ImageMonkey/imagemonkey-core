@@ -109,16 +109,16 @@ func handleRecurringLabelSuggestions() error {
 				return err
 			}
 
-			if len(elem.LabelMeEntry.Sublabels) == 0 {
-				//if the label re-occurs and there are annotations too, migrate them also
-				err = imagemonkeydb.MakeAnnotationsProductive(tx, elem.LabelSuggestion, elem.ProductionLabelId)
-				if err != nil {
-					tx.Rollback(context.TODO())
-					log.Error("[Mark label suggestions as productive] Couldn't make annotations productive", err.Error())
-					raven.CaptureError(err, nil)
-					return err
-				}
+
+			//if the label re-occurs and there are annotations too, migrate them also
+			err = imagemonkeydb.MakeAnnotationsProductive(tx, elem.LabelSuggestion, elem.ProductionLabelId)
+			if err != nil {
+				tx.Rollback(context.TODO())
+				log.Error("[Mark label suggestions as productive] Couldn't make annotations productive", err.Error())
+				raven.CaptureError(err, nil)
+				return err
 			}
+
 		}
 
 		//remove label suggestions
