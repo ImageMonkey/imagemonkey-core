@@ -65,10 +65,10 @@ var ImageMonkeyApi = (function() {
         });
     }
 
-    ImageMonkeyApi.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription, labelPlural, labelRenameTo) {
+    ImageMonkeyApi.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription, labelPlural, labelRenameTo, parentLabelName) {
         var inst = this;
         return new Promise(function(resolve, reject) {
-            var url = inst.baseUrl + "/" + inst.apiVersion + "/trendinglabels/" + labelName + "/accept";
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/trendinglabels/accept";
             var xhr = new XMLHttpRequest();
             xhr.open("POST", url);
             xhr.setRequestHeader("Content-Type", "application/json");
@@ -86,10 +86,12 @@ var ImageMonkeyApi = (function() {
             }
             xhr.send(JSON.stringify({
                 "label": {
+                    "name": labelName,
                     "type": labelType,
                     "description": labelDescription,
                     "plural": labelPlural,
-                    "rename_to": labelRenameTo
+                    "rename_to": labelRenameTo,
+                    "parent": parentLabelName
                 }
             }));
         });
@@ -116,6 +118,25 @@ var ImageMonkeyApi = (function() {
         var inst = this;
         return new Promise(function(resolve, reject) {
             var url = inst.baseUrl + "/" + inst.apiVersion + "/user/" + username + "/imagecollections";
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = reject;
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getProductiveLabels = function(detailed) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + "/label";
+            if (detailed)
+                url += "?detailed=true";
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";
             xhr.open("GET", url);

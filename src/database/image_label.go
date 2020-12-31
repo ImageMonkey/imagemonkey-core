@@ -756,8 +756,7 @@ func (p *ImageMonkeyDatabase) GetTrendingLabels() ([]datastructures.TrendingLabe
 }
 
 func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string, labelDescription string,
-	labelPlural string, labelRenameTo string,
-	userInfo datastructures.UserInfo) error {
+	labelPlural string, labelRenameTo string, parentLabel string, userInfo datastructures.UserInfo) error {
 	status := "waiting for moderator approval"
 	if userInfo.Permissions != nil && userInfo.Permissions.CanAcceptTrendingLabel {
 		status = "accepted"
@@ -788,9 +787,17 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string,
 
 	defer rows.Close()
 
+	trendingLabelBotTaskId := -1
 	success := false
 	if rows.Next() {
 		success = true
+		err = rows.Scan(&trendingLabelBotTaskId)
+		if err != nil {
+			tx.Rollback(context.TODO())
+			log.Error("[Accept Trending Label] Couldn't accept trending label: ", err.Error())
+			raven.CaptureError(err, nil)
+			return err
+		}
 	}
 
 	rows.Close()
@@ -827,6 +834,27 @@ func (p *ImageMonkeyDatabase) AcceptTrendingLabel(name string, labelType string,
 		}
 
 		rows1.Close()
+	} else { //new entry
+		if parentLabel != "" {
+			res, err := tx.Exec(context.TODO(), 
+									`UPDATE trending_label_bot_task 
+									 SET parent_label_id = (
+										SELECT id 
+										FROM label l
+										WHERE l.name = $1 AND l.parent_id is null
+									 ) WHERE id = $2`, parentLabel, trendingLabelBotTaskId)
+			if err != nil {
+				tx.Rollback(context.TODO())
+				log.Error("[Accept Trending Label] Couldn't add parent label: ", err.Error())
+				raven.CaptureError(err, nil)
+				return err
+			}
+			if res.RowsAffected() != 1 {
+				tx.Rollback(context.TODO())
+				log.Error("[Accept Trending Label] Couldn't add parent label: unknown label!")
+				return err
+			}
+		}
 	}
 
 	err = tx.Commit(context.TODO())

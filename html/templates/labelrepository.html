@@ -11,9 +11,9 @@
   <!-- Site Properties -->
   <title>{{ .title }}</title>
   
-  <link rel="stylesheet" href="/css/semantic.min.css?v={{ .assetVersion }}"/>
+  <link rel="stylesheet" href="/css/fomantic-ui/semantic.min.css?v={{ .assetVersion }}"/>
   <script src="/js/jquery.min.js?v={{ .assetVersion }}"></script>
-  <script src="/js/semantic.min.js?v={{ .assetVersion }}"></script> 
+  <script src="/js/fomantic-ui/semantic.min.js?v={{ .assetVersion }}"></script> 
   <link rel="stylesheet" href="/css/common.css?v={{ .assetVersion }}"/>
   <link rel="stylesheet" href="/css/common_sub.css?v={{ .assetVersion }}"/>
   <script src="/js/common.js?v={{ .assetVersion }}"></script> 
@@ -23,7 +23,8 @@
   <script src="js/imagemonkey/views/labelrepository.js?v={{ .assetVersion }}"></script> 
 
   <script> 
-    $(document).ready(function() {	  
+    let labelRepositoryView = null;
+	$(document).ready(function() {	  
 
     let canAcceptTrendingLabelPermission = false;
     {{ if .sessionInformation.UserPermissions }}
@@ -32,7 +33,7 @@
       {{ end }}
     {{ end }}
 
-      let labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, canAcceptTrendingLabelPermission, 
+      labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, canAcceptTrendingLabelPermission, 
 	  	{{ .trendingLabelsRepositoryUrl }}, {{ .labelsRepositoryUrl }});
       labelRepositoryView.setSentryDSN({{ .sentrDSN }});
       labelRepositoryView.exec();
@@ -140,11 +141,25 @@
 	
 		<br>	
 		<br>
+		<b>(optional) parent label</b>
+		<br>
+		<div class="ui input">
+		  <div class="ui fluid search selection dropdown" id="addTrendingLabelDlgParentLabelFormDlgDropdown">
+            <input type="hidden" name="country">
+            <i class="dropdown icon"></i>
+            <div class="default text" id="addTrendingLabelDlgParentLabelFormInput">Optional parent label</div>
+            <div class="menu" id="addTrendingLabelDlgParentLabelFormInputMenuContent">
+            </div>
+		  </div>
+        </div>	
+	
+		<br>	
+		<br>
 		<b>plural form</b>
 		<br>
 		<div class="ui input">
           <input type="text" placeholder="The plural form of the label" id="addTrendingLabelDlgPluralFormInput">
-        </div>	
+        </div>	 
 
 		<br>	
 		<br>

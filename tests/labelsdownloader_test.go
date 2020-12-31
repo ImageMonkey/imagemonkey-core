@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	"os/exec"	
+	"os/exec"
 	"time"
 	"os"
 	"strconv"
@@ -47,7 +47,7 @@ func runLabelsDownloader(t *testing.T) {
 func verifyProductiveAnnotations(t *testing.T, imageAnnotationSuggestionEntries []ImageAnnotationEntry, imageAnnotationEntries []ImageAnnotationEntry, 
 									annotationSuggestionDataEntries []AnnotationDataEntry, annotationDataEntries []AnnotationDataEntry,
 									imageAnnotationSuggestionRevisionEntries []ImageAnnotationRevisionEntry, 
-									imageAnnotationRevisionEntries []ImageAnnotationRevisionEntry) {
+									imageAnnotationRevisionEntries []ImageAnnotationRevisionEntry, parentLabel string) {
 	equals(t, len(imageAnnotationSuggestionEntries), len(imageAnnotationEntries))
 	equals(t, len(annotationSuggestionDataEntries), len(annotationDataEntries))
 	equals(t, len(imageAnnotationSuggestionRevisionEntries), len(imageAnnotationRevisionEntries))
@@ -76,7 +76,13 @@ func verifyProductiveAnnotations(t *testing.T, imageAnnotationSuggestionEntries 
 
 		labelName, err := db.GetLabelSuggestionNameFromId(imageAnnotationSuggestionEntries[i].LabelId)
 		ok(t, err)
-		labelId, err := db.GetLabelIdFromName(labelName)
+		
+		var labelId int64
+		if parentLabel != "" {
+			labelId, err = db.GetLabelIdFromSublabelName(labelName, parentLabel)
+		} else {
+			labelId, err = db.GetLabelIdFromName(labelName)
+		}
 		ok(t, err)
 		equals(t, imageAnnotationEntry.LabelId, labelId)
 	}
@@ -124,7 +130,7 @@ func TestLabelsDownloaderSuccess(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -167,7 +173,7 @@ func TestLabelsDownloaderFailure(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -210,7 +216,7 @@ func TestLabelsDownloaderFailureCanBeRetried(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -228,7 +234,7 @@ func TestLabelsDownloaderFailureCanBeRetried(t *testing.T) {
 	ok(t, err)
 	equals(t, numberOfLabelsBefore, numberOfLabelsAfter)
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201) 
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201) 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -259,7 +265,7 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -277,7 +283,7 @@ func TestLabelsDownloaderSuccessCannotBeRetried(t *testing.T) {
 	ok(t, err)
 	equals(t, numberOfLabelsBefore+1, numberOfLabelsAfter)
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201) 
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201) 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -325,7 +331,7 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	equals(t, len(trendingLabels), 1)
 
 
-	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", token, "normal", 201)
+	testAcceptTrendingLabel(t, "red apple", "", "red apples", "red apple", "", token, "normal", 201)
 	trendingLabels = testGetTrendingLabels(t, token, 200)
 	equals(t, len(trendingLabels), 1)
 
@@ -353,7 +359,7 @@ func TestLabelsDownloaderNonProductiveLabelWithAnnotationsSuccess(t *testing.T) 
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "")
 }
 
 
@@ -397,7 +403,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	equals(t, len(trendingLabels), 13)
 
 	for i, _ := range imageIds {
-		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), token, "normal", 201)
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "", token, "normal", 201)
 	}
 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
@@ -427,7 +433,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsSuccess(t *tes
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "")
 }
 
 
@@ -476,7 +482,7 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinements
 	equals(t, len(trendingLabels), 13)
 
 	for i, _ := range imageIds {
-		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), token, "normal", 201)
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "", token, "normal", 201)
 	}
 
 	trendingLabels = testGetTrendingLabels(t, token, 200)
@@ -506,5 +512,287 @@ func TestLabelsDownloaderMultipleNonProductiveLabelWithAnnotationsAndRefinements
 	ok(t, err)
 
 	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
-								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries)
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "")
+}
+
+func TestLabelsDownloaderLabelHasParentLabelSuccess(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for _, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "supercar", true, token, 200)
+	}
+	runTrendingLabelsWorker(t, 5)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+
+
+	testAcceptTrendingLabel(t, "supercar", "", "supercars", "supercar", "car", token, "normal", 201)
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+1, numberOfLabelsAfter)
+}
+
+func TestLabelsDownloaderLabelHasParentLabelSuccess2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for _, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "head of cat", true, token, 200)
+	}
+	runTrendingLabelsWorker(t, 5)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+
+
+	testAcceptTrendingLabel(t, "head of cat", "", "head of cats", "head of cat", "cat", token, "normal", 201)
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 1)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+1, numberOfLabelsAfter)
+}
+
+
+func TestLabelsDownloaderParentLabelWithAnnotationsAndRefinementsSuccess(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token, 200)
+	}
+
+	//annotate label suggestions
+	for i, imageId := range imageIds {
+		testAnnotate(t, imageId, "red apple " + strconv.Itoa(i), "",
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+		annotationIds, err := db.GetImageAnnotationSuggestionIdsForImage(imageId)
+		ok(t, err)
+		equals(t, len(annotationIds), 1)
+		newAnnotations := `[{"top":55,"left":310,"type":"rect","angle":16,"width":244,"height":120,"stroke":{"color":"red","width":1}}]`
+		testAnnotationRework(t, annotationIds[0], newAnnotations, token)
+	}
+
+	imageAnnotationSuggestionEntries, err := db.GetImageAnnotationSuggestionEntries()
+	ok(t, err)
+
+	annotationSuggestionDataEntries, err := db.GetAnnotationSuggestionDataEntries()
+	ok(t, err)
+
+	imageAnnotationSuggestionRevisionEntries, err := db.GetImageAnnotationSuggestionRevisionEntries()
+	ok(t, err)
+
+	runTrendingLabelsWorker(t, 0)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 13)
+
+	for i, _ := range imageIds {
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "apple", token, "normal", 201)
+	}
+
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 13)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 13)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+13, numberOfLabelsAfter)
+
+	imageAnnotationEntries, err := db.GetImageAnnotationEntries()
+	ok(t, err)
+
+	annotationDataEntries, err := db.GetAnnotationDataEntries()
+	ok(t, err)
+
+	imageAnnotationRevisionEntries, err := db.GetImageAnnotationRevisionEntries()
+	ok(t, err)
+
+	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "apple")
+}
+
+func TestLabelsDownloaderParentLabelWithAnnotationsAndRefinementsRecurringSuccess(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testSignUp(t, "testuser", "testpassword", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpassword", 200)
+
+	err := db.GiveUserModeratorRights("testuser")
+	ok(t, err)
+
+	testMultipleDonate(t, "floor")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+		testSuggestLabelForImage(t, imageId, "red apple " + strconv.Itoa(i), true, token, 200)
+	}
+
+	//annotate label suggestions
+	for i, imageId := range imageIds {
+		if i == 0 {
+			continue
+		}
+
+		testAnnotate(t, imageId, "red apple " + strconv.Itoa(i), "",
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+		annotationIds, err := db.GetImageAnnotationSuggestionIdsForImage(imageId)
+		ok(t, err)
+		equals(t, len(annotationIds), 1)
+		newAnnotations := `[{"top":55,"left":310,"type":"rect","angle":16,"width":244,"height":120,"stroke":{"color":"red","width":1}}]`
+		testAnnotationRework(t, annotationIds[0], newAnnotations, token)
+	}
+
+	imageAnnotationSuggestionEntries, err := db.GetImageAnnotationSuggestionEntries()
+	ok(t, err)
+
+	annotationSuggestionDataEntries, err := db.GetAnnotationSuggestionDataEntries()
+	ok(t, err)
+
+	imageAnnotationSuggestionRevisionEntries, err := db.GetImageAnnotationSuggestionRevisionEntries()
+	ok(t, err)
+
+	runTrendingLabelsWorker(t, 0)
+
+	trendingLabels := testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 12)
+
+	for i, _ := range imageIds {
+		if i == 0 {
+			continue
+		}
+
+		testAcceptTrendingLabel(t, "red apple " + strconv.Itoa(i), "", "red apples", "red apple " + strconv.Itoa(i), "apple", token, "normal", 201)
+	}
+
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 12)
+
+	equals(t, trendingLabels[0].Status, "accepted")
+
+	runLabelBot(t, "cisuccess")
+	trendingLabels = testGetTrendingLabels(t, token, 200)
+	equals(t, len(trendingLabels), 12)
+	equals(t, trendingLabels[0].Status, "merged")
+
+	numberOfLabelsBefore, err := db.GetNumberOfLabels()
+	ok(t, err)
+	runLabelsDownloader(t)
+	numberOfLabelsAfter, err := db.GetNumberOfLabels()
+	ok(t, err)
+	equals(t, numberOfLabelsBefore+12, numberOfLabelsAfter)
+
+	imageAnnotationEntries, err := db.GetImageAnnotationEntries()
+	ok(t, err)
+
+	annotationDataEntries, err := db.GetAnnotationDataEntries()
+	ok(t, err)
+
+	imageAnnotationRevisionEntries, err := db.GetImageAnnotationRevisionEntries()
+	ok(t, err)
+
+	verifyProductiveAnnotations(t, imageAnnotationSuggestionEntries, imageAnnotationEntries, annotationSuggestionDataEntries, annotationDataEntries,
+								imageAnnotationSuggestionRevisionEntries, imageAnnotationRevisionEntries, "apple")
+
+
+	//add recurring label + annotation
+	testSuggestLabelForImage(t, imageIds[0], "red apple 12", true, token, 200)
+	recurringLabelSuggestionNumBefore, err := db.GetNumberOfImagesWithLabelSuggestions("red apple 12")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumBefore), int(1))
+
+	numOfAnnotationsBefore, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(numOfAnnotationsBefore), 12)
+
+	testAnnotate(t, imageIds[0], "red apple 12", "", 
+					`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+
+	runTrendingLabelsWorker(t, 5)
+
+	recurringLabelSuggestionNumAfter, err := db.GetNumberOfImagesWithLabelSuggestions("red apple 12")
+	ok(t, err)
+	equals(t, int(recurringLabelSuggestionNumAfter), int(0))
+
+	numLabelsAfterRecurringLabelSuggestion, err := db.GetNumberOfImagesWithLabel("apple")
+	ok(t, err)
+	equals(t, int(numLabelsAfterRecurringLabelSuggestion), int(13))
+
+	numOfAnnotationsAfter, err := db.GetAllAnnotationIds()
+	ok(t, err)
+	equals(t, len(numOfAnnotationsAfter), len(numOfAnnotationsBefore)+1)
 }

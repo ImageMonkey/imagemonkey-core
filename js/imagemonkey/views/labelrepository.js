@@ -34,6 +34,10 @@ var LabelRepositoryView = (function() {
         return $("#addTrendingLabelDlgPluralFormInput").val();
     }
 
+    LabelRepositoryView.prototype.getParentLabel = function() {
+        return $("#addTrendingLabelDlgParentLabelFormDlgDropdown").dropdown("get value");
+    }
+
     LabelRepositoryView.prototype.getSelectedLabelType = function() {
         var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
         if (radioButtonId === "labelTypeNormalRadioButtonInput") {
@@ -43,6 +47,26 @@ var LabelRepositoryView = (function() {
             return "meta";
         }
         return "";
+    }
+
+    LabelRepositoryView.prototype.populateParentLabels = function() {
+        let inst = this;
+        $("#loadingIndicator").show();
+        this.imageMonkeyApi.getProductiveLabels()
+            .then(function(labels) {
+                $("#loadingIndicator").hide();
+
+                labels.forEach(function(labelName, index) {
+                    let elem = $('<div class="item" data-value="' + escapeHtml(labelName) + '">' + escapeHtml(labelName) + '</div>');
+                    $("#addTrendingLabelDlgParentLabelFormInputMenuContent").append(elem);
+                });
+                $("#addTrendingLabelDlgParentLabelFormDlgDropdown").dropdown();
+
+            }).catch(function(msg = "Couldn't load labels - please try again later") {
+                $("#loadingIndicator").hide();
+                $("#warningMessageBoxContent").text(msg);
+                $("#warningMessageBox").show(200).delay(1500).hide(200);
+            });
     }
 
     LabelRepositoryView.prototype.onAddTrendingLabel = function(elem) {
@@ -76,10 +100,11 @@ var LabelRepositoryView = (function() {
         $("#addTrendingLabelDlg").modal("show");
     }
 
-    LabelRepositoryView.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription, labelPlural, labelRenameTo) {
+    LabelRepositoryView.prototype.acceptTrendingLabel = function(labelName, labelType, labelDescription,
+        labelPlural, labelRenameTo, parentLabelName) {
         let inst = this;
         $("#loadingIndicator").show();
-        this.imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo)
+        this.imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo, parentLabelName)
             .then(function() {
                 $("#loadingIndicator").hide();
                 inst.getTrendingLabels();
@@ -94,7 +119,7 @@ var LabelRepositoryView = (function() {
         $("#loadingIndicator").show();
         $("#labelRepositoryTableContent").empty();
         let inst = this;
-		this.imageMonkeyApi.getTrendingLabels()
+        this.imageMonkeyApi.getTrendingLabels()
             .then(function(data) {
                 $("#loadingIndicator").hide();
                 inst.populateLabelRepositoryTable(data);
@@ -147,7 +172,7 @@ var LabelRepositoryView = (function() {
                     '" data-label-plural="' + escapedTrendingLabel.trim() + 's' +
                     '" data-label-description="' + '' +
                     '" data-label-renameto="' + escapedTrendingLabel.trim() +
-                    '" onclick="this.onAddTrendingLabel(this);">Add</div>');
+                    '" onclick="labelRepositoryView.onAddTrendingLabel(this);">Add</div>');
             } else if (status === 'waiting for moderator approval') {
                 var labelType = data[i].label.type;
                 if (this.canAcceptTrendingLabelPermission) {
@@ -203,13 +228,14 @@ var LabelRepositoryView = (function() {
         });
 
         this.getTrendingLabels();
+        this.populateParentLabels();
 
         let inst = this;
         $("#addTrendingLabelDlgYesButton").click(function(e) {
             e.preventDefault();
             inst.acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"),
                 inst.getSelectedLabelType(), inst.getLabelDescription(), inst.getLabelPlural(),
-                inst.getRenameToLabel());
+                inst.getRenameToLabel(), inst.getParentLabel());
 
         });
 
