@@ -33,7 +33,7 @@
       {{ end }}
     {{ end }}
 
-      labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, canAcceptTrendingLabelPermission, 
+      labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, {{ .sessionInformation.Username }}, canAcceptTrendingLabelPermission, 
 	  	{{ .trendingLabelsRepositoryUrl }}, {{ .labelsRepositoryUrl }});
       labelRepositoryView.setSentryDSN({{ .sentrDSN }});
       labelRepositoryView.exec();
