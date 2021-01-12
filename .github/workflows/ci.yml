@@ -37,11 +37,10 @@ jobs:
           echo "TEST_MODE=only-api" >> env/env_api_tests.ci
           cp env/env.ci env/env_unit_tests.ci
           echo "TEST_MODE=only-unittest" >> env/env_unit_tests.ci
- api-test:
-   runs-on: ubuntu-latest
-   needs: setup
-   steps:
-     - name: Run API tests
-       env: ENV_FILE_LOCATION: ../env_api_tests.travis
-         env
-       run: docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
+  api-test:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Run API tests
+        env: ENV_FILE_LOCATION: ../env_api_tests.travis
+        run: docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
