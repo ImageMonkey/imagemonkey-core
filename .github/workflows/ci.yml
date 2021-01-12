@@ -3,7 +3,7 @@ name: Run Unittests & Integration Tests
 on: [push, pull_request]
 
 jobs:
-  run-tests:
+  setup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -37,4 +37,9 @@ jobs:
           echo "TEST_MODE=only-api" >> env/env_api_tests.ci
           cp env/env.ci env/env_unit_tests.ci
           echo "TEST_MODE=only-unittest" >> env/env_unit_tests.ci
-          docker-compose -f env/docker/docker-compose.ci.yml build --parallel
+          #docker-compose -f env/docker/docker-compose.ci.yml build --parallel
+ api-test:
+   runs-on: ubuntu-latest
+   needs: setup
+   steps:
+     - run: docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
