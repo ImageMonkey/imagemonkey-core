@@ -42,5 +42,6 @@ jobs:
     needs: setup
     steps:
       - name: Run API tests
-        env: ENV_FILE_LOCATION: ../env_api_tests.travis
+        env:
+          ENV_FILE_LOCATION: ../env_api_tests.travis
         run: docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
