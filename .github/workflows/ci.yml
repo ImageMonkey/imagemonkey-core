@@ -1,5 +1,7 @@
 name: Run Unittests & Integration Tests
 
+on: [push, pull_request]
+
 jobs:
   run-tests:
     runs-on: ubuntu-latest
