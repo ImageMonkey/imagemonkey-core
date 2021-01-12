@@ -1,0 +1,35 @@
+name: Run Unittests & Integration Tests
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          echo "Updating docker-compose to version 1.24.1"
+          curl -L https://github.com/docker/compose/releases/download/1.24.1/docker-compose-`uname -s`-`uname -m` -o /tmp/docker-compose
+          sudo rm /usr/local/bin/docker-compose
+          sudo mv /tmp/docker-compose /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          echo "Cloning imagemonkey-labels"
+          git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists
+          rm -f wordlists/.github
+          echo "Creating avatars directory"
+          mkdir -p avatars
+          cp img/default.png avatars/default.png
+          echo "Creating data directory"
+          mkdir -p data/donations
+          mkdir -p data/quarantine
+          mkdir -p data/unverified_donations
+          echo "Downloading existing images (for caching)"
+          docker pull bbernhard/imagemonkey-api:latest
+          docker pull bbernhard/imagemonkey-db:latest
+          docker pull bbernhard/imagemonkey-testing:latest
+          echo "Preparing env files for github actions jobs"
+          cp env/env.ci env/env_ui_tests.ci
+          echo "TEST_MODE=only-ui" >> env/env_ui_tests.ci
+          cp env/env.ci env/env_api_tests.ci
+          echo "TEST_MODE=only-api" >> env/env_api_tests.ci
+          cp env/env.ci env/env_unit_tests.ci
+          echo "TEST_MODE=only-unittest" >> env/env_unit_tests.ci
+          docker-compose -f env/docker/docker-compose.ci.yml build --parallel
