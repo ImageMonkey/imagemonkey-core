@@ -55,6 +55,14 @@ jobs:
           cp env/env.ci env/env_api_tests.ci
           echo "TEST_MODE=only-api" >> env/env_api_tests.ci
           docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
+      
+  ui-test:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}     
       - name: Run UI tests
         env:
           ENV_FILE_LOCATION: ../env_ui_tests.ci
@@ -73,6 +81,14 @@ jobs:
           cp env/env.ci env/env_ui_tests.ci
           echo "TEST_MODE=only-ui" >> env/env_ui_tests.ci
           docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
+      
+  unit-test:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}     
       - name: Run unittests
         env:
           ENV_FILE_LOCATION: ../env_unit_tests.ci
