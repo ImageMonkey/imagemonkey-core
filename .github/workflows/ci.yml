@@ -46,7 +46,7 @@ jobs:
           ref: ${{ github.ref }}
       - name: Run API tests
         env:
-          ENV_FILE_LOCATION: ../env_api_tests.travis
+          ENV_FILE_LOCATION: ../env_api_tests.ci
         run: |
           echo "Cloning imagemonkey-labels"
           git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists
