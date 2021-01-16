@@ -16,16 +16,6 @@ jobs:
           sudo rm /usr/local/bin/docker-compose
           sudo mv /tmp/docker-compose /usr/local/bin/docker-compose
           chmod +x /usr/local/bin/docker-compose
-          echo "Cloning imagemonkey-labels"
-          git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists
-          rm -f wordlists/.github
-          echo "Creating avatars directory"
-          mkdir -p avatars
-          cp img/default.png avatars/default.png
-          echo "Creating data directory"
-          mkdir -p data/donations
-          mkdir -p data/quarantine
-          mkdir -p data/unverified_donations
           echo "Downloading existing images (for caching)"
           docker pull bbernhard/imagemonkey-api:latest
           docker pull bbernhard/imagemonkey-db:latest
