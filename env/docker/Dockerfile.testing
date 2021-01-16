@@ -29,6 +29,9 @@ RUN true #docker workaround (https://github.com/moby/moby/issues/37965)
 COPY src/populate_labels.go /tmp/src/populate_labels.go
 COPY src/database /tmp/src/database
 COPY src/image /tmp/src/image
+
+RUN true #docker workaround (https://github.com/moby/moby/issues/37965)
+
 COPY src/parser /tmp/src/parser
 COPY env/postgres /tmp/env/postgres
 
