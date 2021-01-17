@@ -7,7 +7,7 @@ on:
   pull_request:
     branches:
       - '**' #every branch
-  repository_dispatch:
+  workflow_dispatch:
     branches:
       - '**' #every branch
     types: [trigger_build]
