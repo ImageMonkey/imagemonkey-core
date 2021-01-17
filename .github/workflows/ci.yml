@@ -1,6 +1,16 @@
 name: Run Unittests & Integration Tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - '**' #every branch
+  pull_request:
+    branches:
+      - '**' #every branch
+  repository_dispatch:
+    branches:
+      - '**' #every branch
+    types: [trigger_build]
 
 jobs:
   setup:
