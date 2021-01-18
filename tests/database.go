@@ -907,6 +907,16 @@ func (p *ImageMonkeyDatabase) GetLabelIdFromName(label string) (int64, error) {
 	return labelId, err
 }
 
+func (p *ImageMonkeyDatabase) GetLabelIdFromSublabelName(label string, parentLabel string) (int64, error) {
+	var labelId int64 
+	err := p.db.QueryRow(context.TODO(),
+						   `SELECT l.id 
+							FROM label l
+							JOIN label pl ON pl.id = l.parent_id
+							WHERE l.name = $1 and pl.name = $2`, label, parentLabel).Scan(&labelId)
+	return labelId, err
+}
+
 func (p *ImageMonkeyDatabase) GetLabelIdFromUuid(labelUuid string) (int64, error) {
 	var labelId int64 
 	err := p.db.QueryRow(context.TODO(),
@@ -1269,6 +1279,31 @@ func (p *ImageMonkeyDatabase) GetTrendingLabelBotTaskState(labelSuggestion strin
 		return state, nil
 	}
 	return "", errors.New("nothing found")
+}
+
+func (p *ImageMonkeyDatabase) GetTrendingLabelBotTaskParentId(labelSuggestion string) (int64, error) {
+	rows, err := p.db.Query(context.TODO(),
+							`SELECT COALESCE(bt.parent_label_id::bigint, -1) 
+							 FROM trending_label_bot_task bt 
+							 RIGHT JOIN trending_label_suggestion l ON l.id = bt.trending_label_suggestion_id
+							 RIGHT JOIN label_suggestion s ON s.id = l.label_suggestion_id
+							 WHERE s.name = $1`, labelSuggestion) 
+	if err != nil {
+		return -1, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var parentLabelId int64
+		err = rows.Scan(&parentLabelId)
+		if err != nil {
+			return -1, err
+		}
+
+		return parentLabelId, nil
+	}
+	return -1, errors.New("nothing found")
 }
 
 func (p *ImageMonkeyDatabase) SetTrendingLabelBotTaskState(labelSuggestion string, state string) error {

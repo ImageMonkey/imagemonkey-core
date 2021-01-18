@@ -27,7 +27,7 @@ func (p *TravisCiApi) SetToken(token string) {
 
 func (p *TravisCiApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
 
-	url := "https://api.travis-ci.org/repo/" + p.repoOwner + "%2F" + p.repo + "/branch/" + branchName
+	url := "https://api.travis-ci.com/repo/" + p.repoOwner + "%2F" + p.repo + "/branch/" + branchName
 
 	var travisCiBuildInfo CiBuildInfo
 
@@ -47,7 +47,7 @@ func (p *TravisCiApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
 		return travisCiBuildInfo, errors.New(resp.String())
 	}
 	//log.Info(resp.String())
-	travisCiBuildInfo.JobUrl = ("https://travis-ci.org/" + p.repoOwner + "/" + p.repo +
+	travisCiBuildInfo.JobUrl = ("https://travis-ci.com/" + p.repoOwner + "/" + p.repo +
 		"/builds/" + strconv.FormatInt(travisCiBuildInfo.LastBuild.Id, 10))
 	return travisCiBuildInfo, nil
 }
@@ -62,7 +62,7 @@ func (p *TravisCiApi) StartBuild(branchName string) error {
 	var req TravisRequest
 	req.Request.Branch = branchName
 
-	url := "https://api.travis-ci.org/repo/" + p.repoOwner + "%2F" + p.repo + "/requests"
+	url := "https://api.travis-ci.com/repo/" + p.repoOwner + "%2F" + p.repo + "/requests"
 
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").

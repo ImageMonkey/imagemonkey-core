@@ -2514,12 +2514,7 @@ func main() {
 			c.JSON(200, trendingLabels)
 		})
 
-		router.POST("/v1/trendinglabels/:trendinglabel/accept", func(c *gin.Context) {
-			trendingLabel := c.Param("trendinglabel")
-			if trendingLabel == "" {
-				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid trending label"})
-				return
-			}
+		router.POST("/v1/trendinglabels/accept", func(c *gin.Context) {
 
 			var labelDetails datastructures.AcceptTrendingLabel
 			err := c.BindJSON(&labelDetails)
@@ -2527,6 +2522,12 @@ func main() {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
 				return
 			}
+
+			if labelDetails.Label.Name == "" {
+				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a valid trending label"})
+				return
+			}
+
 			if (labelDetails.Label.Type != "normal") && (labelDetails.Label.Type != "meta") {
 				c.JSON(400, gin.H{"error": "Couldn't process request - please provide a label type"})
 				return
@@ -2557,9 +2558,9 @@ func main() {
 				return
 			}
 
-			err = imageMonkeyDatabase.AcceptTrendingLabel(trendingLabel, labelDetails.Label.Type,
+			err = imageMonkeyDatabase.AcceptTrendingLabel(labelDetails.Label.Name, labelDetails.Label.Type,
 				labelDetails.Label.Description, labelDetails.Label.Plural,
-				labelDetails.Label.RenameTo, userInfo)
+				labelDetails.Label.RenameTo, labelDetails.Label.Parent, userInfo)
 			if err != nil {
 				switch err.(type) {
 				case *imagemonkeydb.InvalidTrendingLabelError:

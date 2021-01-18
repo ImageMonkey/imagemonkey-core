@@ -739,6 +739,7 @@ type ApiTokenRequest struct {
 type TrendingLabel struct {
 	Name     string `json:"name"`
 	RenameTo string `json:"rename_to"`
+	Count    int    `json:"count"`
 	Label    struct {
 		Type        string `json:"type"`
 		Description string `json:"description"`
@@ -766,14 +767,17 @@ type TrendingLabelBotTask struct {
 	Plural      string `json:"plural"`
 	Description string `json:"description"`
 	RenameTo    string `json:"rename_to"`
+	Parent      string `json:"parent"`
 }
 
 type AcceptTrendingLabel struct {
 	Label struct {
+		Name        string `json:"name"`
 		Type        string `json:"type"`
 		Description string `json:"description"`
 		Plural      string `json:"plural"`
 		RenameTo    string `json:"rename_to"`
+		Parent      string `json:"parent"`
 	} `json:"label"`
 }
 

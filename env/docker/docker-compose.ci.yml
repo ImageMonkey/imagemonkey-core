@@ -22,7 +22,7 @@ services:
       cache_from:
         - bbernhard/imagemonkey-db:latest
     env_file:
-        - ${ENV_FILE_LOCATION} #../env.travis
+        - ${ENV_FILE_LOCATION} #../env.ci
     volumes:
         - dbdata:/var/lib/postgresql/data
     logging:
@@ -31,7 +31,7 @@ services:
   #  restart: always
   #  network_mode: host
   #  env_file:
-  #      - ../env.travis
+  #      - ../env.ci
   #  build:
   #    context: "../../"
   #    dockerfile: env/docker/Dockerfile.trendinglabelsworker
@@ -40,7 +40,7 @@ services:
     network_mode: host
     #entrypoint: tail -f /dev/null
     env_file:
-      - ${ENV_FILE_LOCATION} #../env.travis
+      - ${ENV_FILE_LOCATION} #../env.ci
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.web
@@ -52,7 +52,7 @@ services:
   api:
     network_mode: host
     env_file:
-      - ${ENV_FILE_LOCATION} #../env.travis
+      - ${ENV_FILE_LOCATION} #../env.ci
     build:
        context: "../../"
        dockerfile: env/docker/Dockerfile.api
@@ -71,7 +71,7 @@ services:
   #  entrypoint: tail -f /dev/null
   #  network_mode: host
   #  env_file:
-  #    - ../env.travis
+  #    - ../env.ci
   #  build:
   #     context: "../../"
   #     dockerfile: env/docker/Dockerfile.statworker
@@ -80,7 +80,7 @@ services:
   #  entrypoint: tail -f /dev/null
   #  network_mode: host
   #  env_file:
-  #    - ../env.travis
+  #    - ../env.ci
   #  build:
   #     context: "../../"
   #     dockerfile: env/docker/Dockerfile.dataprocessor
@@ -89,7 +89,7 @@ services:
   #  entrypoint: tail -f /dev/null
   #  network_mode: host
   #  env_file:
-  #    - ../env.travis
+  #    - ../env.ci
   #  build:
   #    context: "../../"
   #    dockerfile: env/docker/Dockerfile.blogsubscriptionworker
@@ -97,7 +97,7 @@ services:
     network_mode: host
     #entrypoint: tail -f /dev/null
     env_file:
-      - ${ENV_FILE_LOCATION} #../env.travis
+      - ${ENV_FILE_LOCATION} #../env.ci
     volumes:
       - ../../wordlists:/tmp/wordlists
       - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json

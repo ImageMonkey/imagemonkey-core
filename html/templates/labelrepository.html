@@ -11,214 +11,33 @@
   <!-- Site Properties -->
   <title>{{ .title }}</title>
   
-  <link rel="stylesheet" href="/css/semantic.min.css?v={{ .assetVersion }}"/>
+  <link rel="stylesheet" href="/css/fomantic-ui/semantic.min.css?v={{ .assetVersion }}"/>
   <script src="/js/jquery.min.js?v={{ .assetVersion }}"></script>
-  <script src="/js/semantic.min.js?v={{ .assetVersion }}"></script> 
+  <script src="/js/fomantic-ui/semantic.min.js?v={{ .assetVersion }}"></script> 
   <link rel="stylesheet" href="/css/common.css?v={{ .assetVersion }}"/>
   <link rel="stylesheet" href="/css/common_sub.css?v={{ .assetVersion }}"/>
   <script src="/js/common.js?v={{ .assetVersion }}"></script> 
   <link rel="stylesheet" href="css/spinner/spinners/3-wave.css?v={{ .assetVersion }}"/>
   <script src="js/tablesort/tablesort.js?v={{ .assetVersion }}"></script>
   <script src="js/imagemonkey/api.js?v={{ .assetVersion }}"></script>
+  <script src="js/imagemonkey/views/labelrepository.js?v={{ .assetVersion }}"></script> 
 
-  <script>
-    var imageMonkeyApi = null; 
+  <script> 
+    let labelRepositoryView = null;
+	$(document).ready(function() {	  
 
-    function getRenameToLabel() {
-	  return $("#addTrendingLabelDlgRenameToLabelInput").val();
-	}
+    let canAcceptTrendingLabelPermission = false;
+    {{ if .sessionInformation.UserPermissions }}
+      {{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
+        canAcceptTrendingLabelPermission = true;            
+      {{ end }}
+    {{ end }}
 
-	function getLabelDescription() {
-      return $("#addTrendingLabelDlgDescriptionInput").val();
-	}
-
-	function getLabelPlural() {
-	  return $("#addTrendingLabelDlgPluralFormInput").val(); 
-	}
-
-    function getSelectedLabelType() {
-      var radioButtonId = $("#labelTypeRadioButtons :radio:checked").attr("id");
-      if(radioButtonId === "labelTypeNormalRadioButtonInput"){
-        return "normal";
-      }
-      if(radioButtonId === "labelTypeMetaRadioButtonInput"){
-        return "meta";
-      }
-      return "";
-    }
-    function onAddTrendingLabel(elem) {
-	  $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label"));
-	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label-plural"));
-	  $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label-renameto"));
-	  $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
-      var labelType = getSelectedLabelType(); 
-	  if(labelType === "normal") {
-        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
-      }
-	  else {
-        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", true);
-	  } 
-	  
-	  $("#addTrendingLabelDlg").modal("show"); 
-	}
-
-	function onAcceptTrendingLabel(elem) {
-      $("#addTrendingLabelDlg").attr("data-label-name", $(elem).attr("data-label")); 
-	  $("#addTrendingLabelDlgPluralFormInput").val($(elem).attr("data-label-plural"));
-	  $("#addTrendingLabelDlgDescriptionInput").val($(elem).attr("data-label-description"));
-      $("#addTrendingLabelDlgRenameToLabelInput").val($(elem).attr("data-label-renameto"));
-	  var labelType = $(elem).attr("data-label-type");
-      if(labelType === "normal") {
-        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
-		$("#labelTypeNormalRadioButton").checkbox("set checked"); 
-      }
-	  else {
-        $("#addTrendingLabelDlgPluralFormInput").prop("disabled", true);
-        $("#labelTypeMetaRadioButton").checkbox("set checked");
-	  }  
-      $("#addTrendingLabelDlg").modal("show");	
-	}
-
-	function acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo) {
-	  $("#loadingIndicator").show();
-	  imageMonkeyApi.acceptTrendingLabel(labelName, labelType, labelDescription, labelPlural, labelRenameTo)
-	    .then(function() {
-		  $("#loadingIndicator").hide();
-          getTrendingLabels();
-		}).catch(function(msg="Couldn't accept trending label - please try again later") {
-		  $("#loadingIndicator").hide();
-          $("#warningMessageBoxContent").text(msg);
-          $("#warningMessageBox").show(200).delay(1500).hide(200);
-		});
-	}
-
-	function getTrendingLabels() {
-	  $("#loadingIndicator").show();
-	  $("#labelRepositoryTableContent").empty();
-	  imageMonkeyApi.getTrendingLabels()
-	    .then(function(data) {
-		  $("#loadingIndicator").hide();
-          populateLabelRepositoryTable(data);
-		}).catch(function() {
-		  $("#loadingIndicator").hide();
-          $("#warningMessageBoxContent").text("Couldn't get trending label - please try again later");
-          $("#warningMessageBox").show(200).delay(1500).hide(200);
-		});
-	}
-
-    function populateLabelRepositoryTable(data) {
-      $("#loadingIndicator").show();
-	  $("#labelRepositoryTable").hide();
-
-	  {{ if eq .sessionInformation.Username "" }}
-	  $("#authenticationNeededInfoMessage").show(); 
-	  {{ end }}
- 
-      for(var i = 0; i < data.length; i++) {
-		var githubIssueUrl = '';
-		if(data[i].github.issue.id !== -1)
-			githubIssueUrl = ('<a href="' + {{ .trendingLabelsRepositoryUrl }} + 
-								'/issues/' + data[i].github.issue.id + '">' +
-								'#' +  data[i].github.issue.id + '</a>');
-		var githubBranchUrl = ('<a href="' + {{ .labelsRepositoryUrl }} + 
-								'/tree/' + data[i].github.branch_name + '">' +
-									data[i].github.branch_name + '</a>');
-		var cellColor = data[i].github.issue.closed ? "#76ff03" : "#ffffff";
-		var status = data[i].status;
-		var button = '';
-
-		var disabledStr = '';
-		{{ if eq .sessionInformation.Username "" }}
-		disabledStr = 'disabled ';
-		{{ end }}
-
-		var ciJobUrl = data[i].ci.job_url;
-		var entryId = "trendingLabel" + i;
-
-		var escapedTrendingLabel = escapeHtml(data[i].name);
-		var escapedTrendingLabelDescription = escapeHtml(data[i].label.description);
-		var escapedTrendingLabelPlural = escapeHtml(data[i].label.plural);
-		var escapedTrendingLabelRenameTo = escapeHtml(data[i].rename_to);
-		if(data[i].github.issue.closed) {
-			status = 'closed';
-			button = '';
-		} else if(status === '') {
-			status = 'open';	
-			button = ('<div class="ui fluid ' + disabledStr 
-						+ 'button" data-label="' + escapedTrendingLabel 
-						+ '" data-label-plural="' + escapedTrendingLabel.trim() + 's' 
-						+ '" data-label-description="' + '' 
-						+ '" data-label-renameto="' + escapedTrendingLabel.trim()
-						+ '" onclick="onAddTrendingLabel(this);">Add</div>');
-		} else if(status === 'waiting for moderator approval') {
-			var labelType = data[i].label.type;
-			{{ if .sessionInformation.UserPermissions }}
-			{{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
-			button = ('<div class="ui fluid button" data-label-description="' +  escapedTrendingLabelDescription 
-						+ '" data-label-type="' + labelType + '" data-label="' + escapedTrendingLabel 
-						+ '" data-label-plural="' + escapedTrendingLabelPlural 
-						+ '" data-label-renameto="' + escapedTrendingLabelRenameTo
-						+ '" onclick="onAcceptTrendingLabel(this);">Accept</div>');
-			{{ end }}
-			{{ end }}
-		} else if(status === 'building') {
-			status = '<a href="' + ciJobUrl + '"><img src="/img/ci-build-in-progress.svg"></img></a>';	
-		} else if(status === 'build-passed') {
-			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-passing.svg"></img></a>';
-		} else if(status === 'build-canceled') {
-			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-canceled.svg"></img></a>';
-			button = ('<div class="ui fluid ' + disabledStr + ' button"' 
-						+ ' data-label="' + escapedTrendingLabel 
-						+ '" data-label-plural="' + escapedTrendingLabelPlural
-						+ '" data-label-description="' + escapedTrendingLabelDescription
-						+ '" data-label-renameto="' + escapedTrendingLabelRenameTo
-
-						+ '" onclick="onAddTrendingLabel(this);">Try again</div>');
-	  	} else if(status === 'build-failed') {
-			status = '<a href="' + ciJobUrl +'"><img src="img/ci-build-failed.svg"></img></a>';
-			button = ('<div class="ui fluid ' + disabledStr + ' button"' 
-						+ ' data-label="' + escapedTrendingLabel 
-						+ '" data-label-plural="' + escapedTrendingLabelPlural
-						+ '" data-label-description="' + escapedTrendingLabelDescription
-						+ '" data-label-renameto="' + escapedTrendingLabelRenameTo
-						+ '" onclick="onAddTrendingLabel(this);">Try again</div>');
-		}
-
-        elem = $(('<tr>' +
-                    '<td>' + escapedTrendingLabel  + '</td>' +	
-					'<td class="center aligned">' + githubIssueUrl + '</td>' +
-					'<td class="center aligned">' + githubBranchUrl + '</td>' +
-					'<td class="center aligned" bgcolor="' + cellColor + '">' + status + '</td>' +
-					'<td class="">' + button + '</td>' +
-                  '</tr>'));
-        $("#labelRepositoryTableContent").append(elem);
-      }
-      $("#labelRepositoryTable").tablesort();
-      $("#loadingIndicator").hide();
-	  $("#labelRepositoryTable").show();
-    }
-    $(document).ready(function() {
-      imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
-	  imageMonkeyApi.setToken(getCookie("imagemonkey"));
-	  getTrendingLabels();
-
-	  $("#addTrendingLabelDlgYesButton").click(function(e) {
-	    e.preventDefault();
-	    acceptTrendingLabel($("#addTrendingLabelDlg").attr("data-label-name"), 
-							getSelectedLabelType(), getLabelDescription(), getLabelPlural(), 
-							getRenameToLabel()); 
-
-      });
-
-	  $("#labelTypeNormalRadioButton").click(function(e) {
-		$("#addTrendingLabelDlgPluralFormInput").prop("disabled", false);
-	  });
-	  $("#labelTypeMetaRadioButton").click(function(e) {
-		$("#addTrendingLabelDlgPluralFormInput").prop("disabled", true);
-	  });
-
-	});
-  
+      labelRepositoryView = new LabelRepositoryView({{ .apiBaseUrl }}, {{ .clientId }}, {{ .clientSecret }}, {{ .sessionInformation.Username }}, canAcceptTrendingLabelPermission, 
+	  	{{ .trendingLabelsRepositoryUrl }}, {{ .labelsRepositoryUrl }});
+      labelRepositoryView.setSentryDSN({{ .sentrDSN }});
+      labelRepositoryView.exec();
+	}); 
   </script>
 </head>
 <body>
@@ -267,6 +86,7 @@
             <thead>
               <tr>
                 <th>Name</th>
+                <th class="count center aligned">Count</th>
                 <th class="center aligned"><i class="github icon"></i>Github Issue</th>
 				<th class="center aligned"><i class="github icon"></i>Github Branch</th>
 				<th class="center aligned"><i class="question circle icon"></i>Status</th>
@@ -321,11 +141,25 @@
 	
 		<br>	
 		<br>
+		<b>(optional) parent label</b>
+		<br>
+		<div class="ui input">
+		  <div class="ui fluid search selection dropdown" id="addTrendingLabelDlgParentLabelFormDlgDropdown">
+            <input type="hidden" name="country">
+            <i class="dropdown icon"></i>
+            <div class="default text" id="addTrendingLabelDlgParentLabelFormInput">Optional parent label</div>
+            <div class="menu" id="addTrendingLabelDlgParentLabelFormInputMenuContent">
+            </div>
+		  </div>
+        </div>	
+	
+		<br>	
+		<br>
 		<b>plural form</b>
 		<br>
 		<div class="ui input">
           <input type="text" placeholder="The plural form of the label" id="addTrendingLabelDlgPluralFormInput">
-        </div>	
+        </div>	 
 
 		<br>	
 		<br>
