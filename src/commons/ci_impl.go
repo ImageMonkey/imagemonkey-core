@@ -3,8 +3,8 @@
 package commons
 
 import (
-	"gopkg.in/resty.v1"
 	"errors"
+	"gopkg.in/resty.v1"
 	"strconv"
 )
 
@@ -19,20 +19,19 @@ type Workflow struct {
 }
 
 type WorkflowRun struct {
-	Id int64 `json:"id"`
-	HtmlUrl string `json:"html_url"`
-	Status string `json:"status"`
+	Id         int64  `json:"id"`
+	HtmlUrl    string `json:"html_url"`
+	Status     string `json:"status"`
 	Conclusion string `json:"conclusion"`
 }
 
 type WorkflowsResult struct {
-	TotalCount int `json:"total_count"`
-	Workflows []Workflow `json:"workflows"`
+	TotalCount int        `json:"total_count"`
+	Workflows  []Workflow `json:"workflows"`
 }
 
-
 type WorkflowRunsResult struct {
-	TotalCount int `json:"total_count"`
+	TotalCount   int           `json:"total_count"`
 	WorkflowRuns []WorkflowRun `json:"workflow_runs"`
 }
 
@@ -58,7 +57,7 @@ func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) 
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
 		SetHeader("Authorization", "Bearer "+p.token).
-		SetPathParams(map[string]string {
+		SetPathParams(map[string]string{
 			"branch": branchName,
 		}).
 		SetResult(&res).
@@ -155,4 +154,3 @@ func (p *GithubActionsApi) StartBuild(branchName string) error {
 
 	return nil
 }
-
