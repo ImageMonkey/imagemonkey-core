@@ -74,10 +74,10 @@ func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) 
 		return githubActionsBuildInfo, errors.New("No workflow run found")
 	}
 
-	githubActionsBuildInfo.JobUrl = res.WorkflowRuns[res.TotalCount-1].HtmlUrl
+	githubActionsBuildInfo.JobUrl = res.WorkflowRuns[0].HtmlUrl
 
-	status := res.WorkflowRuns[res.TotalCount-1].Status
-	conclusion := res.WorkflowRuns[res.TotalCount-1].Conclusion
+	status := res.WorkflowRuns[0].Status
+	conclusion := res.WorkflowRuns[0].Conclusion
 
 	if status == "queued" {
 		githubActionsBuildInfo.LastBuild.State = "created"
@@ -92,7 +92,7 @@ func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) 
 	} else {
 		githubActionsBuildInfo.LastBuild.State = "failed"
 	}
-	githubActionsBuildInfo.LastBuild.Id = res.WorkflowRuns[res.TotalCount-1].Id
+	githubActionsBuildInfo.LastBuild.Id = res.WorkflowRuns[0].Id
 	return githubActionsBuildInfo, nil
 }
 
