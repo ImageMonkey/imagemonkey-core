@@ -107,7 +107,7 @@ func labelAlreadyExistsInPipeline(label string, trendingLabelBotTaskId int64) (b
 
 func main() {
 	labelsRepositoryName := flag.String("labels_repository_name", "imagemonkey-labels-test", "Label Repository Name")
-	labelsRepositoryOwner := flag.String("labels_repository_owner", "bbernhard", "Label Repository Owner")
+	labelsRepositoryOwner := flag.String("labels_repository_owner", "ImageMonkey", "Label Repository Owner")
 	gitCheckoutDir := flag.String("git_checkout_dir", "/tmp/labelrepository", "Git checkout directory")
 	singleshot := flag.Bool("singleshot", false, "singleshot")
 	useSentry := flag.Bool("use_sentry", false, "Use Sentry")
@@ -134,7 +134,7 @@ func main() {
 	log.Info("Starting ImageMonkey Bot")
 
 	imageMonkeyBotGithubApiToken := commons.MustGetEnv("IMAGEMONKEY_BOT_GITHUB_API_TOKEN")
-	travisCiApiToken := commons.MustGetEnv("IMAGEMONKEY_TRAVIS_CI_TOKEN")
+	githubActionsApiToken := commons.MustGetEnv("IMAGEMONKEY_GITHUB_ACTIONS_CI_TOKEN")
 
 	//open database and make sure that we can ping it
 	var err error
@@ -155,8 +155,8 @@ func main() {
 	labelsRepository := commons.NewLabelsRepository(*labelsRepositoryOwner, *labelsRepositoryName, *gitCheckoutDir)
 	labelsRepository.SetToken(imageMonkeyBotGithubApiToken)
 
-	travisCiApi := commons.NewTravisCiApi(*labelsRepositoryOwner, *labelsRepositoryName)
-	travisCiApi.SetToken(travisCiApiToken)
+	githubActionsApi := commons.NewGithubActionsApi(*labelsRepositoryOwner, *labelsRepositoryName)
+	githubActionsApi.SetToken(githubActionsApiToken)
 
 	firstIteration := true
 	for {
@@ -259,9 +259,9 @@ func main() {
 				trendingLabel.BranchName = branchName
 			}
 			if trendingLabel.State == "pending" {
-				err = travisCiApi.StartBuild(trendingLabel.BranchName)
+				err = githubActionsApi.StartBuild(trendingLabel.BranchName)
 				if err != nil {
-					log.Error("Couldn't start travis build: ", err.Error())
+					log.Error("Couldn't start github actions build: ", err.Error())
 					raven.CaptureError(err, nil)
 					continue
 				}
@@ -275,54 +275,54 @@ func main() {
 				trendingLabel.State = "building"
 			}
 			if trendingLabel.State == "building" {
-				travisCiBuildInfo, err := travisCiApi.GetBuildInfo(trendingLabel.BranchName)
+				githubActionsBuildInfo, err := githubActionsApi.GetBuildInfo(trendingLabel.BranchName)
 				if err != nil {
 					log.Error("Couldn't query build info for branch ", trendingLabel.BranchName, ": ", err.Error())
 					raven.CaptureError(err, nil)
 					continue
 				}
-				if travisCiBuildInfo.LastBuild.State == "created" {
-					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+				if githubActionsBuildInfo.LastBuild.State == "created" {
+					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, githubActionsBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to buildings: ", err.Error())
 						raven.CaptureError(err, nil)
 						continue
 					}
 					trendingLabel.State = "building"
-				} else if travisCiBuildInfo.LastBuild.State == "started" {
-					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+				} else if githubActionsBuildInfo.LastBuild.State == "started" {
+					err = setTrendingLabelBotTaskState("building", trendingLabel.BranchName, githubActionsBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to building: ", err.Error())
 						raven.CaptureError(err, nil)
 						continue
 					}
 					trendingLabel.State = "building"
-				} else if travisCiBuildInfo.LastBuild.State == "passed" {
-					err = setTrendingLabelBotTaskState("build-success", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+				} else if githubActionsBuildInfo.LastBuild.State == "passed" {
+					err = setTrendingLabelBotTaskState("build-success", trendingLabel.BranchName, githubActionsBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to build-success: ", err.Error())
 						raven.CaptureError(err, nil)
 						continue
 					}
 					trendingLabel.State = "build-success"
-				} else if travisCiBuildInfo.LastBuild.State == "failed" {
-					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+				} else if githubActionsBuildInfo.LastBuild.State == "failed" {
+					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, githubActionsBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to build-failed: ", err.Error())
 						raven.CaptureError(err, nil)
 						continue
 					}
 					trendingLabel.State = "build-failed"
-				} else if travisCiBuildInfo.LastBuild.State == "canceled" {
-					err = setTrendingLabelBotTaskState("build-canceled", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+				} else if githubActionsBuildInfo.LastBuild.State == "canceled" {
+					err = setTrendingLabelBotTaskState("build-canceled", trendingLabel.BranchName, githubActionsBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to build-canceled: ", err.Error())
 						raven.CaptureError(err, nil)
 						continue
 					}
 					trendingLabel.State = "build-canceled"
-				} else if travisCiBuildInfo.LastBuild.State == "errored" {
-					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, travisCiBuildInfo.JobUrl, trendingLabel.BotTaskId)
+				} else if githubActionsBuildInfo.LastBuild.State == "errored" {
+					err = setTrendingLabelBotTaskState("build-failed", trendingLabel.BranchName, githubActionsBuildInfo.JobUrl, trendingLabel.BotTaskId)
 					if err != nil {
 						log.Error("Couldn't set trending label bot task state to build-failed: ", err.Error())
 						raven.CaptureError(err, nil)

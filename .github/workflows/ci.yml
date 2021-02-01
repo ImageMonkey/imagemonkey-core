@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "Cloning imagemonkey-labels"
           git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists
-          rm -f wordlists/.github
+          rm -rf wordlists/.github
           echo "Creating avatars directory"
           mkdir -p avatars
           cp img/default.png avatars/default.png
@@ -65,7 +65,7 @@ jobs:
         run: |
           echo "Cloning imagemonkey-labels"
           git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists
-          rm -f wordlists/.github
+          rm -rf wordlists/.github
           echo "Creating avatars directory"
           mkdir -p avatars
           cp img/default.png avatars/default.png
@@ -91,7 +91,7 @@ jobs:
         run: |
           echo "Cloning imagemonkey-labels"
           git clone https://github.com/bbernhard/imagemonkey-labels.git wordlists
-          rm -f wordlists/.github
+          rm -rf wordlists/.github
           echo "Creating avatars directory"
           mkdir -p avatars
           cp img/default.png avatars/default.png

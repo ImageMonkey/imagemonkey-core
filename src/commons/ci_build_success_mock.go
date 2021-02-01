@@ -3,28 +3,28 @@
 
 package commons
 
-type TravisCiApi struct {
+type GithubActionsApi struct {
 	token string
 }
 
 
-func NewTravisCiApi(repoOwner string, repo string) *TravisCiApi {
-	return &TravisCiApi {
+func NewGithubActionsApi(repoOwner string, repo string) *GithubActionsApi {
+	return &GithubActionsApi {
 	}
 }
 
-func (p *TravisCiApi) SetToken(token string) {
+func (p *GithubActionsApi) SetToken(token string) {
 	p.token = token
 }
 
-func (p *TravisCiApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
+func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
 	var ciBuildInfo CiBuildInfo
 	ciBuildInfo.LastBuild.State = "passed"
 
 	return ciBuildInfo, nil
 }
 
-func (p *TravisCiApi) StartBuild(branchName string) error {
+func (p *GithubActionsApi) StartBuild(branchName string) error {
 	return nil
 }
 
