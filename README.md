@@ -1,4 +1,4 @@
-# ImageMonkey [![Build Status](https://travis-ci.org/ImageMonkey/imagemonkey-core.svg?branch=develop)](https://travis-ci.org/bbernhard/imagemonkey-core)
+# ImageMonkey [![Build Status](https://github.com/ImageMonkey/imagemonkey-core/workflows/Run%20Unittests%20%26%20Integration%20Tests/badge.svg?branch=master)](https://travis-ci.org/bbernhard/imagemonkey-core)
 
 ---
 
