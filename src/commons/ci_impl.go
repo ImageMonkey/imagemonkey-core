@@ -6,6 +6,7 @@ import (
 	"errors"
 	"gopkg.in/resty.v1"
 	"strconv"
+	"time"
 )
 
 type GithubActionsApi struct {
@@ -23,6 +24,8 @@ type WorkflowRun struct {
 	HtmlUrl    string `json:"html_url"`
 	Status     string `json:"status"`
 	Conclusion string `json:"conclusion"`
+	HeadBranch string `json:"head_branch"`
+	Event      string `json:"event"`
 }
 
 type WorkflowsResult struct {
@@ -46,12 +49,10 @@ func (p *GithubActionsApi) SetToken(token string) {
 	p.token = token
 }
 
-func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
-	var githubActionsBuildInfo CiBuildInfo
+func (p *GithubActionsApi) getBuilds(branchName string) (WorkflowRunsResult, error) {
+	var res WorkflowRunsResult
 
 	url := "https://api.github.com/repos/" + p.repoOwner + "/" + p.repo + "/actions/runs"
-
-	var res WorkflowRunsResult
 
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
@@ -63,21 +64,31 @@ func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) 
 		SetResult(&res).
 		Get(url)
 	if err != nil {
-		return githubActionsBuildInfo, err
+		return res, err
 	}
 
 	if !((resp.StatusCode() >= 200) && (resp.StatusCode() <= 209)) {
-		return githubActionsBuildInfo, errors.New(resp.String())
+		return res, errors.New(resp.String())
+	}
+	return res,nil
+}
+
+func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) {
+	var githubActionsBuildInfo CiBuildInfo
+
+	builds, err := p.getBuilds(branchName)
+	if err != nil {
+		return githubActionsBuildInfo, err
 	}
 
-	if res.TotalCount == 0 {
+	if builds.TotalCount == 0 {
 		return githubActionsBuildInfo, errors.New("No workflow run found")
 	}
 
-	githubActionsBuildInfo.JobUrl = res.WorkflowRuns[0].HtmlUrl
+	githubActionsBuildInfo.JobUrl = builds.WorkflowRuns[0].HtmlUrl
 
-	status := res.WorkflowRuns[0].Status
-	conclusion := res.WorkflowRuns[0].Conclusion
+	status := builds.WorkflowRuns[0].Status
+	conclusion := builds.WorkflowRuns[0].Conclusion
 
 	if status == "queued" {
 		githubActionsBuildInfo.LastBuild.State = "created"
@@ -92,7 +103,7 @@ func (p *GithubActionsApi) GetBuildInfo(branchName string) (CiBuildInfo, error) 
 	} else {
 		githubActionsBuildInfo.LastBuild.State = "failed"
 	}
-	githubActionsBuildInfo.LastBuild.Id = res.WorkflowRuns[0].Id
+	githubActionsBuildInfo.LastBuild.Id = builds.WorkflowRuns[0].Id
 	return githubActionsBuildInfo, nil
 }
 
@@ -132,6 +143,13 @@ func (p *GithubActionsApi) StartBuild(branchName string) error {
 		return err
 	}
 
+	buildsBefore, err := p.getBuilds(branchName)
+	if err != nil {
+		return err
+	}
+
+	numBuildsBefore := buildsBefore.TotalCount
+
 	var req GithubActionsRequest
 	req.Ref = branchName
 
@@ -152,5 +170,24 @@ func (p *GithubActionsApi) StartBuild(branchName string) error {
 		return errors.New(resp.String())
 	}
 
-	return nil
+	//there seems to be no way (yet) to get the build number of the job we manually start.
+	//so in order to determine the build number, we look at the build that was created at last. 
+	//that's not bulletproof, but it should work well enough.
+	for i := 0; i < 5; i++ { //it might take a bit until the build number is available
+		buildsAfter, err := p.getBuilds(branchName)
+		if err != nil {
+			time.Sleep(1*time.Second)
+			continue
+		}
+		numBuildsAfter := buildsAfter.TotalCount
+		if numBuildsAfter == numBuildsBefore + 1 {
+			if buildsAfter.WorkflowRuns[0].HeadBranch == branchName && buildsAfter.WorkflowRuns[0].Event == "workflow_dispatch" {
+				return nil
+			}
+		}
+
+		time.Sleep(1*time.Second)
+	}
+
+	return errors.New("Couldn't get build info after 5 attempts")
 }
