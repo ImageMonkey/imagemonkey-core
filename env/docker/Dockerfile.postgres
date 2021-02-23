@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN cd /tmp && git clone https://github.com/arkhipov/temporal_tables \
     && cd /tmp/temporal_tables \
-    && git checkout ${TEMPORAL_TABLE_COMMIT_HASH}
+    && git checkout ${TEMPORAL_TABLE_COMMIT_HASH} \
 	&& make \
     && make install \
     && rm -rf /tmp/temporal_tables
