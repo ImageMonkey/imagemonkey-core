@@ -1,7 +1,10 @@
-FROM golang:1.14.4-buster
-
-# when changing the base image, change also the debian version here
 ARG DEBIAN_VERSION=buster
+ARG POSTGRES_VERSION=9.6
+
+FROM golang:1.14.4-${DEBIAN_VERSION}
+
+ARG DEBIAN_VERSION
+ARG POSTGRES_VERSION
 
 RUN mkdir -p /home/go/bin
 #ENV GOPATH=/home/go
@@ -38,7 +41,7 @@ COPY env/postgres /tmp/env/postgres
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
 	&& apt-get update \
-	&& apt-get install -y --no-install-recommends python3 postgresql-client-13 python3-pip wget unzip \
+	&& apt-get install -y --no-install-recommends python3 postgresql-client-${POSTGRES_VERSION} python3-pip wget unzip \
 	&& pip3 install selenium requests \
 	&& wget https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip --directory-prefix=/tmp/ \
 	&& cd /tmp \
