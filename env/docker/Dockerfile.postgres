@@ -1,25 +1,25 @@
-FROM postgres:13
-
-ARG TEMPORAL_TABLE_VERSION=1.2.0
+ARG POSTGRES_VERSION=9.6
 ARG POSTGIS_VERSION=2.5
+
+FROM postgres:${POSTGRES_VERSION}
+
+ARG POSTGRES_VERSION
+ARG POSTGIS_VERSION
+
+# the temporal tables extension hasn't released a new version in a long time
+# (although there are some commits on master), so we pin the version to a specific commit hash
+ARG TEMPORAL_TABLE_COMMIT_HASH=3ce22da51f2549e8f8b8fbf2850c63eb3a2f1fbb
+
+
 ENV MONKEY_DB_PASSWORD=
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates build-essential postgresql-13-postgis-${POSTGIS_VERSION} postgresql-13-postgis-${POSTGIS_VERSION}-scripts postgresql-contrib-13 postgresql-server-dev-13 git
+      ca-certificates build-essential postgresql-${POSTGRES_VERSION}-postgis-${POSTGIS_VERSION} postgresql-${POSTGRES_VERSION}-postgis-${POSTGIS_VERSION}-scripts postgresql-contrib-${POSTGRES_VERSION} postgresql-server-dev-${POSTGRES_VERSION} git
 
-#RUN cd /tmp && curl -o /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz -L https://github.com/arkhipov/temporal_tables/archive/v${TEMPORAL_TABLE_VERSION}.tar.gz \
-#    && mkdir -p /tmp/temporal_table \
-#    && mv /tmp/v${TEMPORAL_TABLE_VERSION}.tar.gz /tmp/temporal_table/v${TEMPORAL_TABLE_VERSION}.tar.gz \
-#    && cd /tmp/temporal_table && tar xvf v${TEMPORAL_TABLE_VERSION}.tar.gz \
-#    && cd /tmp/temporal_table/temporal_tables-${TEMPORAL_TABLE_VERSION} \
-#    && make \
-#    && make install \
-#    && rm -rf /tmp_temporal_table
-
-RUN cd /tmp && git clone https://github.com/bbernhard/temporal_tables.git \
+RUN cd /tmp && git clone https://github.com/arkhipov/temporal_tables \
     && cd /tmp/temporal_tables \
-	&& git checkout pg13 \
-    && make \
+    && git checkout ${TEMPORAL_TABLE_COMMIT_HASH} \
+	&& make \
     && make install \
     && rm -rf /tmp/temporal_tables
 
