@@ -942,7 +942,7 @@ func TestLabelSuggestionsUsage3(t *testing.T) {
 	testAnnotate(t, imageIds[0], "test", "",
 						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
 
-	testAnnotate(t, imageIds2[0], "test", "",
+	testAnnotate(t, imageIds[1], "test", "",
 						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
 
 	labelSuggestionsUsageAfter := testGetLabelSuggestionsUsage(t)
