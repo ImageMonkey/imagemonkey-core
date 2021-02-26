@@ -172,6 +172,12 @@ type ImageLabel struct {
 	} `json:"labels"`
 }
 
+type ImageLabelSuggestion struct {
+	Name string `json:"uuid"`
+	NumOfAnnotations int32 `json:"num_of_annotations"`
+	NumOfLabels int32 `json:"num_of_labels"`
+}
+
 type AnnotatedImage struct {
 	Image struct {
 		Id       string `json:"uuid"`

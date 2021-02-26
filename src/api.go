@@ -1772,13 +1772,22 @@ func main() {
 			if includeUnlockedStr == "false" {
 				includeUnlocked = false
 			}
-			
+
 			labelSuggestions, err := imageMonkeyDatabase.GetLabelSuggestions(includeUnlocked)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 			}
 			c.JSON(http.StatusOK, labelSuggestions)
+		})
+
+		router.GET("/v1/label/suggestions/usage", func(c *gin.Context) {
+			labelSuggestionsUsage, err := imageMonkeyDatabase.GetLabelSuggestionsUsage()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, labelSuggestionsUsage)
 		})
 
 		router.GET("/v1/label/graph/:labelgraphname", func(c *gin.Context) {
