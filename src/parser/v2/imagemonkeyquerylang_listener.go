@@ -19,6 +19,9 @@ type ImagemonkeyQueryLangListener interface {
 	// EnterParenthesesExpression is called when entering the parenthesesExpression production.
 	EnterParenthesesExpression(c *ParenthesesExpressionContext)
 
+	// EnterImageNumLabelsExpression is called when entering the imageNumLabelsExpression production.
+	EnterImageNumLabelsExpression(c *ImageNumLabelsExpressionContext)
+
 	// EnterAndExpression is called when entering the andExpression production.
 	EnterAndExpression(c *AndExpressionContext)
 
@@ -57,6 +60,9 @@ type ImagemonkeyQueryLangListener interface {
 
 	// ExitParenthesesExpression is called when exiting the parenthesesExpression production.
 	ExitParenthesesExpression(c *ParenthesesExpressionContext)
+
+	// ExitImageNumLabelsExpression is called when exiting the imageNumLabelsExpression production.
+	ExitImageNumLabelsExpression(c *ImageNumLabelsExpressionContext)
 
 	// ExitAndExpression is called when exiting the andExpression production.
 	ExitAndExpression(c *AndExpressionContext)

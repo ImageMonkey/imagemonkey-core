@@ -1566,6 +1566,7 @@ func main() {
 			queryParser.AllowAnnotationCoverage(true)
 			queryParser.AllowImageCollection(true)
 			queryParser.AllowImageHasLabels(true)
+			queryParser.AllowImageNumLabels(true)
 			parseResult, err := queryParser.Parse()
 			if err != nil {
 				c.JSON(422, gin.H{"error": err.Error()})
@@ -2002,6 +2003,7 @@ func main() {
 				queryParser.AllowAnnotationCoverage(true)
 				queryParser.AllowImageCollection(true)
 				queryParser.AllowImageHasLabels(true)
+				queryParser.AllowImageNumLabels(true)
 				parseResult, err := queryParser.Parse()
 				if err != nil {
 					c.JSON(422, gin.H{"error": err.Error()})
@@ -2018,11 +2020,6 @@ func main() {
 				apiUser.ClientFingerprint = getBrowserFingerprint(c)
 				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-				if len(parseResult.QueryValues) == 0 {
-					c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid query!"})
-					return
-				}
-				
 				includeLabelSuggestions := false
 				if apiUser.Name != "" {
 					includeLabelSuggestions = true

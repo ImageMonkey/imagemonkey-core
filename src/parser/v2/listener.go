@@ -54,6 +54,7 @@ type imagemonkeyQueryLangListener struct {
 	pos int
 	allowImageHeight bool
 	allowImageWidth bool
+	allowImageNumLabels bool
 	allowAnnotationCoverage bool
 	allowOrderByValidation bool
 	allowImageCollection bool
@@ -232,6 +233,29 @@ func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightE
 					l.push(stackEntry)
 				} else {
 					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+				}
+			}
+		}
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitImageNumLabelsExpression(c *ImageNumLabelsExpressionContext) {
+
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageNumLabelsVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumLabelsVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowImageNumLabels {
+					operator := tokens[0].GetText()
+					val := "q.image_num_labels" + operator + imageNumLabelsVal
+
+					stackEntry := ParseResult{Query: val}
+					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}

@@ -1855,7 +1855,8 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                                   i.unlocked as image_unlocked, coll.image_collection as image_collection, 
 								  array_agg(a.is_productive) FILTER(WHERE %s) as label_types,
 								  array_agg(a.accessor) FILTER(WHERE %s) as filtered_accessors,
-								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled
+								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled,
+								  array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) image_num_labels
                                   FROM image i 
 
 								  JOIN (

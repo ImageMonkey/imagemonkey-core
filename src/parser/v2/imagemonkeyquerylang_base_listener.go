@@ -48,6 +48,14 @@ func (s *BaseImagemonkeyQueryLangListener) EnterParenthesesExpression(ctx *Paren
 func (s *BaseImagemonkeyQueryLangListener) ExitParenthesesExpression(ctx *ParenthesesExpressionContext) {
 }
 
+// EnterImageNumLabelsExpression is called when production imageNumLabelsExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterImageNumLabelsExpression(ctx *ImageNumLabelsExpressionContext) {
+}
+
+// ExitImageNumLabelsExpression is called when production imageNumLabelsExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitImageNumLabelsExpression(ctx *ImageNumLabelsExpressionContext) {
+}
+
 // EnterAndExpression is called when production andExpression is entered.
 func (s *BaseImagemonkeyQueryLangListener) EnterAndExpression(ctx *AndExpressionContext) {}
 
