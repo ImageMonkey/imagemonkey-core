@@ -951,3 +951,44 @@ func TestLabelSuggestionsUsage3(t *testing.T) {
 	equals(t, labelSuggestionsUsageAfter[0].NumOfAnnotations, int32(2))
 	equals(t, labelSuggestionsUsageAfter[0].Name, "test")
 }
+
+func TestBrowseImageNumLabels(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseLabel(t, "image.num_labels < 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_labels = 1", "", 1, 200)
+	testBrowseLabel(t, "image.num_labels > 1", "", 0, 200)
+	testBrowseLabel(t, "apple & image.num_labels = 1", "", 1, 200)
+	testBrowseLabel(t, "egg & image.num_labels = 1", "", 0, 200)
+	testBrowseLabel(t, "apple | image.num_labels = 1", "", 1, 200)
+}
+
+func TestBrowseImageNumLabels1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseLabel(t, "image.num_labels < AAA", "", 0, 422)
+	testBrowseLabel(t, "image.num_labels = B", "", 0, 422)
+	testBrowseLabel(t, "image.num_labels > C", "", 0, 422)
+}
+
+func TestBrowseImageNumLabels2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testBrowseLabel(t, "image.num_labels < 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_labels = 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_labels > 2", "", 0, 200)
+}

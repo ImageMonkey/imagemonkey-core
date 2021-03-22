@@ -637,3 +637,26 @@ func TestQueryImageWithSlashAndUnderscoreInLabelName(t *testing.T) {
 	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[]")
 	equals(t, parseResult.QueryValues, []interface{}{"blue/red_fish"})
 }
+
+func TestQueryImageNumLabels1(t *testing.T) {
+	queryParser := NewQueryParser("image.num_labels > 50")
+	queryParser.AllowImageNumLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 0)
+	equals(t, parseResult.Query, "q.image_num_labels>50")
+}
+
+func TestQueryImageNumLabels2(t *testing.T) {
+	queryParser := NewQueryParser("image.num_labels = 1")
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowImageCollection(true)
+	queryParser.AllowImageHasLabels(true)
+	queryParser.AllowImageNumLabels(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 0)
+	equals(t, parseResult.Query, "q.image_num_labels=1")
+}

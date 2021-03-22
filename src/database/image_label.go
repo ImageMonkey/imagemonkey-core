@@ -582,7 +582,8 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                             (
                                 SELECT q2.image_id as image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
                                 i.unlocked as image_unlocked, i.key as image_key, coll.image_collection as image_collection,
-                                CASE WHEN array_length(COALESCE(accessors, ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled
+                                CASE WHEN array_length(COALESCE(accessors, ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled,
+								array_length(COALESCE(accessors, ARRAY[]::text[]), 1) as image_num_labels
                                 FROM
                                 (
                                     SELECT q1.image_id, (array_agg(label) FILTER (WHERE label is not null))::text[] as accessors, 

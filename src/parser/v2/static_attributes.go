@@ -9,11 +9,11 @@ const (
 
 
 func GetStaticQueryAttributes(view UiView) []string {
-	if view == LabelView { 
-		return []string{"image.width", "image.height", "annotation.coverage", "image.unlabeled='true'", "image.unlabeled='false'"}
+	if view == LabelView {
+		return []string{"image.width", "image.height", "annotation.coverage", "image.unlabeled='true'", "image.unlabeled='false'", "image.num_labels"}
 	}
-	if view == AnnotationView { 
-		return []string{"image.width", "image.height", "annotation.coverage", "image.unlabeled='true'", "image.unlabeled='false'"}
+	if view == AnnotationView {
+		return []string{"image.width", "image.height", "annotation.coverage", "image.unlabeled='true'", "image.unlabeled='false'", "image.num_labels"}
 	}
 	return []string{}
 }
