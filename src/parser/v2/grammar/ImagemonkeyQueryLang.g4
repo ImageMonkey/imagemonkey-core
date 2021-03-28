@@ -18,6 +18,7 @@ exp
     |   IMAGE_HEIGHT_PREFIX OPERATOR VAL PIXEL                      # imageHeightExpression
     |   IMAGE_WIDTH_PREFIX OPERATOR VAL PIXEL                       # imageWidthExpression
     |   IMAGE_NUM_LABELS_PREFIX OPERATOR VAL                        # imageNumLabelsExpression
+    |   IMAGE_NUM_ANNOTATIONS_PREFIX OPERATOR VAL                   # imageNumAnnotationsExpression
     |   ASSIGNMENT                                                  # assignmentExpression
     |   LABEL                                                       # labelExpression
     |   UUID                                                        # uuidExpression
@@ -50,6 +51,7 @@ ANNOTATION_COVERAGE_PREFIX  : 'annotation.coverage';
 IMAGE_WIDTH_PREFIX          : 'image.width';
 IMAGE_HEIGHT_PREFIX         : 'image.height';
 IMAGE_NUM_LABELS_PREFIX     : 'image.num_labels';
+IMAGE_NUM_ANNOTATIONS_PREFIX: 'image.num_annotations';
 PERCENT                     : '%';
 PIXEL                       : 'px';
 

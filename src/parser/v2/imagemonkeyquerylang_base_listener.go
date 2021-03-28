@@ -62,6 +62,14 @@ func (s *BaseImagemonkeyQueryLangListener) EnterAndExpression(ctx *AndExpression
 // ExitAndExpression is called when production andExpression is exited.
 func (s *BaseImagemonkeyQueryLangListener) ExitAndExpression(ctx *AndExpressionContext) {}
 
+// EnterImageNumAnnotationsExpression is called when production imageNumAnnotationsExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterImageNumAnnotationsExpression(ctx *ImageNumAnnotationsExpressionContext) {
+}
+
+// ExitImageNumAnnotationsExpression is called when production imageNumAnnotationsExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitImageNumAnnotationsExpression(ctx *ImageNumAnnotationsExpressionContext) {
+}
+
 // EnterImageWidthExpression is called when production imageWidthExpression is entered.
 func (s *BaseImagemonkeyQueryLangListener) EnterImageWidthExpression(ctx *ImageWidthExpressionContext) {
 }

@@ -55,6 +55,7 @@ type imagemonkeyQueryLangListener struct {
 	allowImageHeight bool
 	allowImageWidth bool
 	allowImageNumLabels bool
+	allowImageNumAnnotations bool
 	allowAnnotationCoverage bool
 	allowOrderByValidation bool
 	allowImageCollection bool
@@ -251,6 +252,29 @@ func (l *imagemonkeyQueryLangListener) ExitImageNumLabelsExpression(c *ImageNumL
 				if l.allowImageNumLabels {
 					operator := tokens[0].GetText()
 					val := "q.image_num_labels" + operator + imageNumLabelsVal
+
+					stackEntry := ParseResult{Query: val}
+					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
+														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+				}
+			}
+		}
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitImageNumAnnotationsExpression(c *ImageNumAnnotationsExpressionContext) {
+
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageNumAnnotationsVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumAnnotationsVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowImageNumAnnotations {
+					operator := tokens[0].GetText()
+					val := "q.image_num_annotations" + operator + imageNumAnnotationsVal
 
 					stackEntry := ParseResult{Query: val}
 					l.push(stackEntry)

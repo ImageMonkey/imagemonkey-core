@@ -660,3 +660,27 @@ func TestQueryImageNumLabels2(t *testing.T) {
 	equals(t, len(parseResult.QueryValues), 0)
 	equals(t, parseResult.Query, "q.image_num_labels=1")
 }
+
+func TestQueryImageNumAnnotations1(t *testing.T) {
+	queryParser := NewQueryParser("image.num_annotations > 50")
+	queryParser.AllowImageNumAnnotations(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 0)
+	equals(t, parseResult.Query, "q.image_num_annotations>50")
+}
+
+func TestQueryImageNumAnnotations2(t *testing.T) {
+	queryParser := NewQueryParser("image.num_annotations = 1")
+	queryParser.AllowImageWidth(true)
+	queryParser.AllowImageHeight(true)
+	queryParser.AllowAnnotationCoverage(true)
+	queryParser.AllowImageCollection(true)
+	queryParser.AllowImageHasLabels(true)
+	queryParser.AllowImageNumLabels(true)
+	queryParser.AllowImageNumAnnotations(true)
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, len(parseResult.QueryValues), 0)
+	equals(t, parseResult.Query, "q.image_num_annotations=1")
+}

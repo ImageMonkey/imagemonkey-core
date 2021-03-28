@@ -14,6 +14,7 @@ type QueryParser struct {
 	allowImageWidth bool
 	allowImageHeight bool
 	allowImageNumLabels bool
+	allowImageNumAnnotations bool
 	allowAnnotationCoverage bool
 	version int
 	allowOrderByValidation bool
@@ -56,6 +57,7 @@ func NewQueryParser(query string) *QueryParser {
         allowImageWidth: true,
 		allowImageHeight: true,
 		allowImageNumLabels: false,
+		allowImageNumAnnotations: false,
 		allowAnnotationCoverage: true,
         version: 2,
         allowOrderByValidation: false,
@@ -91,6 +93,10 @@ func (p *QueryParser) AllowImageNumLabels(allow bool) {
 	p.allowImageNumLabels = allow
 }
 
+func (p *QueryParser) AllowImageNumAnnotations(allow bool) {
+	p.allowImageNumAnnotations = allow
+}
+
 func (p *QueryParser) SetOffset(offset int) {
 	p.offset = offset
 }
@@ -110,6 +116,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		allowImageWidth: p.allowImageWidth,
 		allowImageHeight: p.allowImageHeight,
 		allowImageNumLabels: p.allowImageNumLabels,
+		allowImageNumAnnotations: p.allowImageNumAnnotations,
 		allowAnnotationCoverage: p.allowAnnotationCoverage,
 		allowOrderByValidation: p.allowOrderByValidation,
 		allowImageCollection: p.allowImageCollection,
@@ -121,7 +128,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		query: p.query,
 		resultOrder: ResultOrder{Direction: ResultOrderDefaultDirection, Type: OrderByDefault},
 	}
-	errorListener := NewCustomErrorListener() 
+	errorListener := NewCustomErrorListener()
 	errorListener.query = p.query
 	parser := NewImagemonkeyQueryLangParser(stream)
 	parser.RemoveErrorListeners() //remove default error listeners
