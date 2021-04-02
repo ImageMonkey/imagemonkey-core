@@ -744,3 +744,22 @@ func TestBrowseAnnotationQueryNoLabelsImage2(t *testing.T) {
 
 	testBrowseAnnotation(t, "apple | image.unlabeled='true'", 2, "")
 }
+
+func TestBrowseImageNumAnnotations(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	//imageId, err := db.GetLatestDonatedImageId()
+	//ok(t, err)
+
+	testBrowseAnnotation(t, "image.num_annotations < 2", 1, "")
+	testBrowseAnnotation(t, "image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "image.num_annotations > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "egg & image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "apple | image.num_annotations = 1", 1, "")
+}
+
+
