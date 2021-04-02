@@ -1837,19 +1837,25 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 	}
 
 	q := fmt.Sprintf(`WITH num_of_annotations_per_image AS (
-						SELECT q.image_id, SUM(q.num_annotations) as num_annotations
+						SELECT q.image_id as image_id, SUM(q.num_annotations) as num_annotations
 						FROM
 						(
 						SELECT i.id AS image_id, count(*) AS num_annotations
 						FROM image i
-						JOIN image_annotation a ON a.image_id = i.id
+						JOIN image_validation v ON v.image_id = i.id
+						WHERE v.label_id NOT IN (
+							SELECT a.label_id FROM image_annotation a
+						)
 						GROUP BY i.id
 
 						UNION ALL
 
 						SELECT i.id AS image_id, count(*) AS num_annotations
 						FROM image i
-						JOIN image_annotation_suggestion a ON a.image_id = i.id
+						JOIN image_label_suggestion s ON s.image_id = i.id
+						WHERE s.image_id NOT IN (
+							SELECT a.label_suggestion_id FROM image_annotation_suggestion a
+						)
 						GROUP BY i.id
 						) q
 						GROUP BY q.image_id
