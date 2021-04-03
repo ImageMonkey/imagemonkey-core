@@ -49,15 +49,15 @@ var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 
 var literalNames = []string{
 	"", "'!'", "'annotation.coverage'", "'image.width'", "'image.height'",
-	"'image.num_labels'", "'image.num_annotations'", "'%'", "'px'", "", "",
-	"", "", "", "", "", "", "", "'&'", "'|'", "'~'", "'('", "')'",
+	"'image.num_labels'", "'image.num_open_annotation_tasks'", "'%'", "'px'",
+	"", "", "", "", "", "", "", "", "", "'&'", "'|'", "'~'", "'('", "')'",
 }
 var symbolicNames = []string{
 	"", "SEP", "ANNOTATION_COVERAGE_PREFIX", "IMAGE_WIDTH_PREFIX", "IMAGE_HEIGHT_PREFIX",
-	"IMAGE_NUM_LABELS_PREFIX", "IMAGE_NUM_ANNOTATIONS_PREFIX", "PERCENT", "PIXEL",
-	"OPERATOR", "ASSIGNMENT", "ORDER_BY", "ORDER_BY_VALIDATION_DESC", "ORDER_BY_VALIDATION_ASC",
-	"ORDER_BY_VALIDATION", "LABEL", "UUID", "VAL", "AND", "OR", "NOT", "LPAR",
-	"RPAR", "SKIPPED_TOKENS",
+	"IMAGE_NUM_LABELS_PREFIX", "IMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX", "PERCENT",
+	"PIXEL", "OPERATOR", "ASSIGNMENT", "ORDER_BY", "ORDER_BY_VALIDATION_DESC",
+	"ORDER_BY_VALIDATION_ASC", "ORDER_BY_VALIDATION", "LABEL", "UUID", "VAL",
+	"AND", "OR", "NOT", "LPAR", "RPAR", "SKIPPED_TOKENS",
 }
 
 var ruleNames = []string{
@@ -91,30 +91,30 @@ func NewImagemonkeyQueryLangParser(input antlr.TokenStream) *ImagemonkeyQueryLan
 
 // ImagemonkeyQueryLangParser tokens.
 const (
-	ImagemonkeyQueryLangParserEOF                          = antlr.TokenEOF
-	ImagemonkeyQueryLangParserSEP                          = 1
-	ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX   = 2
-	ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX           = 3
-	ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX          = 4
-	ImagemonkeyQueryLangParserIMAGE_NUM_LABELS_PREFIX      = 5
-	ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX = 6
-	ImagemonkeyQueryLangParserPERCENT                      = 7
-	ImagemonkeyQueryLangParserPIXEL                        = 8
-	ImagemonkeyQueryLangParserOPERATOR                     = 9
-	ImagemonkeyQueryLangParserASSIGNMENT                   = 10
-	ImagemonkeyQueryLangParserORDER_BY                     = 11
-	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC     = 12
-	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC      = 13
-	ImagemonkeyQueryLangParserORDER_BY_VALIDATION          = 14
-	ImagemonkeyQueryLangParserLABEL                        = 15
-	ImagemonkeyQueryLangParserUUID                         = 16
-	ImagemonkeyQueryLangParserVAL                          = 17
-	ImagemonkeyQueryLangParserAND                          = 18
-	ImagemonkeyQueryLangParserOR                           = 19
-	ImagemonkeyQueryLangParserNOT                          = 20
-	ImagemonkeyQueryLangParserLPAR                         = 21
-	ImagemonkeyQueryLangParserRPAR                         = 22
-	ImagemonkeyQueryLangParserSKIPPED_TOKENS               = 23
+	ImagemonkeyQueryLangParserEOF                                    = antlr.TokenEOF
+	ImagemonkeyQueryLangParserSEP                                    = 1
+	ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX             = 2
+	ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX                     = 3
+	ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX                    = 4
+	ImagemonkeyQueryLangParserIMAGE_NUM_LABELS_PREFIX                = 5
+	ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX = 6
+	ImagemonkeyQueryLangParserPERCENT                                = 7
+	ImagemonkeyQueryLangParserPIXEL                                  = 8
+	ImagemonkeyQueryLangParserOPERATOR                               = 9
+	ImagemonkeyQueryLangParserASSIGNMENT                             = 10
+	ImagemonkeyQueryLangParserORDER_BY                               = 11
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC               = 12
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC                = 13
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION                    = 14
+	ImagemonkeyQueryLangParserLABEL                                  = 15
+	ImagemonkeyQueryLangParserUUID                                   = 16
+	ImagemonkeyQueryLangParserVAL                                    = 17
+	ImagemonkeyQueryLangParserAND                                    = 18
+	ImagemonkeyQueryLangParserOR                                     = 19
+	ImagemonkeyQueryLangParserNOT                                    = 20
+	ImagemonkeyQueryLangParserLPAR                                   = 21
+	ImagemonkeyQueryLangParserRPAR                                   = 22
+	ImagemonkeyQueryLangParserSKIPPED_TOKENS                         = 23
 )
 
 // ImagemonkeyQueryLangParser rules.
@@ -419,6 +419,48 @@ func (s *OrExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
+type ImageNumOpenAnnotationTasksExpressionContext struct {
+	*ExpContext
+}
+
+func NewImageNumOpenAnnotationTasksExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageNumOpenAnnotationTasksExpressionContext {
+	var p = new(ImageNumOpenAnnotationTasksExpressionContext)
+
+	p.ExpContext = NewEmptyExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpContext))
+
+	return p
+}
+
+func (s *ImageNumOpenAnnotationTasksExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *ImageNumOpenAnnotationTasksExpressionContext) IMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX, 0)
+}
+
+func (s *ImageNumOpenAnnotationTasksExpressionContext) OPERATOR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserOPERATOR, 0)
+}
+
+func (s *ImageNumOpenAnnotationTasksExpressionContext) VAL() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserVAL, 0)
+}
+
+func (s *ImageNumOpenAnnotationTasksExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterImageNumOpenAnnotationTasksExpression(s)
+	}
+}
+
+func (s *ImageNumOpenAnnotationTasksExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitImageNumOpenAnnotationTasksExpression(s)
+	}
+}
+
 type ParenthesesExpressionContext struct {
 	*ExpContext
 }
@@ -563,48 +605,6 @@ func (s *AndExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 func (s *AndExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
 		listenerT.ExitAndExpression(s)
-	}
-}
-
-type ImageNumAnnotationsExpressionContext struct {
-	*ExpContext
-}
-
-func NewImageNumAnnotationsExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageNumAnnotationsExpressionContext {
-	var p = new(ImageNumAnnotationsExpressionContext)
-
-	p.ExpContext = NewEmptyExpContext()
-	p.parser = parser
-	p.CopyFrom(ctx.(*ExpContext))
-
-	return p
-}
-
-func (s *ImageNumAnnotationsExpressionContext) GetRuleContext() antlr.RuleContext {
-	return s
-}
-
-func (s *ImageNumAnnotationsExpressionContext) IMAGE_NUM_ANNOTATIONS_PREFIX() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX, 0)
-}
-
-func (s *ImageNumAnnotationsExpressionContext) OPERATOR() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserOPERATOR, 0)
-}
-
-func (s *ImageNumAnnotationsExpressionContext) VAL() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserVAL, 0)
-}
-
-func (s *ImageNumAnnotationsExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.EnterImageNumAnnotationsExpression(s)
-	}
-}
-
-func (s *ImageNumAnnotationsExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.ExitImageNumAnnotationsExpression(s)
 	}
 }
 
@@ -993,13 +993,13 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 			p.Match(ImagemonkeyQueryLangParserVAL)
 		}
 
-	case ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX:
-		localctx = NewImageNumAnnotationsExpressionContext(p, localctx)
+	case ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX:
+		localctx = NewImageNumOpenAnnotationTasksExpressionContext(p, localctx)
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
 			p.SetState(36)
-			p.Match(ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX)
+			p.Match(ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX)
 		}
 		{
 			p.SetState(37)

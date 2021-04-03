@@ -751,12 +751,12 @@ func TestBrowseImageNumAnnotations(t *testing.T) {
 
 	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
 
-	testBrowseAnnotation(t, "image.num_annotations < 2", 1, "")
-	testBrowseAnnotation(t, "image.num_annotations = 1", 1, "")
-	testBrowseAnnotation(t, "image.num_annotations > 1", 0, "")
-	testBrowseAnnotation(t, "apple & image.num_annotations = 1", 1, "")
-	testBrowseAnnotation(t, "egg & image.num_annotations = 1", 0, "")
-	testBrowseAnnotation(t, "apple | image.num_annotations = 1", 1, "")
+	testBrowseAnnotation(t, "image.num_open_annotation_tasks < 2", 1, "")
+	testBrowseAnnotation(t, "image.num_open_annotation_tasks = 1", 1, "")
+	testBrowseAnnotation(t, "image.num_open_annotation_tasks > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_open_annotation_tasks = 1", 1, "")
+	testBrowseAnnotation(t, "egg & image.num_open_annotation_tasks = 1", 0, "")
+	testBrowseAnnotation(t, "apple | image.num_open_annotation_tasks = 1", 1, "")
 }
 
 
@@ -772,12 +772,12 @@ func TestBrowseImageNumAnnotations1(t *testing.T) {
 	testAnnotate(t, imageId, "apple", "",
 						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
 
-	testBrowseAnnotation(t, "image.num_annotations < 2", 0, "")
-	testBrowseAnnotation(t, "image.num_annotations = 1", 0, "")
-	testBrowseAnnotation(t, "image.num_annotations > 1", 0, "")
-	testBrowseAnnotation(t, "apple & image.num_annotations = 1", 0, "")
-	testBrowseAnnotation(t, "egg & image.num_annotations = 1", 0, "")
-	testBrowseAnnotation(t, "apple | image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "image.num_open_annotation_tasks < 2", 0, "")
+	testBrowseAnnotation(t, "image.num_open_annotation_tasks = 1", 0, "")
+	testBrowseAnnotation(t, "image.num_open_annotation_tasks > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_open_annotation_tasks = 1", 0, "")
+	testBrowseAnnotation(t, "egg & image.num_open_annotation_tasks = 1", 0, "")
+	testBrowseAnnotation(t, "apple | image.num_open_annotation_tasks = 1", 0, "")
 }
 
 

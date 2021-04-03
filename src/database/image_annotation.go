@@ -1881,7 +1881,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 								  array_agg(a.accessor) FILTER(WHERE %s) as filtered_accessors,
 								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled,
 								  array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) as image_num_labels,
-								  COALESCE(n.num_annotations, 0) as image_num_annotations
+								  COALESCE(n.num_annotations, 0) as image_num_open_annotation_tasks
                                   FROM image i
 								  JOIN (
 									SELECT v.uuid as validation_uuid, a.accessor as accessor,

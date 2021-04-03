@@ -55,7 +55,7 @@ type imagemonkeyQueryLangListener struct {
 	allowImageHeight bool
 	allowImageWidth bool
 	allowImageNumLabels bool
-	allowImageNumAnnotations bool
+	allowImageNumOpenAnnotationTasks bool
 	allowAnnotationCoverage bool
 	allowOrderByValidation bool
 	allowImageCollection bool
@@ -264,17 +264,17 @@ func (l *imagemonkeyQueryLangListener) ExitImageNumLabelsExpression(c *ImageNumL
 	}
 }
 
-func (l *imagemonkeyQueryLangListener) ExitImageNumAnnotationsExpression(c *ImageNumAnnotationsExpressionContext) {
+func (l *imagemonkeyQueryLangListener) ExitImageNumOpenAnnotationTasksExpression(c *ImageNumOpenAnnotationTasksExpressionContext) {
 
 	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
 	if len(tokens) > 0 {
-		imageNumAnnotationsVal := tokens[0].GetText()
-		if _, err := strconv.Atoi(imageNumAnnotationsVal); err == nil {
+		imageNumOpenAnnotationTasksVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumOpenAnnotationTasksVal); err == nil {
 			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
 			if len(tokens) > 0 {
-				if l.allowImageNumAnnotations {
+				if l.allowImageNumOpenAnnotationTasks {
 					operator := tokens[0].GetText()
-					val := "q.image_num_annotations" + operator + imageNumAnnotationsVal
+					val := "q.image_num_open_annotation_tasks" + operator + imageNumOpenAnnotationTasksVal
 
 					stackEntry := ParseResult{Query: val}
 					l.push(stackEntry)

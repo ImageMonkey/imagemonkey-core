@@ -14,7 +14,7 @@ type QueryParser struct {
 	allowImageWidth bool
 	allowImageHeight bool
 	allowImageNumLabels bool
-	allowImageNumAnnotations bool
+	allowImageNumOpenAnnotationTasks bool
 	allowAnnotationCoverage bool
 	version int
 	allowOrderByValidation bool
@@ -57,7 +57,7 @@ func NewQueryParser(query string) *QueryParser {
         allowImageWidth: true,
 		allowImageHeight: true,
 		allowImageNumLabels: false,
-		allowImageNumAnnotations: false,
+		allowImageNumOpenAnnotationTasks: false,
 		allowAnnotationCoverage: true,
         version: 2,
         allowOrderByValidation: false,
@@ -93,8 +93,8 @@ func (p *QueryParser) AllowImageNumLabels(allow bool) {
 	p.allowImageNumLabels = allow
 }
 
-func (p *QueryParser) AllowImageNumAnnotations(allow bool) {
-	p.allowImageNumAnnotations = allow
+func (p *QueryParser) AllowImageNumOpenAnnotationTasks(allow bool) {
+	p.allowImageNumOpenAnnotationTasks = allow
 }
 
 func (p *QueryParser) SetOffset(offset int) {
@@ -116,7 +116,7 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 		allowImageWidth: p.allowImageWidth,
 		allowImageHeight: p.allowImageHeight,
 		allowImageNumLabels: p.allowImageNumLabels,
-		allowImageNumAnnotations: p.allowImageNumAnnotations,
+		allowImageNumOpenAnnotationTasks: p.allowImageNumOpenAnnotationTasks,
 		allowAnnotationCoverage: p.allowAnnotationCoverage,
 		allowOrderByValidation: p.allowOrderByValidation,
 		allowImageCollection: p.allowImageCollection,

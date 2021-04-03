@@ -16,6 +16,9 @@ type ImagemonkeyQueryLangListener interface {
 	// EnterOrExpression is called when entering the orExpression production.
 	EnterOrExpression(c *OrExpressionContext)
 
+	// EnterImageNumOpenAnnotationTasksExpression is called when entering the imageNumOpenAnnotationTasksExpression production.
+	EnterImageNumOpenAnnotationTasksExpression(c *ImageNumOpenAnnotationTasksExpressionContext)
+
 	// EnterParenthesesExpression is called when entering the parenthesesExpression production.
 	EnterParenthesesExpression(c *ParenthesesExpressionContext)
 
@@ -24,9 +27,6 @@ type ImagemonkeyQueryLangListener interface {
 
 	// EnterAndExpression is called when entering the andExpression production.
 	EnterAndExpression(c *AndExpressionContext)
-
-	// EnterImageNumAnnotationsExpression is called when entering the imageNumAnnotationsExpression production.
-	EnterImageNumAnnotationsExpression(c *ImageNumAnnotationsExpressionContext)
 
 	// EnterImageWidthExpression is called when entering the imageWidthExpression production.
 	EnterImageWidthExpression(c *ImageWidthExpressionContext)
@@ -61,6 +61,9 @@ type ImagemonkeyQueryLangListener interface {
 	// ExitOrExpression is called when exiting the orExpression production.
 	ExitOrExpression(c *OrExpressionContext)
 
+	// ExitImageNumOpenAnnotationTasksExpression is called when exiting the imageNumOpenAnnotationTasksExpression production.
+	ExitImageNumOpenAnnotationTasksExpression(c *ImageNumOpenAnnotationTasksExpressionContext)
+
 	// ExitParenthesesExpression is called when exiting the parenthesesExpression production.
 	ExitParenthesesExpression(c *ParenthesesExpressionContext)
 
@@ -69,9 +72,6 @@ type ImagemonkeyQueryLangListener interface {
 
 	// ExitAndExpression is called when exiting the andExpression production.
 	ExitAndExpression(c *AndExpressionContext)
-
-	// ExitImageNumAnnotationsExpression is called when exiting the imageNumAnnotationsExpression production.
-	ExitImageNumAnnotationsExpression(c *ImageNumAnnotationsExpressionContext)
 
 	// ExitImageWidthExpression is called when exiting the imageWidthExpression production.
 	ExitImageWidthExpression(c *ImageWidthExpressionContext)
