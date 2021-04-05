@@ -745,7 +745,7 @@ func TestBrowseAnnotationQueryNoLabelsImage2(t *testing.T) {
 	testBrowseAnnotation(t, "apple | image.unlabeled='true'", 2, "")
 }
 
-func TestBrowseImageNumAnnotations(t *testing.T) {
+func TestBrowseAnnotationImageNumOpenAnnotationTasks1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -760,7 +760,7 @@ func TestBrowseImageNumAnnotations(t *testing.T) {
 }
 
 
-func TestBrowseImageNumAnnotations1(t *testing.T) {
+func TestBrowseAnnotationImageNumOpenAnnotationTasks2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -778,6 +778,50 @@ func TestBrowseImageNumAnnotations1(t *testing.T) {
 	testBrowseAnnotation(t, "apple & image.num_open_annotation_tasks = 1", 0, "")
 	testBrowseAnnotation(t, "egg & image.num_open_annotation_tasks = 1", 0, "")
 	testBrowseAnnotation(t, "apple | image.num_open_annotation_tasks = 1", 0, "")
+}
+
+func TestBrowseAnnotationImageNumLabels1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "apple", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+	//testBrowseAnnotate only returns images with open annotation tasks.
+	//that's e.g why "image.num_labels < 2" returns 0 although there are
+	//labeled images(un the example every label is already annotated).
+	testBrowseAnnotation(t, "image.num_labels < 2", 0, "")
+	testBrowseAnnotation(t, "image.num_labels = 1", 0, "")
+	testBrowseAnnotation(t, "image.num_labels > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_labels = 1", 0, "")
+	testBrowseAnnotation(t, "egg & image.num_labels = 1", 0, "")
+	testBrowseAnnotation(t, "apple | image.num_labels = 1", 0, "")
+}
+
+func TestBrowseAnnotationImageNumLabels2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testAnnotate(t, imageId, "apple", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testBrowseAnnotation(t, "image.num_labels < 2", 1, "")
+	testBrowseAnnotation(t, "image.num_labels = 1", 1, "")
+	testBrowseAnnotation(t, "image.num_labels > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_labels = 1", 0, "")
+	testBrowseAnnotation(t, "egg & image.num_labels = 1", 1, "")
+	testBrowseAnnotation(t, "apple | image.num_labels = 1", 1, "")
 }
 
 
