@@ -26,34 +26,12 @@ func (s *BaseImagemonkeyQueryLangListener) EnterExpression(ctx *ExpressionContex
 // ExitExpression is called when production expression is exited.
 func (s *BaseImagemonkeyQueryLangListener) ExitExpression(ctx *ExpressionContext) {}
 
-// EnterImageHeightExpression is called when production imageHeightExpression is entered.
-func (s *BaseImagemonkeyQueryLangListener) EnterImageHeightExpression(ctx *ImageHeightExpressionContext) {
-}
-
-// ExitImageHeightExpression is called when production imageHeightExpression is exited.
-func (s *BaseImagemonkeyQueryLangListener) ExitImageHeightExpression(ctx *ImageHeightExpressionContext) {
-}
-
-// EnterOrExpression is called when production orExpression is entered.
-func (s *BaseImagemonkeyQueryLangListener) EnterOrExpression(ctx *OrExpressionContext) {}
-
-// ExitOrExpression is called when production orExpression is exited.
-func (s *BaseImagemonkeyQueryLangListener) ExitOrExpression(ctx *OrExpressionContext) {}
-
 // EnterImageNumOpenAnnotationTasksExpression is called when production imageNumOpenAnnotationTasksExpression is entered.
 func (s *BaseImagemonkeyQueryLangListener) EnterImageNumOpenAnnotationTasksExpression(ctx *ImageNumOpenAnnotationTasksExpressionContext) {
 }
 
 // ExitImageNumOpenAnnotationTasksExpression is called when production imageNumOpenAnnotationTasksExpression is exited.
 func (s *BaseImagemonkeyQueryLangListener) ExitImageNumOpenAnnotationTasksExpression(ctx *ImageNumOpenAnnotationTasksExpressionContext) {
-}
-
-// EnterParenthesesExpression is called when production parenthesesExpression is entered.
-func (s *BaseImagemonkeyQueryLangListener) EnterParenthesesExpression(ctx *ParenthesesExpressionContext) {
-}
-
-// ExitParenthesesExpression is called when production parenthesesExpression is exited.
-func (s *BaseImagemonkeyQueryLangListener) ExitParenthesesExpression(ctx *ParenthesesExpressionContext) {
 }
 
 // EnterImageNumLabelsExpression is called when production imageNumLabelsExpression is entered.
@@ -63,12 +41,6 @@ func (s *BaseImagemonkeyQueryLangListener) EnterImageNumLabelsExpression(ctx *Im
 // ExitImageNumLabelsExpression is called when production imageNumLabelsExpression is exited.
 func (s *BaseImagemonkeyQueryLangListener) ExitImageNumLabelsExpression(ctx *ImageNumLabelsExpressionContext) {
 }
-
-// EnterAndExpression is called when production andExpression is entered.
-func (s *BaseImagemonkeyQueryLangListener) EnterAndExpression(ctx *AndExpressionContext) {}
-
-// ExitAndExpression is called when production andExpression is exited.
-func (s *BaseImagemonkeyQueryLangListener) ExitAndExpression(ctx *AndExpressionContext) {}
 
 // EnterImageWidthExpression is called when production imageWidthExpression is entered.
 func (s *BaseImagemonkeyQueryLangListener) EnterImageWidthExpression(ctx *ImageWidthExpressionContext) {
@@ -111,6 +83,41 @@ func (s *BaseImagemonkeyQueryLangListener) EnterAnnotationCoverageExpression(ctx
 // ExitAnnotationCoverageExpression is called when production annotationCoverageExpression is exited.
 func (s *BaseImagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(ctx *AnnotationCoverageExpressionContext) {
 }
+
+// EnterImageHeightExpression is called when production imageHeightExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterImageHeightExpression(ctx *ImageHeightExpressionContext) {
+}
+
+// ExitImageHeightExpression is called when production imageHeightExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitImageHeightExpression(ctx *ImageHeightExpressionContext) {
+}
+
+// EnterOrExpression is called when production orExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterOrExpression(ctx *OrExpressionContext) {}
+
+// ExitOrExpression is called when production orExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitOrExpression(ctx *OrExpressionContext) {}
+
+// EnterParenthesesExpression is called when production parenthesesExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterParenthesesExpression(ctx *ParenthesesExpressionContext) {
+}
+
+// ExitParenthesesExpression is called when production parenthesesExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitParenthesesExpression(ctx *ParenthesesExpressionContext) {
+}
+
+// EnterAndExpression is called when production andExpression is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterAndExpression(ctx *AndExpressionContext) {}
+
+// ExitAndExpression is called when production andExpression is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitAndExpression(ctx *AndExpressionContext) {}
+
+// EnterImageNumAnnotations is called when production imageNumAnnotations is entered.
+func (s *BaseImagemonkeyQueryLangListener) EnterImageNumAnnotations(ctx *ImageNumAnnotationsContext) {
+}
+
+// ExitImageNumAnnotations is called when production imageNumAnnotations is exited.
+func (s *BaseImagemonkeyQueryLangListener) ExitImageNumAnnotations(ctx *ImageNumAnnotationsContext) {}
 
 // EnterOrderByValidationDescExpression is called when production orderByValidationDescExpression is entered.
 func (s *BaseImagemonkeyQueryLangListener) EnterOrderByValidationDescExpression(ctx *OrderByValidationDescExpressionContext) {

@@ -17,7 +17,7 @@ func NewCustomErrorListener() *CustomErrorListener {
 	return &CustomErrorListener {
         err: nil,
         query: "",
-    } 
+    }
 }
 
 func trimQuotes(s string) string {
@@ -55,6 +55,7 @@ type imagemonkeyQueryLangListener struct {
 	allowImageHeight bool
 	allowImageWidth bool
 	allowImageNumLabels bool
+	allowImageNumAnnotations bool
 	allowImageNumOpenAnnotationTasks bool
 	allowAnnotationCoverage bool
 	allowOrderByValidation bool
@@ -155,7 +156,7 @@ func (l *imagemonkeyQueryLangListener) ExitOrderByValidationAscExpression(c *Ord
 		l.resultOrder.Direction = ResultOrderAscDirection
 		l.resultOrder.Type = OrderByNumOfExistingValidations
 	} else {
-		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 	}
 }
@@ -165,7 +166,7 @@ func (l *imagemonkeyQueryLangListener) ExitOrderByValidationDescExpression(c *Or
 		l.resultOrder.Direction = ResultOrderDescDirection
 		l.resultOrder.Type = OrderByNumOfExistingValidations
 	} else {
-		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 	}
 }
@@ -186,7 +187,7 @@ func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *Annot
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
 				} else {
-					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
@@ -209,7 +210,7 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
 				} else {
-					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
@@ -218,7 +219,6 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 }
 
 func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightExpressionContext) {
-	
 	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
 	if len(tokens) > 0 {
 		imageHeightVal := tokens[0].GetText()
@@ -233,7 +233,7 @@ func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightE
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
 				} else {
-					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
@@ -252,6 +252,29 @@ func (l *imagemonkeyQueryLangListener) ExitImageNumLabelsExpression(c *ImageNumL
 				if l.allowImageNumLabels {
 					operator := tokens[0].GetText()
 					val := "q.image_num_labels" + operator + imageNumLabelsVal
+
+					stackEntry := ParseResult{Query: val}
+					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
+														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+				}
+			}
+		}
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitImageNumAnnotations(c *ImageNumAnnotationsContext) {
+
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageNumAnnotationsVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumAnnotationsVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowImageNumAnnotations {
+					operator := tokens[0].GetText()
+					val := "q.image_num_annotations" + operator + imageNumAnnotationsVal
 
 					stackEntry := ParseResult{Query: val}
 					l.push(stackEntry)
@@ -334,7 +357,6 @@ func (l *imagemonkeyQueryLangListener) ExitLabelExpression(c *LabelExpressionCon
 		val = "q.accessors @> ARRAY[$" + strconv.Itoa(l.pos) + "]::text[]"
 	}
 
-	
 	subval := "a.accessor = $" + strconv.Itoa(l.pos)
 
 	stackEntry := ParseResult{Query: val}
@@ -374,22 +396,22 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 		subval := ""
 		if beforePart == "image.collection" {
 			if !l.allowImageCollection {
-				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return
 			}
 			assignmentVal = trimQuotes(afterPart)
-			val = "image_collection = $" + strconv.Itoa(l.pos) 
+			val = "image_collection = $" + strconv.Itoa(l.pos)
 		} else if beforePart == "image.unlabeled" {
 			if !l.allowImageHasLabels {
-				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return
 			}
 
 			assignmentVal = trimQuotes(afterPart)
 			if assignmentVal != "true" && assignmentVal != "false" {
-				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
+				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'",
 														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return
 			}
@@ -415,7 +437,7 @@ func (l *imagemonkeyQueryLangListener) ExitAndExpression(c *AndExpressionContext
 
 	left := l.pop()
 	leftParentheses := l.popParentheses()
-	
+
 	stackEntry := ParseResult{Query: leftParentheses + left.Query + " AND " + rightParentheses + right.Query}
 	if left.Subquery != "" && right.Subquery != "" {
 		stackEntry.Subquery = leftParentheses + left.Subquery + " OR " + rightParentheses + right.Subquery
@@ -427,12 +449,12 @@ func (l *imagemonkeyQueryLangListener) ExitAndExpression(c *AndExpressionContext
 		}
 	}
 	stackEntry.QueryValues = append(stackEntry.QueryValues, append(left.QueryValues, right.QueryValues...)...)
-	l.push(stackEntry) 
+	l.push(stackEntry)
 }
 
 func (l *imagemonkeyQueryLangListener) ExitNotExpression(c *NotExpressionContext) {
 	left := l.pop()
-	
+
 	stackEntry := ParseResult{Query: "NOT " + left.Query}
 	if left.Subquery != "" {
 		stackEntry.Subquery = "NOT " + left.Subquery
@@ -459,5 +481,5 @@ func (l *imagemonkeyQueryLangListener) ExitOrExpression(c *OrExpressionContext) 
 		}
 	}
 	stackEntry.QueryValues = append(stackEntry.QueryValues, append(left.QueryValues, right.QueryValues...)...)
-	l.push(stackEntry) 
+	l.push(stackEntry)
 }

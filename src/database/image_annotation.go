@@ -1859,6 +1859,24 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 						GROUP BY i.id
 						) q
 						GROUP BY q.image_id
+					  ),
+					  num_annotations_per_image AS (
+						SELECT q.image_id as image_id, SUM(q.num_annotations) as num_annotations
+						FROM
+						(
+						SELECT i.id AS image_id, count(*) AS num_annotations
+						FROM image i
+						JOIN image_annotation a ON a.image_id = i.id
+						GROUP BY i.id
+
+						UNION ALL
+
+						SELECT i.id AS image_id, count(*) AS num_annotations
+						FROM image i
+						JOIN image_annotation_suggestion a ON a.image_id = i.id
+						GROUP BY i.id
+						) q
+						GROUP BY q.image_id
 					  )
 					  SELECT qqq.image_key, qqq.image_width, qqq.image_height, COALESCE(qqq.validation_uuid, ''), qqq.image_unlocked,
                       COALESCE(accessor, '')
@@ -1881,7 +1899,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 								  array_agg(a.accessor) FILTER(WHERE %s) as filtered_accessors,
 								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled,
 								  array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) as image_num_labels,
-								  COALESCE(n.num_annotations, 0) as image_num_open_annotation_tasks
+								  COALESCE(n.num_annotations, 0) as image_num_open_annotation_tasks, COALESCE(n1.num_annotations, 0) as image_num_annotations
                                   FROM image i
 								  JOIN (
 									SELECT v.uuid as validation_uuid, a.accessor as accessor,
@@ -1919,9 +1937,10 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 										WHERE %s
 									) coll ON coll.image_id = i.id
 								  LEFT JOIN num_of_annotations_per_image n ON i.id = n.image_id
+								  LEFT JOIN num_annotations_per_image n1 ON i.id = n1.image_id
 								  WHERE (i.unlocked = true %s)
 
-                                  GROUP BY i.key, i.width, i.height, i.unlocked, coll.image_collection, n.num_annotations
+                                  GROUP BY i.key, i.width, i.height, i.unlocked, coll.image_collection, n.num_annotations, n1.num_annotations
                               ) q WHERE %s
                         )qq
                       ) qqq

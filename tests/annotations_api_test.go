@@ -824,4 +824,41 @@ func TestBrowseAnnotationImageNumLabels2(t *testing.T) {
 	testBrowseAnnotation(t, "apple | image.num_labels = 1", 1, "")
 }
 
+func TestBrowseAnnotationImageNumAnnotations1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseAnnotation(t, "image.num_annotations < 2", 1, "")
+	testBrowseAnnotation(t, "image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "image.num_annotations > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "egg & image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "apple | image.num_annotations = 1", 1, "")
+}
+
+
+func TestBrowseAnnotationImageNumAnnotations2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testAnnotate(t, imageId, "apple", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+	testBrowseAnnotation(t, "image.num_annotations < 2", 1, "")
+	testBrowseAnnotation(t, "image.num_annotations = 1", 1, "")
+	testBrowseAnnotation(t, "image.num_annotations > 1", 0, "")
+	testBrowseAnnotation(t, "apple & image.num_annotations = 1", 0, "")
+	testBrowseAnnotation(t, "egg & image.num_annotations = 1", 1, "")
+	testBrowseAnnotation(t, "apple | image.num_annotations = 1", 1, "")
+}
+
 

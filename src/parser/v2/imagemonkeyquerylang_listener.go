@@ -10,23 +10,11 @@ type ImagemonkeyQueryLangListener interface {
 	// EnterExpression is called when entering the expression production.
 	EnterExpression(c *ExpressionContext)
 
-	// EnterImageHeightExpression is called when entering the imageHeightExpression production.
-	EnterImageHeightExpression(c *ImageHeightExpressionContext)
-
-	// EnterOrExpression is called when entering the orExpression production.
-	EnterOrExpression(c *OrExpressionContext)
-
 	// EnterImageNumOpenAnnotationTasksExpression is called when entering the imageNumOpenAnnotationTasksExpression production.
 	EnterImageNumOpenAnnotationTasksExpression(c *ImageNumOpenAnnotationTasksExpressionContext)
 
-	// EnterParenthesesExpression is called when entering the parenthesesExpression production.
-	EnterParenthesesExpression(c *ParenthesesExpressionContext)
-
 	// EnterImageNumLabelsExpression is called when entering the imageNumLabelsExpression production.
 	EnterImageNumLabelsExpression(c *ImageNumLabelsExpressionContext)
-
-	// EnterAndExpression is called when entering the andExpression production.
-	EnterAndExpression(c *AndExpressionContext)
 
 	// EnterImageWidthExpression is called when entering the imageWidthExpression production.
 	EnterImageWidthExpression(c *ImageWidthExpressionContext)
@@ -46,6 +34,21 @@ type ImagemonkeyQueryLangListener interface {
 	// EnterAnnotationCoverageExpression is called when entering the annotationCoverageExpression production.
 	EnterAnnotationCoverageExpression(c *AnnotationCoverageExpressionContext)
 
+	// EnterImageHeightExpression is called when entering the imageHeightExpression production.
+	EnterImageHeightExpression(c *ImageHeightExpressionContext)
+
+	// EnterOrExpression is called when entering the orExpression production.
+	EnterOrExpression(c *OrExpressionContext)
+
+	// EnterParenthesesExpression is called when entering the parenthesesExpression production.
+	EnterParenthesesExpression(c *ParenthesesExpressionContext)
+
+	// EnterAndExpression is called when entering the andExpression production.
+	EnterAndExpression(c *AndExpressionContext)
+
+	// EnterImageNumAnnotations is called when entering the imageNumAnnotations production.
+	EnterImageNumAnnotations(c *ImageNumAnnotationsContext)
+
 	// EnterOrderByValidationDescExpression is called when entering the orderByValidationDescExpression production.
 	EnterOrderByValidationDescExpression(c *OrderByValidationDescExpressionContext)
 
@@ -55,23 +58,11 @@ type ImagemonkeyQueryLangListener interface {
 	// ExitExpression is called when exiting the expression production.
 	ExitExpression(c *ExpressionContext)
 
-	// ExitImageHeightExpression is called when exiting the imageHeightExpression production.
-	ExitImageHeightExpression(c *ImageHeightExpressionContext)
-
-	// ExitOrExpression is called when exiting the orExpression production.
-	ExitOrExpression(c *OrExpressionContext)
-
 	// ExitImageNumOpenAnnotationTasksExpression is called when exiting the imageNumOpenAnnotationTasksExpression production.
 	ExitImageNumOpenAnnotationTasksExpression(c *ImageNumOpenAnnotationTasksExpressionContext)
 
-	// ExitParenthesesExpression is called when exiting the parenthesesExpression production.
-	ExitParenthesesExpression(c *ParenthesesExpressionContext)
-
 	// ExitImageNumLabelsExpression is called when exiting the imageNumLabelsExpression production.
 	ExitImageNumLabelsExpression(c *ImageNumLabelsExpressionContext)
-
-	// ExitAndExpression is called when exiting the andExpression production.
-	ExitAndExpression(c *AndExpressionContext)
 
 	// ExitImageWidthExpression is called when exiting the imageWidthExpression production.
 	ExitImageWidthExpression(c *ImageWidthExpressionContext)
@@ -90,6 +81,21 @@ type ImagemonkeyQueryLangListener interface {
 
 	// ExitAnnotationCoverageExpression is called when exiting the annotationCoverageExpression production.
 	ExitAnnotationCoverageExpression(c *AnnotationCoverageExpressionContext)
+
+	// ExitImageHeightExpression is called when exiting the imageHeightExpression production.
+	ExitImageHeightExpression(c *ImageHeightExpressionContext)
+
+	// ExitOrExpression is called when exiting the orExpression production.
+	ExitOrExpression(c *OrExpressionContext)
+
+	// ExitParenthesesExpression is called when exiting the parenthesesExpression production.
+	ExitParenthesesExpression(c *ParenthesesExpressionContext)
+
+	// ExitAndExpression is called when exiting the andExpression production.
+	ExitAndExpression(c *AndExpressionContext)
+
+	// ExitImageNumAnnotations is called when exiting the imageNumAnnotations production.
+	ExitImageNumAnnotations(c *ImageNumAnnotationsContext)
 
 	// ExitOrderByValidationDescExpression is called when exiting the orderByValidationDescExpression production.
 	ExitOrderByValidationDescExpression(c *OrderByValidationDescExpressionContext)
