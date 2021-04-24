@@ -843,6 +843,15 @@ var AnnotationView = (function() {
                     unifiedModePropertiesLstWidth = 'four';
                 }
 
+                //increase working area for mobile/tablet devices (https://github.com/ImageMonkey/imagemonkey-core/issues/290)
+                //by hiding the properties list in unified mode
+                if (isMobileOrTabletDevice()) {
+                    w = "twelve";
+                    spacerWidth = "four";
+                    unifiedModePropertiesLstWidth = "zero";
+                }
+
+
                 var unifiedModeLabelsLstUiElems = '';
                 if (this.annotationMode !== "refine") {
                     var showUnifiedModeLabelsLstUiElems = false;
@@ -862,7 +871,7 @@ var AnnotationView = (function() {
                             '<div class="ui center aligned action input" id="addLabelToUnifiedModeListForm">' +
 
                             '<div class="ui input">' +
-                            '<input placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
+                            '<input autocapitalize="none" placeholder="Enter label..." type="text" id="addLabelsToUnifiedModeListLabels" class="mousetrap">' +
                             '</div>' +
                             '<div class="ui button" id="addLabelToUnifiedModeListButton">Add</div>' +
                             '</div>' +
@@ -949,7 +958,11 @@ var AnnotationView = (function() {
             '<div id="annotationAreaContainer">' +
             '<canvas id="annotationArea" imageId=""></canvas>' +
             '</div>' +
-            '</div>' + unifiedModePropertiesLst;
+            '</div>';
+
+        //only show properties list in case it has a non-zero width
+        if (unifiedModePropertiesLstWidth !== "zero")
+            data += unifiedModePropertiesLst;
 
         $("#annotationColumn").show();
         $("#annotationColumn").append(data);
