@@ -15,42 +15,48 @@ var _ = reflect.Copy
 var _ = strconv.Itoa
 
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 23, 57, 4,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 26, 66, 4,
 	2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 5,
 	2, 15, 10, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 5, 3, 39, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 47, 10, 3,
-	12, 3, 14, 3, 50, 11, 3, 3, 4, 3, 4, 3, 4, 5, 4, 55, 10, 4, 3, 4, 2, 3,
-	4, 5, 2, 4, 6, 2, 2, 2, 65, 2, 8, 3, 2, 2, 2, 4, 38, 3, 2, 2, 2, 6, 54,
-	3, 2, 2, 2, 8, 14, 5, 4, 3, 2, 9, 10, 7, 3, 2, 2, 10, 11, 5, 6, 4, 2, 11,
-	12, 7, 2, 2, 3, 12, 15, 3, 2, 2, 2, 13, 15, 7, 2, 2, 3, 14, 9, 3, 2, 2,
-	2, 14, 13, 3, 2, 2, 2, 15, 3, 3, 2, 2, 2, 16, 17, 8, 3, 1, 2, 17, 18, 7,
-	21, 2, 2, 18, 19, 5, 4, 3, 2, 19, 20, 7, 22, 2, 2, 20, 39, 3, 2, 2, 2,
-	21, 22, 7, 20, 2, 2, 22, 39, 5, 4, 3, 11, 23, 24, 7, 4, 2, 2, 24, 25, 7,
-	9, 2, 2, 25, 26, 7, 17, 2, 2, 26, 39, 7, 7, 2, 2, 27, 28, 7, 6, 2, 2, 28,
-	29, 7, 9, 2, 2, 29, 30, 7, 17, 2, 2, 30, 39, 7, 8, 2, 2, 31, 32, 7, 5,
-	2, 2, 32, 33, 7, 9, 2, 2, 33, 34, 7, 17, 2, 2, 34, 39, 7, 8, 2, 2, 35,
-	39, 7, 10, 2, 2, 36, 39, 7, 15, 2, 2, 37, 39, 7, 16, 2, 2, 38, 16, 3, 2,
-	2, 2, 38, 21, 3, 2, 2, 2, 38, 23, 3, 2, 2, 2, 38, 27, 3, 2, 2, 2, 38, 31,
-	3, 2, 2, 2, 38, 35, 3, 2, 2, 2, 38, 36, 3, 2, 2, 2, 38, 37, 3, 2, 2, 2,
-	39, 48, 3, 2, 2, 2, 40, 41, 12, 10, 2, 2, 41, 42, 7, 18, 2, 2, 42, 47,
-	5, 4, 3, 11, 43, 44, 12, 9, 2, 2, 44, 45, 7, 19, 2, 2, 45, 47, 5, 4, 3,
-	10, 46, 40, 3, 2, 2, 2, 46, 43, 3, 2, 2, 2, 47, 50, 3, 2, 2, 2, 48, 46,
-	3, 2, 2, 2, 48, 49, 3, 2, 2, 2, 49, 5, 3, 2, 2, 2, 50, 48, 3, 2, 2, 2,
-	51, 55, 7, 12, 2, 2, 52, 55, 7, 13, 2, 2, 53, 55, 7, 14, 2, 2, 54, 51,
-	3, 2, 2, 2, 54, 52, 3, 2, 2, 2, 54, 53, 3, 2, 2, 2, 55, 7, 3, 2, 2, 2,
-	7, 14, 38, 46, 48, 54,
+	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 48, 10,
+	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7, 3, 56, 10, 3, 12, 3, 14, 3, 59,
+	11, 3, 3, 4, 3, 4, 3, 4, 5, 4, 64, 10, 4, 3, 4, 2, 3, 4, 5, 2, 4, 6, 2,
+	2, 2, 77, 2, 8, 3, 2, 2, 2, 4, 47, 3, 2, 2, 2, 6, 63, 3, 2, 2, 2, 8, 14,
+	5, 4, 3, 2, 9, 10, 7, 3, 2, 2, 10, 11, 5, 6, 4, 2, 11, 12, 7, 2, 2, 3,
+	12, 15, 3, 2, 2, 2, 13, 15, 7, 2, 2, 3, 14, 9, 3, 2, 2, 2, 14, 13, 3, 2,
+	2, 2, 15, 3, 3, 2, 2, 2, 16, 17, 8, 3, 1, 2, 17, 18, 7, 24, 2, 2, 18, 19,
+	5, 4, 3, 2, 19, 20, 7, 25, 2, 2, 20, 48, 3, 2, 2, 2, 21, 22, 7, 23, 2,
+	2, 22, 48, 5, 4, 3, 14, 23, 24, 7, 4, 2, 2, 24, 25, 7, 12, 2, 2, 25, 26,
+	7, 20, 2, 2, 26, 48, 7, 10, 2, 2, 27, 28, 7, 6, 2, 2, 28, 29, 7, 12, 2,
+	2, 29, 30, 7, 20, 2, 2, 30, 48, 7, 11, 2, 2, 31, 32, 7, 5, 2, 2, 32, 33,
+	7, 12, 2, 2, 33, 34, 7, 20, 2, 2, 34, 48, 7, 11, 2, 2, 35, 36, 7, 7, 2,
+	2, 36, 37, 7, 12, 2, 2, 37, 48, 7, 20, 2, 2, 38, 39, 7, 9, 2, 2, 39, 40,
+	7, 12, 2, 2, 40, 48, 7, 20, 2, 2, 41, 42, 7, 8, 2, 2, 42, 43, 7, 12, 2,
+	2, 43, 48, 7, 20, 2, 2, 44, 48, 7, 13, 2, 2, 45, 48, 7, 18, 2, 2, 46, 48,
+	7, 19, 2, 2, 47, 16, 3, 2, 2, 2, 47, 21, 3, 2, 2, 2, 47, 23, 3, 2, 2, 2,
+	47, 27, 3, 2, 2, 2, 47, 31, 3, 2, 2, 2, 47, 35, 3, 2, 2, 2, 47, 38, 3,
+	2, 2, 2, 47, 41, 3, 2, 2, 2, 47, 44, 3, 2, 2, 2, 47, 45, 3, 2, 2, 2, 47,
+	46, 3, 2, 2, 2, 48, 57, 3, 2, 2, 2, 49, 50, 12, 13, 2, 2, 50, 51, 7, 21,
+	2, 2, 51, 56, 5, 4, 3, 14, 52, 53, 12, 12, 2, 2, 53, 54, 7, 22, 2, 2, 54,
+	56, 5, 4, 3, 13, 55, 49, 3, 2, 2, 2, 55, 52, 3, 2, 2, 2, 56, 59, 3, 2,
+	2, 2, 57, 55, 3, 2, 2, 2, 57, 58, 3, 2, 2, 2, 58, 5, 3, 2, 2, 2, 59, 57,
+	3, 2, 2, 2, 60, 64, 7, 15, 2, 2, 61, 64, 7, 16, 2, 2, 62, 64, 7, 17, 2,
+	2, 63, 60, 3, 2, 2, 2, 63, 61, 3, 2, 2, 2, 63, 62, 3, 2, 2, 2, 64, 7, 3,
+	2, 2, 2, 7, 14, 47, 55, 57, 63,
 }
 var deserializer = antlr.NewATNDeserializer(nil)
 var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 
 var literalNames = []string{
 	"", "'!'", "'annotation.coverage'", "'image.width'", "'image.height'",
+	"'image.num_labels'", "'image.num_annotations'", "'image.num_open_annotation_tasks'",
 	"'%'", "'px'", "", "", "", "", "", "", "", "", "", "'&'", "'|'", "'~'",
 	"'('", "')'",
 }
 var symbolicNames = []string{
 	"", "SEP", "ANNOTATION_COVERAGE_PREFIX", "IMAGE_WIDTH_PREFIX", "IMAGE_HEIGHT_PREFIX",
+	"IMAGE_NUM_LABELS_PREFIX", "IMAGE_NUM_ANNOTATIONS_PREFIX", "IMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX",
 	"PERCENT", "PIXEL", "OPERATOR", "ASSIGNMENT", "ORDER_BY", "ORDER_BY_VALIDATION_DESC",
 	"ORDER_BY_VALIDATION_ASC", "ORDER_BY_VALIDATION", "LABEL", "UUID", "VAL",
 	"AND", "OR", "NOT", "LPAR", "RPAR", "SKIPPED_TOKENS",
@@ -87,28 +93,31 @@ func NewImagemonkeyQueryLangParser(input antlr.TokenStream) *ImagemonkeyQueryLan
 
 // ImagemonkeyQueryLangParser tokens.
 const (
-	ImagemonkeyQueryLangParserEOF                        = antlr.TokenEOF
-	ImagemonkeyQueryLangParserSEP                        = 1
-	ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX = 2
-	ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX         = 3
-	ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX        = 4
-	ImagemonkeyQueryLangParserPERCENT                    = 5
-	ImagemonkeyQueryLangParserPIXEL                      = 6
-	ImagemonkeyQueryLangParserOPERATOR                   = 7
-	ImagemonkeyQueryLangParserASSIGNMENT                 = 8
-	ImagemonkeyQueryLangParserORDER_BY                   = 9
-	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC   = 10
-	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC    = 11
-	ImagemonkeyQueryLangParserORDER_BY_VALIDATION        = 12
-	ImagemonkeyQueryLangParserLABEL                      = 13
-	ImagemonkeyQueryLangParserUUID                       = 14
-	ImagemonkeyQueryLangParserVAL                        = 15
-	ImagemonkeyQueryLangParserAND                        = 16
-	ImagemonkeyQueryLangParserOR                         = 17
-	ImagemonkeyQueryLangParserNOT                        = 18
-	ImagemonkeyQueryLangParserLPAR                       = 19
-	ImagemonkeyQueryLangParserRPAR                       = 20
-	ImagemonkeyQueryLangParserSKIPPED_TOKENS             = 21
+	ImagemonkeyQueryLangParserEOF                                    = antlr.TokenEOF
+	ImagemonkeyQueryLangParserSEP                                    = 1
+	ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX             = 2
+	ImagemonkeyQueryLangParserIMAGE_WIDTH_PREFIX                     = 3
+	ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX                    = 4
+	ImagemonkeyQueryLangParserIMAGE_NUM_LABELS_PREFIX                = 5
+	ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX           = 6
+	ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX = 7
+	ImagemonkeyQueryLangParserPERCENT                                = 8
+	ImagemonkeyQueryLangParserPIXEL                                  = 9
+	ImagemonkeyQueryLangParserOPERATOR                               = 10
+	ImagemonkeyQueryLangParserASSIGNMENT                             = 11
+	ImagemonkeyQueryLangParserORDER_BY                               = 12
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC               = 13
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC                = 14
+	ImagemonkeyQueryLangParserORDER_BY_VALIDATION                    = 15
+	ImagemonkeyQueryLangParserLABEL                                  = 16
+	ImagemonkeyQueryLangParserUUID                                   = 17
+	ImagemonkeyQueryLangParserVAL                                    = 18
+	ImagemonkeyQueryLangParserAND                                    = 19
+	ImagemonkeyQueryLangParserOR                                     = 20
+	ImagemonkeyQueryLangParserNOT                                    = 21
+	ImagemonkeyQueryLangParserLPAR                                   = 22
+	ImagemonkeyQueryLangParserRPAR                                   = 23
+	ImagemonkeyQueryLangParserSKIPPED_TOKENS                         = 24
 )
 
 // ImagemonkeyQueryLangParser rules.
@@ -310,12 +319,12 @@ func (s *ExpContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) st
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-type ImageHeightExpressionContext struct {
+type ImageNumOpenAnnotationTasksExpressionContext struct {
 	*ExpContext
 }
 
-func NewImageHeightExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageHeightExpressionContext {
-	var p = new(ImageHeightExpressionContext)
+func NewImageNumOpenAnnotationTasksExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageNumOpenAnnotationTasksExpressionContext {
+	var p = new(ImageNumOpenAnnotationTasksExpressionContext)
 
 	p.ExpContext = NewEmptyExpContext()
 	p.parser = parser
@@ -324,44 +333,40 @@ func NewImageHeightExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleCo
 	return p
 }
 
-func (s *ImageHeightExpressionContext) GetRuleContext() antlr.RuleContext {
+func (s *ImageNumOpenAnnotationTasksExpressionContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *ImageHeightExpressionContext) IMAGE_HEIGHT_PREFIX() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX, 0)
+func (s *ImageNumOpenAnnotationTasksExpressionContext) IMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX, 0)
 }
 
-func (s *ImageHeightExpressionContext) OPERATOR() antlr.TerminalNode {
+func (s *ImageNumOpenAnnotationTasksExpressionContext) OPERATOR() antlr.TerminalNode {
 	return s.GetToken(ImagemonkeyQueryLangParserOPERATOR, 0)
 }
 
-func (s *ImageHeightExpressionContext) VAL() antlr.TerminalNode {
+func (s *ImageNumOpenAnnotationTasksExpressionContext) VAL() antlr.TerminalNode {
 	return s.GetToken(ImagemonkeyQueryLangParserVAL, 0)
 }
 
-func (s *ImageHeightExpressionContext) PIXEL() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserPIXEL, 0)
-}
-
-func (s *ImageHeightExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *ImageNumOpenAnnotationTasksExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.EnterImageHeightExpression(s)
+		listenerT.EnterImageNumOpenAnnotationTasksExpression(s)
 	}
 }
 
-func (s *ImageHeightExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *ImageNumOpenAnnotationTasksExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.ExitImageHeightExpression(s)
+		listenerT.ExitImageNumOpenAnnotationTasksExpression(s)
 	}
 }
 
-type OrExpressionContext struct {
+type ImageNumLabelsExpressionContext struct {
 	*ExpContext
 }
 
-func NewOrExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OrExpressionContext {
-	var p = new(OrExpressionContext)
+func NewImageNumLabelsExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageNumLabelsExpressionContext {
+	var p = new(ImageNumLabelsExpressionContext)
 
 	p.ExpContext = NewEmptyExpContext()
 	p.parser = parser
@@ -370,151 +375,31 @@ func NewOrExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *O
 	return p
 }
 
-func (s *OrExpressionContext) GetRuleContext() antlr.RuleContext {
+func (s *ImageNumLabelsExpressionContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *OrExpressionContext) AllExp() []IExpContext {
-	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IExpContext)(nil)).Elem())
-	var tst = make([]IExpContext, len(ts))
-
-	for i, t := range ts {
-		if t != nil {
-			tst[i] = t.(IExpContext)
-		}
-	}
-
-	return tst
+func (s *ImageNumLabelsExpressionContext) IMAGE_NUM_LABELS_PREFIX() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_NUM_LABELS_PREFIX, 0)
 }
 
-func (s *OrExpressionContext) Exp(i int) IExpContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpContext)(nil)).Elem(), i)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(IExpContext)
+func (s *ImageNumLabelsExpressionContext) OPERATOR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserOPERATOR, 0)
 }
 
-func (s *OrExpressionContext) OR() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserOR, 0)
+func (s *ImageNumLabelsExpressionContext) VAL() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserVAL, 0)
 }
 
-func (s *OrExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *ImageNumLabelsExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.EnterOrExpression(s)
+		listenerT.EnterImageNumLabelsExpression(s)
 	}
 }
 
-func (s *OrExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *ImageNumLabelsExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.ExitOrExpression(s)
-	}
-}
-
-type ParenthesesExpressionContext struct {
-	*ExpContext
-}
-
-func NewParenthesesExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ParenthesesExpressionContext {
-	var p = new(ParenthesesExpressionContext)
-
-	p.ExpContext = NewEmptyExpContext()
-	p.parser = parser
-	p.CopyFrom(ctx.(*ExpContext))
-
-	return p
-}
-
-func (s *ParenthesesExpressionContext) GetRuleContext() antlr.RuleContext {
-	return s
-}
-
-func (s *ParenthesesExpressionContext) LPAR() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserLPAR, 0)
-}
-
-func (s *ParenthesesExpressionContext) Exp() IExpContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(IExpContext)
-}
-
-func (s *ParenthesesExpressionContext) RPAR() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserRPAR, 0)
-}
-
-func (s *ParenthesesExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.EnterParenthesesExpression(s)
-	}
-}
-
-func (s *ParenthesesExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.ExitParenthesesExpression(s)
-	}
-}
-
-type AndExpressionContext struct {
-	*ExpContext
-}
-
-func NewAndExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *AndExpressionContext {
-	var p = new(AndExpressionContext)
-
-	p.ExpContext = NewEmptyExpContext()
-	p.parser = parser
-	p.CopyFrom(ctx.(*ExpContext))
-
-	return p
-}
-
-func (s *AndExpressionContext) GetRuleContext() antlr.RuleContext {
-	return s
-}
-
-func (s *AndExpressionContext) AllExp() []IExpContext {
-	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IExpContext)(nil)).Elem())
-	var tst = make([]IExpContext, len(ts))
-
-	for i, t := range ts {
-		if t != nil {
-			tst[i] = t.(IExpContext)
-		}
-	}
-
-	return tst
-}
-
-func (s *AndExpressionContext) Exp(i int) IExpContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpContext)(nil)).Elem(), i)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(IExpContext)
-}
-
-func (s *AndExpressionContext) AND() antlr.TerminalNode {
-	return s.GetToken(ImagemonkeyQueryLangParserAND, 0)
-}
-
-func (s *AndExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.EnterAndExpression(s)
-	}
-}
-
-func (s *AndExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
-		listenerT.ExitAndExpression(s)
+		listenerT.ExitImageNumLabelsExpression(s)
 	}
 }
 
@@ -756,6 +641,256 @@ func (s *AnnotationCoverageExpressionContext) ExitRule(listener antlr.ParseTreeL
 	}
 }
 
+type ImageHeightExpressionContext struct {
+	*ExpContext
+}
+
+func NewImageHeightExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageHeightExpressionContext {
+	var p = new(ImageHeightExpressionContext)
+
+	p.ExpContext = NewEmptyExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpContext))
+
+	return p
+}
+
+func (s *ImageHeightExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *ImageHeightExpressionContext) IMAGE_HEIGHT_PREFIX() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_HEIGHT_PREFIX, 0)
+}
+
+func (s *ImageHeightExpressionContext) OPERATOR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserOPERATOR, 0)
+}
+
+func (s *ImageHeightExpressionContext) VAL() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserVAL, 0)
+}
+
+func (s *ImageHeightExpressionContext) PIXEL() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserPIXEL, 0)
+}
+
+func (s *ImageHeightExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterImageHeightExpression(s)
+	}
+}
+
+func (s *ImageHeightExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitImageHeightExpression(s)
+	}
+}
+
+type OrExpressionContext struct {
+	*ExpContext
+}
+
+func NewOrExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OrExpressionContext {
+	var p = new(OrExpressionContext)
+
+	p.ExpContext = NewEmptyExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpContext))
+
+	return p
+}
+
+func (s *OrExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *OrExpressionContext) AllExp() []IExpContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IExpContext)(nil)).Elem())
+	var tst = make([]IExpContext, len(ts))
+
+	for i, t := range ts {
+		if t != nil {
+			tst[i] = t.(IExpContext)
+		}
+	}
+
+	return tst
+}
+
+func (s *OrExpressionContext) Exp(i int) IExpContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpContext)(nil)).Elem(), i)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IExpContext)
+}
+
+func (s *OrExpressionContext) OR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserOR, 0)
+}
+
+func (s *OrExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterOrExpression(s)
+	}
+}
+
+func (s *OrExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitOrExpression(s)
+	}
+}
+
+type ParenthesesExpressionContext struct {
+	*ExpContext
+}
+
+func NewParenthesesExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ParenthesesExpressionContext {
+	var p = new(ParenthesesExpressionContext)
+
+	p.ExpContext = NewEmptyExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpContext))
+
+	return p
+}
+
+func (s *ParenthesesExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *ParenthesesExpressionContext) LPAR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserLPAR, 0)
+}
+
+func (s *ParenthesesExpressionContext) Exp() IExpContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IExpContext)
+}
+
+func (s *ParenthesesExpressionContext) RPAR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserRPAR, 0)
+}
+
+func (s *ParenthesesExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterParenthesesExpression(s)
+	}
+}
+
+func (s *ParenthesesExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitParenthesesExpression(s)
+	}
+}
+
+type AndExpressionContext struct {
+	*ExpContext
+}
+
+func NewAndExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *AndExpressionContext {
+	var p = new(AndExpressionContext)
+
+	p.ExpContext = NewEmptyExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpContext))
+
+	return p
+}
+
+func (s *AndExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *AndExpressionContext) AllExp() []IExpContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IExpContext)(nil)).Elem())
+	var tst = make([]IExpContext, len(ts))
+
+	for i, t := range ts {
+		if t != nil {
+			tst[i] = t.(IExpContext)
+		}
+	}
+
+	return tst
+}
+
+func (s *AndExpressionContext) Exp(i int) IExpContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpContext)(nil)).Elem(), i)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IExpContext)
+}
+
+func (s *AndExpressionContext) AND() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserAND, 0)
+}
+
+func (s *AndExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterAndExpression(s)
+	}
+}
+
+func (s *AndExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitAndExpression(s)
+	}
+}
+
+type ImageNumAnnotationsContext struct {
+	*ExpContext
+}
+
+func NewImageNumAnnotationsContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ImageNumAnnotationsContext {
+	var p = new(ImageNumAnnotationsContext)
+
+	p.ExpContext = NewEmptyExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpContext))
+
+	return p
+}
+
+func (s *ImageNumAnnotationsContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *ImageNumAnnotationsContext) IMAGE_NUM_ANNOTATIONS_PREFIX() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX, 0)
+}
+
+func (s *ImageNumAnnotationsContext) OPERATOR() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserOPERATOR, 0)
+}
+
+func (s *ImageNumAnnotationsContext) VAL() antlr.TerminalNode {
+	return s.GetToken(ImagemonkeyQueryLangParserVAL, 0)
+}
+
+func (s *ImageNumAnnotationsContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.EnterImageNumAnnotations(s)
+	}
+}
+
+func (s *ImageNumAnnotationsContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(ImagemonkeyQueryLangListener); ok {
+		listenerT.ExitImageNumAnnotations(s)
+	}
+}
+
 func (p *ImagemonkeyQueryLangParser) Exp() (localctx IExpContext) {
 	return p.exp(0)
 }
@@ -788,7 +923,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(36)
+	p.SetState(45)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
@@ -820,7 +955,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		}
 		{
 			p.SetState(20)
-			p.exp(9)
+			p.exp(12)
 		}
 
 	case ImagemonkeyQueryLangParserANNOTATION_COVERAGE_PREFIX:
@@ -886,12 +1021,63 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 			p.Match(ImagemonkeyQueryLangParserPIXEL)
 		}
 
+	case ImagemonkeyQueryLangParserIMAGE_NUM_LABELS_PREFIX:
+		localctx = NewImageNumLabelsExpressionContext(p, localctx)
+		p.SetParserRuleContext(localctx)
+		_prevctx = localctx
+		{
+			p.SetState(33)
+			p.Match(ImagemonkeyQueryLangParserIMAGE_NUM_LABELS_PREFIX)
+		}
+		{
+			p.SetState(34)
+			p.Match(ImagemonkeyQueryLangParserOPERATOR)
+		}
+		{
+			p.SetState(35)
+			p.Match(ImagemonkeyQueryLangParserVAL)
+		}
+
+	case ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX:
+		localctx = NewImageNumOpenAnnotationTasksExpressionContext(p, localctx)
+		p.SetParserRuleContext(localctx)
+		_prevctx = localctx
+		{
+			p.SetState(36)
+			p.Match(ImagemonkeyQueryLangParserIMAGE_NUM_OPEN_ANNOTATION_TASKS_PREFIX)
+		}
+		{
+			p.SetState(37)
+			p.Match(ImagemonkeyQueryLangParserOPERATOR)
+		}
+		{
+			p.SetState(38)
+			p.Match(ImagemonkeyQueryLangParserVAL)
+		}
+
+	case ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX:
+		localctx = NewImageNumAnnotationsContext(p, localctx)
+		p.SetParserRuleContext(localctx)
+		_prevctx = localctx
+		{
+			p.SetState(39)
+			p.Match(ImagemonkeyQueryLangParserIMAGE_NUM_ANNOTATIONS_PREFIX)
+		}
+		{
+			p.SetState(40)
+			p.Match(ImagemonkeyQueryLangParserOPERATOR)
+		}
+		{
+			p.SetState(41)
+			p.Match(ImagemonkeyQueryLangParserVAL)
+		}
+
 	case ImagemonkeyQueryLangParserASSIGNMENT:
 		localctx = NewAssignmentExpressionContext(p, localctx)
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(33)
+			p.SetState(42)
 			p.Match(ImagemonkeyQueryLangParserASSIGNMENT)
 		}
 
@@ -900,7 +1086,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(34)
+			p.SetState(43)
 			p.Match(ImagemonkeyQueryLangParserLABEL)
 		}
 
@@ -909,7 +1095,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(35)
+			p.SetState(44)
 			p.Match(ImagemonkeyQueryLangParserUUID)
 		}
 
@@ -917,7 +1103,7 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(46)
+	p.SetState(55)
 	p.GetErrorHandler().Sync(p)
 	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 3, p.GetParserRuleContext())
 
@@ -927,47 +1113,47 @@ func (p *ImagemonkeyQueryLangParser) exp(_p int) (localctx IExpContext) {
 				p.TriggerExitRuleEvent()
 			}
 			_prevctx = localctx
-			p.SetState(44)
+			p.SetState(53)
 			p.GetErrorHandler().Sync(p)
 			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 2, p.GetParserRuleContext()) {
 			case 1:
 				localctx = NewAndExpressionContext(p, NewExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, ImagemonkeyQueryLangParserRULE_exp)
-				p.SetState(38)
+				p.SetState(47)
 
-				if !(p.Precpred(p.GetParserRuleContext(), 8)) {
-					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 8)", ""))
+				if !(p.Precpred(p.GetParserRuleContext(), 11)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 11)", ""))
 				}
 				{
-					p.SetState(39)
+					p.SetState(48)
 					p.Match(ImagemonkeyQueryLangParserAND)
 				}
 				{
-					p.SetState(40)
-					p.exp(9)
+					p.SetState(49)
+					p.exp(12)
 				}
 
 			case 2:
 				localctx = NewOrExpressionContext(p, NewExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, ImagemonkeyQueryLangParserRULE_exp)
-				p.SetState(41)
+				p.SetState(50)
 
-				if !(p.Precpred(p.GetParserRuleContext(), 7)) {
-					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 7)", ""))
+				if !(p.Precpred(p.GetParserRuleContext(), 10)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 10)", ""))
 				}
 				{
-					p.SetState(42)
+					p.SetState(51)
 					p.Match(ImagemonkeyQueryLangParserOR)
 				}
 				{
-					p.SetState(43)
-					p.exp(8)
+					p.SetState(52)
+					p.exp(11)
 				}
 
 			}
 
 		}
-		p.SetState(48)
+		p.SetState(57)
 		p.GetErrorHandler().Sync(p)
 		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 3, p.GetParserRuleContext())
 	}
@@ -1117,7 +1303,7 @@ func (p *ImagemonkeyQueryLangParser) Order_by() (localctx IOrder_byContext) {
 		}
 	}()
 
-	p.SetState(52)
+	p.SetState(61)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
@@ -1125,7 +1311,7 @@ func (p *ImagemonkeyQueryLangParser) Order_by() (localctx IOrder_byContext) {
 		localctx = NewOrderByValidationDescExpressionContext(p, localctx)
 		p.EnterOuterAlt(localctx, 1)
 		{
-			p.SetState(49)
+			p.SetState(58)
 			p.Match(ImagemonkeyQueryLangParserORDER_BY_VALIDATION_DESC)
 		}
 
@@ -1133,7 +1319,7 @@ func (p *ImagemonkeyQueryLangParser) Order_by() (localctx IOrder_byContext) {
 		localctx = NewOrderByValidationAscExpressionContext(p, localctx)
 		p.EnterOuterAlt(localctx, 2)
 		{
-			p.SetState(50)
+			p.SetState(59)
 			p.Match(ImagemonkeyQueryLangParserORDER_BY_VALIDATION_ASC)
 		}
 
@@ -1141,7 +1327,7 @@ func (p *ImagemonkeyQueryLangParser) Order_by() (localctx IOrder_byContext) {
 		localctx = NewOrderByValidationDescExpressionContext(p, localctx)
 		p.EnterOuterAlt(localctx, 3)
 		{
-			p.SetState(51)
+			p.SetState(60)
 			p.Match(ImagemonkeyQueryLangParserORDER_BY_VALIDATION)
 		}
 
@@ -1169,10 +1355,10 @@ func (p *ImagemonkeyQueryLangParser) Sempred(localctx antlr.RuleContext, ruleInd
 func (p *ImagemonkeyQueryLangParser) Exp_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 0:
-		return p.Precpred(p.GetParserRuleContext(), 8)
+		return p.Precpred(p.GetParserRuleContext(), 11)
 
 	case 1:
-		return p.Precpred(p.GetParserRuleContext(), 7)
+		return p.Precpred(p.GetParserRuleContext(), 10)
 
 	default:
 		panic("No predicate with index: " + fmt.Sprint(predIndex))

@@ -141,6 +141,49 @@ func (p *ImageMonkeyDatabase) GetLabelSuggestions(includeUnlocked bool) ([]strin
 	return labelSuggestions, nil
 }
 
+func (p *ImageMonkeyDatabase) GetLabelSuggestionsUsage() ([]datastructures.ImageLabelSuggestion, error) {
+	labelSuggestions := []datastructures.ImageLabelSuggestion{}
+
+	q := fmt.Sprintf(`WITH num_labels AS (
+						SELECT l.id AS label_suggestion_id, l.name AS label_name, count(*) AS num_labels
+						FROM image_label_suggestion i
+						JOIN label_suggestion l ON l.id = i.label_suggestion_id
+						GROUP BY l.id
+					), num_annotations AS (
+						SELECT l.id AS label_suggestion_id, count(*) AS num_annotations
+						FROM image_annotation_suggestion i
+						JOIN label_suggestion l ON l.id = i.label_suggestion_id
+						GROUP BY l.id
+					)
+					SELECT l.name, COALESCE(n1.num_labels, 0), COALESCE(n2.num_annotations, 0)
+					FROM label_suggestion l
+					LEFT JOIN num_labels n1 ON n1.label_suggestion_id = l.id
+					LEFT JOIN num_annotations n2 ON n2.label_suggestion_id = l.id`)
+
+	rows, err := p.db.Query(context.TODO(), q)
+	if err != nil {
+		log.Error("[Get Label Suggestions Usage] Couldn't get label suggestions: ", err.Error())
+		raven.CaptureError(err, nil)
+		return labelSuggestions, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var labelSuggestion datastructures.ImageLabelSuggestion
+		err := rows.Scan(&labelSuggestion.Name, &labelSuggestion.NumOfLabels, &labelSuggestion.NumOfAnnotations)
+		if err != nil {
+			log.Error("[Get Label Suggestions Usage] Couldn't scan label suggestions: ", err.Error())
+			raven.CaptureError(err, nil)
+			return labelSuggestions, err
+		}
+
+		labelSuggestions = append(labelSuggestions, labelSuggestion)
+	}
+
+	return labelSuggestions, nil
+}
+
 func (p *ImageMonkeyDatabase) GetLabelAccessors() ([]string, error) {
 	var labels []string
 	rows, err := p.db.Query(context.TODO(), `SELECT accessor FROM label_accessor`)

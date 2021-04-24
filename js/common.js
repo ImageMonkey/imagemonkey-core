@@ -68,3 +68,13 @@ function isMobileDevice() {
     }
     return false;
 }
+
+function isMobileOrTabletDevice() {
+    //there seems to be no reliable way to detect the device type (mobile, tablet, desktop, etc.)
+	//the most reliable way seems to be to use the media queries. If the max screen width is <= 1280px
+	//it's a mobile/tablet device.
+	var mq = window.matchMedia("(max-width: 1280px)");
+	if(mq.matches)
+		return true;
+	return false;
+}

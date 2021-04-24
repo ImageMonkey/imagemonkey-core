@@ -1566,6 +1566,8 @@ func main() {
 			queryParser.AllowAnnotationCoverage(true)
 			queryParser.AllowImageCollection(true)
 			queryParser.AllowImageHasLabels(true)
+			queryParser.AllowImageNumLabels(true)
+			queryParser.AllowImageNumOpenAnnotationTasks(true)
 			parseResult, err := queryParser.Parse()
 			if err != nil {
 				c.JSON(422, gin.H{"error": err.Error()})
@@ -1772,13 +1774,22 @@ func main() {
 			if includeUnlockedStr == "false" {
 				includeUnlocked = false
 			}
-			
+
 			labelSuggestions, err := imageMonkeyDatabase.GetLabelSuggestions(includeUnlocked)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
 				return
 			}
 			c.JSON(http.StatusOK, labelSuggestions)
+		})
+
+		router.GET("/v1/label/suggestions/usage", func(c *gin.Context) {
+			labelSuggestionsUsage, err := imageMonkeyDatabase.GetLabelSuggestionsUsage()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Couldn't process request - please try again later"})
+				return
+			}
+			c.JSON(http.StatusOK, labelSuggestionsUsage)
 		})
 
 		router.GET("/v1/label/graph/:labelgraphname", func(c *gin.Context) {
@@ -1993,6 +2004,9 @@ func main() {
 				queryParser.AllowAnnotationCoverage(true)
 				queryParser.AllowImageCollection(true)
 				queryParser.AllowImageHasLabels(true)
+				queryParser.AllowImageNumLabels(true)
+				queryParser.AllowImageNumOpenAnnotationTasks(true)
+				queryParser.AllowImageNumAnnotations(true)
 				parseResult, err := queryParser.Parse()
 				if err != nil {
 					c.JSON(422, gin.H{"error": err.Error()})
@@ -2009,11 +2023,6 @@ func main() {
 				apiUser.ClientFingerprint = getBrowserFingerprint(c)
 				apiUser.Name = authTokenHandler.GetAccessTokenInfo(c).Username
 
-				if len(parseResult.QueryValues) == 0 {
-					c.JSON(422, gin.H{"error": "Couldn't process request - please provide a valid query!"})
-					return
-				}
-				
 				includeLabelSuggestions := false
 				if apiUser.Name != "" {
 					includeLabelSuggestions = true
