@@ -9,63 +9,68 @@ type Parser interface {
 }
 
 type QueryParser struct {
-	query string
-	offset int
-	allowImageWidth bool
-	allowImageHeight bool
-	allowImageNumLabels bool
-	allowAnnotationCoverage bool
-	version int
-	allowOrderByValidation bool
-	allowImageCollection bool
-	allowImageHasLabels bool
+	query                            string
+	offset                           int
+	allowImageWidth                  bool
+	allowImageHeight                 bool
+	allowImageNumLabels              bool
+	allowImageNumOpenAnnotationTasks bool
+	allowImageNumAnnotations         bool
+	allowAnnotationCoverage          bool
+	version                          int
+	allowOrderByValidation           bool
+	allowImageCollection             bool
+	allowImageHasLabels              bool
 }
 
 type ResultOrderType int
+
 const (
 	OrderByNumOfExistingValidations ResultOrderType = 1 << iota
 	OrderByDefault
 )
 
 type ResultOrderDirection int
+
 const (
 	ResultOrderAscDirection ResultOrderDirection = 1 << iota
 	ResultOrderDescDirection
 	ResultOrderDefaultDirection
 )
 
-
 type ResultOrder struct {
-	Type ResultOrderType
+	Type      ResultOrderType
 	Direction ResultOrderDirection
 }
 
 type ParseResult struct {
-	Input string
-	Query string
-    Subquery string
-    IsUuidQuery bool
+	Input       string
+	Query       string
+	Subquery    string
+	IsUuidQuery bool
 	QueryValues []interface{}
-	OrderBy ResultOrder
+	OrderBy     ResultOrder
 }
 
 func NewQueryParser(query string) *QueryParser {
-    return &QueryParser {
-        query: query,
-        offset: 1,
-        allowImageWidth: true,
-		allowImageHeight: true,
-		allowImageNumLabels: false,
-		allowAnnotationCoverage: true,
-        version: 2,
-        allowOrderByValidation: false,
-		allowImageCollection: false,
-		allowImageHasLabels: false,
-    }
+	return &QueryParser{
+		query:                            query,
+		offset:                           1,
+		allowImageWidth:                  true,
+		allowImageHeight:                 true,
+		allowImageNumLabels:              false,
+		allowImageNumOpenAnnotationTasks: false,
+		allowImageNumAnnotations:         false,
+		allowAnnotationCoverage:          true,
+		version:                          2,
+		allowOrderByValidation:           false,
+		allowImageCollection:             false,
+		allowImageHasLabels:              false,
+	}
 }
 
 func (p *QueryParser) AllowImageHeight(allow bool) {
-    p.allowImageHeight = allow
+	p.allowImageHeight = allow
 }
 
 func (p *QueryParser) AllowImageWidth(allow bool) {
@@ -91,6 +96,14 @@ func (p *QueryParser) AllowImageNumLabels(allow bool) {
 	p.allowImageNumLabels = allow
 }
 
+func (p *QueryParser) AllowImageNumOpenAnnotationTasks(allow bool) {
+	p.allowImageNumOpenAnnotationTasks = allow
+}
+
+func (p *QueryParser) AllowImageNumAnnotations(allow bool) {
+	p.allowImageNumAnnotations = allow
+}
+
 func (p *QueryParser) SetOffset(offset int) {
 	p.offset = offset
 }
@@ -106,22 +119,24 @@ func (p *QueryParser) Parse() (ParseResult, error) {
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	listener := imagemonkeyQueryLangListener{
-		pos: p.offset,
-		allowImageWidth: p.allowImageWidth,
-		allowImageHeight: p.allowImageHeight,
-		allowImageNumLabels: p.allowImageNumLabels,
-		allowAnnotationCoverage: p.allowAnnotationCoverage,
-		allowOrderByValidation: p.allowOrderByValidation,
-		allowImageCollection: p.allowImageCollection,
-		allowImageHasLabels: p.allowImageHasLabels,
-		numOfLabels: 0,
-		version: p.version,
-		isUuidQuery: true,
-		typeOfQueryKnown: false,
-		query: p.query,
-		resultOrder: ResultOrder{Direction: ResultOrderDefaultDirection, Type: OrderByDefault},
+		pos:                              p.offset,
+		allowImageWidth:                  p.allowImageWidth,
+		allowImageHeight:                 p.allowImageHeight,
+		allowImageNumLabels:              p.allowImageNumLabels,
+		allowImageNumAnnotations:         p.allowImageNumAnnotations,
+		allowImageNumOpenAnnotationTasks: p.allowImageNumOpenAnnotationTasks,
+		allowAnnotationCoverage:          p.allowAnnotationCoverage,
+		allowOrderByValidation:           p.allowOrderByValidation,
+		allowImageCollection:             p.allowImageCollection,
+		allowImageHasLabels:              p.allowImageHasLabels,
+		numOfLabels:                      0,
+		version:                          p.version,
+		isUuidQuery:                      true,
+		typeOfQueryKnown:                 false,
+		query:                            p.query,
+		resultOrder:                      ResultOrder{Direction: ResultOrderDefaultDirection, Type: OrderByDefault},
 	}
-	errorListener := NewCustomErrorListener() 
+	errorListener := NewCustomErrorListener()
 	errorListener.query = p.query
 	parser := NewImagemonkeyQueryLangParser(stream)
 	parser.RemoveErrorListeners() //remove default error listeners

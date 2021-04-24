@@ -1836,48 +1836,90 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 		parseResult.Subquery = "1 = 1"
 	}
 
-	q := fmt.Sprintf(`SELECT qqq.image_key, qqq.image_width, qqq.image_height, COALESCE(qqq.validation_uuid, ''), qqq.image_unlocked, 
+	q := fmt.Sprintf(`WITH num_of_annotations_per_image AS (
+						SELECT q.image_id as image_id, SUM(q.num_annotations) as num_annotations
+						FROM
+						(
+						SELECT i.id AS image_id, count(*) AS num_annotations
+						FROM image i
+						JOIN image_validation v ON v.image_id = i.id
+						WHERE v.label_id NOT IN (
+							SELECT a.label_id FROM image_annotation a
+						)
+						GROUP BY i.id
+
+						UNION ALL
+
+						SELECT i.id AS image_id, count(*) AS num_annotations
+						FROM image i
+						JOIN image_label_suggestion s ON s.image_id = i.id
+						WHERE s.image_id NOT IN (
+							SELECT a.label_suggestion_id FROM image_annotation_suggestion a
+						)
+						GROUP BY i.id
+						) q
+						GROUP BY q.image_id
+					  ),
+					  num_annotations_per_image AS (
+						SELECT q.image_id as image_id, SUM(q.num_annotations) as num_annotations
+						FROM
+						(
+						SELECT i.id AS image_id, count(*) AS num_annotations
+						FROM image i
+						JOIN image_annotation a ON a.image_id = i.id
+						GROUP BY i.id
+
+						UNION ALL
+
+						SELECT i.id AS image_id, count(*) AS num_annotations
+						FROM image i
+						JOIN image_annotation_suggestion a ON a.image_id = i.id
+						GROUP BY i.id
+						) q
+						GROUP BY q.image_id
+					  )
+					  SELECT qqq.image_key, qqq.image_width, qqq.image_height, COALESCE(qqq.validation_uuid, ''), qqq.image_unlocked,
                       COALESCE(accessor, '')
                       FROM
                       (
-                        SELECT qq.image_key, qq.image_width, qq.image_height, 
-                        CASE WHEN qq.validation_uuids <> '' THEN unnest(string_to_array(qq.validation_uuids, ',')) ELSE null END as validation_uuid, 
-						qq.image_unlocked, CASE WHEN qq.label_types is not null THEN unnest(qq.label_types) ELSE unnest('{null}'::boolean[]) END as label_types, 
+                        SELECT qq.image_key, qq.image_width, qq.image_height,
+                        CASE WHEN qq.validation_uuids <> '' THEN unnest(string_to_array(qq.validation_uuids, ',')) ELSE null END as validation_uuid,
+						qq.image_unlocked, CASE WHEN qq.label_types is not null THEN unnest(qq.label_types) ELSE unnest('{null}'::boolean[]) END as label_types,
 						CASE WHEN qq.filtered_accessors is not null THEN unnest(qq.filtered_accessors) ELSE unnest('{null}'::text[]) END as accessor
                         FROM
-                        (    
-                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids, 
-							  q.image_unlocked, image_collection, q.label_types, q.filtered_accessors 
+                        (
+                              SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids,
+							  q.image_unlocked, image_collection, q.label_types, q.filtered_accessors
                               FROM
-                              (   SELECT i.key as image_key, i.width as image_width, i.height as image_height, 
-                                  array_to_string(array_agg(CASE WHEN (%s) THEN a.validation_uuid ELSE NULL END), ',') as validation_uuids, 
-                                  array_agg(a.accessor)::text[] as accessors, MAX(COALESCE(a.annotated_percentage, 0)) as annotated_percentage, 
-                                  i.unlocked as image_unlocked, coll.image_collection as image_collection, 
+                              (   SELECT i.key as image_key, i.width as image_width, i.height as image_height,
+                                  array_to_string(array_agg(CASE WHEN (%s) THEN a.validation_uuid ELSE NULL END), ',') as validation_uuids,
+                                  array_agg(a.accessor)::text[] as accessors, MAX(COALESCE(a.annotated_percentage, 0)) as annotated_percentage,
+                                  i.unlocked as image_unlocked, coll.image_collection as image_collection,
 								  array_agg(a.is_productive) FILTER(WHERE %s) as label_types,
 								  array_agg(a.accessor) FILTER(WHERE %s) as filtered_accessors,
 								  CASE WHEN array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled,
-								  array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) image_num_labels
-                                  FROM image i 
-
+								  array_length(COALESCE(array_agg(a.accessor) FILTER(WHERE a.accessor is not null),  ARRAY[]::text[]), 1) as image_num_labels,
+								  COALESCE(n.num_annotations, 0) as image_num_open_annotation_tasks, COALESCE(n1.num_annotations, 0) as image_num_annotations
+                                  FROM image i
 								  JOIN (
-                                  	SELECT v.uuid as validation_uuid, a.accessor as accessor, 
+									SELECT v.uuid as validation_uuid, a.accessor as accessor,
 									c.annotated_percentage as annotated_percentage, v.image_id as image_id, true as is_productive
 									FROM image_validation v
-                                  	JOIN label l ON l.id = v.label_id
-                                 	JOIN label_accessor a ON l.id = a.label_id
-                                  	LEFT JOIN image_annotation_coverage c ON c.image_id = v.image_id
+                                    JOIN label l ON l.id = v.label_id
+									JOIN label_accessor a ON l.id = a.label_id
+									LEFT JOIN image_annotation_coverage c ON c.image_id = v.image_id
 									WHERE NOT EXISTS (
-									  SELECT 1 FROM image_annotation a 
+									  SELECT 1 FROM image_annotation a
 									  WHERE a.label_id = v.label_id AND a.image_id = v.image_id
 								    )%s
 
 									UNION ALL
-								   
-								    SELECT null as validation_uuid, NULL as accessor, 
+
+								    SELECT null as validation_uuid, NULL as accessor,
 								    0 as annotated_percentage, i.id as image_id, true as is_productive
 								    FROM image i
 								    WHERE NOT EXISTS (
-								   	  SELECT 1 FROM image_validation v
+									  SELECT 1 FROM image_validation v
 									  WHERE v.image_id = i.id
 								    ) AND NOT EXISTS (
 								      SELECT 1 FROM image_label_suggestion v
@@ -1886,7 +1928,7 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 
 									%s
                                   ) a ON a.image_id = i.id
-								  LEFT JOIN 
+								  LEFT JOIN
 									(
 										SELECT ui.name as image_collection, c.image_id as image_id
 										FROM image_collection_image c
@@ -1894,9 +1936,11 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
 										JOIN account acc ON acc.id = ui.account_id
 										WHERE %s
 									) coll ON coll.image_id = i.id
+								  LEFT JOIN num_of_annotations_per_image n ON i.id = n.image_id
+								  LEFT JOIN num_annotations_per_image n1 ON i.id = n1.image_id
 								  WHERE (i.unlocked = true %s)
 
-                                  GROUP BY i.key, i.width, i.height, i.unlocked, coll.image_collection
+                                  GROUP BY i.key, i.width, i.height, i.unlocked, coll.image_collection, n.num_annotations, n1.num_annotations
                               ) q WHERE %s
                         )qq
                       ) qqq

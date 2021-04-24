@@ -952,7 +952,7 @@ func TestLabelSuggestionsUsage3(t *testing.T) {
 	equals(t, labelSuggestionsUsageAfter[0].Name, "test")
 }
 
-func TestBrowseImageNumLabels(t *testing.T) {
+func TestBrowseLabelImageNumLabels(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -966,7 +966,7 @@ func TestBrowseImageNumLabels(t *testing.T) {
 	testBrowseLabel(t, "apple | image.num_labels = 1", "", 1, 200)
 }
 
-func TestBrowseImageNumLabels1(t *testing.T) {
+func TestBrowseLabelImageNumLabels1(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -977,7 +977,7 @@ func TestBrowseImageNumLabels1(t *testing.T) {
 	testBrowseLabel(t, "image.num_labels > C", "", 0, 422)
 }
 
-func TestBrowseImageNumLabels2(t *testing.T) {
+func TestBrowseLabelImageNumLabels2(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
@@ -991,4 +991,61 @@ func TestBrowseImageNumLabels2(t *testing.T) {
 	testBrowseLabel(t, "image.num_labels < 2", "", 0, 200)
 	testBrowseLabel(t, "image.num_labels = 2", "", 1, 200)
 	testBrowseLabel(t, "image.num_labels > 2", "", 0, 200)
+}
+
+func TestBrowseLabelImageNumOpenAnnotationTasks1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseLabel(t, "image.num_open_annotation_tasks < 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 1", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks > 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 0", "", 0, 200)
+}
+
+func TestBrowseLabelImageNumOpenAnnotationTasks2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testBrowseLabel(t, "image.num_open_annotation_tasks < 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 1", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks > 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 0", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "apple | image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "apple & image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "dog & image.num_open_annotation_tasks = 2", "", 0, 200)
+}
+
+func TestBrowseLabelImageNumOpenAnnotationTasks3(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testAnnotate(t, imageId, "apple", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+	testBrowseLabel(t, "image.num_open_annotation_tasks < 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 1", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks > 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 0", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 2", "", 0, 200)
+	testBrowseLabel(t, "apple | image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "apple & image.num_open_annotation_tasks = 2", "", 0, 200)
+	testBrowseLabel(t, "dog & image.num_open_annotation_tasks = 2", "", 0, 200)
 }

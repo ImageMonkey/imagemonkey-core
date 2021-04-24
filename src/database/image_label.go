@@ -576,6 +576,30 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                                                 LEFT JOIN label_suggestion s on ils.label_suggestion_id = s.id
                                                                 WHERE (i.unlocked = true %s)
                         ),
+						num_of_annotations_per_image AS (
+							SELECT q.image_id as image_id, SUM(q.num_annotations) as num_annotations
+							FROM
+							(
+							SELECT i.id AS image_id, count(*) AS num_annotations
+							FROM image i
+							JOIN image_validation v ON v.image_id = i.id
+							WHERE v.label_id NOT IN (
+								SELECT a.label_id FROM image_annotation a
+							)
+							GROUP BY i.id
+
+							UNION ALL
+
+							SELECT i.id AS image_id, count(*) AS num_annotations
+							FROM image i
+							JOIN image_label_suggestion s ON s.image_id = i.id
+							WHERE s.image_id NOT IN (
+								SELECT a.label_suggestion_id FROM image_annotation_suggestion a
+							)
+							GROUP BY i.id
+							) q
+							GROUP BY q.image_id
+						),
                         image_ids AS (
                             SELECT image_id, annotated_percentage, image_width, image_height, image_key, image_unlocked, image_collection
                             FROM
@@ -583,7 +607,9 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                 SELECT q2.image_id as image_id, accessors, annotated_percentage, i.width as image_width, i.height as image_height, 
                                 i.unlocked as image_unlocked, i.key as image_key, coll.image_collection as image_collection,
                                 CASE WHEN array_length(COALESCE(accessors, ARRAY[]::text[]), 1) > 0 THEN false ELSE true END as is_unlabeled,
-								array_length(COALESCE(accessors, ARRAY[]::text[]), 1) as image_num_labels
+								array_length(COALESCE(accessors, ARRAY[]::text[]), 1) as image_num_labels,
+								COALESCE(n.num_annotations, 0) as image_num_open_annotation_tasks
+
                                 FROM
                                 (
                                     SELECT q1.image_id, (array_agg(label) FILTER (WHERE label is not null))::text[] as accessors, 
@@ -598,7 +624,7 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                         SELECT image_id, label as label
                                         FROM image_trending_labels t
                                     ) q1
-                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id	
+                                    LEFT JOIN image_annotation_coverage c ON c.image_id = q1.image_id
                                     GROUP BY q1.image_id, c.annotated_percentage
                                 ) q2
                                 JOIN image i ON i.id = q2.image_id
@@ -610,6 +636,7 @@ func (p *ImageMonkeyDatabase) GetImagesLabels(apiUser datastructures.APIUser, pa
                                     JOIN account acc ON acc.id = ui.account_id
                                     WHERE %s
                                 ) coll ON coll.image_id = i.id
+                                LEFT JOIN num_of_annotations_per_image n ON i.id = n.image_id
                             ) q
                             WHERE %s
                         ),
