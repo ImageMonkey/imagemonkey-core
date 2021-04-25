@@ -620,9 +620,27 @@ var Annotator = (function() {
             if (("isPolygonHandle" in p) && p["isPolygonHandle"]) {
                 if (inst.polygon.isInPolyEditMode()) {
                     var points = inst.polygon.getPaintedPolygonById(p.belongsToPolygon).points;
+					
+					//check for the specific event type here. In case it's a mousemove event
+					//we directly have the 'movementX'/'movementY' information. In case it's
+					//not a mousemove event (as we are running on a mobile/tablet device),
+					//check the changedTouches list and calculate the relative x/y positions manually.
+					//caution: this code doesn't handle multi touch events properly!
+					let newX = null;
+					let newY = null;
+					if(o.e.type === "mousemove") {
+						newX = points[p.index].x + o.e.movementX;
+						newY = points[p.index].y + o.e.movementY;
+					}
+					else {
+						let canvasBoundingRect = o.e.target.getBoundingClientRect();
+						newX = o.e.changedTouches.item(0).clientX - canvasBoundingRect.left;
+						newY = o.e.changedTouches.item(0).clientY - canvasBoundingRect.top;
+					}
+
                     points[p.index] = {
-                        x: (points[p.index].x + o.e.movementX),
-                        y: (points[p.index].y + o.e.movementY)
+                        x: newX,
+                        y: newY
                     }
                     //points[p.index] = {x: p.getCenterPoint().x, y: p.getCenterPoint().y};
                     inst.polygon.getPaintedPolygonById(p.belongsToPolygon).setCoords();
