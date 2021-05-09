@@ -6,6 +6,9 @@ FROM golang:1.14.4-${DEBIAN_VERSION}
 ARG DEBIAN_VERSION
 ARG POSTGRES_VERSION
 
+ARG CHROMEDRIVER_VERSION=91.0.4472.19
+#ARG CHROMIUM_VERSION=90.0.4430.93-1
+
 RUN mkdir -p /home/go/bin
 #ENV GOPATH=/home/go
 #ENV GOBIN=/home/go/bin
@@ -41,16 +44,13 @@ COPY env/postgres /tmp/env/postgres
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
 	&& apt-get update \
-	&& apt-get install -y --no-install-recommends python3 postgresql-client-${POSTGRES_VERSION} python3-pip wget unzip \
+	&& apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip wget unzip \
 	&& pip3 install selenium requests \
-	&& wget https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_linux64.zip --directory-prefix=/tmp/ \
+	&& wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip --directory-prefix=/tmp/ \
 	&& cd /tmp \
 	&& unzip /tmp/chromedriver_linux64.zip \ 
 	&& cp /tmp/chromedriver /tmp/tests/ui \
-	&& rm /tmp/chromedriver_linux64.zip \
-	&& wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --directory-prefix=/tmp/ \
-	&& apt install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
-	&& rm /tmp/google-chrome-stable_current_amd64.deb 
+	&& rm /tmp/chromedriver_linux64.zip
 
 RUN cd /tmp \
 	&& wget https://github.com/tsenart/vegeta/releases/download/v12.7.0/vegeta-12.7.0-linux-amd64.tar.gz --directory-prefix=/tmp/ \
