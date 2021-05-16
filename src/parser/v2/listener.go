@@ -9,26 +9,25 @@ import (
 
 type CustomErrorListener struct {
 	*antlr.DefaultErrorListener
-	err error
+	err   error
 	query string
 }
 
 func NewCustomErrorListener() *CustomErrorListener {
-	return &CustomErrorListener {
-        err: nil,
-        query: "",
-    } 
+	return &CustomErrorListener{
+		err:   nil,
+		query: "",
+	}
 }
 
 func trimQuotes(s string) string {
-    if len(s) >= 2 {
-        if c := s[len(s)-1]; s[0] == c && (c == '"' || c == '\'') {
-            return s[1 : len(s)-1]
-        }
-    }
-    return s
+	if len(s) >= 2 {
+		if c := s[len(s)-1]; s[0] == c && (c == '"' || c == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
-
 
 func underlineError(input, msg string, offendingSymbolStart int, offendingSymbolEnd int, column int) string {
 	out := input + "\n"
@@ -45,35 +44,35 @@ func underlineError(input, msg string, offendingSymbolStart int, offendingSymbol
 }
 
 func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
-	c. err = errors.New(underlineError(c.query, msg, offendingSymbol.(antlr.Token).GetStart(), offendingSymbol.(antlr.Token).GetStop(), column))
+	c.err = errors.New(underlineError(c.query, msg, offendingSymbol.(antlr.Token).GetStart(), offendingSymbol.(antlr.Token).GetStop(), column))
 }
-
 
 type imagemonkeyQueryLangListener struct {
 	*BaseImagemonkeyQueryLangListener
-	pos int
-	allowImageHeight bool
-	allowImageWidth bool
-	allowAnnotationCoverage bool
-	allowOrderByValidation bool
-	allowImageCollection bool
-	allowImageHasLabels bool
-	numOfLabels int
-	version int
-	typeOfQueryKnown bool
-	err error
-	isUuidQuery bool
-	query string
-	resultOrder ResultOrder
+	pos                              int
+	allowImageHeight                 bool
+	allowImageWidth                  bool
+	allowImageNumLabels              bool
+	allowImageNumAnnotations         bool
+	allowImageNumOpenAnnotationTasks bool
+	allowAnnotationCoverage          bool
+	allowOrderByValidation           bool
+	allowImageCollection             bool
+	allowImageHasLabels              bool
+	numOfLabels                      int
+	version                          int
+	typeOfQueryKnown                 bool
+	err                              error
+	isUuidQuery                      bool
+	query                            string
+	resultOrder                      ResultOrder
 
 	stack []ParseResult
-
 }
 
 type StackEntry struct {
 	Val string
 }
-
 
 func containsOnly(s string, c rune) bool {
 	for _, char := range s {
@@ -94,10 +93,10 @@ func (l *imagemonkeyQueryLangListener) pop() ParseResult {
 	}
 
 	// Get the last value from the stack.
-	result := l.stack[len(l.stack) - 1]
+	result := l.stack[len(l.stack)-1]
 
 	// Remove the last element from the stack.
-	l.stack = l.stack[:len(l.stack) - 1]
+	l.stack = l.stack[:len(l.stack)-1]
 
 	return result
 }
@@ -108,7 +107,7 @@ func (l *imagemonkeyQueryLangListener) peek() ParseResult {
 	}
 
 	// Get the last value from the stack.
-	result := l.stack[len(l.stack) - 1]
+	result := l.stack[len(l.stack)-1]
 
 	return result
 }
@@ -133,7 +132,6 @@ func (l *imagemonkeyQueryLangListener) popParentheses() string {
 	return prefix
 }
 
-
 func (l *imagemonkeyQueryLangListener) EnterParenthesesExpression(c *ParenthesesExpressionContext) {
 	stackEntry := ParseResult{Query: "("}
 	l.push(stackEntry)
@@ -153,8 +151,8 @@ func (l *imagemonkeyQueryLangListener) ExitOrderByValidationAscExpression(c *Ord
 		l.resultOrder.Direction = ResultOrderAscDirection
 		l.resultOrder.Type = OrderByNumOfExistingValidations
 	} else {
-		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+		l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+			c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 	}
 }
 
@@ -163,11 +161,10 @@ func (l *imagemonkeyQueryLangListener) ExitOrderByValidationDescExpression(c *Or
 		l.resultOrder.Direction = ResultOrderDescDirection
 		l.resultOrder.Type = OrderByNumOfExistingValidations
 	} else {
-		l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+		l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+			c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 	}
 }
-
 
 func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *AnnotationCoverageExpressionContext) {
 	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
@@ -184,8 +181,8 @@ func (l *imagemonkeyQueryLangListener) ExitAnnotationCoverageExpression(c *Annot
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
 				} else {
-					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+					l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+						tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
 		}
@@ -207,8 +204,8 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
 				} else {
-					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+					l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+						tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
 		}
@@ -216,7 +213,6 @@ func (l *imagemonkeyQueryLangListener) ExitImageWidthExpression(c *ImageWidthExp
 }
 
 func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightExpressionContext) {
-	
 	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
 	if len(tokens) > 0 {
 		imageHeightVal := tokens[0].GetText()
@@ -231,8 +227,77 @@ func (l *imagemonkeyQueryLangListener) ExitImageHeightExpression(c *ImageHeightE
 					//stackEntry.Subquery = val
 					l.push(stackEntry)
 				} else {
-					l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+					l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+						tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+				}
+			}
+		}
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitImageNumLabelsExpression(c *ImageNumLabelsExpressionContext) {
+
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageNumLabelsVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumLabelsVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowImageNumLabels {
+					operator := tokens[0].GetText()
+					val := "q.image_num_labels" + operator + imageNumLabelsVal
+
+					stackEntry := ParseResult{Query: val}
+					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+						tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+				}
+			}
+		}
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitImageNumAnnotations(c *ImageNumAnnotationsContext) {
+
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageNumAnnotationsVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumAnnotationsVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowImageNumAnnotations {
+					operator := tokens[0].GetText()
+					val := "q.image_num_annotations" + operator + imageNumAnnotationsVal
+
+					stackEntry := ParseResult{Query: val}
+					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+						tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
+				}
+			}
+		}
+	}
+}
+
+func (l *imagemonkeyQueryLangListener) ExitImageNumOpenAnnotationTasksExpression(c *ImageNumOpenAnnotationTasksExpressionContext) {
+
+	tokens := c.GetTokens(ImagemonkeyQueryLangParserVAL)
+	if len(tokens) > 0 {
+		imageNumOpenAnnotationTasksVal := tokens[0].GetText()
+		if _, err := strconv.Atoi(imageNumOpenAnnotationTasksVal); err == nil {
+			tokens = c.GetTokens(ImagemonkeyQueryLangParserOPERATOR)
+			if len(tokens) > 0 {
+				if l.allowImageNumOpenAnnotationTasks {
+					operator := tokens[0].GetText()
+					val := "q.image_num_open_annotation_tasks" + operator + imageNumOpenAnnotationTasksVal
+
+					stackEntry := ParseResult{Query: val}
+					l.push(stackEntry)
+				} else {
+					l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+						tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart(), tokens[0].GetSymbol().GetStart()))
 				}
 			}
 		}
@@ -251,7 +316,7 @@ func (l *imagemonkeyQueryLangListener) ExitUuidExpression(c *UuidExpressionConte
 	val := ""
 	if l.version == 1 {
 		if !l.isUuidQuery {
-			l.err = errors.New("Expecting UUID, got " +strings.TrimSpace(c.GetText()))
+			l.err = errors.New("Expecting UUID, got " + strings.TrimSpace(c.GetText()))
 			return
 		}
 		val = "a.accessor = $" + strconv.Itoa(l.pos)
@@ -286,7 +351,6 @@ func (l *imagemonkeyQueryLangListener) ExitLabelExpression(c *LabelExpressionCon
 		val = "q.accessors @> ARRAY[$" + strconv.Itoa(l.pos) + "]::text[]"
 	}
 
-	
 	subval := "a.accessor = $" + strconv.Itoa(l.pos)
 
 	stackEntry := ParseResult{Query: val}
@@ -319,30 +383,30 @@ func (l *imagemonkeyQueryLangListener) ExitAssignmentExpression(c *AssignmentExp
 	assignmentVal := strings.TrimSpace(c.GetText()) //remove leading + trailing spaces
 
 	equalSignPos := strings.Index(assignmentVal, "=")
-	if equalSignPos != - 1 { //found
-		beforePart := strings.TrimSpace(assignmentVal[: equalSignPos])
-		afterPart := strings.TrimSpace(assignmentVal[equalSignPos + 1 :])
+	if equalSignPos != -1 { //found
+		beforePart := strings.TrimSpace(assignmentVal[:equalSignPos])
+		afterPart := strings.TrimSpace(assignmentVal[equalSignPos+1:])
 
 		subval := ""
 		if beforePart == "image.collection" {
 			if !l.allowImageCollection {
-				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+					c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return
 			}
 			assignmentVal = trimQuotes(afterPart)
-			val = "image_collection = $" + strconv.Itoa(l.pos) 
+			val = "image_collection = $" + strconv.Itoa(l.pos)
 		} else if beforePart == "image.unlabeled" {
 			if !l.allowImageHasLabels {
-				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+					c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return
 			}
 
 			assignmentVal = trimQuotes(afterPart)
 			if assignmentVal != "true" && assignmentVal != "false" {
-				l.err = errors.New(underlineError(l.query, "Unexpected token '" + c.GetText() + "'", 
-														c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
+				l.err = errors.New(underlineError(l.query, "Unexpected token '"+c.GetText()+"'",
+					c.GetStart().GetStart(), c.GetStart().GetStart(), c.GetStart().GetStart()))
 				return
 			}
 			val = "is_unlabeled = $" + strconv.Itoa(l.pos)
@@ -367,7 +431,7 @@ func (l *imagemonkeyQueryLangListener) ExitAndExpression(c *AndExpressionContext
 
 	left := l.pop()
 	leftParentheses := l.popParentheses()
-	
+
 	stackEntry := ParseResult{Query: leftParentheses + left.Query + " AND " + rightParentheses + right.Query}
 	if left.Subquery != "" && right.Subquery != "" {
 		stackEntry.Subquery = leftParentheses + left.Subquery + " OR " + rightParentheses + right.Subquery
@@ -379,12 +443,12 @@ func (l *imagemonkeyQueryLangListener) ExitAndExpression(c *AndExpressionContext
 		}
 	}
 	stackEntry.QueryValues = append(stackEntry.QueryValues, append(left.QueryValues, right.QueryValues...)...)
-	l.push(stackEntry) 
+	l.push(stackEntry)
 }
 
 func (l *imagemonkeyQueryLangListener) ExitNotExpression(c *NotExpressionContext) {
 	left := l.pop()
-	
+
 	stackEntry := ParseResult{Query: "NOT " + left.Query}
 	if left.Subquery != "" {
 		stackEntry.Subquery = "NOT " + left.Subquery
@@ -411,5 +475,5 @@ func (l *imagemonkeyQueryLangListener) ExitOrExpression(c *OrExpressionContext) 
 		}
 	}
 	stackEntry.QueryValues = append(stackEntry.QueryValues, append(left.QueryValues, right.QueryValues...)...)
-	l.push(stackEntry) 
+	l.push(stackEntry)
 }

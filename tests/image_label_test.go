@@ -66,6 +66,22 @@ func testGetLabelSuggestions(t *testing.T, includeUnlocked bool) []string {
 	return labelSuggestions
 }
 
+func testGetLabelSuggestionsUsage(t *testing.T) []datastructures.ImageLabelSuggestion {
+	url := BASE_URL + API_VERSION + "/label/suggestions/usage"
+
+	labelSuggestionsUsage := []datastructures.ImageLabelSuggestion{}
+
+	req := resty.R().
+			SetHeader("Content-Type", "application/json").
+			SetResult(&labelSuggestionsUsage)
+
+	resp, err := req.Get(url)
+	ok(t, err)
+	equals(t, resp.StatusCode(), 200)
+
+	return labelSuggestionsUsage
+}
+
 
 func testSuggestLabelForImage(t *testing.T, imageId string, label string, annotatable bool, token string, requiredStatusCode int) {
 	type LabelMeEntry struct {
@@ -846,10 +862,190 @@ func TestGetLabelSuggestionsShouldntIncludeUnlocked(t *testing.T) {
 
 
 	runTrendingLabelsWorker(t, 0)
-	
+
 	err = db.CloseAllTrendingLabelTasks()
 	ok(t, err)
 
 	labelSuggestions := testGetLabelSuggestions(t, false)
 	equals(t, len(labelSuggestions), 0)
+}
+
+func TestLabelSuggestionsUsage1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testSignUp(t, "testuser", "testpwd", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpwd", 200)
+
+	labelSuggestionsUsageBefore := testGetLabelSuggestionsUsage(t)
+	equals(t, len(labelSuggestionsUsageBefore), 0)
+
+	testSuggestLabelForImage(t, imageId, "test", true, token, 200)
+
+	labelSuggestionsUsageAfter := testGetLabelSuggestionsUsage(t)
+	equals(t, len(labelSuggestionsUsageAfter), 1)
+	equals(t, labelSuggestionsUsageAfter[0].NumOfLabels, int32(1))
+	equals(t, labelSuggestionsUsageAfter[0].NumOfAnnotations, int32(0))
+	equals(t, labelSuggestionsUsageAfter[0].Name, "test")
+}
+
+func TestLabelSuggestionsUsage2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testSignUp(t, "testuser", "testpwd", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpwd", 200)
+
+	labelSuggestionsUsageBefore := testGetLabelSuggestionsUsage(t)
+	equals(t, len(labelSuggestionsUsageBefore), 0)
+
+	testSuggestLabelForImage(t, imageIds[0], "test", true, token, 200)
+	testSuggestLabelForImage(t, imageIds[1], "test", true, token, 200)
+	testSuggestLabelForImage(t, imageIds[2], "test", true, token, 200)
+
+	labelSuggestionsUsageAfter := testGetLabelSuggestionsUsage(t)
+	equals(t, len(labelSuggestionsUsageAfter), 1)
+	equals(t, labelSuggestionsUsageAfter[0].NumOfLabels, int32(3))
+	equals(t, labelSuggestionsUsageAfter[0].NumOfAnnotations, int32(0))
+	equals(t, labelSuggestionsUsageAfter[0].Name, "test")
+}
+
+func TestLabelSuggestionsUsage3(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testMultipleDonate(t, "apple")
+
+	imageIds, err := db.GetAllImageIds()
+	ok(t, err)
+
+	testSignUp(t, "testuser", "testpwd", "testuser@imagemonkey.io")
+	token := testLogin(t, "testuser", "testpwd", 200)
+
+	labelSuggestionsUsageBefore := testGetLabelSuggestionsUsage(t)
+	equals(t, len(labelSuggestionsUsageBefore), 0)
+
+	testSuggestLabelForImage(t, imageIds[0], "test", true, token, 200)
+	testSuggestLabelForImage(t, imageIds[1], "test", true, token, 200)
+	testSuggestLabelForImage(t, imageIds[2], "test", true, token, 200)
+
+	testAnnotate(t, imageIds[0], "test", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+
+	testAnnotate(t, imageIds[1], "test", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, token, 201)
+
+	labelSuggestionsUsageAfter := testGetLabelSuggestionsUsage(t)
+	equals(t, len(labelSuggestionsUsageAfter), 1)
+	equals(t, labelSuggestionsUsageAfter[0].NumOfLabels, int32(3))
+	equals(t, labelSuggestionsUsageAfter[0].NumOfAnnotations, int32(2))
+	equals(t, labelSuggestionsUsageAfter[0].Name, "test")
+}
+
+func TestBrowseLabelImageNumLabels(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseLabel(t, "image.num_labels < 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_labels = 1", "", 1, 200)
+	testBrowseLabel(t, "image.num_labels > 1", "", 0, 200)
+	testBrowseLabel(t, "apple & image.num_labels = 1", "", 1, 200)
+	testBrowseLabel(t, "egg & image.num_labels = 1", "", 0, 200)
+	testBrowseLabel(t, "apple | image.num_labels = 1", "", 1, 200)
+}
+
+func TestBrowseLabelImageNumLabels1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseLabel(t, "image.num_labels < AAA", "", 0, 422)
+	testBrowseLabel(t, "image.num_labels = B", "", 0, 422)
+	testBrowseLabel(t, "image.num_labels > C", "", 0, 422)
+}
+
+func TestBrowseLabelImageNumLabels2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testBrowseLabel(t, "image.num_labels < 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_labels = 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_labels > 2", "", 0, 200)
+}
+
+func TestBrowseLabelImageNumOpenAnnotationTasks1(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	testBrowseLabel(t, "image.num_open_annotation_tasks < 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 1", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks > 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 0", "", 0, 200)
+}
+
+func TestBrowseLabelImageNumOpenAnnotationTasks2(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testBrowseLabel(t, "image.num_open_annotation_tasks < 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 1", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks > 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 0", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "apple | image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "apple & image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "dog & image.num_open_annotation_tasks = 2", "", 0, 200)
+}
+
+func TestBrowseLabelImageNumOpenAnnotationTasks3(t *testing.T) {
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	testDonate(t, "./images/apples/apple1.jpeg", "apple", true, "", "", 200)
+
+	imageId, err := db.GetLatestDonatedImageId()
+	ok(t, err)
+
+	testLabelImage(t, imageId, "egg", "", "", 200)
+
+	testAnnotate(t, imageId, "apple", "",
+						`[{"top":50,"left":300,"type":"rect","angle":15,"width":240,"height":100,"stroke":{"color":"red","width":1}}]`, "", 201)
+
+	testBrowseLabel(t, "image.num_open_annotation_tasks < 2", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 1", "", 1, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks > 2", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 0", "", 0, 200)
+	testBrowseLabel(t, "image.num_open_annotation_tasks = 2", "", 0, 200)
+	testBrowseLabel(t, "apple | image.num_open_annotation_tasks = 2", "", 1, 200)
+	testBrowseLabel(t, "apple & image.num_open_annotation_tasks = 2", "", 0, 200)
+	testBrowseLabel(t, "dog & image.num_open_annotation_tasks = 2", "", 0, 200)
 }
