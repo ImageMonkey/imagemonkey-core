@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/tailwindcss-compiled.css?v={{ .assetVersion }}" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+	<!--<script src="https://unpkg.com/vue@3.0.1/dist/vue.global.prod.js"></script>-->
+	<script src="https://unpkg.com/vuex"></script>
+	<script src="js/imagemonkey/api.js?v={{ .assetVersion }}"></script>
+	<link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+	<script src="js/fabric.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/loadingspinner.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/imagecanvas.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/annotationtoolbox.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/annotationnavbar.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/annotationlabellist.js?v={{ .assetVersion }}"></script>
+	<script src="js/jquery.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/annotate.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/utils/utils.js?v={{ .assetVersion }}"></script>
+</head>
+
+<script>
+	var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
+	var canvas = null;
+	window.onload = (event) => {
+		window.EventBus = new Vue();
+
+		/*const vueApp = new Vue({
+		  el: '#array-rendering',
+		  delimiters: ['${', '}$'],
+		  data() {
+			return {
+				accessors: [] 
+		  	}
+		  },
+		  mounted: function() {
+			var that = this;
+			Promise.all([imageMonkeyApi.getLabelAccessors(true)])
+				.then(function(d) {
+					console.log(d[0]);
+					that.accessors = d[0];
+				}).catch(function(e) {
+					Sentry.captureException(e);
+				});
+		  }
+		});*/
+
+		const loadingSpinnerComponent = LoadingSpinnerComponent;
+		const annotationToolboxComponent = AnnotationToolboxComponent;
+		const annotationNavbarComponent = AnnotationNavbarComponent;
+		const annotationLabelListComponent = AnnotationLabelListComponent;
+		const imageCanvasComponent = ImageCanvasComponent;
+		//imageCanvasComponent.imageMonkeyApi = imageMonkeyApi;
+
+		const loadingSpinner = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#global-loadingspinner",
+			components: {
+				"loadingspinner": loadingSpinnerComponent
+			}
+		});
+
+		const annotationToolbox = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#annotation-toolbox",
+			components: {
+				"annotationtoolbox": annotationToolboxComponent
+			}
+		});
+
+		const annotationNavbar = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#annotation-navbar",
+			components: {
+				"annotationnavbar": annotationNavbarComponent
+			}
+		});
+
+		const annotationLabelList = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#annotation-label-list",
+			components: {
+				"annotationlabellist": annotationLabelListComponent
+			}
+		});
+
+		const imageCanvas = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#annotation-area",
+			components: {
+				"imagecanvas": imageCanvasComponent
+			},
+			mounted: function() {
+				//this.loadUnannotatedImage();
+				//EventBus.$emit('loadUnannotatedImage', imageMonkeyApi, null);
+			}
+		});
+		imageCanvas.$refs.annotationArea.loadUnannotatedImage();
+
+		/*
+		const loadImage = new Vue({
+		  delimiters: ['${', '}$'],
+		  el: '#annotationArea',
+		  mounted: function() {
+			var that = this;
+			imageMonkeyApi.getUnannotatedImage(undefined, null)
+            .then(function(data) {
+				console.log("here");
+               	canvas = new CanvasDrawer("annotationArea");
+				let backgroundImageUrl = "https://picsum.photos/800/600"
+				canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
+					EventBus.$emit('hideLoadingSpinner', null, null);
+					//loadingSpinnerComponent.hide();
+        			//this.annotator.initHistory();
+            		//this.onCanvasBackgroundImageSet();
+       		 	});
+            }).catch(function() {
+            	console.log("catch")
+				Sentry.captureException(e); 
+            });
+		  }
+		});*/
+		
+	};
+
+</script>
+
+<body>
+	<annotationnavbar id="annotation-navbar"></annotationnavbar>	
+	
+	<div class="grid grid-flow-col grid-cols-3 grid-rows-1 gap-2 items-center justify-center">
+		<div id="annotation-toolbox-container">
+			<annotationtoolbox id="annotation-toolbox"></annotationtoolbox>	
+		</div>
+		<div class="absolute top-20 left-20" id="annotation-area-container">
+		    <imagecanvas id="annotation-area" ref="annotationArea"></imagecanvas>	
+		</div>	
+
+		<div class="absolute right-2" id="annotation-label-list-container">
+			<annotationlabellist id="annotation-label-list"></annotationlabellist>	
+		</div>
+	</div>
+
+	<loadingspinner visible="true" id="global-loadingspinner"></loadingspinner>
+	<!--<ul id="array-rendering">
+	  <li v-for="accessor in accessors">
+		${ accessor.accessor }$
+	  </li> 
+	</ul>-->
+</body>
+
+</html>
+
+
+<!-- Components -->
+{{ template "loading_spinner.html" .}}
+{{ template "imagecanvas.html" .}}
+{{ template "annotationtoolbox.html" .}}
+{{ template "annotationnavbar.html" .}}
+{{ template "annotationlabellist.html" .}}

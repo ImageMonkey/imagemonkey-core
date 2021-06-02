@@ -520,6 +520,15 @@ func main() {
 		})
 
 
+		router.GET("/annotation-demo", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "annotation-demo.html", gin.H{
+				"title": "Annotation-Demo",
+				"apiBaseUrl": apiBaseUrl,
+				"assetVersion": assetVersion,
+			})
+		})
+
+
 		router.GET("/annotate", func(c *gin.Context) {
 			params := c.Request.URL.Query()
 

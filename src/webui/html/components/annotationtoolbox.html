@@ -1,0 +1,42 @@
+<script type="text/x-template" id="annotation-toolbox-template">
+<div class="flex flex-row h-full">
+    <nav class="bg-white dark:bg-gray-800 w-20 h-screen justify-between flex flex-col border-r-2">
+        <div class="mt-10 mb-10">
+            <div class="mt-10">
+                <ul>
+                    <li class="my-12 text-center">
+                        <button type="button" class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="rectAnnotationMode">
+                           <i class="fas fa-vector-square" style="color:gray" v-bind:style="rectAnnotationModeIconColor"></i>
+                        </button>
+                    </li>
+                    <li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="circleAnnotationMode">
+                            <i class="far fa-circle" style="color:gray" v-bind:style="circleAnnotationModeIconColor"></i>
+                        </button>
+                    </li>
+                    <li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="polygonAnnotationMode">
+                            <i class="fas fa-draw-polygon" style="color:gray" v-bind:style="polygonAnnotationModeIconColor"></i>
+                        </button>
+                    </li>
+					<li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="selectMoveAnnotationMode">
+                            <i class="fas fa-expand-arrows-alt" style="color:gray" v-bind:style="selectMoveAnnotationModeIconColor"></i>
+                        </button>
+                    </li>
+                    <li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomIn">
+							<i class="fas fa-search-plus" style="color:gray"></i>
+						</button>
+                    </li>
+					<li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomOut">
+							<i class="fas fa-search-minus" style="color:gray"></i>
+                    	</button>
+					</li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</div>
+</script>
