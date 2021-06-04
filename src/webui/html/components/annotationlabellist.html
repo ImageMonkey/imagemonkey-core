@@ -273,78 +273,8 @@
         </thead>
         <tbody class="divide-y bg-green-100">
           <tr v-for="label in labels">
-		  	<td class="px-6 py-4 text-center">${ label }$</td>
+		  	<td class="px-6 py-4 text-center hover:bg-green-200 cursor-default" v-bind:id="label.uuid" v-on:click="itemSelected(label.uuid)" v-bind:class="itemColor(label.uuid)">${ label.displayname }$</td>
 		  </tr>
-
-		  <!--<tr>
-            <td class="px-6 py-4 text-center">Column</td>
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-          </tr>
-
-		  <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-          </tr>
-
-		  <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-
-          </tr>
-          <tr>
-            <td class="px-6 py-4 text-center">Column</td>
-          </tr>-->
-
         </tbody>
       </table>
     </div>

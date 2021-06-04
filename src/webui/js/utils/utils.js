@@ -1,9 +1,18 @@
-function buildComposedLabels(label, sublabels) {
-	if(sublabels === null || sublabels === undefined)
-		return [label];
-	composedLabels = [label];
-	for(const sublabel of sublabels) {
-		composedLabels.push(sublabel + "/" + label);	
-	}
-	return composedLabels;
+function buildComposedLabels(label, uuid, sublabels) {
+    if (sublabels === null || sublabels === undefined)
+        return [{
+            "displayname": label,
+            "uuid": uuid
+        }];
+    composedLabels = [{
+        "displayname": label,
+        "uuid": uuid
+    }];
+    for (const sublabel of sublabels) {
+        composedLabels.push({
+            "displayname": sublabel.name + "/" + label,
+            "uuid": sublabel.uuid
+        });
+    }
+    return composedLabels;
 }
