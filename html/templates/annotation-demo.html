@@ -53,7 +53,6 @@
 		const annotationNavbarComponent = AnnotationNavbarComponent;
 		const annotationLabelListComponent = AnnotationLabelListComponent;
 		const imageCanvasComponent = ImageCanvasComponent;
-		//imageCanvasComponent.imageMonkeyApi = imageMonkeyApi;
 
 		const loadingSpinner = new Vue({
 			delimiters: ['${', '}$'],
@@ -98,31 +97,8 @@
 				//EventBus.$emit('loadUnannotatedImage', imageMonkeyApi, null);
 			}
 		});
-		imageCanvas.$refs.annotationArea.loadUnannotatedImage();
-
-		/*
-		const loadImage = new Vue({
-		  delimiters: ['${', '}$'],
-		  el: '#annotationArea',
-		  mounted: function() {
-			var that = this;
-			imageMonkeyApi.getUnannotatedImage(undefined, null)
-            .then(function(data) {
-				console.log("here");
-               	canvas = new CanvasDrawer("annotationArea");
-				let backgroundImageUrl = "https://picsum.photos/800/600"
-				canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
-					EventBus.$emit('hideLoadingSpinner', null, null);
-					//loadingSpinnerComponent.hide();
-        			//this.annotator.initHistory();
-            		//this.onCanvasBackgroundImageSet();
-       		 	});
-            }).catch(function() {
-            	console.log("catch")
-				Sentry.captureException(e); 
-            });
-		  }
-		});*/
+		let validationId = new URL(window.location.href).searchParams.get("validation_id");
+		imageCanvas.$refs.annotationArea.loadUnannotatedImage(validationId);
 		
 	};
 
