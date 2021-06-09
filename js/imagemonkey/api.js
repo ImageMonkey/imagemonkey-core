@@ -259,7 +259,7 @@ var ImageMonkeyApi = (function() {
         var inst = this;
         return new Promise(function(resolve, reject) {
             var url = "";
-            if (validationId === undefined)
+            if (validationId === undefined || validationId === null)
                 url = (inst.baseUrl + "/" + inst.apiVersion + "/annotate?add_auto_annotations=true" +
                     ((labelId === null) ? "" : ("&label_id=" + labelId)));
             else

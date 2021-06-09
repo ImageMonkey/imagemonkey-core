@@ -3,16 +3,15 @@ ImageCanvasComponent = {
   imageMonkeyApi: null,
   delimiters: ['${', '}$'],
   methods: {
-	loadUnannotatedImage: function() {
+	loadUnannotatedImage: function(validationId = undefined) {
 		var that = this;
-		console.log("id = " + that.$el.id);
-		console.log("id = ", that);
-		imageMonkeyApi.getUnannotatedImage(undefined, null)
+		imageMonkeyApi.getUnannotatedImage(validationId, null)
 		.then(function(data) {
 			EventBus.$emit("unannotatedImageDataReceived", data);
 
 			canvas = new CanvasDrawer(that.$el.id);
 
+			//TODO: make max width configureable
 			let maxWidth = data.width;
 			if(maxWidth > 800)
 				maxWidth = 800;
@@ -23,9 +22,6 @@ ImageCanvasComponent = {
 
 			canvas.setWidth(width); 
         	canvas.setHeight(height);
-			console.log("width = " +document.getElementById("annotation-area-container").clientWidth);
-			console.log("height = " +document.getElementById("annotation-area-container").clientHeight);
-			console.log("annotationLabelListContainer width: " +$("#annotation-label-list-container").width());
 			
 			let backgroundImageUrl = data.url;
 			canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
@@ -39,8 +35,8 @@ ImageCanvasComponent = {
   },
   mounted: function() {
 		var that = this;
-		EventBus.$on("loadUnannotatedImage", (item, response) => {
-			that.loadUnannotatedImage();
+		EventBus.$on("loadUnannotatedImage", (validationId) => {
+			that.loadUnannotatedImage(validationId);
 		});
 	}
 };

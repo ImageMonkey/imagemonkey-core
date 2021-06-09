@@ -1,3 +1,7 @@
 AnnotationNavbarComponent = {
-	template: "#annotation-navigationbar-template"
+	template: "#annotation-navigationbar-template",
+	methods: {
+		save: function() {
+		}
+	}
 };
