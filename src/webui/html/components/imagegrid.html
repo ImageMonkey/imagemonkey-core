@@ -1,9 +1,29 @@
+<style>
+    .justified {
+        position: relative;
+        width: 100%;
+    }
+
+    .justified-layout-item {
+        position: absolute;
+    }
+
+    .grey-out {
+        opacity: 0.4;
+        filter: alpha(opacity=40);
+        /* msie */
+    }
+</style>
+
 <script type="text/x-template" id="image-grid-template">
 
 <div class="row">
   <div class="one wide column"></div>
   <div class="fourteen wide centered column">
     <div class="justified" id="image-grid">
+
+      <div v-for="elem in currentlyVisibleImageGridData" class="justified-layout-item" data-balloon-visible :data-balloon="elem.tooltipText" data-balloon-length="fit" data-balloon-pos="up" :style="{width: elem.width + 'px', height: elem.height + 'px', top: elem.top + 'px', left: elem.left + 'px'}"><img :src="elem.imageUrl"></img>
+      </div>
     </div>
   </div>
   <div class="one wide column"></div>

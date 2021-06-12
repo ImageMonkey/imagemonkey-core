@@ -7,8 +7,8 @@
       <div class="field">
        <p class="default-text">Search for annotation tasks you are interested in</p>
        <div class="ui action input">
-         <input autocapitalize="none" placeholder="Query..." type="text" id="annotation-query">
-         <div class="ui icon button" id="random-annotation-query-button">
+         <input autocapitalize="none" placeholder="Query..." type="text" v-model="searchQuery" id="annotation-query">
+         <div class="ui icon button" id="random-annotation-query-button" v-on:click="randomQuery">
            <i class="cube icon"></i>
          </div>
        </div>
@@ -18,32 +18,32 @@
         <label>Options</label>
         <div class="field">
           <div class="ui radio checkbox">
-            <input type="radio" name="search-options" checked="checked">
+            <input type="radio" name="search-options" :checked="searchNoOptionsSelected" true-value="checked" false-value="">
             <label>No Options</label>
           </div>
         </div>
         <div class="field">
           <div class="ui radio checkbox" id="annotationsOnlyCheckbox" data-tooltip="Rework existing annotations">
-            <input type="radio" name="search-options">
+            <input type="radio" name="search-options" :checked="searchReworkExistingAnnotationsSelected" true-value="checked" false-value="">
             <label>Rework</label>
           </div>
         </div>
         <div class="field">
           <div class="ui radio checkbox" id="highlight-parent-annotations-checkbox" data-tooltip="Highlight the annotation's parent">
-            <input type="radio" name="search-options">
+            <input type="radio" name="search-options" :checked="searchHighlightAnnotationsParentSelected" true-value="checked" false-value="">
             <label>Highlight</label>
           </div>
         </div>
       </div>
 
 
-      <div class="ui disabled primary submit button" id="browse-annotations-go-button">Go</div>
-      <div class="ui right aligned disabled button" id="annotated-statistics-button">
+      <div class="ui primary submit button"  :class="labelAccessorsLoaded ? '' : 'loading disabled'" id="browse-annotations-go-button" v-on:click="search">Go</div>
+      <div class="ui right aligned button" :class="annotatedStatisticsLoaded ? '' : 'loading disabled'" id="annotated-statistics-button" v-on:click="showAnnotatedStatistics">
         <i class="chart bar icon"></i>
         Statistics
       </div>
     </form>
-    <p id="number-of-query-results"></p>
+    <p id="number-of-shown-query-results" v-if="numberOfShownQueryResults != ''">${ numberOfShownQueryResults }$<br><br></p>
 
     <div class="ui warning message" hidden id="browse-annotations-error-message">
       <i class="close icon"></i>
