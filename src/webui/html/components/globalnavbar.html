@@ -1,0 +1,128 @@
+<script type="text/x-template" id="global-navbar-template">
+
+<div class="ui container" v-if="visible">
+  <div class="ui large secondary inverted pointing menu">
+    <a class="toc item">
+      <i class="sidebar icon"></i>
+    </a>
+  <a class="{{if (eq .activeMenuNr 1)}}active {{end}}item" href="/">Home</a>
+  <a class="{{if (eq .activeMenuNr 2)}}active {{end}}item" href="/donate">Donate</a>
+  <div class="ui floating labeled dropdown item" id="label-pointing-menu-dropdown">
+    Label<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="header" style="font-size: 15px;">
+        Label Object
+      </div>
+      <div class="center aligned item" onclick="window.location='/label?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/label?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Label Image
+      </div>
+      <div class="center aligned item" onclick="window.location='/label?type=image&mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/label?type=image&mode=browse';">Browse</div>
+    </div>
+  </div>
+  
+  <div class="ui floating labeled dropdown item" id="annotate-pointing-menu-dropdown">
+    Annotate<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/annotate?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/annotate?mode=browse';">Browse</div>
+    </div>
+  </div>
+
+  <div class="ui floating labeled dropdown item" id="unified-mode-pointing-menu-dropdown">
+    Unified Mode<i class="dropdown icon"></i>
+    <div class="menu">
+        <div class="center aligned item" onclick="window.location='/annotate?mode=default&view=unified';">Default</div>
+        <div class="center aligned item" onclick="window.location='/annotate?mode=browse&view=unified';">Browse</div>
+    </div>
+  </div>
+
+  <div class="ui floating labeled dropdown item" id="validate-pointing-menu-dropdown">
+    Validate<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="header" style="font-size: 15px;">
+        Validate Object
+      </div>
+      <div class="center aligned item" onclick="window.location='/verify?mode=default';">Default</div>
+      <div class="center aligned item" onclick="window.location='/verify?mode=browse';">Browse</div>
+      <div class="header" style="font-size: 15px;">
+        Validate Annotation
+      </div>
+      <div class="center aligned item" onclick="window.location='/verify_annotation';">Default</div>
+    </div>
+  </div>
+  
+  <div class="ui dropdown item" id="refinement-pointing-menu-dropdown">
+      Refinement<i class="dropdown icon"></i>
+      <div class="menu">
+        <div class="center aligned item" onclick="window.location='/refine?mode=browse';">Refinement</div>
+        <div class="center aligned item" onclick="window.location='/quiz';">Quiz</div>
+      </div>
+    </div>
+
+  <div class="ui dropdown item" id="dataset-pointing-menu-dropdown">
+    Dataset<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/statistics';">Statistics</div>
+      <div class="center aligned item" onclick="window.location='/explore';">Explore</div>
+      <div class="center aligned item" onclick="window.location='/graph';">Graph</div>
+    </div>
+  </div>
+
+  <div class="ui dropdown item" id="developers-pointing-menu-dropdown">
+    Developers<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/libraries';">Libraries</div>
+      <div class="center aligned item" onclick="window.location='/models';">Models</div>
+    </div>
+  </div>
+
+  <div class="ui dropdown item" id="more-pointing-menu-dropdown">
+    More<i class="dropdown icon"></i>
+    <div class="menu">
+      <div class="center aligned item" onclick="window.location='/apps';">Apps</div>
+      <div class="center aligned item" onclick="window.location='/blog';">Blog</div>
+      <div class="center aligned item" onclick="window.location='/playground';">Playground</div>
+    </div>
+  </div>
+
+  {{if (eq .sessionInformation.LoggedIn false)}}
+  <a class="{{if (eq .activeMenuNr 12)}}active {{end}}item" href="/login">Login</a>
+  {{ else }}
+  <div class="ui dropdown item" id="main-menu-dropdown">
+    <i class="user icon"></i> {{ .sessionInformation.Username }} <i class="dropdown icon"></i>
+    <div class="floating ui circular label" id="num-of-main-moderator-notifications" :style="{visibility: numOfNotifications > 0 ? 'visible' : 'hidden'}" :class="numOfNotifications > 0 ? 'red' : ''">${ numOfNotifications }$</div>
+    <div class="menu">
+      <div class="item" id="main-menu-profile-button" v-on:click="profile"><i class="user icon"></i>Profile</div>
+      {{if eq .sessionInformation.IsModerator true }}
+      <div class="item" onclick="window.location='/moderation';"><i class="bullhorn icon" id="moderator-button-icon"></i>
+      Moderation
+      </div>
+      {{ end }}
+
+      {{ if .sessionInformation.UserPermissions }}
+      {{ if eq .sessionInformation.UserPermissions.CanUnlockImage true }}
+      <div class="item" onclick="window.location='/image_unlock';"><i class="check circle outline icon"></i>
+      Unlock Image
+      </div>
+      {{ end }}
+      {{ end }}
+
+	  {{ if .sessionInformation.UserPermissions }}
+	  {{ if eq .sessionInformation.UserPermissions.CanAcceptTrendingLabel true }}
+	  <div class="item" onclick="window.location='/labelrepository';"><i class="chart line icon"></i>
+	  Label Repository
+	  </div>
+	  {{ end }}
+	  {{ end }}
+
+      <div class="item" id="main-menu-logout-button" v-on:click="logout"><i class="sign out icon"></i>Logout</div>
+    </div>
+  </div>
+  {{ end }}
+</div>
+</div>
+
+</script>
