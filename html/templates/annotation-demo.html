@@ -5,151 +5,207 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="/css/tailwindcss-compiled.css?v={{ .assetVersion }}" rel="stylesheet">
-	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-	<!--<script src="https://unpkg.com/vue@3.0.1/dist/vue.global.prod.js"></script>-->
-	<script src="https://unpkg.com/vuex"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>	
+    <!--<script src="https://unpkg.com/vue@3.0.1/dist/vue.global.prod.js"></script>-->
+    <script src="https://unpkg.com/vuex"></script>
+	<!--<script src="https://requirejs.org/docs/release/2.3.6/minified/require.js"></script>-->	
+   	<link rel="stylesheet" href="css/spinner/spinners/3-wave.css?v={{ .assetVersion }}"/> 
+	<link rel="stylesheet" href="css/balloon/balloon.min.css?v={{ .assetVersion }}">
+	<script src="js/justified-layout.min.js?v={{ .assetVersion }}"></script>
 	<script src="js/imagemonkey/api.js?v={{ .assetVersion }}"></script>
-	<link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
-	<script src="js/fabric.min.js?v={{ .assetVersion }}"></script>
-	<script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous" />
+
+    <script src="js/jquery.min.js?v={{ .assetVersion }}"></script>
+    <script src="js/jquery-ui.min.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="css/jquery-ui.css?v={{ .assetVersion }}" />
+	<script src="js/common.js?v={{ .assetVersion }}"></script> 
+	<script src="/js/cookies.min.js?v={{ .assetVersion }}"></script>
+	<script src="/js/settings.js?v={{ .assetVersion }}"></script>
+
+    <script src="js/fabric.min.js?v={{ .assetVersion }}"></script>
+    <script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
+    <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
     <script src="js/components/loadingspinner.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/imagecanvas.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/annotationtoolbox.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/annotationnavbar.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/annotationlabellist.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/annotationbrowseform.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/annotationstatisticspopup.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/imagegrid.js?v={{ .assetVersion }}"></script>
-	<script src="js/components/waveloadingbar.js?v={{ .assetVersion }}"></script>
-	<script src="js/jquery.min.js?v={{ .assetVersion }}"></script>
-
-	<link rel="stylesheet" href="css/semantic.min.css?v={{ .assetVersion }}"/>
-    <script src="js/semantic.min.js?v={{ .assetVersion }}"></script> 
-    <link rel="stylesheet" href="css/common.css?v={{ .assetVersion }}"/>
-    <link rel="stylesheet" href="css/common_sub.css?v={{ .assetVersion }}"/>
-    <script src="js/common.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/imagecanvas.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationtoolbox.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationnavbar.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationlabellist.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationbrowseform.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationstatisticspopup.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/imagegrid.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/waveloadingbar.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/globalnavbar.js?v={{ .assetVersion }}"></script>
+	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
 
 
-	<script src="js/annotate.min.js?v={{ .assetVersion }}"></script>
-	<script src="js/utils/utils.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="css/semantic.min.css?v={{ .assetVersion }}" />
+    <script src="js/semantic.min.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="css/common.css?v={{ .assetVersion }}" />
+    <link rel="stylesheet" href="css/common_sub.css?v={{ .assetVersion }}" /> 
+
+
+    <script src="js/annotate.min.js?v={{ .assetVersion }}"></script>
+    <script src="js/utils/utils.js?v={{ .assetVersion }}"></script>
 </head>
 
 <script>
-	var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
-	var canvas = null;
-	window.onload = (event) => {
-		window.EventBus = new Vue();
+    var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
+	imageMonkeyApi.setToken(getCookie("imagemonkey"));
+    var canvas = null;
+    window.onload = (event) => {
+        window.EventBus = new Vue();
 
-		const loadingSpinnerComponent = LoadingSpinnerComponent;
-		const annotationToolboxComponent = AnnotationToolboxComponent;
-		const annotationNavbarComponent = AnnotationNavbarComponent;
-		const annotationLabelListComponent = AnnotationLabelListComponent;
-		const annotationBrowseFormComponent = AnnotationBrowseFormComponent;
-		const annotationStatisticsPopupComponent = AnnotationStatisticsPopupComponent;
-		const imageCanvasComponent = ImageCanvasComponent;
-		const imageGridComponent = ImageGridComponent;
-		const waveLoadingBarComponent = WaveLoadingBarComponent;
 
-		const loadingSpinner = new Vue({
+        const store = new Vuex.Store({
+            state: {
+                username: {{ .sessionInformation.Username }},
+                loggedIn: {{ if ne .sessionInformation.Username "" }} true {{ else }} false {{ end }},
+				isModerator: {{ if eq .sessionInformation.IsModerator true }} true {{ else }} false {{ end}}
+            },
+            mutations: {},
+            getters: {
+                loggedIn: function(state) {
+                    return state.loggedIn;
+                },
+				username: function(state) {
+					return state.username;
+				},
+				isModerator: function(state) {
+					return state.isModerator;
+				}
+            }
+        });
+
+
+        const loadingSpinnerComponent = LoadingSpinnerComponent;
+        const annotationToolboxComponent = AnnotationToolboxComponent;
+        const annotationNavbarComponent = AnnotationNavbarComponent;
+        const annotationLabelListComponent = AnnotationLabelListComponent;
+        const annotationBrowseFormComponent = AnnotationBrowseFormComponent;
+        const annotationStatisticsPopupComponent = AnnotationStatisticsPopupComponent;
+        const imageCanvasComponent = ImageCanvasComponent;
+        const imageGridComponent = ImageGridComponent;
+        const waveLoadingBarComponent = WaveLoadingBarComponent;
+		const globalNavbarComponent = GlobalNavbarComponent;
+
+        const loadingSpinner = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#global-loadingspinner",
+            components: {
+                "loadingspinner": loadingSpinnerComponent
+            }
+        });
+
+        const annotationToolbox = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-toolbox",
+            components: {
+                "annotationtoolbox": annotationToolboxComponent
+            }
+        });
+
+        const annotationNavbar = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-navbar",
+            components: {
+                "annotationnavbar": annotationNavbarComponent
+            }
+        });
+
+        const annotationBrowseForm = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-browseform",
+			store: store,
+            components: {
+                "annotationbrowseform": annotationBrowseFormComponent
+            }
+        });
+
+        const annotationLabelList = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-label-list",
+            components: {
+                "annotationlabellist": annotationLabelListComponent
+            }
+        });
+
+        const annotationStatisticsPopup = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-statistics-popup",
+            components: {
+                "annotationstatisticspopup": annotationStatisticsPopupComponent
+            }
+        });
+
+        const imageGrid = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-image-grid",
+            components: {
+                "imagegrid": imageGridComponent
+            }//,
+			/*mounted: function() {
+				var that = this;
+				
+			}*/
+        });
+
+        const waveLoadingBar = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-wave-loading-bar",
+            components: {
+                "waveloadingbar": waveLoadingBarComponent
+            }
+        });
+
+        const imageCanvas = new Vue({
+            delimiters: ['${', '}$'],
+            el: "#annotation-area",
+            components: {
+                "imagecanvas": imageCanvasComponent
+            },
+            mounted: function() {
+                //this.loadUnannotatedImage();
+                //EventBus.$emit('loadUnannotatedImage', imageMonkeyApi, null);
+            }
+        });
+
+		const globalNavbar = new Vue({
 			delimiters: ['${', '}$'],
-			el: "#global-loadingspinner",
+			el: "#global-navbar",
+			store: store,
 			components: {
-				"loadingspinner": loadingSpinnerComponent
-			}
-		});
-
-		const annotationToolbox = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-toolbox",
-			components: {
-				"annotationtoolbox": annotationToolboxComponent
-			}
-		});
-
-		const annotationNavbar = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-navbar",
-			components: {
-				"annotationnavbar": annotationNavbarComponent
-			}
-		});
-
-		const annotationBrowseForm = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-browseform",
-			components: {
-				"annotationbrowseform": annotationBrowseFormComponent
-			}
-		});
-
-		const annotationLabelList = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-label-list",
-			components: {
-				"annotationlabellist": annotationLabelListComponent
-			}
-		});
-
-		const annotationStatisticsPopup = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-statistics-popup",
-			components: {
-				"annotationstatisticspopup": annotationStatisticsPopupComponent
-			}
-		});
-
-		const imageGrid = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-image-grid",
-			components: {
-				"imagegrid": imageGridComponent 
-			}
-		});
-
-		const waveLoadingBar = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-wave-loading-bar",
-			components: {
-				"waveloadingbar": waveLoadingBarComponent 
-			}
-		});
-
-		const imageCanvas = new Vue({
-			delimiters: ['${', '}$'],
-			el: "#annotation-area",
-			components: {
-				"imagecanvas": imageCanvasComponent
+				"globalnavbar": globalNavbarComponent
 			},
 			mounted: function() {
-				//this.loadUnannotatedImage();
-				//EventBus.$emit('loadUnannotatedImage', imageMonkeyApi, null);
+				EventBus.$on("imageInImageGridClicked", (imageId) => {
+					this.$refs.globalNavbar.hide();	
+				});
 			}
 		});
-		let validationId = new URL(window.location.href).searchParams.get("validation_id");
-		imageCanvas.$refs.annotationArea.loadUnannotatedImage(validationId);
-		
-	};
+        
+		//let validationId = new URL(window.location.href).searchParams.get("validation_id");
+        //imageCanvas.$refs.annotationArea.loadUnannotatedImage(validationId);
 
+    };
 </script>
 
 <body>
-	{{ template "menu.html" .}}
+	<!--TODO mobile menu-->
 
-	<div class="pusher">
-    	<div class="ui inverted vertical masthead center aligned segment" id="navHeader">
-     		{{ template "pointing_menu.html" .}}	
-		</div>
-		<div class="ui stackable grid" id="mainGrid" style="margin-top: 1em;">
-			<annotationbrowseform id="annotation-browseform"></annotationbrowseform>
-		</div>
+    <div class="pusher" id="annotation-browse-form-container">
+        <div class="ui inverted vertical masthead center aligned segment" id="navHeader">
+            <globalnavbar id="global-navbar" ref="globalNavbar"></globalnavbar>
+        </div>
+        <div class="ui stackable grid" id="mainGrid" style="margin-top: 1em;">
+            <annotationbrowseform id="annotation-browseform" ref="form"></annotationbrowseform>	
+        </div>
 
-		<annotationstatisticspopup id="annotation-statistics-popup"></annotationstatisticspopup>
-		<imagegrid id="annotation-image-grid"></imagegrid>
-		<waveloadingbar id="annotation-wave-loading-bar"></waveloadingbar>
+        <annotationstatisticspopup id="annotation-statistics-popup"></annotationstatisticspopup>
+		<imagegrid id="annotation-image-grid" ref="imageGrid"></imagegrid>	
+        <waveloadingbar id="annotation-wave-loading-bar"></waveloadingbar>	
+    </div>
 
-	</div>
-	
-	<!--<annotationnavbar id="annotation-navbar"></annotationnavbar>	
+    <annotationnavbar id="annotation-navbar"></annotationnavbar>	
 	
 	<div class="grid grid-flow-col grid-cols-3 grid-rows-1 gap-2 items-center justify-center">
 		<div id="annotation-toolbox-container">
@@ -164,7 +220,7 @@
 		</div>
 	</div>
 
-	<loadingspinner visible="true" id="global-loadingspinner"></loadingspinner>-->
+	<loadingspinner id="global-loadingspinner"></loadingspinner>
 </body>
 
 </html>
@@ -180,3 +236,5 @@
 {{ template "annotationstatisticspopup.html" .}}
 {{ template "imagegrid.html" .}}
 {{ template "waveloadingbar.html" .}}
+{{ template "inlineerrormessage.html" .}}
+{{ template "globalnavbar.html" .}}

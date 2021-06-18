@@ -1,6 +1,6 @@
 <script type="text/x-template" id="annotation-browse-form-template">
 
-<div class="row" id="annotation-query-search-container">
+<div class="row" id="annotation-query-search-container" v-if="visible">
   <div class="four wide column"></div>
   <div class="eight wide center aligned column">
     <form class="ui form segment">
@@ -45,9 +45,9 @@
     </form>
     <p id="number-of-shown-query-results" v-if="numberOfShownQueryResults != ''">${ numberOfShownQueryResults }$<br><br></p>
 
-    <div class="ui warning message" hidden id="browse-annotations-error-message">
+    <div class="ui warning message" id="browse-annotations-error-message" :style="{visibility: errorMessage != '' ? 'visible' : 'hidden'}">
       <i class="close icon"></i>
-      <div class="header"></div>
+      <div class="header">${ errorMessage }$</div>
     </div>
   </div>
   <div class="four wide column"></div>

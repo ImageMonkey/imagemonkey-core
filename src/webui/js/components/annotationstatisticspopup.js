@@ -32,14 +32,17 @@ AnnotationStatisticsPopupComponent = {
         labelClicked: function(label) {
             $("#" + this.$el.id).modal("hide");
             EventBus.$emit("annotatedStatisticsPopupLabelClicked", label);
+        },
+        onShowAnnotatedStatisticsPopup: function() {
+            $("#" + this.$el.id).modal("show");
         }
+    },
+    beforeDestroy: function() {
+        EventBus.$off("showAnnotatedStatisticsPopup", onShowAnnotatedStatisticsPopup);
     },
     mounted: function() {
         this.loadAnnotatedStatistics();
 
-        var that = this;
-        EventBus.$on("showAnnotatedStatisticsPopup", () => {
-            $("#" + that.$el.id).modal("show");
-        });
+        EventBus.$on("showAnnotatedStatisticsPopup", this.onShowAnnotatedStatisticsPopup);
     }
 };

@@ -263,7 +263,7 @@
 
 
 <script type="text/x-template" id="annotation-label-list-template">
-<div class="flex flex-col h-screen">
+<div v-if="visible" class="flex flex-col h-screen">
     <div class="flex-grow overflow-auto">
       <table class="relative w-full border">
         <thead>

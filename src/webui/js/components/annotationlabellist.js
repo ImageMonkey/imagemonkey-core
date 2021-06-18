@@ -5,11 +5,11 @@ AnnotationLabelListComponent = {
         return {
             labels: [],
             labelLookupTable: [],
-            currentSelectedItem: null
+            currentSelectedItem: null,
+            visible: false
         }
     },
-    computed: {
-    },
+    computed: {},
     methods: {
         itemSelected: function(labelUuid) {
             this.currentSelectedItem = labelUuid;
@@ -18,11 +18,9 @@ AnnotationLabelListComponent = {
             if (this.currentSelectedItem === labelUuid)
                 return "bg-red-100";
             return "bg-green-100";
-        }
-    },
-    mounted: function() {
-        var that = this;
-        EventBus.$on("unannotatedImageDataReceived", (data) => {
+        },
+        onUnannotatedImageDataReceived: function(data) {
+            var that = this;
             let onlyUnlockedLabels = false;
             imageMonkeyApi.getLabelsForImage(data.uuid, onlyUnlockedLabels)
                 .then(function(entries) {
@@ -31,9 +29,9 @@ AnnotationLabelListComponent = {
                         composedLabels.push(...buildComposedLabels(entry.label, entry.uuid, entry.sublabels));
                     }
 
-                    this.labelLookupTable = {}
+                    that.labelLookupTable = {}
                     for (const composedLabel of composedLabels) {
-                        this.labelLookupTable[composedLabel.uuid] = composedLabel.displayname;
+                        that.labelLookupTable[composedLabel.uuid] = composedLabel.displayname;
                     }
 
                     that.labels = composedLabels;
@@ -41,6 +39,12 @@ AnnotationLabelListComponent = {
                     console.log(e.message);
                     Sentry.captureException(e);
                 });
-        });
+        }
+    },
+    beforeDestroy: function() {
+        EventBus.$off("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
+    },
+    mounted: function() {
+        EventBus.$on("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
     }
 };

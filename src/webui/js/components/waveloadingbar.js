@@ -15,15 +15,12 @@ WaveLoadingBarComponent = {
             this.visible = false;
         }
     },
+    beforeDestroy: function() {
+        EventBus.$off("showWaveLoadingIndicator", this.showWaveLoadingIndicator);
+        EventBus.$off("hideWaveLoadingIndicator", this.hideWaveLoadingIndicator);
+    },
     mounted: function() {
-        var that = this;
-        EventBus.$on("showWaveLoadingIndicator", () => {
-            console.log("showwww");
-            that.showWaveLoadingIndicator();
-        });
-
-        EventBus.$on("hideWaveLoadingIndicator", () => {
-            that.hideWaveLoadingIndicator();
-        });
+        EventBus.$on("showWaveLoadingIndicator", this.showWaveLoadingIndicator);
+        EventBus.$on("hideWaveLoadingIndicator", this.hideWaveLoadingIndicator);
     }
 };

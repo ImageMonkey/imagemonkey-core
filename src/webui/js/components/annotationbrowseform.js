@@ -11,7 +11,9 @@ AnnotationBrowseFormComponent = {
             searchReworkExistingAnnotationsSelected: false,
             searchHighlightAnnotationsParentSelected: false,
             numberOfShownQueryResults: '',
-            availableLabels: []
+            availableLabels: [],
+            errorMessage: "",
+            visible: true
         }
     },
     computed: {},
@@ -25,6 +27,10 @@ AnnotationBrowseFormComponent = {
         searchHighlightAnnotationsParentSelected: function() {
         	return this.searchHighlightAnnotationsParentSelected;
         },*/
+        showInlineErrorMessage: function(errorMessage) {
+            this.errorMessage = errorMessage;
+            setTimeout(() => this.errorMessage = "", 5000);
+        },
         search: function() {
             EventBus.$emit("showWaveLoadingIndicator");
 
@@ -39,16 +45,18 @@ AnnotationBrowseFormComponent = {
                 apiCommand = imageMonkeyApi.queryAnnotated(this.searchQuery, true);
             }
 
+            var that = this;
             apiCommand
                 .then(function(data) {
                     if (data && data.length > 0) {
                         EventBus.$emit("populateUnifiedModeImageGrid", data, options);
                     } else {
-                        console.log("nothing found");
+                        EventBus.$emit("hideWaveLoadingIndicator");
+                        that.showInlineErrorMessage("Nothing found");
                     }
                 }).catch(function(e) {
                     EventBus.$emit("hideWaveLoadingIndicator");
-                    console.log(e);
+                    that.showInlineErrorMessage("Couldn't process request - please try again later");
                     Sentry.captureException(e);
                 });
         },
@@ -95,23 +103,34 @@ AnnotationBrowseFormComponent = {
                 }).catch(function(e) {
                     Sentry.captureException(e);
                 });
+        },
+        onAnnotatedStatisticsLoaded: function() {
+            this.annotatedStatisticsLoaded = true;
+        },
+        onAnnotatedStatisticsPopupLabelClicked: function(label) {
+            this.searchQuery = label;
+            this.search();
+        },
+        onUnifiedModeImageGridCurrentlyShownImagesUpdated: function(num) {
+            EventBus.$emit("hideWaveLoadingIndicator");
+            this.numberOfShownQueryResults = num;
+        },
+        onImageInImageGridClicked: function() {
+            this.visible = false;
         }
+    },
+    beforeDestroy: function() {
+        EventBus.$off("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
+        EventBus.$off("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
+        EventBus.$off("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
+        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
     },
     mounted: function() {
         this.populate();
 
-        var that = this;
-        EventBus.$on("annotatedStatisticsLoaded", () => {
-            that.annotatedStatisticsLoaded = true;
-        });
-
-        EventBus.$on("annotatedStatisticsPopupLabelClicked", (label) => {
-            this.searchQuery = label;
-            this.search();
-        });
-        EventBus.$on("unifiedModeImageGridCurrentlyShownImagesUpdated", (num) => {
-            EventBus.$emit("hideWaveLoadingIndicator");
-            this.numberOfShownQueryResults = num;
-        });
+        EventBus.$on("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
+        EventBus.$on("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
+        EventBus.$on("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
+        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 };

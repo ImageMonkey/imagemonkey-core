@@ -1,23 +1,22 @@
 LoadingSpinnerComponent = {
-	template: "#loadingspinner-template",
-    props: ["visible"],
+    template: "#loadingspinner-template",
     data() {
         return {
-            isvisible: true
+            visible: false
         }
     },
     methods: {
         show: function() {
-            this.isvisible = true;
+            this.visible = true;
         },
         hide: function() {
-            this.isvisible = false;
+            this.visible = false;
         }
     },
-	mounted: function() {
-		var that = this;
-		EventBus.$on('hideLoadingSpinner', (item, response) => {
-			that.hide();
-		});
-	}
+    beforeDestroy: function() {
+        EventBus.$off("hideLoadingSpinner", this.hide);
+    },
+    mounted: function() {
+        EventBus.$on("hideLoadingSpinner", this.hide);
+    }
 };

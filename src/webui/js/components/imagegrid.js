@@ -9,7 +9,8 @@ ImageGridComponent = {
             defaultBatchSize: 50,
             numberOfCurrentlyShownResults: 0,
             numberOfQueryResults: 0,
-            currentlyVisibleImageGridData: null
+            currentlyVisibleImageGridData: null,
+            visible: true
 
         }
     },
@@ -22,6 +23,15 @@ ImageGridComponent = {
             this.numberOfCurrentlyShownResults = 0;
             this.numberOfQueryResults = 0;
             this.infiniteScroll.deactivate();
+        },
+        show: function() {
+            this.visible = true;
+        },
+        hide: function() {
+            this.visible = false;
+        },
+        imageClicked: function(imageId) {
+            EventBus.$emit("imageInImageGridClicked", imageId);
         },
         populate: function(data, options) {
             this.clear();
@@ -105,15 +115,19 @@ ImageGridComponent = {
             EventBus.$emit("unifiedModeImageGridCurrentlyShownImagesUpdated", numberOfShownQueryResults);
 
 
+        },
+        onImageInImageGridClicked: function(imageId) {
+            this.visible = false;
         }
+    },
+    beforeDestroy: function() {
+        EventBus.$off("populateUnifiedModeImageGrid", this.populate);
+        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
     },
     mounted: function() {
         this.infiniteScroll = new InfiniteScroll(this.loadNextImagesInImageGrid, false);
 
-        var that = this;
-        EventBus.$on("populateUnifiedModeImageGrid", (data, options) => {
-            console.log("received");
-            that.populate(data, options);
-        });
+        EventBus.$on("populateUnifiedModeImageGrid", this.populate);
+        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 };
