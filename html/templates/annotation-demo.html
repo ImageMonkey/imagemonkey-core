@@ -25,7 +25,9 @@
     <script src="js/fabric.min.js?v={{ .assetVersion }}"></script>
     <script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
     <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
-    <script src="js/components/loadingspinner.js?v={{ .assetVersion }}"></script>
+    
+	<!-- components-->
+	<script src="js/components/loadingspinner.js?v={{ .assetVersion }}"></script>
     <script src="js/components/imagecanvas.js?v={{ .assetVersion }}"></script>
     <script src="js/components/annotationtoolbox.js?v={{ .assetVersion }}"></script>
     <script src="js/components/annotationnavbar.js?v={{ .assetVersion }}"></script>
@@ -35,6 +37,9 @@
     <script src="js/components/imagegrid.js?v={{ .assetVersion }}"></script>
     <script src="js/components/waveloadingbar.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/globalnavbar.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/annotationbrowseformcontainer.js?v={{ .assetVersion }}"></script>
+	
+
 	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
 
 
@@ -81,12 +86,8 @@
         const annotationToolboxComponent = AnnotationToolboxComponent;
         const annotationNavbarComponent = AnnotationNavbarComponent;
         const annotationLabelListComponent = AnnotationLabelListComponent;
-        const annotationBrowseFormComponent = AnnotationBrowseFormComponent;
-        const annotationStatisticsPopupComponent = AnnotationStatisticsPopupComponent;
         const imageCanvasComponent = ImageCanvasComponent;
-        const imageGridComponent = ImageGridComponent;
-        const waveLoadingBarComponent = WaveLoadingBarComponent;
-		const globalNavbarComponent = GlobalNavbarComponent;
+		const annotationBrowseFormContainerComponent = AnnotationBrowseFormContainerComponent;
 
         const loadingSpinner = new Vue({
             delimiters: ['${', '}$'],
@@ -112,48 +113,11 @@
             }
         });
 
-        const annotationBrowseForm = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-browseform",
-			store: store,
-            components: {
-                "annotationbrowseform": annotationBrowseFormComponent
-            }
-        });
-
         const annotationLabelList = new Vue({
             delimiters: ['${', '}$'],
             el: "#annotation-label-list",
             components: {
                 "annotationlabellist": annotationLabelListComponent
-            }
-        });
-
-        const annotationStatisticsPopup = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-statistics-popup",
-            components: {
-                "annotationstatisticspopup": annotationStatisticsPopupComponent
-            }
-        });
-
-        const imageGrid = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-image-grid",
-            components: {
-                "imagegrid": imageGridComponent
-            }//,
-			/*mounted: function() {
-				var that = this;
-				
-			}*/
-        });
-
-        const waveLoadingBar = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-wave-loading-bar",
-            components: {
-                "waveloadingbar": waveLoadingBarComponent
             }
         });
 
@@ -169,16 +133,20 @@
             }
         });
 
-		const globalNavbar = new Vue({
+		Vue.component("globalnavbar", GlobalNavbarComponent);
+		Vue.component("annotationbrowseform", AnnotationBrowseFormComponent);
+		Vue.component("annotationstatisticspopup", AnnotationStatisticsPopupComponent);
+		Vue.component("imagegrid", ImageGridComponent);
+		Vue.component("waveloadingbar", WaveLoadingBarComponent);
+		Vue.component("annotationbrowseformcontainer", AnnotationBrowseFormContainerComponent);
+
+		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
-			el: "#global-navbar",
+			el: "#annotation-browse-form-container",
 			store: store,
-			components: {
-				"globalnavbar": globalNavbarComponent
-			},
 			mounted: function() {
 				EventBus.$on("imageInImageGridClicked", (imageId) => {
-					this.$refs.globalNavbar.hide();	
+					this.$refs.annotationBrowseFormContainer.hide();	
 				});
 			}
 		});
@@ -192,20 +160,9 @@
 <body>
 	<!--TODO mobile menu-->
 
-    <div class="pusher" id="annotation-browse-form-container">
-        <div class="ui inverted vertical masthead center aligned segment" id="navHeader">
-            <globalnavbar id="global-navbar" ref="globalNavbar"></globalnavbar>
-        </div>
-        <div class="ui stackable grid" id="mainGrid" style="margin-top: 1em;">
-            <annotationbrowseform id="annotation-browseform" ref="form"></annotationbrowseform>	
-        </div>
+   	<annotationbrowseformcontainer id="annotation-browse-form-container" ref="annotationBrowseFormContainer"></annotationbrowseformcontainer>
 
-        <annotationstatisticspopup id="annotation-statistics-popup"></annotationstatisticspopup>
-		<imagegrid id="annotation-image-grid" ref="imageGrid"></imagegrid>	
-        <waveloadingbar id="annotation-wave-loading-bar"></waveloadingbar>	
-    </div>
-
-    <annotationnavbar id="annotation-navbar"></annotationnavbar>	
+    <annotationnavbar id="annotation-navbar"></annotationnavbar>
 	
 	<div class="grid grid-flow-col grid-cols-3 grid-rows-1 gap-2 items-center justify-center">
 		<div id="annotation-toolbox-container">
@@ -238,3 +195,4 @@
 {{ template "waveloadingbar.html" .}}
 {{ template "inlineerrormessage.html" .}}
 {{ template "globalnavbar.html" .}}
+{{ template "annotationbrowseformcontainer.html" .}}

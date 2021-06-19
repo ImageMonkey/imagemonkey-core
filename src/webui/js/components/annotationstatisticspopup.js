@@ -38,7 +38,7 @@ AnnotationStatisticsPopupComponent = {
         }
     },
     beforeDestroy: function() {
-        EventBus.$off("showAnnotatedStatisticsPopup", onShowAnnotatedStatisticsPopup);
+        EventBus.$off("showAnnotatedStatisticsPopup", this.onShowAnnotatedStatisticsPopup);
     },
     mounted: function() {
         this.loadAnnotatedStatistics();
