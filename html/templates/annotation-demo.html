@@ -38,7 +38,7 @@
     <script src="js/components/waveloadingbar.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/globalnavbar.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/annotationbrowseformcontainer.js?v={{ .assetVersion }}"></script>
-	
+	<script src="js/components/unifiedannotationmode.js?v={{ .assetVersion }}"></script>
 
 	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
 
@@ -82,7 +82,7 @@
         });
 
 
-        const loadingSpinnerComponent = LoadingSpinnerComponent;
+        /*const loadingSpinnerComponent = LoadingSpinnerComponent;
         const annotationToolboxComponent = AnnotationToolboxComponent;
         const annotationNavbarComponent = AnnotationNavbarComponent;
         const annotationLabelListComponent = AnnotationLabelListComponent;
@@ -131,7 +131,7 @@
                 //this.loadUnannotatedImage();
                 //EventBus.$emit('loadUnannotatedImage', imageMonkeyApi, null);
             }
-        });
+        });*/
 
 		Vue.component("globalnavbar", GlobalNavbarComponent);
 		Vue.component("annotationbrowseform", AnnotationBrowseFormComponent);
@@ -139,6 +139,11 @@
 		Vue.component("imagegrid", ImageGridComponent);
 		Vue.component("waveloadingbar", WaveLoadingBarComponent);
 		Vue.component("annotationbrowseformcontainer", AnnotationBrowseFormContainerComponent);
+		Vue.component("unifiedannotationmode", UnifiedAnnotationModeComponent);
+		Vue.component("annotationtoolbox", AnnotationToolboxComponent);
+		Vue.component("annotationnavbar", AnnotationNavbarComponent);
+		Vue.component("annotationlabellist", AnnotationLabelListComponent);
+		Vue.component("imagecanvas", ImageCanvasComponent);
 
 		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
@@ -147,6 +152,17 @@
 			mounted: function() {
 				EventBus.$on("imageInImageGridClicked", (imageId) => {
 					this.$refs.annotationBrowseFormContainer.hide();	
+				});
+			}
+		});
+
+		const unifiedAnnotationMode = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#unified-annotation-mode",
+			store: store,
+			mounted: function() {
+				EventBus.$on("imageInImageGridClicked", (imageId) => {
+					this.$refs.unifiedAnnotationMode.show();
 				});
 			}
 		});
@@ -162,21 +178,9 @@
 
    	<annotationbrowseformcontainer id="annotation-browse-form-container" ref="annotationBrowseFormContainer"></annotationbrowseformcontainer>
 
-    <annotationnavbar id="annotation-navbar"></annotationnavbar>
-	
-	<div class="grid grid-flow-col grid-cols-3 grid-rows-1 gap-2 items-center justify-center">
-		<div id="annotation-toolbox-container">
-			<annotationtoolbox id="annotation-toolbox"></annotationtoolbox>	
-		</div>
-		<div class="absolute top-20 left-20" id="annotation-area-container">
-		    <imagecanvas id="annotation-area" ref="annotationArea"></imagecanvas>	
-		</div>	
+	<unifiedannotationmode id="unified-annotation-mode" ref="unifiedAnnotationMode"></unifiedannotationmode>
 
-		<div class="absolute right-2" id="annotation-label-list-container">
-			<annotationlabellist id="annotation-label-list"></annotationlabellist>	
-		</div>
-	</div>
-
+    
 	<loadingspinner id="global-loadingspinner"></loadingspinner>
 </body>
 
@@ -196,3 +200,4 @@
 {{ template "inlineerrormessage.html" .}}
 {{ template "globalnavbar.html" .}}
 {{ template "annotationbrowseformcontainer.html" .}}
+{{ template "unifiedannotationmode.html" .}}

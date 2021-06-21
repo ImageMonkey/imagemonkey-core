@@ -6,7 +6,7 @@ AnnotationLabelListComponent = {
             labels: [],
             labelLookupTable: [],
             currentSelectedItem: null,
-            visible: false
+            visible: true 
         }
     },
     computed: {},

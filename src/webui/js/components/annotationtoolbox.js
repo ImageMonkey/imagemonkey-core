@@ -4,7 +4,7 @@ AnnotationToolboxComponent = {
         return {
             canvas: null,
             annotator: null,
-            visible: false
+            visible: true 
         }
     },
     computed: {
@@ -63,19 +63,14 @@ AnnotationToolboxComponent = {
             this.canvas = canvas;
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
-        },
-        onImageInImageGridClicked: function(imageId) {
-            this.visible = false;
         }
 
     },
     beforeDestroy: function() {
         EventBus.$off("canvasCreated", this.onCanvasCreated);
-        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
     },
     mounted: function() {
         EventBus.$on("canvasCreated", this.onCanvasCreated);
-        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 
 };

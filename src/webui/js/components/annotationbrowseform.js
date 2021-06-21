@@ -114,16 +114,12 @@ AnnotationBrowseFormComponent = {
         onUnifiedModeImageGridCurrentlyShownImagesUpdated: function(num) {
             EventBus.$emit("hideWaveLoadingIndicator");
             this.numberOfShownQueryResults = num;
-        },
-        onImageInImageGridClicked: function() {
-            this.visible = false;
         }
     },
     beforeDestroy: function() {
         EventBus.$off("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$off("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$off("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
-        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
     },
     mounted: function() {
         this.populate();
@@ -131,6 +127,5 @@ AnnotationBrowseFormComponent = {
         EventBus.$on("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$on("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$on("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
-        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 };

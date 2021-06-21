@@ -4,7 +4,7 @@ ImageCanvasComponent = {
     delimiters: ['${', '}$'],
     data() {
         return {
-            visible: false
+            visible: true 
         }
     },
     methods: {
@@ -36,18 +36,12 @@ ImageCanvasComponent = {
                 }).catch(function() {
                     Sentry.captureException(e);
                 });
-        },
-        onImageInImageGridClicked: function() {
-            this.visible = true;
         }
     },
     beforeDestroy: function() {
         EventBus.$off("loadUnannotatedImage", this.loadUnannotatedImage);
-        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
-
     },
     mounted: function() {
         EventBus.$on("loadUnannotatedImage", this.loadUnannotatedImage);
-        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 };

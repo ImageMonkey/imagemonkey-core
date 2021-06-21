@@ -2,19 +2,14 @@ AnnotationNavbarComponent = {
     template: "#annotation-navigationbar-template",
     data() {
         return {
-            visible: false
+            visible: true 
         }
     },
     methods: {
-        save: function() {},
-        onImageInImageGridClicked: function(imageId) {
-            this.visible = true;
-        }
+        save: function() {}
     },
     beforeDestroy: function() {
-        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
     },
     mounted: function() {
-        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 };

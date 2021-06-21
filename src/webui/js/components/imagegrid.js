@@ -115,19 +115,14 @@ ImageGridComponent = {
             EventBus.$emit("unifiedModeImageGridCurrentlyShownImagesUpdated", numberOfShownQueryResults);
 
 
-        },
-        onImageInImageGridClicked: function(imageId) {
-            this.visible = false;
         }
     },
     beforeDestroy: function() {
         EventBus.$off("populateUnifiedModeImageGrid", this.populate);
-        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
     },
     mounted: function() {
         this.infiniteScroll = new InfiniteScroll(this.loadNextImagesInImageGrid, false);
 
         EventBus.$on("populateUnifiedModeImageGrid", this.populate);
-        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
     }
 };
