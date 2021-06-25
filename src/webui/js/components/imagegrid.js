@@ -81,7 +81,8 @@ ImageGridComponent = {
                     left: justifiedLayoutGeometry.boxes[i].left,
                     width: justifiedLayoutGeometry.boxes[i].width,
                     height: justifiedLayoutGeometry.boxes[i].height,
-                    imageUuid: data[i].uuid,
+                    imageUuid: data[i].image.uuid,
+                    validationId: data[i].uuid,
                     imageUrl: imageUrl,
                     tooltipText: tooltipText
                 });

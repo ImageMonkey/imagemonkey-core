@@ -149,10 +149,16 @@
 			delimiters: ['${', '}$'],
 			el: "#annotation-browse-form-container",
 			store: store,
+			methods: {
+				onImageInImageGridClicked: function(validationId) {
+					this.$refs.annotationBrowseFormContainer.hide();
+				}
+			},
+			beforeDestroy: function() {
+				EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
+			},
 			mounted: function() {
-				EventBus.$on("imageInImageGridClicked", (imageId) => {
-					this.$refs.annotationBrowseFormContainer.hide();	
-				});
+				EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
 			}
 		});
 
@@ -160,10 +166,17 @@
 			delimiters: ['${', '}$'],
 			el: "#unified-annotation-mode",
 			store: store,
-			mounted: function() {
-				EventBus.$on("imageInImageGridClicked", (imageId) => {
+			methods: {
+				onImageInImageGridClicked: function(validationId) {
 					this.$refs.unifiedAnnotationMode.show();
-				});
+					this.$refs.unifiedAnnotationMode.loadUnannotatedImage(validationId);
+				}
+			},
+			beforeDestroy: function() {
+				EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
+			},
+			mounted: function() {
+				EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
 			}
 		});
         
