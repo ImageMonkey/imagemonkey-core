@@ -1,0 +1,21 @@
+<script type="text/x-template" id="unified-annotation-mode-template">
+
+<div v-show="visible">
+	<annotationnavbar id="annotation-navbar"></annotationnavbar>
+	
+	<div class="grid grid-flow-col grid-cols-3 grid-rows-1 gap-2 items-center justify-center">
+		<div id="annotation-toolbox-container">
+			<annotationtoolbox id="annotation-toolbox"></annotationtoolbox>	
+		</div>
+		<div class="absolute top-20 left-20" id="annotation-area-container">
+		    <imagecanvas id="annotation-area" ref="annotationArea"></imagecanvas>	
+		</div>	
+
+		<div class="absolute right-2" id="annotation-label-list-container">
+			<annotationlabellist id="annotation-label-list"></annotationlabellist>	
+		</div>
+		<removelabelconfirmationdialog id="remove-label-confirmation-dialog" ref="removeLabelConfirmationDialog"></removelabelconfirmationdialog>
+	</div>
+</div>
+
+</script>

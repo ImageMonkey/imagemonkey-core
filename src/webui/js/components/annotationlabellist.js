@@ -19,6 +19,9 @@ AnnotationLabelListComponent = {
                 return "bg-red-100";
             return "bg-green-100";
         },
+		removeLabel: function(label) {
+			EventBus.$emit("removeLabel", label);
+		},
         onUnannotatedImageDataReceived: function(data) {
             var that = this;
             let onlyUnlockedLabels = false;
