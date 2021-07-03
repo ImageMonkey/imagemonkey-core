@@ -6,7 +6,7 @@ AnnotationLabelListComponent = {
             labels: [],
             labelLookupTable: [],
             currentSelectedItem: null,
-            visible: true 
+            visible: true
         }
     },
     computed: {},
@@ -19,13 +19,13 @@ AnnotationLabelListComponent = {
                 return "bg-red-100";
             return "bg-green-100";
         },
-		removeLabel: function(label) {
-			EventBus.$emit("removeLabel", label);
-		},
-        onUnannotatedImageDataReceived: function(data) {
+        removeLabel: function(label) {
+            EventBus.$emit("removeLabel", label);
+        },
+        getLabelsForImage: function(imageId) {
             var that = this;
             let onlyUnlockedLabels = false;
-            imageMonkeyApi.getLabelsForImage(data.uuid, onlyUnlockedLabels)
+            imageMonkeyApi.getLabelsForImage(imageId, onlyUnlockedLabels)
                 .then(function(entries) {
                     let composedLabels = []
                     for (const entry of entries) {
@@ -42,6 +42,20 @@ AnnotationLabelListComponent = {
                     console.log(e.message);
                     Sentry.captureException(e);
                 });
+        },
+        getAnnotationsForImage: function(imageId, imageUnlocked) {
+            var that = this;
+            imageMonkeyApi.getAnnotationsForImage(imageId, imageUnlocked)
+                .then(function(annotations) {
+                    //TODO
+                }).catch(function(e) {
+                    console.log(e.message);
+                    Sentry.captureException(e);
+                });
+        },
+        onUnannotatedImageDataReceived: function(data) {
+            this.getLabelsForImage(data.uuid);
+            this.getAnnotationsForImage(data.uuid, data.unlocked);
         }
     },
     beforeDestroy: function() {
@@ -50,4 +64,5 @@ AnnotationLabelListComponent = {
     mounted: function() {
         EventBus.$on("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
     }
+
 };
