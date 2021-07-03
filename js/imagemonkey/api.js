@@ -483,5 +483,35 @@ var ImageMonkeyApi = (function() {
         });
     }
 
+    ImageMonkeyApi.prototype.getAnnotationsForImage = function(imageId, imageUnlocked) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = '';
+            if (imageUnlocked)
+                url = inst.baseUrl + '/' + inst.apiVersion + '/donation/' + imageId + '/annotations';
+            else
+                url = inst.baseUrl + '/' + inst.apiVersion + '/unverified-donation/' + imageId + '/annotations?token=' + inst.token;
+            console.log(url);
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+
+    }
+
     return ImageMonkeyApi;
 }());
