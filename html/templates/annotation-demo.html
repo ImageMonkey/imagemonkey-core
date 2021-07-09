@@ -40,6 +40,7 @@
 	<script src="js/components/annotationbrowseformcontainer.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/unifiedannotationmode.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/removelabelconfirmationdialog.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/simpleerrorpopup.js?v={{ .assetVersion }}"></script>
 
 	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
 
@@ -82,58 +83,6 @@
             }
         });
 
-
-        /*const loadingSpinnerComponent = LoadingSpinnerComponent;
-        const annotationToolboxComponent = AnnotationToolboxComponent;
-        const annotationNavbarComponent = AnnotationNavbarComponent;
-        const annotationLabelListComponent = AnnotationLabelListComponent;
-        const imageCanvasComponent = ImageCanvasComponent;
-		const annotationBrowseFormContainerComponent = AnnotationBrowseFormContainerComponent;
-
-        const loadingSpinner = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#global-loadingspinner",
-            components: {
-                "loadingspinner": loadingSpinnerComponent
-            }
-        });
-
-        const annotationToolbox = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-toolbox",
-            components: {
-                "annotationtoolbox": annotationToolboxComponent
-            }
-        });
-
-        const annotationNavbar = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-navbar",
-            components: {
-                "annotationnavbar": annotationNavbarComponent
-            }
-        });
-
-        const annotationLabelList = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-label-list",
-            components: {
-                "annotationlabellist": annotationLabelListComponent
-            }
-        });
-
-        const imageCanvas = new Vue({
-            delimiters: ['${', '}$'],
-            el: "#annotation-area",
-            components: {
-                "imagecanvas": imageCanvasComponent
-            },
-            mounted: function() {
-                //this.loadUnannotatedImage();
-                //EventBus.$emit('loadUnannotatedImage', imageMonkeyApi, null);
-            }
-        });*/
-
 		Vue.component("globalnavbar", GlobalNavbarComponent);
 		Vue.component("annotationbrowseform", AnnotationBrowseFormComponent);
 		Vue.component("annotationstatisticspopup", AnnotationStatisticsPopupComponent);
@@ -146,6 +95,7 @@
 		Vue.component("annotationlabellist", AnnotationLabelListComponent);
 		Vue.component("imagecanvas", ImageCanvasComponent);
 		Vue.component("removelabelconfirmationdialog", RemoveLabelConfirmationDialogComponent);
+		Vue.component("simpleerrorpopup", SimpleErrorPopupComponent);
 
 		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
@@ -217,3 +167,4 @@
 {{ template "annotationbrowseformcontainer.html" .}}
 {{ template "unifiedannotationmode.html" .}}
 {{ template "removelabelconfirmationdialog.html" .}}
+{{ template "simpleerrorpopup.html" .}}

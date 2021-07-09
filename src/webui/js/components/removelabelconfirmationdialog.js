@@ -14,6 +14,10 @@ RemoveLabelConfirmationDialogComponent = {
         },
 		hide: function() {
 			this.visible = false;
+		},
+		onConfirmRemoveLabel: function() {
+			EventBus.$emit("confirmRemoveLabel", this.labelToBeRemoved);
+			this.hide();
 		}
     },
     mounted: function() {

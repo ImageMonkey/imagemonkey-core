@@ -16,3 +16,22 @@ function buildComposedLabels(label, uuid, sublabels) {
     }
     return composedLabels;
 }
+
+function labelExistsInLabelList(label, labelList) {
+    for (const elem of labelList) {
+        if (elem["displayname"] === label)
+            return true;
+    }
+    return false;
+}
+
+function removeLabelFromLabelList(label, labelList) {
+    let i = 0;
+    for (const elem of labelList) {
+        if (elem["displayname"] === label) {
+            labelList.splice(i, 1);
+            break;
+        }
+        i++;
+    }
+}
