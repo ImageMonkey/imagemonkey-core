@@ -9,7 +9,9 @@ AnnotationLabelListComponent = {
             visible: true,
             addLabelInput: null,
             addedButNotCommittedLabels: {},
-            toBeRemovedLabelUuids: []
+            toBeRemovedLabelUuids: [],
+            availableLabelsLookupTable: {},
+            availableLabels: []
         }
     },
     computed: {},
@@ -74,15 +76,26 @@ AnnotationLabelListComponent = {
             this.getAnnotationsForImage(data.uuid, data.unlocked);
         },
         onAddLabel: function() {
-            if (!labelExistsInLabelList(this.addLabelInput, this.labels)) {
-                let newLabel = {
-                    "uuid": this.generateUuid()
-                };
-                this.addedButNotCommittedLabels[this.addLabelInput] = newLabel;
-                this.labels.push(...buildComposedLabels(this.addLabelInput, newLabel.uuid, []));
-                this.currentSelectedItem = newLabel.uuid;
-            } else {
-                EventBus.$emit("duplicateLabelAdded", this.addLabelInput);
+            let splittedLabels = this.addLabelInput.split(new Settings().getLabelSeparator()).map(item => item.trim());
+
+            for (const splittedLabel of splittedLabels) {
+                if (!this.$store.getters.loggedIn) {
+                    if (!(splittedLabel in this.availableLabelsLookupTable)) {
+                        EventBus.$emit("unauthenticatedAccess");
+                        return
+                    }
+                }
+
+                if (!labelExistsInLabelList(splittedLabel, this.labels)) {
+                    let newLabel = {
+                        "uuid": this.generateUuid()
+                    };
+                    this.addedButNotCommittedLabels[splittedLabel] = newLabel;
+                    this.labels.push(...buildComposedLabels(splittedLabel, newLabel.uuid, []));
+                    this.currentSelectedItem = newLabel.uuid;
+                } else {
+                    EventBus.$emit("duplicateLabelAdded", splittedLabel);
+                }
             }
             this.addLabelInput = null;
         },
@@ -93,6 +106,45 @@ AnnotationLabelListComponent = {
                 this.toBeRemovedLabelUuids.push(this.labels[label].uuid);
             }
             removeLabelFromLabelList(label, this.labels);
+        },
+        getAvailableLabelsAndLabelSuggestions: function() {
+            let labelRequests = [imageMonkeyApi.getAvailableLabels()];
+            if (this.$store.getters.loggedIn)
+                labelRequests.push(imageMonkeyApi.getLabelSuggestions(false));
+
+            var inst = this;
+            Promise.all(labelRequests)
+                .then(function(data) {
+                    for (var key in data[0]) {
+                        if (data[0].hasOwnProperty(key)) {
+                            inst.availableLabels.push(key);
+                            inst.availableLabelsLookupTable[key] = {
+                                "uuid": data[0][key].uuid,
+                                "label": key,
+                                "sublabel": ""
+                            };
+                        }
+
+                        if (data[0][key].has) {
+                            for (var subkey in data[0][key].has) {
+                                if (data[0][key].has.hasOwnProperty(subkey)) {
+                                    inst.availableLabels.push(subkey + "/" + key);
+                                    inst.availableLabelsLookupTable[subkey + "/" + key] = {
+                                        "uuid": data[0][key].has[subkey].uuid,
+                                        "label": key,
+                                        "sublabel": subkey
+                                    };
+                                }
+                            }
+                        }
+                    }
+                    if (data.length > 1) {
+                        inst.availableLabels.push(...data[1]);
+                    }
+                }).catch(function(e) {
+                    Sentry.captureException(e);
+                });
+
         }
     },
     beforeDestroy: function() {
@@ -102,6 +154,7 @@ AnnotationLabelListComponent = {
     mounted: function() {
         EventBus.$on("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
         EventBus.$on("confirmRemoveLabel", this.onConfirmRemoveLabel);
+        this.getAvailableLabelsAndLabelSuggestions();
     }
 
 };
