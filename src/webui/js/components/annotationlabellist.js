@@ -11,7 +11,8 @@ AnnotationLabelListComponent = {
             addedButNotCommittedLabels: {},
             toBeRemovedLabelUuids: [],
             availableLabelsLookupTable: {},
-            availableLabels: []
+            availableLabels: [],
+            labelsAutoCompletion: null
         }
     },
     computed: {},
@@ -76,7 +77,8 @@ AnnotationLabelListComponent = {
             this.getAnnotationsForImage(data.uuid, data.unlocked);
         },
         onAddLabel: function() {
-            let splittedLabels = this.addLabelInput.split(new Settings().getLabelSeparator()).map(item => item.trim());
+            let labelString = $("#add-labels-input").val();
+            let splittedLabels = labelString.split(new Settings().getLabelSeparator()).map(item => item.trim());
 
             for (const splittedLabel of splittedLabels) {
                 if (!this.$store.getters.loggedIn) {
@@ -141,6 +143,7 @@ AnnotationLabelListComponent = {
                     if (data.length > 1) {
                         inst.availableLabels.push(...data[1]);
                     }
+                    inst.labelsAutoCompletion = new AutoCompletion("#add-labels-input", inst.availableLabels);
                 }).catch(function(e) {
                     Sentry.captureException(e);
                 });
