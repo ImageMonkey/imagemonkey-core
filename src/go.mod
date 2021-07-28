@@ -9,7 +9,7 @@ require (
 	github.com/bbernhard/gin-wraphh v0.0.0-20160304035037-ea8e4927b3a6
 	github.com/bbernhard/imghash v0.0.0-20151018235733-6afea89d4c0e
 	github.com/certifi/gocertifi v0.0.0-20190506164543-d2eda7129713 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/garyburd/redigo v1.6.0
 	github.com/getsentry/raven-go v0.2.0
 	github.com/gin-contrib/sse v0.1.0 // indirect

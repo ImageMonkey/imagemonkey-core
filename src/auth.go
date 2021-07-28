@@ -5,7 +5,7 @@ import (
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"strings"
