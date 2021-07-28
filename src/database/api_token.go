@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 	"time"
