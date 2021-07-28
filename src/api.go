@@ -11,7 +11,7 @@ import (
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	img "github.com/bbernhard/imagemonkey-core/image"
 	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/getsentry/raven-go"
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
