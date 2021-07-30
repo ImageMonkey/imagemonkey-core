@@ -12,7 +12,8 @@ AnnotationLabelListComponent = {
             toBeRemovedLabelUuids: [],
             availableLabelsLookupTable: {},
             availableLabels: [],
-            labelsAutoCompletion: null
+            labelsAutoCompletion: null,
+            imageId: null
         }
     },
     computed: {},
@@ -38,9 +39,11 @@ AnnotationLabelListComponent = {
             this.labels = [];
             this.addLabelInput = null;
             this.labelLookupTable = [];
+            this.imageId = null;
         },
         getLabelsForImage: function(imageId) {
             this.reset();
+            this.imageId = imageId;
 
             var that = this;
             let onlyUnlockedLabels = false;
@@ -148,6 +151,20 @@ AnnotationLabelListComponent = {
                     Sentry.captureException(e);
                 });
 
+        },
+        persistNewlyAddedLabels: function() {
+            let addedLabels = [];
+            for (const label in this.addedButNotCommittedLabels) {
+                addedLabels.push({
+                    label: label,
+                    annotatable: true
+                });
+            }
+            if (addedLabels.length > 0)
+                return imageMonkeyApi.labelImage(this.imageId, addedLabels);
+            return new Promise((resolve) => {
+                resolve(null);
+            });
         }
     },
     beforeDestroy: function() {
