@@ -491,7 +491,6 @@ var ImageMonkeyApi = (function() {
                 url = inst.baseUrl + '/' + inst.apiVersion + '/donation/' + imageId + '/annotations';
             else
                 url = inst.baseUrl + '/' + inst.apiVersion + '/unverified-donation/' + imageId + '/annotations?token=' + inst.token;
-            console.log(url);
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";
             xhr.open("GET", url);
