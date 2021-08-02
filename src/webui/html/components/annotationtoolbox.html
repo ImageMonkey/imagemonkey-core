@@ -5,32 +5,32 @@
             <div class="mt-10">
                 <ul>
                     <li class="my-12 text-center">
-                        <button type="button" class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="rectAnnotationMode">
+                        <button type="button" class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="rectAnnotationMode" v-bind:class="toolboxItemEnabled">
                            <i class="fas fa-vector-square" style="color:gray" v-bind:style="rectAnnotationModeIconColor"></i>
                         </button>
                     </li>
                     <li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="circleAnnotationMode">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="circleAnnotationMode" v-bind:class="toolboxItemEnabled">
                             <i class="far fa-circle" style="color:gray" v-bind:style="circleAnnotationModeIconColor"></i>
                         </button>
                     </li>
                     <li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="polygonAnnotationMode">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="polygonAnnotationMode" v-bind:class="toolboxItemEnabled">
                             <i class="fas fa-draw-polygon" style="color:gray" v-bind:style="polygonAnnotationModeIconColor"></i>
                         </button>
                     </li>
 					<li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="selectMoveAnnotationMode">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="selectMoveAnnotationMode" v-bind:class="toolboxItemEnabled">
                             <i class="fas fa-expand-arrows-alt" style="color:gray" v-bind:style="selectMoveAnnotationModeIconColor"></i>
                         </button>
                     </li>
                     <li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomIn">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomIn" v-bind:class="toolboxItemEnabled">
 							<i class="fas fa-search-plus" style="color:gray"></i>
 						</button>
                     </li>
 					<li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomOut">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomOut" v-bind:class="toolboxItemEnabled">
 							<i class="fas fa-search-minus" style="color:gray"></i>
                     	</button>
 					</li>

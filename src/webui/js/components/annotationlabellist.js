@@ -24,6 +24,7 @@ AnnotationLabelListComponent = {
         },
         itemSelected: function(labelUuid) {
             this.currentSelectedItem = labelUuid;
+            EventBus.$emit("labelSelected");
         },
         itemColor: function(labelUuid) {
             if (this.currentSelectedItem === labelUuid)

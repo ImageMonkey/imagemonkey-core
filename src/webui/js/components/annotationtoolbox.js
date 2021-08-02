@@ -4,32 +4,44 @@ AnnotationToolboxComponent = {
         return {
             canvas: null,
             annotator: null,
-            visible: true 
+            visible: true,
+            isDisabled: true
         }
     },
     computed: {
         rectAnnotationModeIconColor() {
-            if (this.annotator && this.annotator.getShape() === "Rectangle")
+            if (!this.isDisabled && this.annotator && this.annotator.getShape() === "Rectangle")
                 return "color:blue";
             return "color: gray";
         },
         circleAnnotationModeIconColor() {
-            if (this.annotator && this.annotator.getShape() === "Circle")
+            if (!this.isDisabled && this.annotator && this.annotator.getShape() === "Circle")
                 return "color:blue";
             return "color: gray";
         },
         polygonAnnotationModeIconColor() {
-            if (this.annotator && this.annotator.getShape() === "Polygon")
+            if (!this.isDisabled && this.annotator && this.annotator.getShape() === "Polygon")
                 return "color:blue";
             return "color: gray";
         },
         selectMoveAnnotationModeIconColor() {
-            if (this.annotator && this.annotator.isSelectMoveModeEnabled())
+            if (!this.isDisabled && this.annotator && this.annotator.isSelectMoveModeEnabled())
                 return "color:blue";
             return "color: gray";
+        },
+        toolboxItemEnabled() {
+            if (this.isDisabled)
+                return "opacity-50 cursor-not-allowed";
+            return "";
         }
     },
     methods: {
+        enableTools: function() {
+            this.isDisabled = false;
+        },
+        disableTools: function() {
+            this.isDisabled = true;
+        },
         zoomOut: function() {
             this.canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
         },

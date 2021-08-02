@@ -24,16 +24,21 @@ UnifiedAnnotationModeComponent = {
         },
         onUnauthenticatedAccess: function() {
             this.$refs.simpleErrorPopup.show("Please log in first");
+        },
+        onLabelSelected: function() {
+            this.$refs.annotationToolBox.enableTools();
         }
     },
     beforeDestroy: function() {
         EventBus.$off("removeLabel", this.onRemoveLabel);
         EventBus.$off("duplicateLabelAdded", this.onDuplicateLabelAdded);
         EventBus.$off("unauthenticatedAccess", this.onUnauthenticatedAccess);
+        EventBus.$off("labelSelected", this.onLabelSelected);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
         EventBus.$on("duplicateLabelAdded", this.onDuplicateLabelAdded);
         EventBus.$on("unauthenticatedAccess", this.onUnauthenticatedAccess);
+        EventBus.$on("labelSelected", this.onLabelSelected);
     }
 }
