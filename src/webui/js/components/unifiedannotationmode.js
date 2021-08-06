@@ -27,6 +27,9 @@ UnifiedAnnotationModeComponent = {
         },
         onLabelSelected: function() {
             this.$refs.annotationToolBox.enableTools();
+        },
+        onNoLabelSelected: function() {
+            this.$refs.annotationToolBox.disableTools();
         }
     },
     beforeDestroy: function() {
@@ -34,11 +37,13 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("duplicateLabelAdded", this.onDuplicateLabelAdded);
         EventBus.$off("unauthenticatedAccess", this.onUnauthenticatedAccess);
         EventBus.$off("labelSelected", this.onLabelSelected);
+        EventBus.$off("noLabelSelected", this.onNoLabelSelected);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
         EventBus.$on("duplicateLabelAdded", this.onDuplicateLabelAdded);
         EventBus.$on("unauthenticatedAccess", this.onUnauthenticatedAccess);
         EventBus.$on("labelSelected", this.onLabelSelected);
+        EventBus.$on("noLabelSelected", this.onNoLabelSelected);
     }
 }

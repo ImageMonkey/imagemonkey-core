@@ -38,38 +38,50 @@ AnnotationToolboxComponent = {
     methods: {
         enableTools: function() {
             this.isDisabled = false;
+            this.annotator.unblock();
         },
         disableTools: function() {
             this.isDisabled = true;
+            this.annotator.block();
         },
         zoomOut: function() {
-            this.canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+            if (!this.isDisabled)
+                this.canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
         },
         zoomIn: function() {
-            this.canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+            if (!this.isDisabled)
+                this.canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
         },
         onAnnotatorMouseUp: function() {},
         onAnnotatorObjectDeselected: function() {},
         onAnnotatorObjectSelected: function() {},
         rectAnnotationMode: function() {
-            this.annotator.disablePanMode();
-            this.annotator.disableSelectMoveMode();
-            this.annotator.setShape("Rectangle");
+            if (!this.isDisabled) {
+                this.annotator.disablePanMode();
+                this.annotator.disableSelectMoveMode();
+                this.annotator.setShape("Rectangle");
+            }
         },
         circleAnnotationMode: function() {
-            this.annotator.disablePanMode();
-            this.annotator.disableSelectMoveMode()
-            this.annotator.setShape("Circle");
+            if (!this.isDisabled) {
+                this.annotator.disablePanMode();
+                this.annotator.disableSelectMoveMode()
+                this.annotator.setShape("Circle");
+            }
         },
         polygonAnnotationMode: function() {
-            this.annotator.disablePanMode();
-            this.annotator.disableSelectMoveMode();
-            this.annotator.setShape("Polygon");
+            if (!this.isDisabled) {
+                this.annotator.disablePanMode();
+                this.annotator.disableSelectMoveMode();
+                this.annotator.setShape("Polygon");
+            }
         },
         selectMoveAnnotationMode: function() {
-            this.annotator.disablePanMode();
-            this.annotator.enableSelectMoveMode();
-            this.annotator.setShape("");
+            if (!this.isDisabled) {
+                this.annotator.disablePanMode();
+                this.annotator.enableSelectMoveMode();
+                this.annotator.setShape("");
+            }
         },
         onCanvasCreated: function(canvas) {
             this.canvas = canvas;

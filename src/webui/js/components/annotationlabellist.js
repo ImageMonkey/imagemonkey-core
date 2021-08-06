@@ -42,7 +42,7 @@ AnnotationLabelListComponent = {
             this.labelLookupTable = [];
             this.imageId = null;
         },
-        getLabelsForImage: function(imageId) {
+        getLabelsForImage: function(imageId, toBeSelectedValidationId) {
             this.reset();
             this.imageId = imageId;
 
@@ -51,9 +51,21 @@ AnnotationLabelListComponent = {
             imageMonkeyApi.getLabelsForImage(imageId, onlyUnlockedLabels)
                 .then(function(entries) {
                     let composedLabels = []
+                    let labelSelected = false;
                     for (const entry of entries) {
                         composedLabels.push(...buildComposedLabels(entry.label, entry.uuid, entry.sublabels));
+                        if (toBeSelectedValidationId !== null) {
+                            if ("validation" in entry) {
+                                if (entry["validation"]["uuid"] === toBeSelectedValidationId) {
+                                    labelSelected = true;
+                                    that.itemSelected(entry["uuid"]);
+                                }
+                            }
+                        }
                     }
+
+                    if (!labelSelected)
+                        EventBus.$emit("noLabelSelected");
 
                     that.labelLookupTable = {}
                     for (const composedLabel of composedLabels) {
@@ -76,8 +88,8 @@ AnnotationLabelListComponent = {
                     Sentry.captureException(e);
                 });
         },
-        onUnannotatedImageDataReceived: function(data) {
-            this.getLabelsForImage(data.uuid);
+        onUnannotatedImageDataReceived: function(data, validationId) {
+            this.getLabelsForImage(data.uuid, validationId);
             this.getAnnotationsForImage(data.uuid, data.unlocked);
         },
         onAddLabel: function() {

@@ -12,7 +12,7 @@ ImageCanvasComponent = {
             var that = this;
             imageMonkeyApi.getUnannotatedImage(validationId, null)
                 .then(function(data) {
-                    EventBus.$emit("unannotatedImageDataReceived", data);
+                    EventBus.$emit("unannotatedImageDataReceived", data, validationId);
 
                     canvas = new CanvasDrawer(that.$el.id);
 
