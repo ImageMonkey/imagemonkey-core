@@ -120,6 +120,10 @@
 			store: store,
 			methods: {
 				onImageInImageGridClicked: function(validationId) {
+					let url = new URL(window.location);
+					url.searchParams.set('validation_id', validationId);
+					window.history.replaceState({}, null, url);
+
 					this.$refs.unifiedAnnotationMode.show();
 					this.$refs.unifiedAnnotationMode.loadUnannotatedImage(validationId);
 				}
@@ -131,6 +135,10 @@
 				EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
 			}
 		});
+
+		{{ if ne .validationId "" }}
+			EventBus.$emit("imageInImageGridClicked", {{ .validationId }});
+		{{ end }}
         
 		//let validationId = new URL(window.location.href).searchParams.get("validation_id");
         //imageCanvas.$refs.annotationArea.loadUnannotatedImage(validationId);

@@ -521,12 +521,15 @@ func main() {
 
 
 		router.GET("/annotation-demo", func(c *gin.Context) {
+			validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
+
 			c.HTML(http.StatusOK, "annotation-demo.html", gin.H{
 				"title": "Annotation-Demo",
 				"activeMenuNr": 4,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"apiBaseUrl": apiBaseUrl,
 				"assetVersion": assetVersion,
+				"validationId": validationId,
 			})
 		})
 
