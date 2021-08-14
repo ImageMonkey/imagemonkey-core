@@ -120,12 +120,12 @@ AnnotationBrowseFormComponent = {
         EventBus.$off("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$off("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$off("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
+        EventBus.$off("loadAnnotationBrowseFormLabels", this.populate);
     },
     mounted: function() {
-        this.populate();
-
         EventBus.$on("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$on("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$on("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
+        EventBus.$on("loadAnnotationBrowseFormLabels", this.populate);
     }
 };
