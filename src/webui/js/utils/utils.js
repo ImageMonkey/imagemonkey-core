@@ -17,6 +17,12 @@ function buildComposedLabels(label, uuid, sublabels) {
     return composedLabels;
 }
 
+function getDisplayName(label, sublabel) {
+    if (sublabel === "")
+        return label;
+    return sublabel + "/" + label;
+}
+
 function labelExistsInLabelList(label, labelList) {
     for (const elem of labelList) {
         if (elem["displayname"] === label)
