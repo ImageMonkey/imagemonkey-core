@@ -87,14 +87,19 @@ AnnotationToolboxComponent = {
             this.canvas = canvas;
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
+        },
+        onDrawAnnotations: function(annotations) {
+            this.annotator.loadAnnotations(annotations, this.canvas.fabric().backgroundImage.scaleX);
         }
 
     },
     beforeDestroy: function() {
         EventBus.$off("canvasCreated", this.onCanvasCreated);
+        EventBus.$off("drawAnnotations", this.onDrawAnnotations);
     },
     mounted: function() {
         EventBus.$on("canvasCreated", this.onCanvasCreated);
+        EventBus.$on("drawAnnotations", this.onDrawAnnotations);
     }
 
 };

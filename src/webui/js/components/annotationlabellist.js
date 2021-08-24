@@ -13,7 +13,8 @@ AnnotationLabelListComponent = {
             availableLabelsLookupTable: {},
             availableLabels: [],
             labelsAutoCompletion: null,
-            imageId: null
+            imageId: null,
+            annotations: {}
         }
     },
     computed: {},
@@ -24,7 +25,16 @@ AnnotationLabelListComponent = {
         },
         itemSelected: function(labelUuid) {
             this.currentSelectedItem = labelUuid;
+            let annotationsForLabel = [];
+
+            let displayName = null;
+            if (labelUuid in this.labelLookupTable)
+                displayName = this.labelLookupTable[labelUuid];
+
+            if (displayName in this.annotations)
+                annotationsForLabel = this.annotations[displayName];
             EventBus.$emit("labelSelected");
+            EventBus.$emit("drawAnnotations", annotationsForLabel);
         },
         itemColor: function(labelUuid) {
             if (this.currentSelectedItem === labelUuid)
@@ -41,6 +51,7 @@ AnnotationLabelListComponent = {
             this.addLabelInput = null;
             this.labelLookupTable = [];
             this.imageId = null;
+            this.annotations = {};
         },
         getLabelsForImage: function(imageId, toBeSelectedValidationId) {
             this.reset();
@@ -82,7 +93,10 @@ AnnotationLabelListComponent = {
             var that = this;
             imageMonkeyApi.getAnnotationsForImage(imageId, imageUnlocked)
                 .then(function(annotations) {
-                    //TODO
+                    for (const annotation of annotations) {
+                        let displayName = getDisplayName(annotation.validation.label, annotation.validation.sublabel);
+                        that.annotations[displayName] = annotation.annotations;
+                    }
                 }).catch(function(e) {
                     console.log(e.message);
                     Sentry.captureException(e);
@@ -110,6 +124,7 @@ AnnotationLabelListComponent = {
                     };
                     this.addedButNotCommittedLabels[splittedLabel] = newLabel;
                     this.labels.push(...buildComposedLabels(splittedLabel, newLabel.uuid, []));
+                    this.labelLookupTable[newLabel.uuid] = getDisplayName(splittedLabel, "");
                     this.currentSelectedItem = newLabel.uuid;
                 } else {
                     EventBus.$emit("duplicateLabelAdded", splittedLabel);
@@ -123,6 +138,7 @@ AnnotationLabelListComponent = {
             else {
                 this.toBeRemovedLabelUuids.push(this.labels[label].uuid);
             }
+            delete this.labelLookupTable[this.labels[label].uuid];
             removeLabelFromLabelList(label, this.labels);
         },
         getAvailableLabelsAndLabelSuggestions: function() {
