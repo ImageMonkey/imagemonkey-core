@@ -5,7 +5,8 @@ AnnotationToolboxComponent = {
             canvas: null,
             annotator: null,
             visible: true,
-            isDisabled: true
+            isDisabled: true,
+            labelUuid: null
         }
     },
     computed: {
@@ -88,7 +89,14 @@ AnnotationToolboxComponent = {
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
         },
-        onDrawAnnotations: function(annotations) {
+        onDrawAnnotations: function(annotations, labelUuid) {
+            if (this.labelUuid !== null) {
+                if (this.annotator.isDirty()) {
+                    let annos = this.annotator.toJSON();
+                    EventBus.$emit("annotationsChanged", annos, this.labelUuid);
+                }
+            }
+            this.labelUuid = labelUuid;
             this.annotator.loadAnnotations(annotations, this.canvas.fabric().backgroundImage.scaleX);
         }
 

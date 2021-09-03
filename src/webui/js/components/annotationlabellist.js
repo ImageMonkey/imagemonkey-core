@@ -34,7 +34,7 @@ AnnotationLabelListComponent = {
             if (displayName in this.annotations)
                 annotationsForLabel = this.annotations[displayName];
             EventBus.$emit("labelSelected");
-            EventBus.$emit("drawAnnotations", annotationsForLabel);
+            EventBus.$emit("drawAnnotations", annotationsForLabel, labelUuid);
         },
         itemColor: function(labelUuid) {
             if (this.currentSelectedItem === labelUuid)
@@ -196,13 +196,18 @@ AnnotationLabelListComponent = {
             });
         }
     },
+    onAnnotationsChanged: function(annotations, labelUuid) {
+        //TODO	
+    },
     beforeDestroy: function() {
         EventBus.$off("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
         EventBus.$off("confirmRemoveLabel", this.onConfirmRemoveLabel);
+        EventBus.$off("annotationsChanged", this.onAnnotationsChanged);
     },
     mounted: function() {
         EventBus.$on("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
         EventBus.$on("confirmRemoveLabel", this.onConfirmRemoveLabel);
+        EventBus.$on("annotationsChanged", this.onAnnotationsChanged);
         this.getAvailableLabelsAndLabelSuggestions();
     }
 
