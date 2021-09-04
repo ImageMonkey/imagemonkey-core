@@ -165,10 +165,23 @@
     {{ end }}
 
     var url = '{{ .apiBaseUrl }}/v1/validations/unannotated';
-    if(browseAnnotationsOnlyMode)
-      url = '{{ .apiBaseUrl }}/v1/annotations';
+    let searchOption = '';
+    if(browseAnnotationsOnlyMode) {
+        url = '{{ .apiBaseUrl }}/v1/annotations';
+        searchOption = 'rework';
+    }
 
     var query = $("#annotationQuery").val();
+
+    let fullUrl = new URL(window.location);
+    fullUrl.searchParams.set('query', query);
+    fullUrl.searchParams.set('search_option', searchOption);
+    if(searchOption === '')
+        fullUrl.searchParams.delete('search_option');
+    else if(searchOption === 'rework')
+        fullUrl.searchParams.set('search_option', searchOption);
+    window.history.pushState({}, null, fullUrl);
+
     $.ajax({
           url: url,
           dataType: 'json',
@@ -345,6 +358,13 @@
 
     imageMonkeyApi.setToken(getCookie("imagemonkey"));
 
+    {{ if ne .query "" }}
+    $("#annotationQuery").val({{ .query }});
+    {{ if eq .searchOption "rework" }}
+    $("#annotationsOnlyCheckbox").checkbox("set checked");
+    {{ end }}
+    populateImageGrid();
+    {{ end }}
 
     var staticQueryAttributes = {{ .queryAttributes }};
     var availableLabels = staticQueryAttributes;

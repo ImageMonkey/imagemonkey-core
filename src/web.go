@@ -564,7 +564,9 @@ func main() {
 			}
 
 			view := commons.GetParamFromUrlParams(c, "view", "default")
-			
+			query := commons.GetParamFromUrlParams(c, "query", "")
+			searchOption := commons.GetParamFromUrlParams(c, "search_option", "default")
+
 			c.HTML(http.StatusOK, "annotate.html", gin.H{
 				"title": "Annotate",
 				"activeMenuNr": 4,
@@ -579,6 +581,8 @@ func main() {
 				"annotationMode": mode,
 				"annotationView": view,
 				"onlyOnce": onlyOnce,
+				"query": query,
+				"searchOption": searchOption,
 				"sentryDsn": localSentryDsn,
 				"showSkipAnnotationButtons": showSkipAnnotationButtons,
 				"queryAttributes": parser.GetStaticQueryAttributes(parser.AnnotationView),
