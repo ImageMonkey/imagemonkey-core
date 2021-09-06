@@ -137,7 +137,11 @@
 		{{ if ne .validationId "" }}
 			EventBus.$emit("imageInImageGridClicked", {{ .validationId }});
 		{{ else }}
+		{{ if ne .query "" }}
+			EventBus.$emit("loadAnnotationBrowseFormLabels", {{ .query }});
+		{{ else }}
 			EventBus.$emit("loadAnnotationBrowseFormLabels");
+		{{ end }}
 		{{ end }}
         
 		//let validationId = new URL(window.location.href).searchParams.get("validation_id");

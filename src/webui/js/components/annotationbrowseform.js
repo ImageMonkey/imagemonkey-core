@@ -36,20 +36,26 @@ AnnotationBrowseFormComponent = {
 
             this.numberOfShownQueryResults = 0;
             let apiCommand = null;
-            let options = "";
+            let searchOption = "";
             if (this.searchNoOptionsSelected) {
-                options = "no-options";
+                searchOption = "no-option";
                 apiCommand = imageMonkeyApi.queryUnannotatedAnnotations(this.searchQuery, true);
             } else if (this.searchReworkExistingAnnotationsSelected) {
-                options = "rework";
+                searchOption = "rework";
                 apiCommand = imageMonkeyApi.queryAnnotated(this.searchQuery, true);
             }
+
+            let fullUrl = new URL(window.location);
+            fullUrl.searchParams.set('query', this.searchQuery);
+            if (searchOption !== "no-option")
+                fullUrl.searchParams.set('search_option', searchOption);
+            window.history.pushState({}, null, fullUrl);
 
             var that = this;
             apiCommand
                 .then(function(data) {
                     if (data && data.length > 0) {
-                        EventBus.$emit("populateUnifiedModeImageGrid", data, options);
+                        EventBus.$emit("populateUnifiedModeImageGrid", data, searchOption);
                     } else {
                         EventBus.$emit("hideWaveLoadingIndicator");
                         that.showInlineErrorMessage("Nothing found");
@@ -114,18 +120,25 @@ AnnotationBrowseFormComponent = {
         onUnifiedModeImageGridCurrentlyShownImagesUpdated: function(num) {
             EventBus.$emit("hideWaveLoadingIndicator");
             this.numberOfShownQueryResults = num;
+        },
+        onLoadAnnotationBrowseFormLabels: function(query = null) {
+            this.populate();
+            if (query !== null) {
+                this.searchQuery = query;
+                this.search();
+            }
         }
     },
     beforeDestroy: function() {
         EventBus.$off("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$off("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$off("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
-        EventBus.$off("loadAnnotationBrowseFormLabels", this.populate);
+        EventBus.$off("loadAnnotationBrowseFormLabels", this.onLoadAnnotationBrowseFormLabels);
     },
     mounted: function() {
         EventBus.$on("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$on("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$on("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
-        EventBus.$on("loadAnnotationBrowseFormLabels", this.populate);
+        EventBus.$on("loadAnnotationBrowseFormLabels", this.onLoadAnnotationBrowseFormLabels);
     }
 };
