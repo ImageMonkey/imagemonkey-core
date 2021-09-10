@@ -14,7 +14,8 @@ AnnotationLabelListComponent = {
             availableLabels: [],
             labelsAutoCompletion: null,
             imageId: null,
-            annotations: {}
+            annotations: {},
+            notCommittedAnnotations: {}
         }
     },
     computed: {},
@@ -52,6 +53,7 @@ AnnotationLabelListComponent = {
             this.labelLookupTable = [];
             this.imageId = null;
             this.annotations = {};
+            this.notCommittedAnnotations = {};
         },
         getLabelsForImage: function(imageId, toBeSelectedValidationId) {
             this.reset();
@@ -194,10 +196,35 @@ AnnotationLabelListComponent = {
             return new Promise((resolve) => {
                 resolve(null);
             });
+        },
+        persistAnnotations: function() {
+            var annotations = [];
+            for (var key in this.notCommittedAnnotations) {
+                if (this.notCommittedAnnotations.hasOwnProperty(key)) {
+                    let displayLabel = this.labelLookupTable[key];
+                    let label = displayLabel;
+                    let sublabel = "";
+                    if (displayLabel in this.availableLabelsLookupTable) {
+                        label = this.availableLabelsLookupTable[displayLabel].label;
+                        sublabel = this.availableLabelsLookupTable[displayLabel].sublabel;
+                    }
+                    var annotation = {};
+                    annotation["annotations"] = this.notCommittedAnnotations[key];
+                    annotation["label"] = label;
+                    annotation["sublabel"] = sublabel;
+                    annotations.push(annotation);
+                }
+            }
+            if (annotations.length > 0) {
+                return imageMonkeyApi.addAnnotations(this.imageId, annotations);
+            }
+            return new Promise((resolve) => {
+                resolve(null);
+            });
         }
     },
     onAnnotationsChanged: function(annotations, labelUuid) {
-        //TODO	
+        this.notCommittedAnnotations[labelUuid] = annotations;
     },
     beforeDestroy: function() {
         EventBus.$off("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);

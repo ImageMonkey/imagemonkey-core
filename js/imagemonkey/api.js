@@ -509,7 +509,29 @@ var ImageMonkeyApi = (function() {
             }
             xhr.send();
         });
+    }
 
+    ImageMonkeyApi.prototype.addAnnotations = function(imageId, data) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/donation/' + imageId + "/annotate";
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("POST", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                resolve();
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send(JSON.stringify(data));
+        });
     }
 
     return ImageMonkeyApi;

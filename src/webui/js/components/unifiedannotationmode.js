@@ -3,7 +3,8 @@ UnifiedAnnotationModeComponent = {
     delimiters: ['${', '}$'],
     data() {
         return {
-            visible: false
+            visible: false,
+            imageId: null
         }
     },
     methods: {
@@ -30,6 +31,38 @@ UnifiedAnnotationModeComponent = {
         },
         onNoLabelSelected: function() {
             this.$refs.annotationToolBox.disableTools();
+        },
+        onHideUnifiedAnnotationMode: function() {
+            this.visible = false;
+        },
+        onImageInImageGridClicked: function(imageId, validationId) {
+            this.iamgeId = imageId;
+            let url = new URL(window.location);
+            url.searchParams.set('validation_id', validationId);
+            url.searchParams.set('image_id', imageId);
+            window.history.replaceState({}, null, url);
+
+            this.show();
+            this.loadUnannotatedImage(validationId);
+        },
+        getActiveImageId: function() {
+            return this.imageId;
+        },
+        onSaveChangesInUnifiedMode: function() {
+            let inst = this;
+            this.$refs.annotationLabelList.persistNewlyAddedLabels().then(function() {
+                inst.$refs.annotationLabelList.persistAnnotations().then(function() {
+                    EventBus.$emit("hideUnifiedAnnotationMode");
+                    EventBus.$emit("showAnnotationBrowseMode");
+                    EventBus.$emit("greyOutImageInImageGrid", inst.imageId);
+                }).catch(function(e) {
+                    Sentry.captureException(e);
+                    EventBus.$emit("showErrorPopup", "Couldn't save changes");
+                });
+            }).catch(function(e) {
+                Sentry.captureException(e);
+                EventBus.$emit("showErrorPopup", "Couldn't save changes");
+            });
         }
     },
     beforeDestroy: function() {
@@ -38,6 +71,9 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("unauthenticatedAccess", this.onUnauthenticatedAccess);
         EventBus.$off("labelSelected", this.onLabelSelected);
         EventBus.$off("noLabelSelected", this.onNoLabelSelected);
+        EventBus.$off("hideUnifiedAnnotationMode", this.onHideUnifiedAnnotationMode);
+        EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
+        EventBus.$off("saveChangesInUnifiedMode", this.onSaveChangesInUnifiedMode);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -45,5 +81,8 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("unauthenticatedAccess", this.onUnauthenticatedAccess);
         EventBus.$on("labelSelected", this.onLabelSelected);
         EventBus.$on("noLabelSelected", this.onNoLabelSelected);
+        EventBus.$on("hideUnifiedAnnotationMode", this.onHideUnifiedAnnotationMode);
+        EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
+        EventBus.$on("saveChangesInUnifiedMode", this.onSaveChangesInUnifiedMode);
     }
 }

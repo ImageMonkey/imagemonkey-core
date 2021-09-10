@@ -7,12 +7,7 @@ AnnotationNavbarComponent = {
     },
     methods: {
         save: function() {
-            this.$parent.$refs.annotationLabelList.persistNewlyAddedLabels().then(function() {
-               	//TODO: persist annotations 
-            }).catch(function(e) {
-                Sentry.captureException(e);
-                EventBus.$emit("showErrorPopup", "Couldn't save changes");
-            });
+            EventBus.$emit("saveChangesInUnifiedMode");
         }
     },
     beforeDestroy: function() {

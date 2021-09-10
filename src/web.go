@@ -522,6 +522,7 @@ func main() {
 
 		router.GET("/annotation-demo", func(c *gin.Context) {
 			validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
+			imageId := commons.GetParamFromUrlParams(c, "image_id", "")
 
 			query := commons.GetParamFromUrlParams(c, "query", "")
 			searchOption := commons.GetParamFromUrlParams(c, "search_option", "default")
@@ -533,6 +534,7 @@ func main() {
 				"apiBaseUrl": apiBaseUrl,
 				"assetVersion": assetVersion,
 				"validationId": validationId,
+				"imageId": imageId,
 				"query": query,
 				"searchOption": searchOption,
 			})

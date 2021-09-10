@@ -30,8 +30,8 @@ ImageGridComponent = {
         hide: function() {
             this.visible = false;
         },
-        imageClicked: function(imageId) {
-            EventBus.$emit("imageInImageGridClicked", imageId);
+        imageClicked: function(imageId, validationId) {
+            EventBus.$emit("imageInImageGridClicked", imageId, validationId);
         },
         populate: function(data, options) {
             this.clear();
@@ -116,14 +116,20 @@ ImageGridComponent = {
             EventBus.$emit("unifiedModeImageGridCurrentlyShownImagesUpdated", numberOfShownQueryResults);
 
 
+        },
+        onGreyOutImageInImageGrid: function() {
+            //TODO
+            console.log("TODO: grey out image in image grid");
         }
     },
     beforeDestroy: function() {
         EventBus.$off("populateUnifiedModeImageGrid", this.populate);
+        EventBus.$off("greyOutImageInImageGrid", this.onGreyOutImageInImageGrid);
     },
     mounted: function() {
         this.infiniteScroll = new InfiniteScroll(this.loadNextImagesInImageGrid, false);
 
         EventBus.$on("populateUnifiedModeImageGrid", this.populate);
+        EventBus.$on("greyOutImageInImageGrid", this.onGreyOutImageInImageGrid);
     }
 };

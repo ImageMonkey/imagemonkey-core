@@ -100,7 +100,7 @@
 			el: "#annotation-browse-form-container",
 			store: store,
 			methods: {
-				onImageInImageGridClicked: function(validationId) {
+				onImageInImageGridClicked: function(imageId, validationId) {
 					this.$refs.annotationBrowseFormContainer.hide();
 				}
 			},
@@ -115,27 +115,11 @@
 		const unifiedAnnotationMode = new Vue({
 			delimiters: ['${', '}$'],
 			el: "#unified-annotation-mode",
-			store: store,
-			methods: {
-				onImageInImageGridClicked: function(validationId) {
-					let url = new URL(window.location);
-					url.searchParams.set('validation_id', validationId);
-					window.history.replaceState({}, null, url);
-
-					this.$refs.unifiedAnnotationMode.show();
-					this.$refs.unifiedAnnotationMode.loadUnannotatedImage(validationId);
-				}
-			},
-			beforeDestroy: function() {
-				EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
-			},
-			mounted: function() {
-				EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
-			}
+			store: store
 		});
 
-		{{ if ne .validationId "" }}
-			EventBus.$emit("imageInImageGridClicked", {{ .validationId }});
+		{{ if and (ne .validationId "") (ne .imageId "") }}
+			EventBus.$emit("imageInImageGridClicked", {{ .imageId }}, {{ .validationId }});
 		{{ else }}
 		{{ if ne .query "" }}
 			EventBus.$emit("loadAnnotationBrowseFormLabels", {{ .query }});
