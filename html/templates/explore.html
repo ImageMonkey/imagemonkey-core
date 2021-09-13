@@ -244,6 +244,14 @@
     $("#query").val(randomElem);
   });
 
+  $("#query").keyup(function(event) {
+    if(event.keyCode === 13) { //when enter inside input field is pressed
+      event.preventDefault();
+      $("#goButton").click();
+      $("#query").blur();
+    }
+  });
+
   //in case there are URL parameters prodvided, load when document
   //gets loaded.
   {{if ne .queryInfo.Query "" }}
@@ -275,7 +283,7 @@
     </div>
     <div class="row">
       <div class="eight wide center aligned column">
-        <form class="ui form segment">
+        <form class="ui form segment" onsubmit="return false;"> <!-- do not handle enter key presses in HTML form-->
           <div class="field">
             <p class="default-text">Query the data you are interested in</p>
             <div class="ui action input">
