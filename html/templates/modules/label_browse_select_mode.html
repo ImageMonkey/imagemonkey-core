@@ -312,7 +312,7 @@
 <div class="row" id="labelQuerySearchContainer">
   <div class="four wide column"></div>
   <div class="eight wide center aligned column">
-    <form class="ui form segment" id="labelQueryForm">
+    <form class="ui form segment" id="labelQueryForm" onsubmit="return false;"> <!-- do not handle enter key presses in HTML form-->
       <div class="field">
        <p class="default-text">Search for images you are interested in</p>
        <div class="ui action input">
