@@ -127,6 +127,13 @@ AnnotationBrowseFormComponent = {
                 this.searchQuery = query;
                 this.search();
             }
+        },
+        onKeyup: function(event) {
+            if (event.key == "Enter") {
+                event.preventDefault();
+                event.target.blur();
+                this.search();
+            }
         }
     },
     beforeDestroy: function() {

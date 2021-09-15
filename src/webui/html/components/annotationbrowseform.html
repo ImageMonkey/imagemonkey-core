@@ -3,7 +3,7 @@
 <div class="row" id="annotation-query-search-container" v-if="visible">
   <div class="four wide column"></div>
   <div class="eight wide center aligned column">
-    <form class="ui form segment">
+    <form class="ui form segment" onsubmit="return false;" v-on:keyup="onKeyup"> <!-- do not handle enter key presses in HTML form-->
       <div class="field">
        <p class="default-text">Search for annotation tasks you are interested in</p>
        <div class="ui action input">
