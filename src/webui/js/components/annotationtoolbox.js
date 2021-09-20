@@ -53,6 +53,9 @@ AnnotationToolboxComponent = {
             if (!this.isDisabled)
                 this.canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
         },
+        deleteAnnotation: function() {
+            this.annotator.deleteSelected();
+        },
         onAnnotatorMouseUp: function() {},
         onAnnotatorObjectDeselected: function() {},
         onAnnotatorObjectSelected: function() {},
@@ -102,6 +105,9 @@ AnnotationToolboxComponent = {
                 return this.annotator.toJSON();
             }
             return [];
+        },
+        removeSelectedAnnotation: function() {
+            this.deleteAnnotation();
         }
 
     },
@@ -130,6 +136,9 @@ AnnotationToolboxComponent = {
         });
         this.annotationHotkeyHandler.zoomIn(function() {
             inst.zoomIn();
+        });
+        this.annotationHotkeyHandler.deleteAnnotation(function() {
+            EventBus.$emit("deleteSelectedAnnotation");
         });
     }
 

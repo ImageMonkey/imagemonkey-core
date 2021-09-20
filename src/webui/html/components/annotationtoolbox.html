@@ -1,5 +1,5 @@
 <script type="text/x-template" id="annotation-toolbox-template">
-<div class="flex flex-row h-full" v-if="visible">
+    <div class="flex flex-row h-full" v-if="visible">
     <nav class="bg-white dark:bg-gray-800 w-20 h-screen justify-between flex flex-col border-r-2">
         <div class="mt-10 mb-10">
             <div class="mt-10">
@@ -32,6 +32,11 @@
 					<li class="my-12 text-center">
                         <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomOut" v-bind:class="toolboxItemEnabled">
 							<i class="fas fa-search-minus" style="color:gray"></i>
+                    	</button>
+					</li>
+					<li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="deleteAnnotation" v-bind:class="toolboxItemEnabled">
+							<i class="fas fa-trash" style="color:gray"></i>
                     	</button>
 					</li>
                 </ul>

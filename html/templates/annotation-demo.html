@@ -44,6 +44,7 @@
 	<script src="js/components/annotationbrowseformcontainer.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/unifiedannotationmode.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/removelabelconfirmationdialog.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/removeannotationconfirmationdialog.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/simpleerrorpopup.js?v={{ .assetVersion }}"></script>
 
 	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
@@ -98,6 +99,7 @@
 		Vue.component("imagecanvas", ImageCanvasComponent);
 		Vue.component("removelabelconfirmationdialog", RemoveLabelConfirmationDialogComponent);
 		Vue.component("simpleerrorpopup", SimpleErrorPopupComponent);
+		Vue.component("removeannotationconfirmationdialog", RemoveAnnotationConfirmationDialogComponent);
 
 		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
@@ -167,4 +169,5 @@
 {{ template "annotationbrowseformcontainer.html" .}}
 {{ template "unifiedannotationmode.html" .}}
 {{ template "removelabelconfirmationdialog.html" .}}
+{{ template "removeannotationconfirmationdialog.html" .}}
 {{ template "simpleerrorpopup.html" .}}

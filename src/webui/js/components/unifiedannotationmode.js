@@ -72,6 +72,12 @@ UnifiedAnnotationModeComponent = {
                 Sentry.captureException(e);
                 EventBus.$emit("showErrorPopup", "Couldn't save changes");
             });
+        },
+        onDeleteSelectedAnnotation: function() {
+            this.$refs.removeAnnotationConfirmationDialog.show();
+        },
+        onConfirmRemoveAnnotation: function() {
+            this.$refs.annotationToolBox.removeSelectedAnnotation();
         }
     },
     beforeDestroy: function() {
@@ -83,6 +89,8 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("hideUnifiedAnnotationMode", this.onHideUnifiedAnnotationMode);
         EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
         EventBus.$off("saveChangesInUnifiedMode", this.onSaveChangesInUnifiedMode);
+        EventBus.$off("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
+        EventBus.$off("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -93,5 +101,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("hideUnifiedAnnotationMode", this.onHideUnifiedAnnotationMode);
         EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
         EventBus.$on("saveChangesInUnifiedMode", this.onSaveChangesInUnifiedMode);
+        EventBus.$on("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
+        EventBus.$on("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
     }
 }
