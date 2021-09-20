@@ -5,8 +5,7 @@ AnnotationToolboxComponent = {
             canvas: null,
             annotator: null,
             visible: true,
-            isDisabled: true,
-            labelUuid: null
+            isDisabled: true
         }
     },
     computed: {
@@ -89,25 +88,27 @@ AnnotationToolboxComponent = {
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
         },
-        onDrawAnnotations: function(annotations, labelUuid) {
-            if (this.labelUuid !== null) {
-                if (this.annotator.isDirty()) {
-                    let annos = this.annotator.toJSON();
-                    EventBus.$emit("annotationsChanged", annos, this.labelUuid);
-                }
-            }
-            this.labelUuid = labelUuid;
+        drawAnnotations: function(annotations) {
             this.annotator.loadAnnotations(annotations, this.canvas.fabric().backgroundImage.scaleX);
+        },
+        annotationsChanged: function() {
+            if (this.annotator && this.annotator.isDirty())
+                return true;
+            return false;
+        },
+        getAnnotationsOnCanvas: function() {
+            if (this.annotator) {
+                return this.annotator.toJSON();
+            }
+            return [];
         }
 
     },
     beforeDestroy: function() {
         EventBus.$off("canvasCreated", this.onCanvasCreated);
-        EventBus.$off("drawAnnotations", this.onDrawAnnotations);
     },
     mounted: function() {
         EventBus.$on("canvasCreated", this.onCanvasCreated);
-        EventBus.$on("drawAnnotations", this.onDrawAnnotations);
     }
 
 };

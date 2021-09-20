@@ -26,8 +26,17 @@ UnifiedAnnotationModeComponent = {
         onUnauthenticatedAccess: function() {
             this.$refs.simpleErrorPopup.show("Please log in first");
         },
-        onLabelSelected: function() {
+        onLabelSelected: function(currentSelectedLabelUuid, previousSelectedLabelUuid) {
             this.$refs.annotationToolBox.enableTools();
+            let annotationsChanged = this.$refs.annotationToolBox.annotationsChanged();
+            if (annotationsChanged) {
+                let annotationsOnCanvas = this.$refs.annotationToolBox.getAnnotationsOnCanvas();
+                if (previousSelectedLabelUuid !== null)
+                    this.$refs.annotationLabelList.updateAnnotations(annotationsOnCanvas, previousSelectedLabelUuid);
+            }
+
+            let annotations = this.$refs.annotationLabelList.getAnnotationsForLabelUuid(currentSelectedLabelUuid);
+            this.$refs.annotationToolBox.drawAnnotations(annotations);
         },
         onNoLabelSelected: function() {
             this.$refs.annotationToolBox.disableTools();

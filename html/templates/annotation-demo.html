@@ -20,6 +20,7 @@
 	<script src="/js/cookies.min.js?v={{ .assetVersion }}"></script>
 	<script src="/js/settings.js?v={{ .assetVersion }}"></script>
 
+    <script src="js/lodash.core.min.js?v={{ .assetVersion }}"></script>
     <script src="js/fabric.min.js?v={{ .assetVersion }}"></script>
     <script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
     <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
@@ -59,7 +60,6 @@
     var canvas = null;
     window.onload = (event) => {
         window.EventBus = new Vue();
-
 
         const store = new Vuex.Store({
             state: {

@@ -6,6 +6,7 @@ AnnotationLabelListComponent = {
             labels: [],
             labelLookupTable: [],
             currentSelectedItem: null,
+            previousSelectedItem: null,
             visible: true,
             addLabelInput: null,
             addedButNotCommittedLabels: {},
@@ -24,18 +25,29 @@ AnnotationLabelListComponent = {
             return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
                 (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
         },
-        itemSelected: function(labelUuid) {
-            this.currentSelectedItem = labelUuid;
+        getCurrentSelectedLabelUuid: function() {
+            return this.currentSelectedItem;
+        },
+        getPreviousSelectedLabelUuid: function() {
+            return this.previousSelectedItem;
+        },
+        getAnnotationsForLabelUuid: function(labelUuid) {
             let annotationsForLabel = [];
-
             let displayName = null;
             if (labelUuid in this.labelLookupTable)
                 displayName = this.labelLookupTable[labelUuid];
 
             if (displayName in this.annotations)
                 annotationsForLabel = this.annotations[displayName];
-            EventBus.$emit("labelSelected");
-            EventBus.$emit("drawAnnotations", annotationsForLabel, labelUuid);
+            else if (labelUuid in this.notCommittedAnnotations)
+                annotationsForLabel = this.notCommittedAnnotations[labelUuid];
+            return annotationsForLabel;
+        },
+        itemSelected: function(labelUuid) {
+            this.previousSelectedItem = this.currentSelectedItem;
+            this.currentSelectedItem = labelUuid;
+
+            EventBus.$emit("labelSelected", this.currentSelectedItem, this.previousSelectedItem);
         },
         itemColor: function(labelUuid) {
             if (this.currentSelectedItem === labelUuid)
@@ -221,20 +233,18 @@ AnnotationLabelListComponent = {
             return new Promise((resolve) => {
                 resolve(null);
             });
+        },
+        updateAnnotations: function(annotations, labelUuid) {
+            this.notCommittedAnnotations[labelUuid] = annotations;
         }
-    },
-    onAnnotationsChanged: function(annotations, labelUuid) {
-        this.notCommittedAnnotations[labelUuid] = annotations;
     },
     beforeDestroy: function() {
         EventBus.$off("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
         EventBus.$off("confirmRemoveLabel", this.onConfirmRemoveLabel);
-        EventBus.$off("annotationsChanged", this.onAnnotationsChanged);
     },
     mounted: function() {
         EventBus.$on("unannotatedImageDataReceived", this.onUnannotatedImageDataReceived);
         EventBus.$on("confirmRemoveLabel", this.onConfirmRemoveLabel);
-        EventBus.$on("annotationsChanged", this.onAnnotationsChanged);
         this.getAvailableLabelsAndLabelSuggestions();
     }
 
