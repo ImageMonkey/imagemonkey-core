@@ -5,7 +5,8 @@ AnnotationToolboxComponent = {
             canvas: null,
             annotator: null,
             visible: true,
-            isDisabled: true
+            isDisabled: true,
+            annotationHotkeyHandler: null
         }
     },
     computed: {
@@ -109,6 +110,27 @@ AnnotationToolboxComponent = {
     },
     mounted: function() {
         EventBus.$on("canvasCreated", this.onCanvasCreated);
+
+        let inst = this;
+        this.annotationHotkeyHandler = new AnnotationHotkeyHandler();
+        this.annotationHotkeyHandler.drawRectangle(function() {
+            inst.rectAnnotationMode();
+        });
+        this.annotationHotkeyHandler.drawCircle(function() {
+            inst.circleAnnotationMode();
+        });
+        this.annotationHotkeyHandler.drawPolygon(function() {
+            inst.polygonAnnotationMode();
+        });
+        this.annotationHotkeyHandler.selectMove(function() {
+            inst.selectMoveAnnotationMode();
+        });
+        this.annotationHotkeyHandler.zoomOut(function() {
+            inst.zoomOut();
+        });
+        this.annotationHotkeyHandler.zoomIn(function() {
+            inst.zoomIn();
+        });
     }
 
 };
