@@ -67,30 +67,32 @@ AnnotationLabelListComponent = {
             this.annotations = {};
             this.notCommittedAnnotations = {};
         },
-        getLabelsForImage: function(imageId, toBeSelectedValidationId) {
+        getLabelsAndAnnotationsForImage: function(imageId, toBeSelectedValidationId, imageUnlocked) {
             this.reset();
             this.imageId = imageId;
 
             var that = this;
             let onlyUnlockedLabels = false;
-            imageMonkeyApi.getLabelsForImage(imageId, onlyUnlockedLabels)
-                .then(function(entries) {
+
+            let promises = [imageMonkeyApi.getLabelsForImage(imageId, onlyUnlockedLabels),
+                imageMonkeyApi.getAnnotationsForImage(imageId, imageUnlocked)
+            ]
+            Promise.all(promises)
+                .then(function(data) {
+
+                    //labels
                     let composedLabels = []
-                    let labelSelected = false;
-                    for (const entry of entries) {
+                    let selectedLabelUuid = null;
+                    for (const entry of data[0]) {
                         composedLabels.push(...buildComposedLabels(entry.label, entry.uuid, entry.sublabels));
                         if (toBeSelectedValidationId !== null) {
                             if ("validation" in entry) {
                                 if (entry["validation"]["uuid"] === toBeSelectedValidationId) {
-                                    labelSelected = true;
-                                    that.itemSelected(entry["uuid"]);
+                                    selectedLabelUuid = entry["uuid"];
                                 }
                             }
                         }
                     }
-
-                    if (!labelSelected)
-                        EventBus.$emit("noLabelSelected");
 
                     that.labelLookupTable = {}
                     for (const composedLabel of composedLabels) {
@@ -98,27 +100,25 @@ AnnotationLabelListComponent = {
                     }
 
                     that.labels = composedLabels;
-                }).catch(function(e) {
-                    console.log(e.message);
-                    Sentry.captureException(e);
-                });
-        },
-        getAnnotationsForImage: function(imageId, imageUnlocked) {
-            var that = this;
-            imageMonkeyApi.getAnnotationsForImage(imageId, imageUnlocked)
-                .then(function(annotations) {
-                    for (const annotation of annotations) {
+
+                    //annotations
+                    for (const annotation of data[1]) {
                         let displayName = getDisplayName(annotation.validation.label, annotation.validation.sublabel);
                         that.annotations[displayName] = annotation.annotations;
                     }
+
+                    if (selectedLabelUuid !== null)
+                        that.itemSelected(selectedLabelUuid);
+                    else
+                        EventBus.$emit("noLabelSelected");
+
                 }).catch(function(e) {
                     console.log(e.message);
                     Sentry.captureException(e);
                 });
         },
         onUnannotatedImageDataReceived: function(data, validationId) {
-            this.getLabelsForImage(data.uuid, validationId);
-            this.getAnnotationsForImage(data.uuid, data.unlocked);
+            this.getLabelsAndAnnotationsForImage(data.uuid, validationId, data.unlocked);
         },
         onAddLabel: function() {
             let labelString = $("#add-labels-input").val();
