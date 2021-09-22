@@ -131,7 +131,7 @@ ImageGridComponent = {
             this.clear();
 
             //ugly hack to set the height of the DOM element to 0
-            $("#annotation-image-grid").height(0);
+            document.getElementById(this.$el.id).style.height = 0;
         }
     },
     beforeDestroy: function() {
