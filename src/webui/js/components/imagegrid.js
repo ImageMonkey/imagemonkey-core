@@ -11,7 +11,6 @@ ImageGridComponent = {
             numberOfQueryResults: 0,
             currentlyVisibleImageGridData: null,
             visible: true
-
         }
     },
     computed: {},
@@ -29,6 +28,11 @@ ImageGridComponent = {
         },
         hide: function() {
             this.visible = false;
+        },
+        imageStyle(greyedOut) {
+            if (greyedOut)
+                return "grey-out";
+            return "";
         },
         imageClicked: function(imageId, validationId) {
             EventBus.$emit("imageInImageGridClicked", imageId, validationId);
@@ -84,7 +88,8 @@ ImageGridComponent = {
                     imageUuid: data[i].image.uuid,
                     validationId: data[i].uuid,
                     imageUrl: imageUrl,
-                    tooltipText: tooltipText
+                    tooltipText: tooltipText,
+                    greyedOut: false
                 });
             }
 
@@ -117,9 +122,10 @@ ImageGridComponent = {
 
 
         },
-        onGreyOutImageInImageGrid: function() {
-            //TODO
-            console.log("TODO: grey out image in image grid");
+        onGreyOutImageInImageGrid: function(imageId) {
+            let idx = this.imageGridData.findIndex((obj => obj.imageUuid == imageId));
+            if (idx !== -1)
+                this.imageGridData[idx].greyedOut = true;
         }
     },
     beforeDestroy: function() {

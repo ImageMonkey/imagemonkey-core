@@ -26,14 +26,18 @@ UnifiedAnnotationModeComponent = {
         onUnauthenticatedAccess: function() {
             this.$refs.simpleErrorPopup.show("Please log in first");
         },
-        onLabelSelected: function(currentSelectedLabelUuid, previousSelectedLabelUuid) {
-            this.$refs.annotationToolBox.enableTools();
+        updateAnnotationsInAnnotationLabelList: function(labelUuid) {
             let annotationsChanged = this.$refs.annotationToolBox.annotationsChanged();
             if (annotationsChanged) {
                 let annotationsOnCanvas = this.$refs.annotationToolBox.getAnnotationsOnCanvas();
-                if (previousSelectedLabelUuid !== null)
-                    this.$refs.annotationLabelList.updateAnnotations(annotationsOnCanvas, previousSelectedLabelUuid);
+                if (labelUuid !== null)
+                    this.$refs.annotationLabelList.updateAnnotations(annotationsOnCanvas, labelUuid);
             }
+
+        },
+        onLabelSelected: function(currentSelectedLabelUuid, previousSelectedLabelUuid) {
+            this.$refs.annotationToolBox.enableTools();
+            this.updateAnnotationsInAnnotationLabelList(previousSelectedLabelUuid);
 
             let annotations = this.$refs.annotationLabelList.getAnnotationsForLabelUuid(currentSelectedLabelUuid);
             this.$refs.annotationToolBox.drawAnnotations(annotations);
@@ -45,7 +49,7 @@ UnifiedAnnotationModeComponent = {
             this.visible = false;
         },
         onImageInImageGridClicked: function(imageId, validationId) {
-            this.iamgeId = imageId;
+            this.imageId = imageId;
             let url = new URL(window.location);
             url.searchParams.set('validation_id', validationId);
             url.searchParams.set('image_id', imageId);
@@ -58,6 +62,9 @@ UnifiedAnnotationModeComponent = {
             return this.imageId;
         },
         onSaveChangesInUnifiedMode: function() {
+            let currentSelectedLabelUuid = this.$refs.annotationLabelList.getCurrentSelectedLabelUuid();
+            this.updateAnnotationsInAnnotationLabelList(currentSelectedLabelUuid);
+
             let inst = this;
             this.$refs.annotationLabelList.persistNewlyAddedLabels().then(function() {
                 inst.$refs.annotationLabelList.persistAnnotations().then(function() {

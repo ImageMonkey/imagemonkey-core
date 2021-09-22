@@ -7,6 +7,9 @@ AnnotationBrowseFormContainerComponent = {
         }
     },
     methods: {
+        show: function() {
+            this.visible = true;
+        },
         hide: function() {
             this.visible = false;
         },
