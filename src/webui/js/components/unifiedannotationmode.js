@@ -51,8 +51,8 @@ UnifiedAnnotationModeComponent = {
         onImageInImageGridClicked: function(imageId, validationId) {
             this.imageId = imageId;
             let url = new URL(window.location);
-            url.searchParams.set('validation_id', validationId);
-            url.searchParams.set('image_id', imageId);
+            url.searchParams.set("validation_id", validationId);
+            url.searchParams.set("image_id", imageId);
             window.history.replaceState({}, null, url);
 
             this.show();
@@ -71,6 +71,11 @@ UnifiedAnnotationModeComponent = {
                     EventBus.$emit("hideUnifiedAnnotationMode");
                     EventBus.$emit("showAnnotationBrowseMode");
                     EventBus.$emit("greyOutImageInImageGrid", inst.imageId);
+
+                    let url = new URL(window.location);
+                    url.searchParams.delete("validation_id");
+                    url.searchParams.delete("image_id");
+                    window.history.replaceState({}, null, url);
                 }).catch(function(e) {
                     Sentry.captureException(e);
                     EventBus.$emit("showErrorPopup", "Couldn't save changes");
