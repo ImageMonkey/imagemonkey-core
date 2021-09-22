@@ -49,6 +49,11 @@ AnnotationLabelListComponent = {
 
             EventBus.$emit("labelSelected", this.currentSelectedItem, this.previousSelectedItem);
         },
+        entryCanBeRemoved: function(labelName) {
+            if (labelName in this.addedButNotCommittedLabels)
+                return true;
+            return false;
+        },
         itemColor: function(labelUuid) {
             if (this.currentSelectedItem === labelUuid)
                 return "bg-red-100";
