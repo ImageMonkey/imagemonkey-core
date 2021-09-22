@@ -4,7 +4,7 @@ ImageGridComponent = {
     data() {
         return {
             infiniteScroll: null,
-            imageGridData: null,
+            imageGridData: [],
             numOfLastFetchedImg: 0,
             defaultBatchSize: 50,
             numberOfCurrentlyShownResults: 0,
@@ -16,9 +16,9 @@ ImageGridComponent = {
     computed: {},
     methods: {
         clear: function() {
-            this.imageGridData = null;
+            this.imageGridData = [];
             this.numOfLastFetchedImg = 0;
-            this.currentlyVisibleImageGridData = 0;
+            this.currentlyVisibleImageGridData = [];
             this.numberOfCurrentlyShownResults = 0;
             this.numberOfQueryResults = 0;
             this.infiniteScroll.deactivate();
@@ -126,16 +126,24 @@ ImageGridComponent = {
             let idx = this.imageGridData.findIndex((obj => obj.imageUuid == imageId));
             if (idx !== -1)
                 this.imageGridData[idx].greyedOut = true;
+        },
+        onClearImageGrid: function() {
+            this.clear();
+
+            //ugly hack to set the height of the DOM element to 0
+            $("#annotation-image-grid").height(0);
         }
     },
     beforeDestroy: function() {
         EventBus.$off("populateUnifiedModeImageGrid", this.populate);
         EventBus.$off("greyOutImageInImageGrid", this.onGreyOutImageInImageGrid);
+        EventBus.$off("clearImageGrid", this.onClearImageGrid);
     },
     mounted: function() {
         this.infiniteScroll = new InfiniteScroll(this.loadNextImagesInImageGrid, false);
 
         EventBus.$on("populateUnifiedModeImageGrid", this.populate);
         EventBus.$on("greyOutImageInImageGrid", this.onGreyOutImageInImageGrid);
+        EventBus.$on("clearImageGrid", this.onClearImageGrid);
     }
 };

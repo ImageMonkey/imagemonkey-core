@@ -32,6 +32,7 @@ AnnotationBrowseFormComponent = {
             setTimeout(() => this.errorMessage = "", 5000);
         },
         search: function() {
+            EventBus.$emit("clearImageGrid");
             EventBus.$emit("showWaveLoadingIndicator");
 
             this.numberOfShownQueryResults = 0;
