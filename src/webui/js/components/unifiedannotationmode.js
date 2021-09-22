@@ -71,6 +71,7 @@ UnifiedAnnotationModeComponent = {
                     EventBus.$emit("hideUnifiedAnnotationMode");
                     EventBus.$emit("showAnnotationBrowseMode");
                     EventBus.$emit("greyOutImageInImageGrid", inst.imageId);
+                    EventBus.$emit("clearImageAnnotationCanvas");
 
                     let url = new URL(window.location);
                     url.searchParams.delete("validation_id");

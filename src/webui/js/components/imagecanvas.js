@@ -4,7 +4,8 @@ ImageCanvasComponent = {
     delimiters: ['${', '}$'],
     data() {
         return {
-            visible: true 
+            visible: true,
+            canvas: null
         }
     },
     methods: {
@@ -14,7 +15,7 @@ ImageCanvasComponent = {
                 .then(function(data) {
                     EventBus.$emit("unannotatedImageDataReceived", data, validationId);
 
-                    canvas = new CanvasDrawer(that.$el.id);
+                    that.canvas.clear();
 
                     //TODO: make max width configureable
                     let maxWidth = data.width;
@@ -25,23 +26,33 @@ ImageCanvasComponent = {
                     let width = scaleFactor * data.width;
                     let height = scaleFactor * data.height;
 
-                    canvas.setWidth(width);
-                    canvas.setHeight(height);
+                    that.canvas.setWidth(width);
+                    that.canvas.setHeight(height);
 
                     let backgroundImageUrl = data.url;
-                    canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
-                        EventBus.$emit("canvasCreated", canvas);
+                    that.canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
+                        EventBus.$emit("canvasCreated", that.canvas);
                         EventBus.$emit("hideLoadingSpinner", null, null);
                     });
                 }).catch(function() {
                     Sentry.captureException(e);
                 });
+        },
+        canvas: function() {
+            return this.canvas;
+        },
+        onClearImageAnnotationCanvas: function() {
+            this.canvas.clear();
+
         }
     },
     beforeDestroy: function() {
         EventBus.$off("loadUnannotatedImage", this.loadUnannotatedImage);
+        EventBus.$off("clearImageAnnotationCanvas", this.onClearImageAnnotationCanvas);
     },
     mounted: function() {
         EventBus.$on("loadUnannotatedImage", this.loadUnannotatedImage);
+        EventBus.$on("clearImageAnnotationCanvas", this.onClearImageAnnotationCanvas);
+        this.canvas = new CanvasDrawer(this.$el.id);
     }
 };
