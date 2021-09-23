@@ -528,7 +528,7 @@ func main() {
 			searchOption := commons.GetParamFromUrlParams(c, "search_option", "default")
 
 			c.HTML(http.StatusOK, "annotation-demo.html", gin.H{
-				"title": "Annotation-Demo",
+				"title": "ImageMonkey Annotation Tool",
 				"activeMenuNr": 4,
 				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
 				"apiBaseUrl": apiBaseUrl,
