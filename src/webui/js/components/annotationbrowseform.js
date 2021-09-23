@@ -13,7 +13,8 @@ AnnotationBrowseFormComponent = {
             numberOfShownQueryResults: '',
             availableLabels: [],
             errorMessage: "",
-            visible: true
+            visible: true,
+            populated: false
         }
     },
     computed: {},
@@ -107,6 +108,7 @@ AnnotationBrowseFormComponent = {
                     that.autoCompletion = new AutoCompletion("#annotation-query", availableLabels);
                     that.availableLabels = availableLabels;
                     that.labelAccessorsLoaded = true;
+                    that.populated = true;
                 }).catch(function(e) {
                     Sentry.captureException(e);
                 });
@@ -135,6 +137,13 @@ AnnotationBrowseFormComponent = {
                 event.target.blur();
                 this.search();
             }
+        },
+        onCallSearchIfUrlOpenedInStandaloneMode: function(query) {
+            if (!this.populated) {
+                this.populate();
+                this.searchQuery = query;
+                this.search();
+            }
         }
     },
     beforeDestroy: function() {
@@ -142,11 +151,13 @@ AnnotationBrowseFormComponent = {
         EventBus.$off("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$off("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
         EventBus.$off("loadAnnotationBrowseFormLabels", this.onLoadAnnotationBrowseFormLabels);
+        EventBus.$off("callSearchIfUrlOpenedInStandaloneMode", this.onCallSearchIfUrlOpenedInStandaloneMode);
     },
     mounted: function() {
         EventBus.$on("annotatedStatisticsLoaded", this.onAnnotatedStatisticsLoaded);
         EventBus.$on("annotatedStatisticsPopupLabelClicked", this.onAnnotatedStatisticsPopupLabelClicked);
         EventBus.$on("unifiedModeImageGridCurrentlyShownImagesUpdated", this.onUnifiedModeImageGridCurrentlyShownImagesUpdated);
         EventBus.$on("loadAnnotationBrowseFormLabels", this.onLoadAnnotationBrowseFormLabels);
+        EventBus.$on("callSearchIfUrlOpenedInStandaloneMode", this.onCallSearchIfUrlOpenedInStandaloneMode);
     }
 };

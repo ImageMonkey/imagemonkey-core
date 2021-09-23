@@ -92,9 +92,12 @@ UnifiedAnnotationModeComponent = {
             EventBus.$emit("clearImageAnnotationCanvas");
 
             let url = new URL(window.location);
+            let query = url.searchParams.get("query");
             url.searchParams.delete("validation_id");
             url.searchParams.delete("image_id");
             window.history.replaceState({}, null, url);
+
+            EventBus.$emit("callSearchIfUrlOpenedInStandaloneMode", query);
         },
         onDeleteSelectedAnnotation: function() {
             this.$refs.removeAnnotationConfirmationDialog.show();
