@@ -1,7 +1,7 @@
 <script type="text/x-template" id="annotation-label-list-template">
 <div v-if="visible" class="flex flex-col h-screen">
   <div class="flex items-center border border-gray-200 py-2 bg-white mt-1">
-	<input id="add-labels-input" class="appearance-none bg-transparent border-none w-full text-gray-500 mr-3 py-1 px-2 leading-tight focus:outline-none" type="text" placeholder="Add Label.." aria-label="Full name" v-model="addLabelInput">
+	<input id="add-labels-input" v-on:keyup.enter="onAddLabel()" class="appearance-none bg-transparent border-none w-full text-gray-500 mr-3 py-1 px-2 leading-tight focus:outline-none" type="text" placeholder="Add Label.." aria-label="Full name" v-model="addLabelInput">
     <button class="bg-white hover:bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded inline-flex items-center mr-1" v-on:click="onAddLabel()">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
