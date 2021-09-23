@@ -86,6 +86,16 @@ UnifiedAnnotationModeComponent = {
                 EventBus.$emit("showErrorPopup", "Couldn't save changes");
             });
         },
+        onDiscardChangesInUnifiedMode: function() {
+            EventBus.$emit("hideUnifiedAnnotationMode");
+            EventBus.$emit("showAnnotationBrowseMode");
+            EventBus.$emit("clearImageAnnotationCanvas");
+
+            let url = new URL(window.location);
+            url.searchParams.delete("validation_id");
+            url.searchParams.delete("image_id");
+            window.history.replaceState({}, null, url);
+        },
         onDeleteSelectedAnnotation: function() {
             this.$refs.removeAnnotationConfirmationDialog.show();
         },
@@ -102,6 +112,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("hideUnifiedAnnotationMode", this.onHideUnifiedAnnotationMode);
         EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
         EventBus.$off("saveChangesInUnifiedMode", this.onSaveChangesInUnifiedMode);
+        EventBus.$off("discardChangesInUnifiedMode", this.onDiscardChangesInUnifiedMode);
         EventBus.$off("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$off("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
     },
@@ -114,6 +125,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("hideUnifiedAnnotationMode", this.onHideUnifiedAnnotationMode);
         EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
         EventBus.$on("saveChangesInUnifiedMode", this.onSaveChangesInUnifiedMode);
+        EventBus.$on("discardChangesInUnifiedMode", this.onDiscardChangesInUnifiedMode);
         EventBus.$on("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$on("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
     }

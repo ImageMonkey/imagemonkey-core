@@ -37,7 +37,14 @@
 
 						<div class="ml-3 relative">
 							<div>
-								<button class="bg-white hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-500 border font-bold py-4 px-12 rounded" v-on:click="save">
+								<button class="bg-white hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-500 border font-bold py-4 px-12 rounded" data-tooltip="Discard changes (ctrl+d)" data-position="bottom center" v-on:click="discard">
+									Discard
+								</button>
+							</div>
+						</div>
+						<div class="ml-3 relative">
+							<div>
+								<button class="bg-white hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-500 border font-bold py-4 px-12 rounded" data-tooltip="Save changes (ctrl+s)" data-position="bottom center" v-on:click="save">
 									Save
 								</button>
 							</div>
