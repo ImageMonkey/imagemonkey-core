@@ -56,8 +56,8 @@ AnnotationLabelListComponent = {
         },
         itemColor: function(labelUuid) {
             if (this.currentSelectedItem === labelUuid)
-                return "bg-red-100";
-            return "bg-green-100";
+                return "bg-gray-200";
+            return "bg-white";
         },
         removeLabel: function(label) {
             EventBus.$emit("removeLabel", label);
