@@ -1,8 +1,11 @@
 AnnotationNavbarComponent = {
     template: "#annotation-navigationbar-template",
+    delimiters: ['${', '}$'],
     data() {
         return {
-            visible: true
+            visible: true,
+            avatar: "/img/default.png",
+            username: "guest"
         }
     },
     methods: {
@@ -11,6 +14,16 @@ AnnotationNavbarComponent = {
         },
         discard: function() {
             EventBus.$emit("discardChangesInUnifiedMode");
+        },
+        avatarClicked: function() {
+            let username = this.$store.getters.username;
+            if (username !== "")
+                window.location.href = "/profile/" + username;
+            else
+                window.location.href = "/login";
+        },
+        username: function() {
+            return this.username;
         }
     },
     beforeDestroy: function() {
@@ -36,5 +49,14 @@ AnnotationNavbarComponent = {
                 inst.discard();
             }
         });
+
+        let username = this.$store.getters.username;
+        if (username !== "") {
+            this.username = username;
+            this.avatar = imageMonkeyApi.getAvatarUrl(username);
+        } else {
+            this.username = "guest";
+            this.avatar = "/img/default.png";
+        }
     }
 };

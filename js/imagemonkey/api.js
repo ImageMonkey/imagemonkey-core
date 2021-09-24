@@ -534,5 +534,9 @@ var ImageMonkeyApi = (function() {
         });
     }
 
+    ImageMonkeyApi.prototype.getAvatarUrl = function(username) {
+        return this.baseUrl + '/' + this.apiVersion + '/user/' + username + '/profile/avatar';
+    }
+
     return ImageMonkeyApi;
 }());
