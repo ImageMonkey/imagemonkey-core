@@ -106,13 +106,16 @@ AnnotationBrowseFormComponent = {
                         }
                     }
 
-                    that.autoCompletion = new AutoCompletion("#annotation-query", availableLabels);
+                    that.autoCompletion = new AutoCompletion("#annotation-query", availableLabels, that.onLabelInDropdownSelected);
                     that.availableLabels = availableLabels;
                     that.labelAccessorsLoaded = true;
                     that.populated = true;
                 }).catch(function(e) {
                     Sentry.captureException(e);
                 });
+        },
+        onLabelInDropdownSelected: function(label) {
+            this.searchQuery = label;
         },
         onAnnotatedStatisticsLoaded: function() {
             this.annotatedStatisticsLoaded = true;
