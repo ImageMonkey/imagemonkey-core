@@ -6,20 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	commons "github.com/bbernhard/imagemonkey-core/commons"
-	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
-	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	img "github.com/bbernhard/imagemonkey-core/image"
-	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
-	"github.com/golang-jwt/jwt"
-	"github.com/getsentry/raven-go"
-	"github.com/gin-gonic/gin"
-	"github.com/gofrs/uuid"
-	"github.com/gomodule/redigo/redis"
-	"github.com/h2non/filetype"
-	"github.com/oschwald/geoip2-golang"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 	"html"
 	"image"
 	"net"
@@ -29,6 +15,22 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	img "github.com/bbernhard/imagemonkey-core/image"
+	imagemonkeyquerylang "github.com/bbernhard/imagemonkey-core/parser/v2"
+	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
+	"github.com/getsentry/raven-go"
+	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
+	"github.com/golang-jwt/jwt"
+	"github.com/gomodule/redigo/redis"
+	"github.com/h2non/filetype"
+	"github.com/oschwald/geoip2-golang"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var geoipDb *geoip2.Reader
@@ -1099,6 +1101,20 @@ func main() {
 				c.JSON(204, nil)
 			})
 		}
+
+		router.GET("/v1/internal/view/:view/static-query-attributes", func(c *gin.Context) {
+			view := c.Param("view")
+			if view == "label" {
+				res := parser.GetStaticQueryAttributes(imagemonkeyquerylang.LabelView)
+				c.JSON(200, res)
+				return
+			} else if view == "annotation" {
+				res := parser.GetStaticQueryAttributes(imagemonkeyquerylang.AnnotationView)
+				c.JSON(200, res)
+				return
+			}
+			c.JSON(404, gin.H{"error": "Unknown view"})
+		})
 
 		router.GET("/v1/validation", func(c *gin.Context) {
 			var apiUser datastructures.APIUser

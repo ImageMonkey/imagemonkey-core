@@ -79,7 +79,7 @@ AnnotationBrowseFormComponent = {
         },
         populate: function() {
             var that = this;
-            let promises = [imageMonkeyApi.getLabelAccessors(true)];
+            let promises = [imageMonkeyApi.getLabelAccessors(true), imageMonkeyApi.getStaticQueryAttributes("annotation")];
             if (this.$store.getters.loggedIn) {
                 promises.push(imageMonkeyApi.getImageCollections(this.$store.getters.username));
                 promises.push(imageMonkeyApi.getLabelSuggestions(false));
@@ -92,15 +92,16 @@ AnnotationBrowseFormComponent = {
                     for (const elem of data[0]) {
                         availableLabels.push(elem.accessor);
                     }
+                    availableLabels.push(...data[1]);
 
-                    if (data.length > 1) {
-                        for (const elem of data[1]) {
+                    if (data.length > 2) {
+                        for (const elem of data[2]) {
                             availableLabels.push("image.collection='" + elem.name + "'")
                         }
                     }
 
-                    if (data.length > 2) {
-                        for (const elem of data[2]) {
+                    if (data.length > 3) {
+                        for (const elem of data[3]) {
                             availableLabels.push(elem);
                         }
                     }

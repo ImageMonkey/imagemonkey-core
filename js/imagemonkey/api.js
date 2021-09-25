@@ -538,5 +538,29 @@ var ImageMonkeyApi = (function() {
         return this.baseUrl + '/' + this.apiVersion + '/user/' + username + '/profile/avatar';
     }
 
+    ImageMonkeyApi.prototype.getStaticQueryAttributes = function(view) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/internal/view/' + view + '/static-query-attributes';
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
     return ImageMonkeyApi;
 }());
