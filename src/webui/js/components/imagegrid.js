@@ -34,8 +34,19 @@ ImageGridComponent = {
                 return "grey-out";
             return "";
         },
-        imageClicked: function(imageId, validationId) {
-            EventBus.$emit("imageInImageGridClicked", imageId, validationId);
+        imageClicked: function(imageId, validationId, imageUrl, imageWidth, imageHeight, imageUnlocked) {
+            let url = new URL(imageUrl);
+            url.searchParams.delete('width');
+            url.searchParams.delete('height');
+
+            let imageAnnotationInfo = new ImageAnnotationInfo()
+            imageAnnotationInfo.imageId = imageId;
+            imageAnnotationInfo.validationId = validationId;
+            imageAnnotationInfo.fullImageWidth = imageWidth;
+            imageAnnotationInfo.fullImageHeight = imageHeight;
+            imageAnnotationInfo.imageUnlocked = imageUnlocked;
+            imageAnnotationInfo.imageUrl = url.toString();
+            EventBus.$emit("imageInImageGridClicked", imageAnnotationInfo);
         },
         populate: function(data, options) {
             this.clear();
@@ -86,9 +97,12 @@ ImageGridComponent = {
                     width: justifiedLayoutGeometry.boxes[i].width,
                     height: justifiedLayoutGeometry.boxes[i].height,
                     imageUuid: data[i].image.uuid,
-                    validationId: data[i].uuid,
+                    validationId: data[i].uuid === "" ? null : data[i].uuid,
                     imageUrl: imageUrl,
                     tooltipText: tooltipText,
+                    fullWidth: data[i].image.width,
+                    fullHeight: data[i].image.height,
+                    unlocked: imageUnlocked,
                     greyedOut: false
                 });
             }

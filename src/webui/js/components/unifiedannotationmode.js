@@ -14,8 +14,8 @@ UnifiedAnnotationModeComponent = {
         show: function() {
             this.visible = true;
         },
-        loadUnannotatedImage: function(validationId) {
-            this.$refs.annotationArea.loadUnannotatedImage(validationId);
+        loadUnannotatedImage: function(imageAnnotationInfo) {
+            this.$refs.annotationArea.loadUnannotatedImage(imageAnnotationInfo);
         },
         onRemoveLabel: function(label) {
             this.$refs.removeLabelConfirmationDialog.show(label);
@@ -48,15 +48,15 @@ UnifiedAnnotationModeComponent = {
         onHideUnifiedAnnotationMode: function() {
             this.visible = false;
         },
-        onImageInImageGridClicked: function(imageId, validationId) {
-            this.imageId = imageId;
+        onImageInImageGridClicked: function(imageAnnotationInfo) {
+            this.imageId = imageAnnotationInfo.imageId;
             let url = new URL(window.location);
-            url.searchParams.set("validation_id", validationId);
-            url.searchParams.set("image_id", imageId);
+            url.searchParams.set("validation_id", imageAnnotationInfo.validationId);
+            url.searchParams.set("image_id", imageAnnotationInfo.imageId);
             window.history.replaceState({}, null, url);
 
             this.show();
-            this.loadUnannotatedImage(validationId);
+            this.loadUnannotatedImage(imageAnnotationInfo);
         },
         getActiveImageId: function() {
             return this.imageId;

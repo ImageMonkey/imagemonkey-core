@@ -122,8 +122,8 @@ AnnotationLabelListComponent = {
                     Sentry.captureException(e);
                 });
         },
-        onUnannotatedImageDataReceived: function(data, validationId) {
-            this.getLabelsAndAnnotationsForImage(data.uuid, validationId, data.unlocked);
+        onUnannotatedImageDataReceived: function(imageId, validationId, imageUnlocked) {
+            this.getLabelsAndAnnotationsForImage(imageId, validationId, imageUnlocked);
         },
         onAddLabel: function() {
             let labelString = $("#add-labels-input").val();

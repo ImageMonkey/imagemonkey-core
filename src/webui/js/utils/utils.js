@@ -41,3 +41,12 @@ function removeLabelFromLabelList(label, labelList) {
         i++;
     }
 }
+
+function ImageAnnotationInfo() {
+    this.imageId = "";
+    this.validationId = "";
+    this.fullImageWidth = 0;
+    this.fullImageHeight = 0;
+    this.imageUrl = "";
+    this.imageUnlocked = false;
+}

@@ -108,7 +108,7 @@
 			el: "#annotation-browse-form-container",
 			store: store,
 			methods: {
-				onImageInImageGridClicked: function(imageId, validationId) {
+				onImageInImageGridClicked: function(imageAnnotationInfo) {
 					this.$refs.annotationBrowseFormContainer.hide();
 				}
 			},
@@ -127,7 +127,10 @@
 		});
 
 		{{ if and (ne .validationId "") (ne .imageId "") }}
-			EventBus.$emit("imageInImageGridClicked", {{ .imageId }}, {{ .validationId }});
+			let imageAnnotationInfo = new ImageAnnotationInfo();
+			imageAnnotationInfo.imageId = {{ .imageId }};
+			imageAnnotationInfo.validationId = {{ .validationId }};
+			EventBus.$emit("imageInImageGridClicked", imageAnnotationInfo);
 		{{ else }}
 		{{ if ne .query "" }}
 			EventBus.$emit("loadAnnotationBrowseFormLabels", {{ .query }});
@@ -135,9 +138,6 @@
 			EventBus.$emit("loadAnnotationBrowseFormLabels");
 		{{ end }}
 		{{ end }}
-        
-		//let validationId = new URL(window.location.href).searchParams.get("validation_id");
-        //imageCanvas.$refs.annotationArea.loadUnannotatedImage(validationId);
 
     };
 </script>
