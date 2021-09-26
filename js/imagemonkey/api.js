@@ -442,7 +442,7 @@ var ImageMonkeyApi = (function() {
             var url = inst.baseUrl + '/' + inst.apiVersion + '/donations/unprocessed-descriptions';
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";
-            xhr.open("GET", url);
+            xhr.open("HEAD", url);
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
             xhr.onload = function() {
                 var numOfNotifications = xhr.getResponseHeader('X-Total-Count');
