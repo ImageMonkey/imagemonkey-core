@@ -84,16 +84,17 @@ AnnotationLabelListComponent = {
             ]
             Promise.all(promises)
                 .then(function(data) {
-
                     //labels
                     let composedLabels = []
                     let selectedLabelUuid = null;
-                    for (const entry of data[0]) {
-                        composedLabels.push(...buildComposedLabels(entry.label, entry.uuid, entry.sublabels));
-                        if (toBeSelectedValidationId !== null) {
-                            if ("validation" in entry) {
-                                if (entry["validation"]["uuid"] === toBeSelectedValidationId) {
-                                    selectedLabelUuid = entry["uuid"];
+                    if (data[0] !== null) {
+                        for (const entry of data[0]) {
+                            composedLabels.push(...buildComposedLabels(entry.label, entry.uuid, entry.sublabels));
+                            if (toBeSelectedValidationId !== null) {
+                                if ("validation" in entry) {
+                                    if (entry["validation"]["uuid"] === toBeSelectedValidationId) {
+                                        selectedLabelUuid = entry["uuid"];
+                                    }
                                 }
                             }
                         }
