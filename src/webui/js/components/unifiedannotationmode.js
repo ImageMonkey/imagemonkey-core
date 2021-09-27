@@ -51,7 +51,9 @@ UnifiedAnnotationModeComponent = {
         onImageInImageGridClicked: function(imageAnnotationInfo) {
             this.imageId = imageAnnotationInfo.imageId;
             let url = new URL(window.location);
-            url.searchParams.set("validation_id", imageAnnotationInfo.validationId);
+
+            if (imageAnnotationInfo.validationId !== null)
+                url.searchParams.set("validation_id", imageAnnotationInfo.validationId);
             url.searchParams.set("image_id", imageAnnotationInfo.imageId);
             window.history.replaceState({}, null, url);
 
@@ -107,6 +109,27 @@ UnifiedAnnotationModeComponent = {
         },
         onConfirmRemoveAnnotation: function() {
             this.$refs.annotationToolBox.removeSelectedAnnotation();
+        },
+        onLoadImage: function(imageId, validationId = null) {
+            let imageAnnotationInfo = new ImageAnnotationInfo();
+            imageAnnotationInfo.imageId = imageId;
+            imageAnnotationInfo.validationId = validationId;
+            if (validationId !== null) {
+                this.onImageInImageGridClicked(imageAnnotationInfo);
+            } else {
+                let inst = this;
+                imageMonkeyApi.getImageDetails(imageId).then(function(data) {
+                    let imageUrl = imageMonkeyApi.getImageUrl(imageId, data.unlocked);
+                    imageAnnotationInfo.fullImageWidth = data.width;
+                    imageAnnotationInfo.fullImageHeight = data.height;
+                    imageAnnotationInfo.imageUnlocked = data.unlocked;
+                    imageAnnotationInfo.imageUrl = imageUrl;
+                    inst.onImageInImageGridClicked(imageAnnotationInfo);
+                }).catch(function(e) {
+                    Sentry.captureException(e);
+                    EventBus.$emit("showErrorPopup", "Couldn't get image details");
+                });
+            }
         }
     },
     beforeDestroy: function() {
@@ -121,6 +144,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("discardChangesInUnifiedMode", this.onDiscardChangesInUnifiedMode);
         EventBus.$off("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$off("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
+        EventBus.$off("loadImage", this.onLoadImage);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -134,5 +158,6 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("discardChangesInUnifiedMode", this.onDiscardChangesInUnifiedMode);
         EventBus.$on("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$on("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
+        EventBus.$on("loadImage", this.onLoadImage);
     }
 }

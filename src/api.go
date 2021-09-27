@@ -806,6 +806,22 @@ func main() {
 			}
 		})
 
+		router.GET("/v1/images/:imageid/details", func(c *gin.Context) {
+			imageId := c.Param("imageid")
+			imageDetails, err := imageMonkeyDatabase.GetImageDetails(imageId)
+			if err != nil {
+				switch err.(type) {
+				case *imagemonkeydb.NotFoundError:
+					c.JSON(401, gin.H{"error": "No image with that id found"})
+					return
+				default:
+					c.JSON(500, gin.H{"error": "Couldn't get image details - please try again later"})
+					return
+				}
+			}
+			c.JSON(200, imageDetails)
+		})
+
 		//serve images in "donations" directory with the possibility to scale images
 		//before serving them
 		router.GET("/v1/unverified-donation/:imageid", func(c *gin.Context) {

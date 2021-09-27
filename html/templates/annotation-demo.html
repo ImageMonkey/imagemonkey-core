@@ -110,13 +110,18 @@
 			methods: {
 				onImageInImageGridClicked: function(imageAnnotationInfo) {
 					this.$refs.annotationBrowseFormContainer.hide();
+				},
+				onLoadImage: function(imageId, validationId) {
+					this.$refs.annotationBrowseFormContainer.hide();
 				}
 			},
 			beforeDestroy: function() {
 				EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
+				EventBus.$off("loadImage", this.onLoadImage);
 			},
 			mounted: function() {
 				EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
+				EventBus.$on("loadImage", this.onLoadImage);
 			}
 		});
 
@@ -127,10 +132,9 @@
 		});
 
 		{{ if and (ne .validationId "") (ne .imageId "") }}
-			let imageAnnotationInfo = new ImageAnnotationInfo();
-			imageAnnotationInfo.imageId = {{ .imageId }};
-			imageAnnotationInfo.validationId = {{ .validationId }};
-			EventBus.$emit("imageInImageGridClicked", imageAnnotationInfo);
+			EventBus.$emit("loadImage", {{ .imageId }}, {{ .validationId }});
+		{{ else if and (eq .validationId "") (ne .imageId "") }}
+			EventBus.$emit("loadImage", {{ .imageId }}, null);
 		{{ else }}
 		{{ if ne .query "" }}
 			EventBus.$emit("loadAnnotationBrowseFormLabels", {{ .query }});

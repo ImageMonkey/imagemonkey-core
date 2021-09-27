@@ -8,6 +8,10 @@ var ImageMonkeyApi = (function() {
         this.clientId = null
     };
 
+    ImageMonkeyApi.getBaseUrl = function() {
+        return this.baseUrl;
+    }
+
     ImageMonkeyApi.prototype.setToken = function(token) {
         this.token = token;
     }
@@ -538,10 +542,41 @@ var ImageMonkeyApi = (function() {
         return this.baseUrl + '/' + this.apiVersion + '/user/' + username + '/profile/avatar';
     }
 
+    ImageMonkeyApi.prototype.getImageUrl = function(imageId, isUnlocked) {
+        let url = this.baseUrl + '/' + this.apiVersion + (isUnlocked ? '/donation/' : '/unverified-donation/') + imageId;
+        if (!isUnlocked)
+            url += "?token=" + this.token;
+        return url;
+    }
+
     ImageMonkeyApi.prototype.getStaticQueryAttributes = function(view) {
         var inst = this;
         return new Promise(function(resolve, reject) {
             var url = inst.baseUrl + '/' + inst.apiVersion + '/internal/view/' + view + '/static-query-attributes';
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getImageDetails = function(imageId) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/images/' + imageId + '/details';
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";
             xhr.open("GET", url);
