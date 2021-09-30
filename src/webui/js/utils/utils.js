@@ -31,6 +31,14 @@ function labelExistsInLabelList(label, labelList) {
     return false;
 }
 
+function getLabelUuidForLabelInLabelList(label, labelList) {
+    for (const elem of labelList) {
+        if (elem["displayname"] === label)
+            return elem["uuid"];
+    }
+    return null;
+}
+
 function removeLabelFromLabelList(label, labelList) {
     let i = 0;
     for (const elem of labelList) {

@@ -117,6 +117,8 @@ AnnotationLabelListComponent = {
                         that.itemSelected(selectedLabelUuid);
                     else
                         EventBus.$emit("noLabelSelected");
+
+                    $("#add-labels-input").focus();
                     EventBus.$emit("imageSpecificLabelsAndAnnotationsLoaded");
 
                 }).catch(function(e) {
