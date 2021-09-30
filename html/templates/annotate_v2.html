@@ -102,6 +102,7 @@
 		Vue.component("removelabelconfirmationdialog", RemoveLabelConfirmationDialogComponent);
 		Vue.component("simpleerrorpopup", SimpleErrorPopupComponent);
 		Vue.component("removeannotationconfirmationdialog", RemoveAnnotationConfirmationDialogComponent);
+		Vue.component("loadingspinner", LoadingSpinnerComponent);
 
 		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
@@ -152,9 +153,6 @@
    	<annotationbrowseformcontainer id="annotation-browse-form-container" ref="annotationBrowseFormContainer"></annotationbrowseformcontainer>
 
 	<unifiedannotationmode id="unified-annotation-mode" ref="unifiedAnnotationMode"></unifiedannotationmode>
-
-    
-	<loadingspinner id="global-loadingspinner"></loadingspinner>
 </body>
 
 </html>

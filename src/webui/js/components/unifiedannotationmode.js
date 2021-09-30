@@ -4,7 +4,11 @@ UnifiedAnnotationModeComponent = {
     data() {
         return {
             visible: false,
-            imageId: null
+            imageId: null,
+
+            imageLoaded: false,
+            labelsAndLabelSuggestionsLoaded: false,
+            imageSpecificLabelsAndAnnotationsLoaded: false
         }
     },
     methods: {
@@ -49,6 +53,8 @@ UnifiedAnnotationModeComponent = {
             this.visible = false;
         },
         onImageInImageGridClicked: function(imageAnnotationInfo) {
+            this.showLoadingSpinner();
+
             this.imageId = imageAnnotationInfo.imageId;
             let url = new URL(window.location);
 
@@ -130,6 +136,43 @@ UnifiedAnnotationModeComponent = {
                     EventBus.$emit("showErrorPopup", "Couldn't get image details");
                 });
             }
+        },
+
+
+        showLoadingSpinner: function() {
+            this.resetLoadedStates();
+            this.$refs.loadingSpinner.show();
+        },
+        hideLoadingSpinner: function() {
+            this.$refs.loadingSpinner.hide();
+        },
+        onImageLoaded: function() {
+            this.imageLoaded = true;
+            this.hideLoadingSpinnerIfEverythingIsLoaded();
+        },
+        onLabelsAndLabelSuggestionsLoaded: function() {
+            this.labelsAndLabelSuggestionsLoaded = true;
+            this.hideLoadingSpinnerIfEverythingIsLoaded();
+        },
+        onImageSpecificLabelsAndAnnotationsLoaded: function() {
+            this.imageSpecificLabelsAndAnnotationsLoaded = true;
+            this.hideLoadingSpinnerIfEverythingIsLoaded();
+        },
+        hideLoadingSpinnerIfEverythingIsLoaded: function() {
+            if (this.isEverythingLoaded()) {
+                this.hideLoadingSpinner();
+            }
+        },
+        isEverythingLoaded: function() {
+            if (this.imageLoaded && this.labelsAndLabelSuggestionsLoaded && this.imageSpecificLabelsAndAnnotationsLoaded &&
+                this.imageSpecificLabelsAndAnnotationsLoaded) {
+                return true;
+            }
+        },
+        resetLoadedStates: function() {
+            this.imageLoaded = false;
+            //this.labelsAndLabelSuggestionsLoaded = false; //labels and label suggestions are only populated once, so do not reset them.
+            this.imageSpecificLabelsAndAnnotationsLoaded = false;
         }
     },
     beforeDestroy: function() {
@@ -147,6 +190,11 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("loadImage", this.onLoadImage);
         EventBus.$off("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
         EventBus.$off("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
+
+
+        EventBus.$off("imageLoaded", this.onImageLoaded);
+        EventBus.$off("labelsAndLabelSuggestionsLoaded", this.onLabelsAndLabelSuggestionsLoaded);
+        EventBus.$off("imageSpecificLabelsAndAnnotationsLoaded", this.onImageSpecificLabelsAndAnnotationsLoaded);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -163,5 +211,11 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("loadImage", this.onLoadImage);
         EventBus.$on("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
         EventBus.$on("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
+
+
+        EventBus.$on("imageLoaded", this.onImageLoaded);
+        EventBus.$on("labelsAndLabelSuggestionsLoaded", this.onLabelsAndLabelSuggestionsLoaded);
+        EventBus.$on("imageSpecificLabelsAndAnnotationsLoaded", this.onImageSpecificLabelsAndAnnotationsLoaded);
+
     }
 }

@@ -52,7 +52,7 @@ ImageCanvasComponent = {
             let that = this;
             this.canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
                 EventBus.$emit("canvasCreated", that.canvas);
-                EventBus.$emit("hideLoadingSpinner", null, null);
+                EventBus.$emit("imageLoaded");
             });
         },
         canvas: function() {

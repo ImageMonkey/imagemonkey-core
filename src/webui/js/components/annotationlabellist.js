@@ -117,6 +117,7 @@ AnnotationLabelListComponent = {
                         that.itemSelected(selectedLabelUuid);
                     else
                         EventBus.$emit("noLabelSelected");
+                    EventBus.$emit("imageSpecificLabelsAndAnnotationsLoaded");
 
                 }).catch(function(e) {
                     console.log(e.message);
@@ -196,6 +197,7 @@ AnnotationLabelListComponent = {
                         inst.availableLabels.push(...data[1]);
                     }
                     inst.labelsAutoCompletion = new AutoCompletion("#add-labels-input", inst.availableLabels);
+                    EventBus.$emit("labelsAndLabelSuggestionsLoaded");
                 }).catch(function(e) {
                     Sentry.captureException(e);
                 });

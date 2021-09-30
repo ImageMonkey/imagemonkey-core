@@ -15,8 +15,10 @@ LoadingSpinnerComponent = {
     },
     beforeDestroy: function() {
         EventBus.$off("hideLoadingSpinner", this.hide);
+        EventBus.$off("showLoadingSpinner", this.show);
     },
     mounted: function() {
         EventBus.$on("hideLoadingSpinner", this.hide);
+        EventBus.$on("showLoadingSpinner", this.show);
     }
 };
