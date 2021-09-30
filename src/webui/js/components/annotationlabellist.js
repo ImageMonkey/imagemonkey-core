@@ -242,6 +242,12 @@ AnnotationLabelListComponent = {
         },
         updateAnnotations: function(annotations, labelUuid) {
             this.notCommittedAnnotations[labelUuid] = annotations;
+        },
+        ctrlSPressed: function() {
+            EventBus.$emit("ctrl+sPressed");
+        },
+        ctrlDPressed: function() {
+            EventBus.$emit("ctrl+dPressed");
         }
     },
     beforeDestroy: function() {

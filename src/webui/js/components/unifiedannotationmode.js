@@ -145,6 +145,8 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$off("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
         EventBus.$off("loadImage", this.onLoadImage);
+        EventBus.$off("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
+        EventBus.$off("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -159,5 +161,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$on("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
         EventBus.$on("loadImage", this.onLoadImage);
+        EventBus.$on("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
+        EventBus.$on("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
     }
 }
