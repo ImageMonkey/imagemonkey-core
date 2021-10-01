@@ -156,12 +156,14 @@ AnnotationLabelListComponent = {
             this.addLabelInput = null;
         },
         onConfirmRemoveLabel: function(label) {
+            let labelUuid = getLabelUuidForLabelInLabelList(label, this.labels);
             if (label in this.addedButNotCommittedLabels)
                 delete this.addedButNotCommittedLabels[label];
             else {
-                this.toBeRemovedLabelUuids.push(this.labels[label].uuid);
+                this.toBeRemovedLabelUuids.push(labelUuid);
             }
-            delete this.labelLookupTable[this.labels[label].uuid];
+
+            delete this.labelLookupTable[labelUuid];
             removeLabelFromLabelList(label, this.labels);
         },
         getAvailableLabelsAndLabelSuggestions: function() {
