@@ -30,8 +30,10 @@ ImageCanvasComponent = {
                 .then(function(data) {
                     EventBus.$emit("unannotatedImageDataReceived", data.uuid, validationId, data.unlocked);
 
+                    let imageUrl = imageMonkeyApi.getImageUrl(data.uuid, data.unlocked);
+
                     that.canvas.clear();
-                    that.loadImage(data.url, data.width, data.height);
+                    that.loadImage(imageUrl, data.width, data.height);
                 }).catch(function() {
                     Sentry.captureException(e);
                 });
