@@ -34,8 +34,15 @@ ImageCanvasComponent = {
 
                     that.canvas.clear();
                     that.loadImage(imageUrl, data.width, data.height);
-                }).catch(function() {
-                    Sentry.captureException(e);
+                }).catch(function(e) {
+                    let err = e.message;
+                    if (err.includes("missing result set")) { //IMPROVE ME: not particularily nice to check for a specific string here, as the actual error message is likely to change.
+                        EventBus.$emit("showErrorPopup", "The requested resource either doesn't exist or you do not have the appropriate permissions to access this page.", false);
+                        EventBus.$emit("hideLoadingSpinner");
+                    } else {
+                        console.log(e);
+                        Sentry.captureException(e);
+                    }
                 });
         },
         loadImage: function(imageUrl, imageWidth, imageHeight) {

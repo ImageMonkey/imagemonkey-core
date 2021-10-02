@@ -281,8 +281,8 @@ var ImageMonkeyApi = (function() {
                 reject();
             }
             xhr.onreadystatechange = function() {
-                if (xhr.status >= 400) {
-                    reject();
+                if (xhr.readyState === 4 && xhr.status >= 400) {
+                    reject(new Error(xhr.response["error"]));
                 }
             }
             xhr.send();

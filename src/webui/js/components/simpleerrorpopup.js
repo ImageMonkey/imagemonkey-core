@@ -4,13 +4,15 @@ SimpleErrorPopupComponent = {
     data() {
         return {
             visible: false,
-            msg: null
+            msg: null,
+            closeable: true,
         }
     },
     methods: {
-        show: function(msg) {
+        show: function(msg, closeable = true) {
             this.msg = msg
             this.visible = true;
+            this.closeable = closeable;
         },
         hide: function() {
             this.visible = false;
