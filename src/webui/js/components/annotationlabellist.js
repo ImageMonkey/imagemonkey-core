@@ -148,7 +148,7 @@ AnnotationLabelListComponent = {
                     this.addedButNotCommittedLabels[splittedLabel] = newLabel;
                     this.labels.push(...buildComposedLabels(splittedLabel, newLabel.uuid, []));
                     this.labelLookupTable[newLabel.uuid] = getDisplayName(splittedLabel, "");
-                    this.currentSelectedItem = newLabel.uuid;
+                    this.itemSelected(newLabel.uuid);
                 } else {
                     EventBus.$emit("duplicateLabelAdded", splittedLabel);
                 }
@@ -165,6 +165,14 @@ AnnotationLabelListComponent = {
 
             delete this.labelLookupTable[labelUuid];
             removeLabelFromLabelList(label, this.labels);
+
+            //if removed item was selected, select a different one
+            if (labelUuid === this.getCurrentSelectedLabelUuid()) {
+                let nextLabelUuid = (this.labels.length > 0) ? this.labels[0].uuid : null;
+                this.itemSelected(nextLabelUuid);
+                if (nextLabelUuid === null)
+                    EventBus.$emit("noLabelSelected");
+            }
         },
         getAvailableLabelsAndLabelSuggestions: function() {
             let labelRequests = [imageMonkeyApi.getAvailableLabels()];
