@@ -40,16 +40,19 @@ RUN true #docker workaround (https://github.com/moby/moby/issues/37965)
 COPY src/parser /tmp/src/parser
 COPY env/postgres /tmp/env/postgres
 
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip wget unzip \
-	&& pip3 install selenium requests \
-	&& wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip --directory-prefix=/tmp/ \
-	&& cd /tmp \
-	&& unzip /tmp/chromedriver_linux64.zip \ 
-	&& cp /tmp/chromedriver /tmp/tests/ui \
-	&& rm /tmp/chromedriver_linux64.zip
+RUN apt-get update \
+  && apt-get install -y ca-certificates \
+  && echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip unzip \
+  && pip3 install selenium requests \
+  && wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip --directory-prefix=/tmp/ \
+  && cd /tmp \
+  && unzip /tmp/chromedriver_linux64.zip \
+  && ls -la /tmp \
+  && cp /tmp/chromedriver /tmp/tests/ui \
+  && rm /tmp/chromedriver_linux64.zip
 
 RUN cd /tmp \
 	&& wget https://github.com/tsenart/vegeta/releases/download/v12.7.0/vegeta-12.7.0-linux-amd64.tar.gz --directory-prefix=/tmp/ \
