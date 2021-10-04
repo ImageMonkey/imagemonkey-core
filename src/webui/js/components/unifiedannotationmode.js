@@ -8,7 +8,8 @@ UnifiedAnnotationModeComponent = {
 
             imageLoaded: false,
             labelsAndLabelSuggestionsLoaded: false,
-            imageSpecificLabelsAndAnnotationsLoaded: false
+            imageSpecificLabelsAndAnnotationsLoaded: false,
+            imageInfoReceived: false
         }
     },
     methods: {
@@ -137,6 +138,13 @@ UnifiedAnnotationModeComponent = {
                 });
             }
         },
+        getCanvasWidth: function() {
+            let annotationToolBoxSidebarWidth = $("#annotation-toolbox-sidebar").width();
+            let annotationLabelListWidth = $("#annotation-label-list").width();
+            let windowWidth = $(window).width();
+            let canvasWidth = windowWidth - (annotationToolBoxSidebarWidth + annotationLabelListWidth + 25);
+            return canvasWidth;
+        },
 
 
         showLoadingSpinner: function() {
@@ -156,6 +164,10 @@ UnifiedAnnotationModeComponent = {
         },
         onImageSpecificLabelsAndAnnotationsLoaded: function() {
             this.imageSpecificLabelsAndAnnotationsLoaded = true;
+            if (this.imageInfoReceived && this.labelsAndLabelSuggestionsLoaded) {
+                let maxCanvasWidth = this.getCanvasWidth();
+                this.$refs.annotationArea.loadImage(maxCanvasWidth);
+            }
             this.hideLoadingSpinnerIfEverythingIsLoaded();
         },
         hideLoadingSpinnerIfEverythingIsLoaded: function() {
@@ -163,8 +175,16 @@ UnifiedAnnotationModeComponent = {
                 this.hideLoadingSpinner();
             }
         },
+        onImageInfoReceived: function() {
+            this.imageInfoReceived = true;
+            if (this.imageInfoReceived && this.imageSpecificLabelsAndAnnotationsLoaded) {
+                let maxCanvasWidth = this.getCanvasWidth();
+                this.$refs.annotationArea.loadImage(maxCanvasWidth);
+            }
+            this.hideLoadingSpinnerIfEverythingIsLoaded();
+        },
         isEverythingLoaded: function() {
-            if (this.imageLoaded && this.labelsAndLabelSuggestionsLoaded && this.imageSpecificLabelsAndAnnotationsLoaded &&
+            if (this.imageInfoReceived && this.imageLoaded && this.labelsAndLabelSuggestionsLoaded && this.imageSpecificLabelsAndAnnotationsLoaded &&
                 this.imageSpecificLabelsAndAnnotationsLoaded) {
                 return true;
             }
@@ -188,6 +208,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$off("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
         EventBus.$off("loadImage", this.onLoadImage);
+        EventBus.$off("imageInfoReceived", this.onImageInfoReceived);
         EventBus.$off("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
         EventBus.$off("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
 
@@ -209,6 +230,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("deleteSelectedAnnotation", this.onDeleteSelectedAnnotation);
         EventBus.$on("confirmRemoveAnnotation", this.onConfirmRemoveAnnotation);
         EventBus.$on("loadImage", this.onLoadImage);
+        EventBus.$on("imageInfoReceived", this.onImageInfoReceived);
         EventBus.$on("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
         EventBus.$on("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
 

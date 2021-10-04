@@ -5,7 +5,10 @@ ImageCanvasComponent = {
     data() {
         return {
             visible: true,
-            canvas: null
+            canvas: null,
+            imageUrl: null,
+            imageHeight: null,
+            imageWidth: null
         }
     },
     methods: {
@@ -22,7 +25,10 @@ ImageCanvasComponent = {
             EventBus.$emit("unannotatedImageDataReceived", imageId, null, imageUnlocked);
 
             this.canvas.clear();
-            this.loadImage(imageUrl, imageWidth, imageHeight);
+            this.imageUrl = imageUrl;
+            this.imageHeight = imageHeight;
+            this.imageWidth = imageWidth;
+            EventBus.$emit("imageInfoReceived");
         },
         loadUnannotatedImageByValidationId: function(validationId) {
             let that = this;
@@ -33,7 +39,10 @@ ImageCanvasComponent = {
                     let imageUrl = imageMonkeyApi.getImageUrl(data.uuid, data.unlocked);
 
                     that.canvas.clear();
-                    that.loadImage(imageUrl, data.width, data.height);
+                    that.imageUrl = imageUrl;
+                    that.imageHeight = data.height;
+                    that.imageWidth = data.width;
+                    EventBus.$emit("imageInfoReceived");
                 }).catch(function(e) {
                     let err = e.message;
                     if (err.includes("missing result set")) { //IMPROVE ME: not particularily nice to check for a specific string here, as the actual error message is likely to change.
@@ -45,19 +54,18 @@ ImageCanvasComponent = {
                     }
                 });
         },
-        loadImage: function(imageUrl, imageWidth, imageHeight) {
-            //TODO: make max width configureable
-            let maxWidth = imageWidth;
-            if (maxWidth > 800)
-                maxWidth = 800;
+        loadImage: function(maxCanvasWidth) {
+            let maxWidth = maxCanvasWidth;
+            if (maxWidth > maxCanvasWidth)
+                maxWidth = maxCanvasWidth;
 
-            let scaleFactor = maxWidth / imageWidth;
-            let width = scaleFactor * imageWidth;
-            let height = scaleFactor * imageHeight;
+            let scaleFactor = maxWidth / this.imageWidth;
+            let width = scaleFactor * this.imageWidth;
+            let height = scaleFactor * this.imageHeight;
             this.canvas.setWidth(width);
             this.canvas.setHeight(height);
 
-            let backgroundImageUrl = imageUrl;
+            let backgroundImageUrl = this.imageUrl;
             let that = this;
             this.canvas.setCanvasBackgroundImageUrl(backgroundImageUrl, function() {
                 EventBus.$emit("canvasCreated", that.canvas);
