@@ -193,6 +193,7 @@ UnifiedAnnotationModeComponent = {
             this.imageLoaded = false;
             //this.labelsAndLabelSuggestionsLoaded = false; //labels and label suggestions are only populated once, so do not reset them.
             this.imageSpecificLabelsAndAnnotationsLoaded = false;
+            this.imageInfoReceived = false;
         }
     },
     beforeDestroy: function() {
