@@ -38,12 +38,20 @@ AnnotationToolboxComponent = {
     },
     methods: {
         enableTools: function() {
-            this.isDisabled = false;
-            this.annotator.unblock();
+            if (this.annotator !== null) {
+                this.isDisabled = false;
+                this.annotator.unblock();
+            } else {
+                console.error("Couldn't enable annotator tools as annotator is null");
+            }
         },
         disableTools: function() {
-            this.isDisabled = true;
-            this.annotator.block();
+            if (this.annotator !== null) {
+                this.isDisabled = true;
+                this.annotator.block();
+            } else {
+                console.error("Couldn't disable annotator tools as annotator is null");
+            }
         },
         zoomOut: function() {
             if (!this.isDisabled)
@@ -93,7 +101,10 @@ AnnotationToolboxComponent = {
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
         },
         drawAnnotations: function(annotations) {
-            this.annotator.loadAnnotations(annotations, this.canvas.fabric().backgroundImage.scaleX);
+            if (this.annotator !== null)
+                this.annotator.loadAnnotations(annotations, this.canvas.fabric().backgroundImage.scaleX);
+            else
+                console.error("Couldn't draw annotations as annotator is null");
         },
         annotationsChanged: function() {
             if (this.annotator && this.annotator.isDirty())
