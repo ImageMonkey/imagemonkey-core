@@ -27,6 +27,7 @@
     <script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
     <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
 	<script src="js/mousetrap.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/sentry/sentry.min.js?v={{ .assetVersion }}"></script>
 
     <!-- utils -->
     <script src="js/utils/utils.js?v={{ .assetVersion }}"></script>
@@ -66,6 +67,14 @@
 	imageMonkeyApi.setToken(getCookie("imagemonkey"));
     var canvas = null;
     window.onload = (event) => {
+		try{
+      		Sentry.init({
+        		dsn: '{{ .sentryDsn }}',
+      		});
+    	} catch(e) {
+    	}
+
+
         window.EventBus = new Vue();
 
         const store = new Vuex.Store({

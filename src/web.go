@@ -606,6 +606,7 @@ func main() {
 					"imageId": imageId,
 					"query": query,
 					"searchOption": searchOption,
+					"sentryDsn": localSentryDsn,
 				})
 			}
 		})
