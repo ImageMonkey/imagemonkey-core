@@ -9,7 +9,8 @@ UnifiedAnnotationModeComponent = {
             imageLoaded: false,
             labelsAndLabelSuggestionsLoaded: false,
             imageSpecificLabelsAndAnnotationsLoaded: false,
-            imageInfoReceived: false
+            imageInfoReceived: false,
+            annotatorInitialized: false
         }
     },
     methods: {
@@ -183,9 +184,17 @@ UnifiedAnnotationModeComponent = {
             }
             this.hideLoadingSpinnerIfEverythingIsLoaded();
         },
+        onAnnotatorInitialized: function() {
+            if (this.$refs.annotationLabelList.getCurrentSelectedLabelUuid() !== null)
+                this.$refs.annotationToolBox.enableTools();
+            else
+                this.$refs.annotationToolBox.disableTools();
+            this.annotatorInitialized = true;
+            this.hideLoadingSpinnerIfEverythingIsLoaded();
+        },
         isEverythingLoaded: function() {
             if (this.imageInfoReceived && this.imageLoaded && this.labelsAndLabelSuggestionsLoaded && this.imageSpecificLabelsAndAnnotationsLoaded &&
-                this.imageSpecificLabelsAndAnnotationsLoaded) {
+                this.imageSpecificLabelsAndAnnotationsLoaded && this.annotatorInitialized) {
                 return true;
             }
         },
@@ -194,6 +203,7 @@ UnifiedAnnotationModeComponent = {
             //this.labelsAndLabelSuggestionsLoaded = false; //labels and label suggestions are only populated once, so do not reset them.
             this.imageSpecificLabelsAndAnnotationsLoaded = false;
             this.imageInfoReceived = false;
+            this.annotatorInitialized = false;
         }
     },
     beforeDestroy: function() {
@@ -217,6 +227,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("imageLoaded", this.onImageLoaded);
         EventBus.$off("labelsAndLabelSuggestionsLoaded", this.onLabelsAndLabelSuggestionsLoaded);
         EventBus.$off("imageSpecificLabelsAndAnnotationsLoaded", this.onImageSpecificLabelsAndAnnotationsLoaded);
+        EventBus.$off("annotatorInitialized", this.onAnnotatorInitialized);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -239,6 +250,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("imageLoaded", this.onImageLoaded);
         EventBus.$on("labelsAndLabelSuggestionsLoaded", this.onLabelsAndLabelSuggestionsLoaded);
         EventBus.$on("imageSpecificLabelsAndAnnotationsLoaded", this.onImageSpecificLabelsAndAnnotationsLoaded);
+        EventBus.$on("annotatorInitialized", this.onAnnotatorInitialized);
 
     }
 }

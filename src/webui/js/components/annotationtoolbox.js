@@ -99,6 +99,7 @@ AnnotationToolboxComponent = {
             this.canvas = canvas;
             this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
                 this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
+            EventBus.$emit("annotatorInitialized");
         },
         drawAnnotations: function(annotations) {
             if (this.annotator !== null)

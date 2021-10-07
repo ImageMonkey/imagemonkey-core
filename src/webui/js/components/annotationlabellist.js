@@ -43,11 +43,11 @@ AnnotationLabelListComponent = {
                 annotationsForLabel = this.notCommittedAnnotations[labelUuid];
             return annotationsForLabel;
         },
-        itemSelected: function(labelUuid) {
+        itemSelected: function(labelUuid, emitEvent = true) {
             this.previousSelectedItem = this.currentSelectedItem;
             this.currentSelectedItem = labelUuid;
-
-            EventBus.$emit("labelSelected", this.currentSelectedItem, this.previousSelectedItem);
+            if (emitEvent)
+                EventBus.$emit("labelSelected", this.currentSelectedItem, this.previousSelectedItem);
         },
         entryCanBeRemoved: function(labelName) {
             if (labelName in this.addedButNotCommittedLabels)
@@ -71,6 +71,8 @@ AnnotationLabelListComponent = {
             this.imageId = null;
             this.annotations = {};
             this.notCommittedAnnotations = {};
+            this.currentSelectedItem = null;
+            this.previousSelectedItem = null;
         },
         getLabelsAndAnnotationsForImage: function(imageId, toBeSelectedValidationId, imageUnlocked) {
             this.reset();
@@ -114,9 +116,7 @@ AnnotationLabelListComponent = {
                     }
 
                     if (selectedLabelUuid !== null)
-                        that.itemSelected(selectedLabelUuid);
-                    else
-                        EventBus.$emit("noLabelSelected");
+                        that.itemSelected(selectedLabelUuid, false);
 
                     $("#add-labels-input").focus();
                     EventBus.$emit("imageSpecificLabelsAndAnnotationsLoaded");
