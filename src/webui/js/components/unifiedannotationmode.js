@@ -10,7 +10,8 @@ UnifiedAnnotationModeComponent = {
             labelsAndLabelSuggestionsLoaded: false,
             imageSpecificLabelsAndAnnotationsLoaded: false,
             imageInfoReceived: false,
-            annotatorInitialized: false
+            annotatorInitialized: false,
+            labelListMarginTop: "mt-20"
         }
     },
     methods: {
@@ -43,6 +44,8 @@ UnifiedAnnotationModeComponent = {
         },
         onLabelSelected: function(currentSelectedLabelUuid, previousSelectedLabelUuid) {
             this.$refs.annotationToolBox.enableTools();
+            this.$refs.inlineInfoMessage.hide();
+            this.labelListMarginTop = "mt-10";
             this.updateAnnotationsInAnnotationLabelList(previousSelectedLabelUuid);
 
             let annotations = this.$refs.annotationLabelList.getAnnotationsForLabelUuid(currentSelectedLabelUuid);
@@ -185,10 +188,15 @@ UnifiedAnnotationModeComponent = {
             this.hideLoadingSpinnerIfEverythingIsLoaded();
         },
         onAnnotatorInitialized: function() {
-            if (this.$refs.annotationLabelList.getCurrentSelectedLabelUuid() !== null)
+            if (this.$refs.annotationLabelList.getCurrentSelectedLabelUuid() !== null) {
                 this.$refs.annotationToolBox.enableTools();
-            else
+                this.$refs.inlineInfoMessage.hide();
+                this.labelListMarginTop = "mt-10";
+            } else {
                 this.$refs.annotationToolBox.disableTools();
+                this.$refs.inlineInfoMessage.show("Add a label to start annotating");
+                this.labelListMarginTop = "mt-20";
+            }
             this.annotatorInitialized = true;
             this.hideLoadingSpinnerIfEverythingIsLoaded();
         },

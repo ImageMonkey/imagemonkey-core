@@ -49,6 +49,7 @@
 	<script src="js/components/removelabelconfirmationdialog.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/removeannotationconfirmationdialog.js?v={{ .assetVersion }}"></script>
 	<script src="js/components/simpleerrorpopup.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/inlineinfomessage.js?v={{ .assetVersion }}"></script>
 
 	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
 
@@ -112,6 +113,7 @@
 		Vue.component("simpleerrorpopup", SimpleErrorPopupComponent);
 		Vue.component("removeannotationconfirmationdialog", RemoveAnnotationConfirmationDialogComponent);
 		Vue.component("loadingspinner", LoadingSpinnerComponent);
+		Vue.component("inlineinfomessage", InlineInfoMessageComponent);
 
 		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
@@ -184,3 +186,4 @@
 {{ template "removelabelconfirmationdialog.html" .}}
 {{ template "removeannotationconfirmationdialog.html" .}}
 {{ template "simpleerrorpopup.html" .}}
+{{ template "inlineinfomessage.html" .}}
