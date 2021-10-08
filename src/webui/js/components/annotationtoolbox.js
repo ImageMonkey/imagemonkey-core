@@ -6,7 +6,8 @@ AnnotationToolboxComponent = {
             annotator: null,
             visible: true,
             isDisabled: true,
-            annotationHotkeyHandler: null
+            annotationHotkeyHandler: null,
+            tooltipsEnabled: false
         }
     },
     computed: {
@@ -34,11 +35,33 @@ AnnotationToolboxComponent = {
             if (this.isDisabled)
                 return "opacity-50 cursor-not-allowed";
             return "";
+        },
+        rectAnnotationModeTooltip: function() {
+            return (this.tooltipsEnabled) ? "Rectangle (r)" : null;
+        },
+        circleAnnotationModeTooltip: function() {
+            return (this.tooltipsEnabled) ? "Circle (c)" : null;
+        },
+        polygonAnnotationModeTooltip: function() {
+            return (this.tooltipsEnabled) ? "Polygon (p)" : null;
+        },
+        selectMoveAnnotationModeTooltip: function() {
+            return (this.tooltipsEnabled) ? "Select & Move (s)" : null;
+        },
+        zoomInTooltip: function() {
+            return (this.tooltipsEnabled) ? "Zoom In (+)" : null;
+        },
+        zoomOutTooltip: function() {
+            return (this.tooltipsEnabled) ? "Zoom Out (-)" : null;
+        },
+        removeAnnotationTooltip: function() {
+            return (this.tooltipsEnabled) ? "Remove Annotation (del)" : null;
         }
     },
     methods: {
         enableTools: function() {
             if (this.annotator !== null) {
+                this.tooltipsEnabled = true;
                 this.isDisabled = false;
                 this.annotator.unblock();
             } else {
@@ -47,6 +70,7 @@ AnnotationToolboxComponent = {
         },
         disableTools: function() {
             if (this.annotator !== null) {
+                this.tooltipsEnabled = false;
                 this.isDisabled = true;
                 this.annotator.block();
             } else {

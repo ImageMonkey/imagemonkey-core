@@ -5,37 +5,37 @@
             <div class="mt-10">
                 <ul>
                     <li class="my-12 text-center">
-                        <button type="button" class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="rectAnnotationMode" data-tooltip="Rectangle (r)" data-position="right center" v-bind:class="toolboxItemEnabled">
+                        <button type="button" class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="rectAnnotationMode" v-bind:data-tooltip="rectAnnotationModeTooltip" data-position="right center" v-bind:class="toolboxItemEnabled">
                            <i class="fas fa-vector-square" style="color:gray" v-bind:style="rectAnnotationModeIconColor"></i>
                         </button>
                     </li>
                     <li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="circleAnnotationMode" data-tooltip="Circle (c)" data-position="right center" v-bind:class="toolboxItemEnabled">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="circleAnnotationMode" v-bind:data-tooltip="circleAnnotationModeTooltip" data-position="right center" v-bind:class="toolboxItemEnabled">
                             <i class="far fa-circle" style="color:gray" v-bind:style="circleAnnotationModeIconColor"></i>
                         </button>
                     </li>
                     <li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="polygonAnnotationMode" data-tooltip="Polygon (p)" data-position="right center" v-bind:class="toolboxItemEnabled">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="polygonAnnotationMode" v-bind:data-tooltip="polygonAnnotationModeTooltip" data-position="right center" v-bind:class="toolboxItemEnabled">
                             <i class="fas fa-draw-polygon" style="color:gray" v-bind:style="polygonAnnotationModeIconColor"></i>
                         </button>
                     </li>
 					<li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="selectMoveAnnotationMode" v-bind:class="toolboxItemEnabled" data-tooltip="Select & Move (s)" data-position="right center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="selectMoveAnnotationMode" v-bind:class="toolboxItemEnabled" v-bind:data-tooltip="selectMoveAnnotationModeTooltip" data-position="right center">
                             <i class="fas fa-expand-arrows-alt" style="color:gray" v-bind:style="selectMoveAnnotationModeIconColor"></i>
                         </button>
                     </li>
                     <li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" data-tooltip="Zoom In (+)" data-position="right center" v-on:click="zoomIn" v-bind:class="toolboxItemEnabled">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-bind:data-tooltip="zoomInTooltip" data-position="right center" v-on:click="zoomIn" v-bind:class="toolboxItemEnabled">
 							<i class="fas fa-search-plus" style="color:gray"></i>
 						</button>
                     </li>
 					<li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomOut" data-tooltip="Zoom Out (-)" data-position="right center" v-bind:class="toolboxItemEnabled">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="zoomOut" v-bind:data-tooltip="zoomOutTooltip" data-position="right center" v-bind:class="toolboxItemEnabled">
 							<i class="fas fa-search-minus" style="color:gray"></i>
                     	</button>
 					</li>
 					<li class="my-12 text-center">
-                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="deleteAnnotation" data-tooltip="Remove Annotation (del)" data-position="right center" v-bind:class="toolboxItemEnabled">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="deleteAnnotation" v-bind:data-tooltip="removeAnnotationTooltip" data-position="right center" v-bind:class="toolboxItemEnabled">
 							<i class="fas fa-trash" style="color:gray"></i>
                     	</button>
 					</li>
