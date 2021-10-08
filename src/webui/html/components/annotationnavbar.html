@@ -1,11 +1,11 @@
 <script type="text/x-template" id="annotation-navigationbar-template">
 <div v-if="visible">
-    <nav class="bg-white dark:bg-gray-800  shadow ">
+    <nav class="bg-imagemonkeygray dark:bg-gray-800  shadow ">
 		<div class="max-w-7xl mx-auto px-8">
             <div class="flex items-center justify-between h-16">
-                <div class=" flex items-center">
+                <div class="flex items-center">
                     <p class="flex-shrink-0" href="/">
-                      <h3>ImageMonkey Annotation Tool</h3>
+                      <h3 class="text-white">ImageMonkey Annotation Tool</h3>
                     </p>
                 </div>
                 <div class="block">
@@ -54,7 +54,7 @@
                             <img class="object-cover w-7 h-7 rounded-full" :src="avatar" @click="avatarClicked" style="cursor: pointer"/>
 						</div>
 						<div class="absolute top-8 left-14">
-	                        <p class="text-xs" @click="avatarClicked" style="cursor: pointer">${ username }$</p>
+	                        <p class="text-white text-xs" @click="avatarClicked" style="cursor: pointer">${ username }$</p>
 						</div>
 
                     </div>
