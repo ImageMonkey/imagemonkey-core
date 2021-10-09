@@ -141,6 +141,12 @@ AnnotationLabelListComponent = {
                     }
                 }
 
+                //do not add empty label
+                if (splittedLabel === "") {
+                    EventBus.$emit("emptyLabelAdded");
+                    continue;
+                }
+
                 if (!labelExistsInLabelList(splittedLabel, this.labels)) {
                     let newLabel = {
                         "uuid": this.generateUuid()

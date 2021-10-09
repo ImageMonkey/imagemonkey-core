@@ -11,7 +11,7 @@ UnifiedAnnotationModeComponent = {
             imageSpecificLabelsAndAnnotationsLoaded: false,
             imageInfoReceived: false,
             annotatorInitialized: false,
-            labelListMarginTop: "mt-20"
+            labelListMarginTop: "mt-16"
         }
     },
     methods: {
@@ -30,6 +30,9 @@ UnifiedAnnotationModeComponent = {
         onDuplicateLabelAdded: function(label) {
             this.$refs.simpleErrorPopup.show("Label " + label + " already exists");
         },
+        onEmptyLabelAdded: function() {
+            this.$refs.simpleErrorPopup.show("Cannot add an empty label!");
+        },
         onUnauthenticatedAccess: function() {
             this.$refs.simpleErrorPopup.show("Please log in first");
         },
@@ -45,7 +48,7 @@ UnifiedAnnotationModeComponent = {
         onLabelSelected: function(currentSelectedLabelUuid, previousSelectedLabelUuid) {
             this.$refs.annotationToolBox.enableTools();
             this.$refs.inlineInfoMessage.hide();
-            this.labelListMarginTop = "mt-10";
+            this.labelListMarginTop = "mt-3";
             this.updateAnnotationsInAnnotationLabelList(previousSelectedLabelUuid);
 
             let annotations = this.$refs.annotationLabelList.getAnnotationsForLabelUuid(currentSelectedLabelUuid);
@@ -191,11 +194,11 @@ UnifiedAnnotationModeComponent = {
             if (this.$refs.annotationLabelList.getCurrentSelectedLabelUuid() !== null) {
                 this.$refs.annotationToolBox.enableTools();
                 this.$refs.inlineInfoMessage.hide();
-                this.labelListMarginTop = "mt-10";
+                this.labelListMarginTop = "mt-3";
             } else {
                 this.$refs.annotationToolBox.disableTools();
                 this.$refs.inlineInfoMessage.show("Add a label to start annotating");
-                this.labelListMarginTop = "mt-20";
+                this.labelListMarginTop = "mt-16";
             }
             this.annotatorInitialized = true;
             this.hideLoadingSpinnerIfEverythingIsLoaded();
@@ -217,6 +220,7 @@ UnifiedAnnotationModeComponent = {
     beforeDestroy: function() {
         EventBus.$off("removeLabel", this.onRemoveLabel);
         EventBus.$off("duplicateLabelAdded", this.onDuplicateLabelAdded);
+        EventBus.$off("emptyLabelAdded", this.onEmptyLabelAdded);
         EventBus.$off("unauthenticatedAccess", this.onUnauthenticatedAccess);
         EventBus.$off("labelSelected", this.onLabelSelected);
         EventBus.$off("noLabelSelected", this.onNoLabelSelected);
@@ -240,6 +244,7 @@ UnifiedAnnotationModeComponent = {
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
         EventBus.$on("duplicateLabelAdded", this.onDuplicateLabelAdded);
+        EventBus.$on("emptyLabelAdded", this.onEmptyLabelAdded);
         EventBus.$on("unauthenticatedAccess", this.onUnauthenticatedAccess);
         EventBus.$on("labelSelected", this.onLabelSelected);
         EventBus.$on("noLabelSelected", this.onNoLabelSelected);
