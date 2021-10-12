@@ -54,6 +54,37 @@ RUN apt-get update \
   && cp /tmp/chromedriver /tmp/tests/ui \
   && rm /tmp/chromedriver_linux64.zip
 
+# install cypress dependencies
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y \
+  libgtk2.0-0 \
+  libgtk-3-0 \
+  libnotify-dev \
+  libgconf-2-4 \
+  libgbm-dev \
+  libnss3 \
+  libxss1 \
+  libasound2 \
+  libxtst6 \
+  xauth \
+  xvfb \
+  nodejs \
+  npm \
+  # clean up
+  && rm -rf /var/lib/apt/lists/*
+
+# a few environment variables to make NPM installs easier
+# good colors for most applications
+ENV TERM xterm
+# avoid million NPM install messages
+ENV npm_config_loglevel warn
+# allow installing when the main user is root
+ENV npm_config_unsafe_perm true
+
+RUN cd /tmp \
+	&& npm install cypress --save-dev \
+	&& npm install --save-dev cypress-file-upload
+
 RUN cd /tmp \
 	&& wget https://github.com/tsenart/vegeta/releases/download/v12.7.0/vegeta-12.7.0-linux-amd64.tar.gz --directory-prefix=/tmp/ \
 	&& tar xvf vegeta-12.7.0-linux-amd64.tar.gz \
