@@ -1,18 +1,28 @@
 describe('Unified Mode', () => {
     before(() => {
-        cy.clear_db();
-		cy.donate_image('apple1.jpeg');
+        cy.clear_db_and_create_moderator_account();
+        cy.donate_image('apple1.jpeg');
+        cy.donate_image('apple2.jpeg');
+        cy.login('moderator', 'moderator');
+        cy.unlock_all_images();
     })
 
     it('Browse Image', () => {
-		/*cy.visit('http://127.0.0.1:8080/donate');
+        cy.query_images("image.unlabeled='true'", 2);
+    });
 
-        cy.fixture('images/apples/apple1.jpeg').then(fileContent => {
-            cy.get('[id="dropzone"]').attachFile({
-                fileContent: fileContent.toString(),
-                fileName: 'apple1.jpeg',
-                mimeType: 'image/png'
-            });
-        });*/
+    it('Open Image for Annotation', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().then((elem) => {
+            elem.click();
+            cy.get('#loading-spinner').should('not.be.visible');
+        });
+    });
+
+    it('Open Image for Annotation', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().then((elem) => {
+            elem.click();
+        });
     });
 })

@@ -41,7 +41,6 @@ Cypress.Commands.add('donate_image', (imageName) => {
     //cy.wait(500);
 
     cy.fixture('images/apples/' + imageName).then(fileContent => {
-        console.log(fileContent.toString());
         cy.xpath("//input[@type='file']").attachFile({
             fileContent: fileContent.toString(),
             filePath: 'images/apples/' + imageName
@@ -64,8 +63,23 @@ Cypress.Commands.add('signup_user', (username, password, emailAddress) => {
     cy.get('#signupButton').click();
 });
 
-Cypress.Commands.add('query_images', (query) => {
+Cypress.Commands.add('query_images', (query, expectedElements) => {
     cy.visit('http://127.0.0.1:8080/annotate?mode=browse&view=unified&v=2');
+
+	//wait until go button is enabled and loading indicator is disabled or
+	//at max 4 seconds.
+	cy.get('#browse-annotations-go-button').should('not.have.class', 'disabled');
+	cy.get('#browse-annotations-go-button').should('not.have.class', 'loading');
+
+	//wait until annotation statistics button is enabled and loading indicator is disabled or
+	//at max 4 seconds.
+	cy.get('#annotated-statistics-button').should('not.have.class', 'loading');
+	cy.get('#annotated-statistics-button').should('not.have.class', 'disabled');
+
+	cy.get('#annotation-query').type(query);
+	cy.get('#browse-annotations-go-button').click();
+
+	cy.get('#annotation-image-grid').find('img').should('have.length', expectedElements);
 });
 
 Cypress.Commands.add('unlock_all_images', () => {
