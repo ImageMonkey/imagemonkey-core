@@ -115,6 +115,11 @@
 		Vue.component("loadingspinner", LoadingSpinnerComponent);
 		Vue.component("inlineinfomessage", InlineInfoMessageComponent);
 
+		const simpleErrorPopup = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#simple-error-popup"
+		});
+
 		const annotationBrowseFormContainer = new Vue({
 			delimiters: ['${', '}$'],
 			el: "#annotation-browse-form-container",
@@ -164,6 +169,7 @@
    	<annotationbrowseformcontainer id="annotation-browse-form-container" ref="annotationBrowseFormContainer"></annotationbrowseformcontainer>
 
 	<unifiedannotationmode id="unified-annotation-mode" ref="unifiedAnnotationMode"></unifiedannotationmode>
+	<simpleerrorpopup id="simple-error-popup" ref="simpleErrorPopup"></simpleerrorpopup>
 </body>
 
 </html>

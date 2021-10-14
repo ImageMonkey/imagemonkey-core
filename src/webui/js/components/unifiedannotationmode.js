@@ -28,13 +28,13 @@ UnifiedAnnotationModeComponent = {
             this.$refs.removeLabelConfirmationDialog.show(label);
         },
         onDuplicateLabelAdded: function(label) {
-            this.$refs.simpleErrorPopup.show("Label " + label + " already exists");
+            EventBus.$emit("showErrorPopup", "Label " + label + " already exists");
         },
         onEmptyLabelAdded: function() {
-            this.$refs.simpleErrorPopup.show("Cannot add an empty label!");
+            EventBus.$emit("showErrorPopup", "Cannot add an empty label!");
         },
         onUnauthenticatedAccess: function() {
-            this.$refs.simpleErrorPopup.show("Please log in first");
+            EventBus.$emit("showErrorPopup", "Please log in first");
         },
         updateAnnotationsInAnnotationLabelList: function(labelUuid) {
             let annotationsChanged = this.$refs.annotationToolBox.annotationsChanged();

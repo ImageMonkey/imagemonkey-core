@@ -18,7 +18,7 @@ SimpleErrorPopupComponent = {
             this.visible = false;
         }
     },
-    beforeDetroy: function() {
+    beforeDestroy: function() {
         EventBus.$off("showErrorPopup", this.show);
     },
     mounted: function() {
