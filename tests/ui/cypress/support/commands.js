@@ -66,20 +66,20 @@ Cypress.Commands.add('signup_user', (username, password, emailAddress) => {
 Cypress.Commands.add('query_images', (query, expectedElements) => {
     cy.visit('http://127.0.0.1:8080/annotate?mode=browse&view=unified&v=2');
 
-	//wait until go button is enabled and loading indicator is disabled or
-	//at max 4 seconds.
-	cy.get('#browse-annotations-go-button').should('not.have.class', 'disabled');
-	cy.get('#browse-annotations-go-button').should('not.have.class', 'loading');
+    //wait until go button is enabled and loading indicator is disabled or
+    //at max 4 seconds.
+    cy.get('#browse-annotations-go-button').should('not.have.class', 'disabled');
+    cy.get('#browse-annotations-go-button').should('not.have.class', 'loading');
 
-	//wait until annotation statistics button is enabled and loading indicator is disabled or
-	//at max 4 seconds.
-	cy.get('#annotated-statistics-button').should('not.have.class', 'loading');
-	cy.get('#annotated-statistics-button').should('not.have.class', 'disabled');
+    //wait until annotation statistics button is enabled and loading indicator is disabled or
+    //at max 4 seconds.
+    cy.get('#annotated-statistics-button').should('not.have.class', 'loading');
+    cy.get('#annotated-statistics-button').should('not.have.class', 'disabled');
 
-	cy.get('#annotation-query').type(query);
-	cy.get('#browse-annotations-go-button').click();
+    cy.get('#annotation-query').type(query);
+    cy.get('#browse-annotations-go-button').click();
 
-	cy.get('#annotation-image-grid').find('img').should('have.length', expectedElements);
+    cy.get('#annotation-image-grid').find('img').should('have.length', expectedElements);
 });
 
 Cypress.Commands.add('unlock_all_images', () => {
@@ -101,4 +101,26 @@ Cypress.Commands.add('login', (username, password) => {
 
     //wait until redirected after login or at max 4 seconds
     cy.url().should('eq', 'http://127.0.0.1:8080/')
+});
+
+Cypress.Commands.add('draw_rectangle', (startX, startY, width, height) => {
+    cy.get('#annotation-toolbox').find('button').first().click();
+    cy.get('#annotation-area-container').find('canvas').first().next()
+        .trigger('mousemove', {
+            clientX: startX,
+            clientY: startY,
+            force: true
+        })
+        .trigger('mousedown', {
+            which: 1,
+            force: true
+        })
+        .trigger('mousemove', {
+            clientX: startX + width,
+            clientY: startY + height,
+            force: true
+        })
+        .trigger('mouseup', {
+            force: true
+        });
 });

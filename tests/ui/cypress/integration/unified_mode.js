@@ -19,10 +19,47 @@ describe('Unified Mode', () => {
         });
     });
 
-    it('Open Image for Annotation', () => {
+    it('Label Image', () => {
         cy.query_images("image.unlabeled='true'", 2);
         cy.get('#annotation-image-grid').find('img').first().then((elem) => {
             elem.click();
+            cy.get('#loading-spinner').should('not.be.visible');
+            //add label 'apple'
+            cy.get('#add-labels-input').type('apple');
+            cy.get('#add-labels-input').type('{enter}');
+            //add label 'banana'
+            cy.get('#add-labels-input').type('banana');
+            cy.get('#add-labels-input').type('{enter}');
+            cy.get('#annotation-label-list').find('table').find('td').should('have.length', 2);
+        });
+    });
+
+    it('Remove Label again', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().then((elem) => {
+            elem.click();
+            cy.get('#loading-spinner').should('not.be.visible');
+            //add label 'apple'
+            cy.get('#add-labels-input').type('apple');
+            cy.get('#add-labels-input').type('{enter}');
+            cy.get('#annotation-label-list').find('table').find('td').should('have.length', 1);
+            //remove label 'apple' again
+            cy.get('#annotation-label-list').find('table').find('td').find('button').click();
+            cy.get('#remove-label-confirmation-dialog').find('button').contains('Remove').click();
+            cy.get('#annotation-label-list').find('table').find('td').should('have.length', 0);
+        });
+    });
+
+    it('Annotate Image', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().then((elem) => {
+            elem.click();
+            cy.get('#loading-spinner').should('not.be.visible');
+            //add label 'apple'
+            cy.get('#add-labels-input').type('apple');
+            cy.get('#add-labels-input').type('{enter}');
+            cy.get('#annotation-label-list').find('table').find('td').should('have.length', 1);
+            cy.draw_rectangle(0, 0, 200, 100);
         });
     });
 })
