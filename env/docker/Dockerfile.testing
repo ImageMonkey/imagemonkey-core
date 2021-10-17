@@ -45,7 +45,7 @@ RUN apt-get update \
   && echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
   && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
   && apt-get update \
-  && apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip unzip \
+  && apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip python3-setuptools unzip \
   && pip3 install selenium requests \
   && wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip --directory-prefix=/tmp/ \
   && cd /tmp \
