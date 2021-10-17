@@ -40,6 +40,9 @@ RUN true #docker workaround (https://github.com/moby/moby/issues/37965)
 COPY src/parser /tmp/src/parser
 COPY env/postgres /tmp/env/postgres
 
+COPY src/webui/html/components /tmp/html/templates
+COPY src/webui/js/components /tmp/js/
+
 RUN apt-get update \
   && apt-get install -y ca-certificates \
   && echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
