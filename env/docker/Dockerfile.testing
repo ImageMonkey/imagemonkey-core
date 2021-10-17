@@ -85,7 +85,8 @@ ENV npm_config_unsafe_perm true
 
 RUN cd /tmp \
 	&& npm install cypress --save-dev \
-	&& npm install --save-dev cypress-file-upload
+	&& npm install --save-dev cypress-file-upload \
+	&& npm install -D cypress-xpath
 
 RUN cd /tmp \
 	&& wget https://github.com/tsenart/vegeta/releases/download/v12.7.0/vegeta-12.7.0-linux-amd64.tar.gz --directory-prefix=/tmp/ \
