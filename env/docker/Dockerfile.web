@@ -33,8 +33,8 @@ COPY html /home/imagemonkey/html
 COPY js /home/imagemonkey/js
 COPY css /home/imagemonkey/css
 COPY img /home/imagemonkey/img
-COPY src/webui/html/components /home/imagemonkey/html/
-COPY src/webui/js/components /home/imagemonkey/js/
+ADD src/webui/html/components /home/imagemonkey/html/templates/
+ADD src/webui/js/components /home/imagemonkey/js/
 
 RUN cd /tmp/src/ && go install web.go auth.go
 
