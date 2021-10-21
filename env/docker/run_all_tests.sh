@@ -75,7 +75,8 @@ if [ ${MODE} == "all" ] || [ ${MODE} == "only-ui" ]; then
 		echo "Aborting due to error"
 		echo "Copy cypress screenshots to /tmp/test_output"
 		cp -r /tmp/tests/ui/cypress/screenshots /tmp/test_output/
-		ls -la /tmp/test_output/ 
+		echo "Copy cypress videos to /tmp/test_output"
+		cp -r /tmp/tests/ui/cypress/videos /tmp/test_output/
 		exit $retVal
 	fi
 fi

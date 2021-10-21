@@ -78,11 +78,11 @@ jobs:
           cp env/env.ci env/env_ui_tests.ci
           echo "TEST_MODE=only-ui" >> env/env_ui_tests.ci
           docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
-      - name: Upload cypress screenshots of failed tests
+      - name: Upload cypress screenshots and videos of failed tests
         if: failure()
         uses: actions/upload-artifact@v2
         with:
-          name: cypress-screenshots-of-failed-tests
+          name: cypress-screenshots-and-videos-of-failed-tests
           path: test_output/*
           retention-days: 5
 
