@@ -102,7 +102,7 @@ services:
       - ../../wordlists:/tmp/wordlists
       - ../../public_backups/public_backups.json:/tmp/public_backups/public_backups.json
       - ../../data:/tmp/data
-      - ../../test-output:/tmp/test_output
+      - ../../test_output:/tmp/test_output
     build:
       context: "../../"
       dockerfile: env/docker/Dockerfile.testing
