@@ -73,6 +73,7 @@ jobs:
           mkdir -p data/donations
           mkdir -p data/quarantine
           mkdir -p data/unverified_donations
+          mkdir -p test_output
           echo "Preparing env file for github actions job"
           cp env/env.ci env/env_ui_tests.ci
           echo "TEST_MODE=only-ui" >> env/env_ui_tests.ci
@@ -82,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: cypress-screenshots-of-failed-tests
-          path: /tmp/tests/ui/cypress/screenshots/*
+          path: test_output/*
           retention-days: 5
 
       
