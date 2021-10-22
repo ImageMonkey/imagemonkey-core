@@ -57,19 +57,19 @@ if [ ${MODE} == "all" ]  || [ ${MODE} == "only-unittest" ]; then
 fi
 
 if [ ${MODE} == "all" ] || [ ${MODE} == "only-ui" ]; then
-	echo "Starting UI tests"
-	echo "Run selenium tests"
-	cd ui/
-	python3 -m unittest
-	retVal=$?
-	if [ $retVal -ne 0 ]; then
-		echo "Aborting due to error"
-		exit $retVal
-	fi
+	#echo "Starting UI tests"
+	#echo "Run selenium tests"
+	#cd ui/
+	#python3 -m unittest
+	#retVal=$?
+	#if [ $retVal -ne 0 ]; then
+	#	echo "Aborting due to error"
+	#	exit $retVal
+	#fi
 
 	echo "Run cypress tests"
 	cd /tmp/tests/
-	/tmp/node_modules/.bin/cypress run --project ui/ --browser chromium
+	DEBUG=cypress:server:util:process_profiler /tmp/node_modules/.bin/cypress run --project ui/ --browser chromium
 	retVal=$?
 	if [ $retVal -ne 0 ]; then
 		echo "Aborting due to error"
