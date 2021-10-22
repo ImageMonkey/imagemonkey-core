@@ -66,7 +66,7 @@ describe('Unified Mode', () => {
 	it('Annotate Image and Browse', () => {
         cy.query_images("image.unlabeled='true'", 2);
         cy.get('#annotation-image-grid').find('img').first().click();
-		cy.get('#loading-spinner').should('not.be.visible');
+		//cy.get('#loading-spinner').should('not.be.visible');
 		//add label 'apple'
 		cy.get('#add-labels-input').type('apple');
 		cy.get('#add-labels-input').type('{enter}');
