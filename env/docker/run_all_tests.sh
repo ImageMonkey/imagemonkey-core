@@ -69,7 +69,7 @@ if [ ${MODE} == "all" ] || [ ${MODE} == "only-ui" ]; then
 
 	echo "Run cypress tests"
 	cd /tmp/tests/
-	/tmp/node_modules/.bin/cypress run --project ui/
+	/tmp/node_modules/.bin/cypress run --project ui/ --browser chromium
 	retVal=$?
 	if [ $retVal -ne 0 ]; then
 		echo "Aborting due to error"
