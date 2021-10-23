@@ -124,3 +124,23 @@ Cypress.Commands.add('draw_rectangle', (startX, startY, width, height) => {
             force: true
         });
 });
+
+Cypress.Commands.add('query_annotated_images', (query, expectedElements) => {
+    let url = new URL('http://127.0.0.1:8080/annotate?mode=browse&view=unified');
+    url.searchParams.set('search_option', 'rework');
+    url.searchParams.set('query', query);
+
+    cy.visit(url.toString());
+
+    //wait until go button is enabled and loading indicator is disabled or
+    //at max 4 seconds.
+    cy.get('#browseAnnotationsGoButton').should('not.have.class', 'disabled');
+    cy.get('#browseAnnotationsGoButton').should('not.have.class', 'loading');
+
+    //wait until annotation statistics button is enabled and loading indicator is disabled or
+    //at max 4 seconds.
+    cy.get('#annotatedStatisticsButton').should('not.have.class', 'loading');
+    cy.get('#annotatedStatisticsButton').should('not.have.class', 'disabled');
+
+    cy.get('#imageGrid').get('*[class^="justified-layout-item"]').should('have.length', expectedElements);
+});
