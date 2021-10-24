@@ -8,6 +8,7 @@ var AutoCompletion = (function() {
     }
 
     function AutoCompletion(id, entries, callback = null) {
+        this.id = id;
         var maxResults = 10;
         $(id)
             // don't navigate away from the field on tab when selecting an item
@@ -70,5 +71,10 @@ var AutoCompletion = (function() {
                 }
             }
     }
+
+    AutoCompletion.prototype.close = function() {
+        $(this.id).autocomplete("close");
+    }
+
     return AutoCompletion;
 }());

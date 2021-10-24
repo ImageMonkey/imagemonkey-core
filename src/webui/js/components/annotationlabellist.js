@@ -130,6 +130,7 @@ AnnotationLabelListComponent = {
             this.getLabelsAndAnnotationsForImage(imageId, validationId, imageUnlocked);
         },
         onAddLabel: function() {
+            this.labelsAutoCompletion.close();
             let labelString = $("#add-labels-input").val();
             let splittedLabels = labelString.split(new Settings().getLabelSeparator()).map(item => item.trim());
 
