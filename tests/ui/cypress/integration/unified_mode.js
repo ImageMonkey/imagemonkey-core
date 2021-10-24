@@ -123,4 +123,18 @@ describe('Unified Mode', () => {
 
         cy.query_annotated_images('apple', 1);
     });
+
+    it('Duplicate Label', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+        //add label 'apple'
+        cy.get('#add-labels-input').type('apple');
+        cy.get('#add-labels-input').type('{enter}');
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 1);
+        cy.get('#add-labels-input').type('apple');
+        cy.get('#add-labels-input').type('{enter}');
+        cy.get('#simple-error-popup').contains('Label apple already exists');
+		cy.get('#annotation-label-list').find('table').find('td').should('have.length', 1);
+    });
 })
