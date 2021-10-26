@@ -170,6 +170,9 @@ AnnotationLabelListComponent = {
                 this.toBeRemovedLabelUuids.push(labelUuid);
             }
 
+            if (labelUuid in this.notCommittedAnnotations)
+                delete this.notCommittedAnnotations[labelUuid];
+
             delete this.labelLookupTable[labelUuid];
             removeLabelFromLabelList(label, this.labels);
 
