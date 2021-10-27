@@ -5,6 +5,7 @@ terser ../js/annotate.js -o ../js/annotate.min.js
 cp -r webui/js/components ../js/
 cp -r webui/js/utils ../js/
 cp -r webui/html/components ../html/templates/
+cd webui/css && ./generate.sh && cd ../../
 if [ $? -ne 0 ]; then
 	echo "Couldn't minify js files...aborting"
 	exit 1
