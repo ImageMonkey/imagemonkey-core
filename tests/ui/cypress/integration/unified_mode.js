@@ -218,4 +218,39 @@ describe('Unified Mode', () => {
         cy.query_images("banana", 1);
         cy.query_images("orange", 1);
     });
+
+    it('Annotation Tools disabled with no labels', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+
+        cy.get('#annotation-toolbox-sidebar').find('li').find('button').should('have.class', 'cursor-not-allowed');
+    });
+
+    it('Annotation Tools enabled with at least one label', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+
+        cy.get('#add-labels-input').type('apple,  banana  ,  orange  ');
+        cy.get('#add-labels-input').type('{enter}');
+
+        cy.get('#annotation-toolbox-sidebar').find('li').find('button').should('not.have.class', 'cursor-not-allowed');
+    });
+
+    it('Annotation Tools disabled when label gets removed', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+
+        cy.get('#add-labels-input').type('apple');
+        cy.get('#add-labels-input').type('{enter}');
+
+        //remove label
+        cy.get('#annotation-label-list').find('table').find('td').find('button').click();
+        cy.get('#remove-label-confirmation-dialog').find('p').contains('Are you sure you want to remove the label apple?');
+        cy.get('#remove-label-confirmation-dialog').find('button').contains('Remove').click();
+
+        cy.get('#annotation-toolbox-sidebar').find('li').find('button').should('have.class', 'cursor-not-allowed');
+    });
 })
