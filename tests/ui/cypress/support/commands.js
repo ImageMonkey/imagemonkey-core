@@ -144,3 +144,15 @@ Cypress.Commands.add('query_annotated_images', (query, expectedElements) => {
 
     cy.get('#imageGrid').get('*[class^="justified-layout-item"]').should('have.length', expectedElements);
 });
+
+Cypress.Commands.add('logout', () => {
+    cy.visit('http://127.0.0.1:8080');
+
+    cy.get('#mainMenuDropdown').click({
+        force: true
+    });
+    cy.get('#mainMenuLogoutButton').click({
+        force: true
+    });
+    cy.get('a').contains('Login');
+});

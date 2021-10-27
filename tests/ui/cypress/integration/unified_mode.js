@@ -1,5 +1,6 @@
 describe('Unified Mode', () => {
     beforeEach(() => {
+        cy.viewport(1280, 1024);
         cy.clear_db_and_create_moderator_account();
         cy.donate_image('apple1.jpeg');
         cy.donate_image('apple2.jpeg');
@@ -176,5 +177,45 @@ describe('Unified Mode', () => {
 
         cy.get('#annotation-navbar').find('button').contains('Save').click();
         cy.query_images("apple", 1);
+    });
+
+    it('Add non-productive label with unautenticated user', () => {
+        cy.logout();
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+
+        cy.get('#add-labels-input').type('non-productive-label');
+        cy.get('#add-labels-input').type('{enter}');
+
+        cy.get('#simple-error-popup').contains('Please log in first');
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 0);
+    });
+
+    it('Add multiple labels with shortcut', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+
+        cy.get('#add-labels-input').type('apple,banana,orange');
+        cy.get('#add-labels-input').type('{enter}');
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 3);
+    });
+
+    it('Add multiple labels with shortcut, strip newlines', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+
+        cy.get('#add-labels-input').type('apple,  banana  ,  orange  ');
+        cy.get('#add-labels-input').type('{enter}');
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 3);
+        cy.get('#annotation-label-list').find('table').find('td').contains('apple');
+        cy.get('#annotation-label-list').find('table').find('td').contains('banana');
+        cy.get('#annotation-label-list').find('table').find('td').contains('orange');
+        cy.get('#annotation-navbar').find('button').contains('Save').click();
+        cy.query_images("apple", 1);
+        cy.query_images("banana", 1);
+        cy.query_images("orange", 1);
     });
 })
