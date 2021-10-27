@@ -154,4 +154,27 @@ describe('Unified Mode', () => {
         cy.get('#annotation-navbar').find('button').contains('Save').click();
         cy.query_images("apple", 0);
     });
+
+    it('Add Label, Add Annotation, Remove Label and Add label again', () => {
+        cy.query_images("image.unlabeled='true'", 2);
+        cy.get('#annotation-image-grid').find('img').first().click();
+        cy.get('#loading-spinner').should('not.be.visible');
+        //add label 'apple'
+        cy.get('#add-labels-input').type('apple');
+        cy.get('#add-labels-input').type('{enter}');
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 1);
+        cy.draw_rectangle(0, 0, 200, 100);
+        //remove label
+        cy.get('#annotation-label-list').find('table').find('td').find('button').click();
+        cy.get('#remove-label-confirmation-dialog').find('p').contains('Are you sure you want to remove the label apple?');
+        cy.get('#remove-label-confirmation-dialog').find('button').contains('Remove').click();
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 0);
+        //add label 'apple' again
+        cy.get('#add-labels-input').type('apple');
+        cy.get('#add-labels-input').type('{enter}');
+        cy.get('#annotation-label-list').find('table').find('td').should('have.length', 1);
+
+        cy.get('#annotation-navbar').find('button').contains('Save').click();
+        cy.query_images("apple", 1);
+    });
 })
