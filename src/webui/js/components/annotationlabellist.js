@@ -44,6 +44,11 @@ AnnotationLabelListComponent = {
             return annotationsForLabel;
         },
         itemSelected: function(labelUuid, emitEvent = true) {
+            if (!this.$store.getters.loggedIn) {
+                if (!this.isLabelProductive(labelUuid))
+                    return;
+            }
+
             this.previousSelectedItem = this.currentSelectedItem;
             this.currentSelectedItem = labelUuid;
             if (emitEvent)
@@ -58,6 +63,20 @@ AnnotationLabelListComponent = {
             if (this.currentSelectedItem === labelUuid)
                 return "bg-gray-200";
             return "bg-white";
+        },
+        isLabelProductive: function(labelUuid) {
+            let displayName = this.labelLookupTable[labelUuid];
+            if (displayName in this.availableLabelsLookupTable)
+                return true;
+            return false;
+        },
+        itemCursorStyle: function(labelUuid) {
+            if (!this.$store.getters.loggedIn) {
+                if (this.isLabelProductive(labelUuid))
+                    return "cursor-default";
+                return "cursor-not-allowed";
+            }
+            return "cursor-default";
         },
         removeLabel: function(label) {
             EventBus.$emit("removeLabel", label);
