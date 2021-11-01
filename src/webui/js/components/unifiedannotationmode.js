@@ -206,6 +206,11 @@ UnifiedAnnotationModeComponent = {
         isEverythingLoaded: function() {
             if (this.imageInfoReceived && this.imageLoaded && this.labelsAndLabelSuggestionsLoaded && this.imageSpecificLabelsAndAnnotationsLoaded &&
                 this.imageSpecificLabelsAndAnnotationsLoaded && this.annotatorInitialized) {
+                if (!this.$store.getters.loggedIn && this.$refs.annotationLabelList.containsNonProductiveLabels) {
+                    this.$refs.inlineInfoMessage.show("Please login to annotate all labels!");
+                    this.labelListMarginTop = "mt-16";
+                }
+
                 return true;
             }
         },
