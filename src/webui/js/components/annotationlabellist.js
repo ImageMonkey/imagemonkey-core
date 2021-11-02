@@ -242,7 +242,6 @@ AnnotationLabelListComponent = {
                 }).catch(function(e) {
                     Sentry.captureException(e);
                 });
-
         },
         persistNewlyAddedLabels: function() {
             let addedLabels = [];
@@ -291,6 +290,14 @@ AnnotationLabelListComponent = {
         },
         ctrlDPressed: function() {
             EventBus.$emit("ctrl+dPressed");
+        },
+        containsNonProductiveLabels: function() {
+            let that = this;
+            for (const [key, value] of Object.entries(this.labelLookupTable)) {
+                if (!(key in that.availableLabelsLookupTable))
+                    return true;
+            }
+            return false;
         }
     },
     beforeDestroy: function() {
