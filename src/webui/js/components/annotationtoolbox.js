@@ -79,11 +79,11 @@ AnnotationToolboxComponent = {
         },
         zoomOut: function() {
             if (!this.isDisabled)
-                this.canvas.fabric().setZoom(canvas.fabric().getZoom() / 1.1);
+                this.canvas.fabric().setZoom(this.canvas.fabric().getZoom() / 1.1);
         },
         zoomIn: function() {
             if (!this.isDisabled)
-                this.canvas.fabric().setZoom(canvas.fabric().getZoom() * 1.1);
+                this.canvas.fabric().setZoom(this.canvas.fabric().getZoom() * 1.1);
         },
         deleteAnnotation: function() {
             this.annotator.deleteSelected();
