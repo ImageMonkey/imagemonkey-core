@@ -35,6 +35,9 @@ ImageGridComponent = {
             return "";
         },
         imageClicked: function(imageId, validationId, imageUrl, imageWidth, imageHeight, imageUnlocked) {
+            this.infiniteScroll.pause();
+            this.infiniteScroll.saveScrollPosition();
+
             let url = new URL(imageUrl);
             url.searchParams.delete('width');
             url.searchParams.delete('height');
@@ -146,12 +149,17 @@ ImageGridComponent = {
 
             //ugly hack to set the height of the DOM element to 0
             document.getElementById(this.$el.id).style.height = 0;
+        },
+        onRestoreScrollPosition: function() {
+            this.infiniteScroll.restoreScrollPosition();
+            this.infiniteScroll.resume();
         }
     },
     beforeDestroy: function() {
         EventBus.$off("populateUnifiedModeImageGrid", this.populate);
         EventBus.$off("greyOutImageInImageGrid", this.onGreyOutImageInImageGrid);
         EventBus.$off("clearImageGrid", this.onClearImageGrid);
+        EventBus.$off("restoreScrollPosition", this.onRestoreScrollPosition);
     },
     mounted: function() {
         this.infiniteScroll = new InfiniteScroll(this.loadNextImagesInImageGrid, false);
@@ -159,5 +167,6 @@ ImageGridComponent = {
         EventBus.$on("populateUnifiedModeImageGrid", this.populate);
         EventBus.$on("greyOutImageInImageGrid", this.onGreyOutImageInImageGrid);
         EventBus.$on("clearImageGrid", this.onClearImageGrid);
+        EventBus.$on("restoreScrollPosition", this.onRestoreScrollPosition);
     }
 };

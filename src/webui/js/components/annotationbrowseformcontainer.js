@@ -15,6 +15,7 @@ AnnotationBrowseFormContainerComponent = {
         },
         onShowAnnotationBrowseMode: function() {
             this.visible = true;
+            EventBus.$emit("annotationBrowseModeShown");
         }
     },
     beforeDestroy: function() {

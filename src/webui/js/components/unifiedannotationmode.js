@@ -87,6 +87,7 @@ UnifiedAnnotationModeComponent = {
                     EventBus.$emit("hideUnifiedAnnotationMode");
                     EventBus.$emit("showAnnotationBrowseMode");
                     EventBus.$emit("greyOutImageInImageGrid", inst.imageId);
+
                     EventBus.$emit("clearImageAnnotationCanvas");
 
                     let url = new URL(window.location);
@@ -220,6 +221,11 @@ UnifiedAnnotationModeComponent = {
             this.imageSpecificLabelsAndAnnotationsLoaded = false;
             this.imageInfoReceived = false;
             this.annotatorInitialized = false;
+        },
+        onAnnotationBrowseModeShown: function() {
+            setTimeout(function() {
+                EventBus.$emit("restoreScrollPosition");
+            }, 500);
         }
     },
     beforeDestroy: function() {
@@ -245,6 +251,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("labelsAndLabelSuggestionsLoaded", this.onLabelsAndLabelSuggestionsLoaded);
         EventBus.$off("imageSpecificLabelsAndAnnotationsLoaded", this.onImageSpecificLabelsAndAnnotationsLoaded);
         EventBus.$off("annotatorInitialized", this.onAnnotatorInitialized);
+        EventBus.$off("annotationBrowseModeShown", this.onAnnotationBrowseModeShown);
     },
     mounted: function() {
         EventBus.$on("removeLabel", this.onRemoveLabel);
@@ -269,6 +276,7 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("labelsAndLabelSuggestionsLoaded", this.onLabelsAndLabelSuggestionsLoaded);
         EventBus.$on("imageSpecificLabelsAndAnnotationsLoaded", this.onImageSpecificLabelsAndAnnotationsLoaded);
         EventBus.$on("annotatorInitialized", this.onAnnotatorInitialized);
+        EventBus.$on("annotationBrowseModeShown", this.onAnnotationBrowseModeShown);
 
     }
 }
