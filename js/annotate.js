@@ -997,8 +997,9 @@ var Annotator = (function() {
         return transformedP;
     }
 
-    Annotator.prototype.reset = function() {
-        this.canvas.clear();
+    Annotator.prototype.reset = function(clearCanvas = true) {
+        if (clearCanvas)
+            this.canvas.clear();
         this.canvas.setZoom(1.0);
         //this.canvas.viewport.position.x = 0;
         //this.canvas.viewport.position.y = 0;

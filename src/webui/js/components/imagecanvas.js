@@ -55,6 +55,7 @@ ImageCanvasComponent = {
                 });
         },
         loadImage: function(maxCanvasWidth) {
+            this.canvas.clear();
             let maxWidth = maxCanvasWidth;
             if (maxWidth > maxCanvasWidth)
                 maxWidth = maxCanvasWidth;

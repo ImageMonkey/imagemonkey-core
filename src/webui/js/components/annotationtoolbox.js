@@ -121,9 +121,13 @@ AnnotationToolboxComponent = {
         },
         onCanvasCreated: function(canvas) {
             this.canvas = canvas;
-            this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
-                this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
-            this.canvas.fabric().setZoom(1);
+            if (!this.annotator) {
+                this.annotator = new Annotator(this.canvas.fabric(), this.onAnnotatorObjectSelected.bind(this),
+                    this.onAnnotatorMouseUp.bind(this), this.onAnnotatorObjectDeselected.bind(this));
+            } else {
+                this.annotator.reset(false);
+            }
+            //this.canvas.fabric().setZoom(1);
             EventBus.$emit("annotatorInitialized");
         },
         drawAnnotations: function(annotations) {
