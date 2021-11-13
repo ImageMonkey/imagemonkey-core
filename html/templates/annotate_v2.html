@@ -28,6 +28,7 @@
     <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
 	<script src="js/mousetrap.min.js?v={{ .assetVersion }}"></script>
 	<script src="js/sentry/sentry.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/fingerprint2.min.js?v={{ .assetVersion }}"></script>
 
     <!-- utils -->
     <script src="js/utils/utils.js?v={{ .assetVersion }}"></script>
@@ -66,7 +67,15 @@
 <script>
     var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
 	imageMonkeyApi.setToken(getCookie("imagemonkey"));
-    var canvas = null;
+
+	try {
+		//can fail in case someone uses uBlock origin or Co.
+		new Fingerprint2().get(function(result, components) {
+			imageMonkeyApi.setBrowserFingerprint(result);
+		});
+	} catch (e) {}
+
+	var canvas = null;
     window.onload = (event) => {
 		try{
       		Sentry.init({

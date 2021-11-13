@@ -5,7 +5,8 @@ var ImageMonkeyApi = (function() {
         this.token = '';
         this.availableLabels = null;
         this.clientSecret = null;
-        this.clientId = null
+        this.clientId = null;
+        this.browserFingerprint = null;
     };
 
     ImageMonkeyApi.getBaseUrl = function() {
@@ -22,6 +23,10 @@ var ImageMonkeyApi = (function() {
 
     ImageMonkeyApi.prototype.setClientSecret = function(clientSecret) {
         this.clientSecret = clientSecret;
+    }
+
+    ImageMonkeyApi.prototype.setBrowserFingerprint = function(browserFingerprint) {
+        this.browserFingerprint = browserFingerprint;
     }
 
     ImageMonkeyApi.prototype.getAvailableLabels = function(useCache = false) {
@@ -56,6 +61,8 @@ var ImageMonkeyApi = (function() {
             xhr.open("POST", url);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            if (inst.browserFingerprint !== null)
+                xhr.setRequestHeader("X-Browser-Fingerprint", inst.browserFingerprint);
             xhr.onload = function() {
                 if (xhr.status >= 400)
                     reject();
@@ -472,6 +479,8 @@ var ImageMonkeyApi = (function() {
             xhr.responseType = "json";
             xhr.open("POST", url);
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            if (inst.browserFingerprint !== null)
+                xhr.setRequestHeader("X-Browser-Fingerprint", inst.browserFingerprint);
             xhr.onload = function() {
                 resolve();
             }
@@ -523,6 +532,8 @@ var ImageMonkeyApi = (function() {
             xhr.responseType = "json";
             xhr.open("POST", url);
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            if (inst.browserFingerprint !== null)
+                xhr.setRequestHeader("X-Browser-Fingerprint", inst.browserFingerprint);
             xhr.onload = function() {
                 resolve();
             }
