@@ -210,6 +210,12 @@ UnifiedAnnotationModeComponent = {
                 if (!this.$store.getters.loggedIn && this.$refs.annotationLabelList.containsNonProductiveLabels) {
                     this.$refs.inlineInfoMessage.show("Please login to annotate all labels!");
                     this.labelListMarginTop = "mt-16";
+
+                    let currentSelectedLabelUuid = this.$refs.annotationLabelList.getCurrentSelectedLabelUuid();
+                    if (currentSelectedLabelUuid !== null) {
+                        let annotations = this.$refs.annotationLabelList.getAnnotationsForLabelUuid(currentSelectedLabelUuid);
+                        this.$refs.annotationToolBox.drawAnnotations(annotations);
+                    }
                 }
 
                 return true;
