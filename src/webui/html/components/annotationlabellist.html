@@ -1,0 +1,33 @@
+<script type="text/x-template" id="annotation-label-list-template">
+<div v-if="visible" class="flex flex-col h-screen">
+  <div class="flex items-center border border-gray-200 py-2 bg-white mt-1">
+	<input id="add-labels-input" v-on:keyup.enter="onAddLabel()" class="appearance-none bg-transparent border-none w-full text-gray-500 mr-3 py-1 px-2 leading-tight focus:outline-none" type="text" placeholder="Add Label.." aria-label="Full name" v-model="addLabelInput" v-on:keydown.ctrl.s.prevent.stop="ctrlSPressed" v-on:keydown.ctrl.d.prevent.stop="ctrlDPressed">
+    <button class="bg-white hover:bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded inline-flex items-center mr-1" v-on:click="onAddLabel()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span>Add</span>
+    </button>
+  </div>
+  <div class="flex-grow overflow-auto">
+    <table class="relative w-full border">
+      <thead>
+        <tr>
+          <th class="sticky top-0 px-20 py-3 text-white shadow-lg bg-gray-400">Labels</th>
+		</tr>
+      </thead>
+      <tbody class="divide-y bg-green-100">
+        <tr v-for="label in labels">
+		  <td class="px-6 py-4 text-left hover:bg-gray-100 shadow-lg" v-bind:id="label.uuid" v-on:click="itemSelected(label.uuid)" :class="[itemCursorStyle(label.uuid), itemColor(label.uuid)]">${ label.displayname }$
+	        <button v-if="entryCanBeRemoved(label.displayname)" v-on:click="removeLabel(label.displayname)" class="float-right text-black rounded-md hover:bg-white hover:border-indigo-500 hover:text-black">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+	      </td>
+		</tr> 
+      </tbody>
+    </table>
+  </div>
+</div>
+</script>

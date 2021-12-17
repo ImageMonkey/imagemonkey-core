@@ -701,3 +701,26 @@ func (p *ImageMonkeyDatabase) Export(parseResult parser.ParseResult, annotations
 	}
 	return imageEntries, err
 }
+
+func (p *ImageMonkeyDatabase) GetImageDetails(imageId string) (datastructures.ImageDetails, error) {
+	rows, err := p.db.Query(context.TODO(), `SELECT i.unlocked, i.width, i.height
+												FROM image i WHERE i.key = $1`, imageId)
+	var imageDetails datastructures.ImageDetails
+	if err != nil {
+		log.Error("[Image Info] Couldn't query image info: ", err.Error())
+		raven.CaptureError(err, nil)
+		return imageDetails, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&imageDetails.Unlocked, &imageDetails.Width, &imageDetails.Height)
+		if err != nil {
+			log.Error("[Image Info] Couldn't scan row: ", err.Error())
+			raven.CaptureError(err, nil)
+			return imageDetails, err
+		}
+	} else {
+		return imageDetails, &NotFoundError{Description: "No image with that id found"}
+	}
+	return imageDetails, nil
+}

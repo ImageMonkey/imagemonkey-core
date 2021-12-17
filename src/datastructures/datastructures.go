@@ -588,6 +588,12 @@ type ImageInfo struct {
 	Source ImageSource
 }
 
+type ImageDetails struct {
+	Width  int32 `json:"width"`
+	Height int32 `json:"height"`
+	Unlocked bool `json:"unlocked"`
+}
+
 type UserSignupRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`

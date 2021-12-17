@@ -519,75 +519,96 @@ func main() {
 			})
 		})
 
-
 		router.GET("/annotate", func(c *gin.Context) {
-			params := c.Request.URL.Query()
+			version := commons.GetParamFromUrlParams(c, "v", "1")
+			if version == "1" {
+				params := c.Request.URL.Query()
 
-			labelId, err := commons.GetLabelIdFromUrlParams(params)
-			if err != nil {
-				c.JSON(422, gin.H{"error": "label id needs to be an integer"})
-				return
-			}
+				labelId, err := commons.GetLabelIdFromUrlParams(params)
+				if err != nil {
+					c.JSON(422, gin.H{"error": "label id needs to be an integer"})
+					return
+				}
 
-			mode := commons.GetParamFromUrlParams(c, "mode", "default")
-			onlyOnce := false
-			var revision int64
-			revision = -1
-			showSkipAnnotationButtons := true
-			validationId := ""
-			annotationId := ""
+				mode := commons.GetParamFromUrlParams(c, "mode", "default")
+				onlyOnce := false
+				var revision int64
+				revision = -1
+				showSkipAnnotationButtons := true
+				validationId := ""
+				annotationId := ""
 
-			if mode == "default" {
-				annotationId = commons.GetParamFromUrlParams(c, "annotation_id", "")
-				if annotationId != "" {
-					mode = "refine"
-					onlyOnce = true
-					showSkipAnnotationButtons = false //if there are already annotations, 
-													 //then we do not need to show the blacklist annotation and unannotatable buttons
-
-					revisionStr := commons.GetParamFromUrlParams(c, "rev", "-1")
-					revision, err = strconv.ParseInt(revisionStr, 10, 32)
-					if err != nil {
-						ShowErrorPage(c)
-						return
-					}
-
-				} else {
-					validationId = commons.GetValidationIdFromUrlParams(params)
-					if validationId != "" {
-						//it doesn't make sene to use the validation id and the label id for querying - so we
-						//give the validation id preference.
-						labelId = ""
+				if mode == "default" {
+					annotationId = commons.GetParamFromUrlParams(c, "annotation_id", "")
+					if annotationId != "" {
+						mode = "refine"
 						onlyOnce = true
+						showSkipAnnotationButtons = false //if there are already annotations,
+														 //then we do not need to show the blacklist annotation and unannotatable buttons
+
+						revisionStr := commons.GetParamFromUrlParams(c, "rev", "-1")
+						revision, err = strconv.ParseInt(revisionStr, 10, 32)
+						if err != nil {
+							ShowErrorPage(c)
+							return
+						}
+
+					} else {
+						validationId = commons.GetValidationIdFromUrlParams(params)
+						if validationId != "" {
+							//it doesn't make sene to use the validation id and the label id for querying - so we
+							//give the validation id preference.
+							labelId = ""
+							onlyOnce = true
+						}
 					}
 				}
+
+				view := commons.GetParamFromUrlParams(c, "view", "default")
+				query := commons.GetParamFromUrlParams(c, "query", "")
+				searchOption := commons.GetParamFromUrlParams(c, "search_option", "default")
+
+				c.HTML(http.StatusOK, "annotate.html", gin.H{
+					"title": "Annotate",
+					"activeMenuNr": 4,
+					"apiBaseUrl": apiBaseUrl,
+					"appIdentifier": webAppIdentifier,
+					"playgroundBaseUrl": playgroundBaseUrl,
+					"labelId": labelId,
+					"annotationRevision": revision,
+					"validationId": validationId,
+					"annotationId": annotationId,
+					"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+					"annotationMode": mode,
+					"annotationView": view,
+					"onlyOnce": onlyOnce,
+					"query": query,
+					"searchOption": searchOption,
+					"sentryDsn": localSentryDsn,
+					"showSkipAnnotationButtons": showSkipAnnotationButtons,
+					"queryAttributes": parser.GetStaticQueryAttributes(parser.AnnotationView),
+					"assetVersion": assetVersion,
+				})
+			} else {
+				validationId := commons.GetParamFromUrlParams(c, "validation_id", "")
+				imageId := commons.GetParamFromUrlParams(c, "image_id", "")
+
+				query := commons.GetParamFromUrlParams(c, "query", "")
+				searchOption := commons.GetParamFromUrlParams(c, "search_option", "default")
+
+				c.HTML(http.StatusOK, "annotate_v2.html", gin.H{
+					"title": "ImageMonkey Annotation Tool",
+					"activeMenuNr": 4,
+					"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
+					"apiBaseUrl": apiBaseUrl,
+					"assetVersion": assetVersion,
+					"validationId": validationId,
+					"imageId": imageId,
+					"query": query,
+					"searchOption": searchOption,
+					"sentryDsn": localSentryDsn,
+				})
 			}
-
-			view := commons.GetParamFromUrlParams(c, "view", "default")
-			query := commons.GetParamFromUrlParams(c, "query", "")
-			searchOption := commons.GetParamFromUrlParams(c, "search_option", "default")
-
-			c.HTML(http.StatusOK, "annotate.html", gin.H{
-				"title": "Annotate",
-				"activeMenuNr": 4,
-				"apiBaseUrl": apiBaseUrl,
-				"appIdentifier": webAppIdentifier,
-				"playgroundBaseUrl": playgroundBaseUrl,
-				"labelId": labelId,
-				"annotationRevision": revision,
-				"validationId": validationId,
-				"annotationId": annotationId,
-				"sessionInformation": sessionCookieHandler.GetSessionInformation(c),
-				"annotationMode": mode,
-				"annotationView": view,
-				"onlyOnce": onlyOnce,
-				"query": query,
-				"searchOption": searchOption,
-				"sentryDsn": localSentryDsn,
-				"showSkipAnnotationButtons": showSkipAnnotationButtons,
-				"queryAttributes": parser.GetStaticQueryAttributes(parser.AnnotationView),
-				"assetVersion": assetVersion,
-			})
 		})
 
 		router.GET("/verify", func(c *gin.Context) {
