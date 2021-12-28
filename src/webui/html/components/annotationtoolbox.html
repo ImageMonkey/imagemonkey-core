@@ -39,6 +39,11 @@
 							<i class="fas fa-trash" style="color:gray"></i>
                     	</button>
 					</li>
+					<li class="my-12 text-center">
+                        <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" v-on:click="showHideAllAnnotations" v-bind:data-tooltip="showHideAllAnnotationsTooltip" data-position="right center" v-bind:class="showHideAllAnnotationsToolboxItemEnabled">
+							<i class="fas fa-eye" v-bind:style="showHideAllAnnotationsIconColor"></i>
+                    	</button>
+					</li>
                 </ul>
             </div>
         </div>

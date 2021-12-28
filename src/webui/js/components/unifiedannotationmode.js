@@ -78,8 +78,10 @@ UnifiedAnnotationModeComponent = {
             return this.imageId;
         },
         onSaveChangesInUnifiedMode: function() {
-            let currentSelectedLabelUuid = this.$refs.annotationLabelList.getCurrentSelectedLabelUuid();
-            this.updateAnnotationsInAnnotationLabelList(currentSelectedLabelUuid);
+            if (!this.$refs.annotationToolBox.allAnnotationsAreShown()) {
+                let currentSelectedLabelUuid = this.$refs.annotationLabelList.getCurrentSelectedLabelUuid();
+                this.updateAnnotationsInAnnotationLabelList(currentSelectedLabelUuid);
+            }
 
             let inst = this;
             this.$refs.annotationLabelList.persistNewlyAddedLabels().then(function() {
@@ -230,6 +232,26 @@ UnifiedAnnotationModeComponent = {
             setTimeout(function() {
                 EventBus.$emit("restoreScrollPosition");
             }, 500);
+        },
+        onShowAllAnnotations: function() {
+            let currentSelectedLabelUuid = this.$refs.annotationLabelList.getCurrentSelectedLabelUuid();
+            this.updateAnnotationsInAnnotationLabelList(currentSelectedLabelUuid);
+
+            let allAnnotations = this.$refs.annotationLabelList.getAllAnnotations();
+            this.$refs.annotationToolBox.drawAnnotations(allAnnotations);
+
+            this.$refs.annotationLabelList.setReadOnly(true);
+        },
+        onHideAllAnnotations: function() {
+            let currentSelectedLabelUuid = this.$refs.annotationLabelList.getCurrentSelectedLabelUuid();
+            if (currentSelectedLabelUuid !== null) {
+                let annotations = this.$refs.annotationLabelList.getAnnotationsForLabelUuid(currentSelectedLabelUuid);
+                this.$refs.annotationToolBox.drawAnnotations(annotations);
+            } else {
+                this.$refs.annotationToolBox.removeAllAnnotations();
+            }
+
+            this.$refs.annotationLabelList.setReadOnly(false);
         }
     },
     beforeDestroy: function() {
@@ -249,6 +271,8 @@ UnifiedAnnotationModeComponent = {
         EventBus.$off("imageInfoReceived", this.onImageInfoReceived);
         EventBus.$off("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
         EventBus.$off("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
+        EventBus.$off("showAllAnnotations", this.onShowAllAnnotations);
+        EventBus.$off("hideAllAnnotations", this.onHideAllAnnotations);
 
 
         EventBus.$off("imageLoaded", this.onImageLoaded);
@@ -274,6 +298,8 @@ UnifiedAnnotationModeComponent = {
         EventBus.$on("imageInfoReceived", this.onImageInfoReceived);
         EventBus.$on("ctrl+sPressed", this.onSaveChangesInUnifiedMode);
         EventBus.$on("ctrl+dPressed", this.onDiscardChangesInUnifiedMode);
+        EventBus.$on("showAllAnnotations", this.onShowAllAnnotations);
+        EventBus.$on("hideAllAnnotations", this.onHideAllAnnotations);
 
 
         EventBus.$on("imageLoaded", this.onImageLoaded);

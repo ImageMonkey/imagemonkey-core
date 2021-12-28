@@ -7,7 +7,8 @@ AnnotationToolboxComponent = {
             visible: true,
             isDisabled: true,
             annotationHotkeyHandler: null,
-            tooltipsEnabled: false
+            tooltipsEnabled: false,
+            showAllAnnotations: false
         }
     },
     computed: {
@@ -31,7 +32,19 @@ AnnotationToolboxComponent = {
                 return "color:blue";
             return "color: gray";
         },
+        showHideAllAnnotationsIconColor() {
+            if (this.showAllAnnotations)
+                return "color:blue";
+            return "color:gray";
+        },
         toolboxItemEnabled() {
+            if (this.isDisabled)
+                return "opacity-50 cursor-not-allowed";
+            return "";
+        },
+        showHideAllAnnotationsToolboxItemEnabled() {
+            if (this.showAllAnnotations)
+                return "";
             if (this.isDisabled)
                 return "opacity-50 cursor-not-allowed";
             return "";
@@ -56,6 +69,9 @@ AnnotationToolboxComponent = {
         },
         removeAnnotationTooltip: function() {
             return (this.tooltipsEnabled) ? "Remove Annotation (del)" : null;
+        },
+        showHideAllAnnotationsTooltip: function() {
+            return (this.showAllAnnotations) ? "Hide all Annotations" : "Show all Annotations";
         }
     },
     methods: {
@@ -149,8 +165,23 @@ AnnotationToolboxComponent = {
         },
         removeSelectedAnnotation: function() {
             this.deleteAnnotation();
+        },
+        showHideAllAnnotations: function() {
+            this.showAllAnnotations = !this.showAllAnnotations;
+            if (this.showAllAnnotations) {
+                this.disableTools();
+                EventBus.$emit("showAllAnnotations");
+            } else {
+                this.enableTools();
+                EventBus.$emit("hideAllAnnotations");
+            }
+        },
+        removeAllAnnotations: function() {
+            this.annotator.deleteAll();
+        },
+        allAnnotationsAreShown: function() {
+            return this.showAllAnnotations;
         }
-
     },
     beforeDestroy: function() {
         EventBus.$off("canvasCreated", this.onCanvasCreated);

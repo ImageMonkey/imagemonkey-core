@@ -16,7 +16,8 @@ AnnotationLabelListComponent = {
             labelsAutoCompletion: null,
             imageId: null,
             annotations: {},
-            notCommittedAnnotations: {}
+            notCommittedAnnotations: {},
+            readOnly: false
         }
     },
     computed: {},
@@ -44,6 +45,9 @@ AnnotationLabelListComponent = {
             return annotationsForLabel;
         },
         itemSelected: function(labelUuid, emitEvent = true) {
+            if (this.readOnly)
+                return;
+
             if (!this.$store.getters.loggedIn) {
                 if (!this.isLabelProductive(labelUuid))
                     return;
@@ -71,12 +75,21 @@ AnnotationLabelListComponent = {
             return false;
         },
         itemCursorStyle: function(labelUuid) {
+            if (this.readOnly)
+                return "cursor-not-allowed";
+
             if (!this.$store.getters.loggedIn) {
                 if (this.isLabelProductive(labelUuid))
                     return "cursor-default";
                 return "cursor-not-allowed";
             }
             return "cursor-default";
+        },
+        addLabelButtonStyle: function() {
+            if (this.readOnly) {
+                return "cursor-not-allowed disabled:opacity-50";
+            }
+            return "";
         },
         removeLabel: function(label) {
             EventBus.$emit("removeLabel", label);
@@ -298,6 +311,17 @@ AnnotationLabelListComponent = {
                     return true;
             }
             return false;
+        },
+        getAllAnnotations: function() {
+            let allAnnotations = [];
+            for (const [key, annos] of Object.entries(this.annotations))
+                allAnnotations.push(...annos);
+            for (const [key, annos] of Object.entries(this.notCommittedAnnotations))
+                allAnnotations.push(...annos);
+            return allAnnotations;
+        },
+        setReadOnly: function(readOnly) {
+            this.readOnly = readOnly;
         }
     },
     beforeDestroy: function() {
