@@ -102,7 +102,7 @@ AnnotationToolboxComponent = {
                 this.canvas.fabric().setZoom(this.canvas.fabric().getZoom() * 1.1);
         },
         deleteAnnotation: function() {
-            this.annotator.deleteSelected();
+            EventBus.$emit("deleteSelectedAnnotation");
         },
         onAnnotatorMouseUp: function() {},
         onAnnotatorObjectDeselected: function() {},
