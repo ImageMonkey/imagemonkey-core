@@ -143,7 +143,7 @@ AnnotationToolboxComponent = {
             } else {
                 this.annotator.reset(false);
             }
-            //this.canvas.fabric().setZoom(1);
+            this.showAllAnnotations = false;
             EventBus.$emit("annotatorInitialized");
         },
         drawAnnotations: function(annotations) {

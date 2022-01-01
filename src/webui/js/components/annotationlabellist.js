@@ -112,6 +112,7 @@ AnnotationLabelListComponent = {
 
             var that = this;
             let onlyUnlockedLabels = false;
+            this.readOnly = false;
 
             let promises = [imageMonkeyApi.getLabelsForImage(imageId, onlyUnlockedLabels),
                 imageMonkeyApi.getAnnotationsForImage(imageId, imageUnlocked)
