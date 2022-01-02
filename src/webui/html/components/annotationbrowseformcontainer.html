@@ -1,0 +1,16 @@
+<script type="text/x-template" id="annotation-browse-form-container-template">
+
+<div v-show="visible" class="pusher" id="annotation-browse-form-container">
+	<div class="ui inverted vertical masthead center aligned segment" id="navHeader">
+	<globalnavbar id="global-navbar" ref="globalNavbar"></globalnavbar>
+	</div>
+	<div class="ui stackable grid" id="mainGrid" style="margin-top: 1em;">
+	<annotationbrowseform id="annotation-browseform" ref="form"></annotationbrowseform>	
+	</div>
+
+	<annotationstatisticspopup id="annotation-statistics-popup"></annotationstatisticspopup>
+	<imagegrid id="annotation-image-grid" ref="imageGrid"></imagegrid>	
+	<waveloadingbar id="annotation-wave-loading-bar"></waveloadingbar>	
+</div>
+
+</script>

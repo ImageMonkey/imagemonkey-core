@@ -1,0 +1,204 @@
+<!doctype html>
+<html>
+
+<head>
+    {{ template "favicon.html" .}}
+    <title>{{ .title }}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/tailwindcss.min.css?v={{ .assetVersion }}" rel="stylesheet">
+    <script src="js/vue/vue.min.js"></script>
+    <script src="js/vuex/vuex.min.js"></script>
+   	<link rel="stylesheet" href="css/spinner/spinners/3-wave.css?v={{ .assetVersion }}"/> 
+	<link rel="stylesheet" href="css/balloon/balloon.min.css?v={{ .assetVersion }}">
+	<script src="js/justified-layout.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/imagemonkey/api.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="css/fontawesome/fontawesome.min.css">
+
+    <script src="js/jquery.min.js?v={{ .assetVersion }}"></script>
+    <script src="js/jquery-ui.min.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="css/jquery-ui.css?v={{ .assetVersion }}" />
+	<script src="js/common.js?v={{ .assetVersion }}"></script> 
+	<script src="/js/cookies.min.js?v={{ .assetVersion }}"></script>
+	<script src="/js/settings.js?v={{ .assetVersion }}"></script>
+
+    <script src="js/lodash.core.min.js?v={{ .assetVersion }}"></script>
+    <script src="js/fabric.min.js?v={{ .assetVersion }}"></script>
+    <script src="js/fabric_helper.js?v={{ .assetVersion }}"></script>
+    <script src="js/imagemonkey/misc/autocompletion.js?v={{ .assetVersion }}"></script>
+	<script src="js/mousetrap.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/sentry/sentry.min.js?v={{ .assetVersion }}"></script>
+	<script src="js/fingerprint2.min.js?v={{ .assetVersion }}"></script>
+
+    <!-- utils -->
+    <script src="js/utils/utils.js?v={{ .assetVersion }}"></script>
+    <script src="js/utils/annotationhotkeyhandler.js?v={{ .assetVersion }}"></script>
+
+	<!-- components -->
+	<script src="js/components/loadingspinner.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/imagecanvas.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationtoolbox.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationnavbar.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationlabellist.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationbrowseform.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/annotationstatisticspopup.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/imagegrid.js?v={{ .assetVersion }}"></script>
+    <script src="js/components/waveloadingbar.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/globalnavbar.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/annotationbrowseformcontainer.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/unifiedannotationmode.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/removelabelconfirmationdialog.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/removeannotationconfirmationdialog.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/simpleerrorpopup.js?v={{ .assetVersion }}"></script>
+	<script src="js/components/inlineinfomessage.js?v={{ .assetVersion }}"></script>
+
+	<script src="js/infinitescroll.js?v={{ .assetVersion }}"></script>
+
+
+    <link rel="stylesheet" href="css/semantic.min.css?v={{ .assetVersion }}" />
+    <script src="js/semantic.min.js?v={{ .assetVersion }}"></script>
+    <link rel="stylesheet" href="css/common.css?v={{ .assetVersion }}" />
+    <link rel="stylesheet" href="css/common_sub.css?v={{ .assetVersion }}" /> 
+
+
+    <script src="js/annotate.min.js?v={{ .assetVersion }}"></script>
+</head>
+
+<script>
+    var imageMonkeyApi = new ImageMonkeyApi("{{ .apiBaseUrl }}");
+	imageMonkeyApi.setToken(getCookie("imagemonkey"));
+
+	try {
+		//can fail in case someone uses uBlock origin or Co.
+		new Fingerprint2().get(function(result, components) {
+			imageMonkeyApi.setBrowserFingerprint(result);
+		});
+	} catch (e) {}
+
+	var canvas = null;
+    window.onload = (event) => {
+		try{
+      		Sentry.init({
+        		dsn: '{{ .sentryDsn }}',
+      		});
+    	} catch(e) {
+    	}
+
+
+        window.EventBus = new Vue();
+
+        const store = new Vuex.Store({
+            state: {
+                username: {{ .sessionInformation.Username }},
+                loggedIn: {{ if ne .sessionInformation.Username "" }} true {{ else }} false {{ end }},
+				isModerator: {{ if eq .sessionInformation.IsModerator true }} true {{ else }} false {{ end}}
+            },
+            mutations: {},
+            getters: {
+                loggedIn: function(state) {
+                    return state.loggedIn;
+                },
+				username: function(state) {
+					return state.username;
+				},
+				isModerator: function(state) {
+					return state.isModerator;
+				}
+            }
+        });
+
+		Vue.component("globalnavbar", GlobalNavbarComponent);
+		Vue.component("annotationbrowseform", AnnotationBrowseFormComponent);
+		Vue.component("annotationstatisticspopup", AnnotationStatisticsPopupComponent);
+		Vue.component("imagegrid", ImageGridComponent);
+		Vue.component("waveloadingbar", WaveLoadingBarComponent);
+		Vue.component("annotationbrowseformcontainer", AnnotationBrowseFormContainerComponent);
+		Vue.component("unifiedannotationmode", UnifiedAnnotationModeComponent);
+		Vue.component("annotationtoolbox", AnnotationToolboxComponent);
+		Vue.component("annotationnavbar", AnnotationNavbarComponent);
+		Vue.component("annotationlabellist", AnnotationLabelListComponent);
+		Vue.component("imagecanvas", ImageCanvasComponent);
+		Vue.component("removelabelconfirmationdialog", RemoveLabelConfirmationDialogComponent);
+		Vue.component("simpleerrorpopup", SimpleErrorPopupComponent);
+		Vue.component("removeannotationconfirmationdialog", RemoveAnnotationConfirmationDialogComponent);
+		Vue.component("loadingspinner", LoadingSpinnerComponent);
+		Vue.component("inlineinfomessage", InlineInfoMessageComponent);
+
+		const simpleErrorPopup = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#simple-error-popup"
+		});
+
+		const annotationBrowseFormContainer = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#annotation-browse-form-container",
+			store: store,
+			methods: {
+				onImageInImageGridClicked: function(imageAnnotationInfo) {
+					this.$refs.annotationBrowseFormContainer.hide();
+				},
+				onLoadImage: function(imageId, validationId) {
+					this.$refs.annotationBrowseFormContainer.hide();
+				}
+			},
+			beforeDestroy: function() {
+				EventBus.$off("imageInImageGridClicked", this.onImageInImageGridClicked);
+				EventBus.$off("loadImage", this.onLoadImage);
+			},
+			mounted: function() {
+				EventBus.$on("imageInImageGridClicked", this.onImageInImageGridClicked);
+				EventBus.$on("loadImage", this.onLoadImage);
+			}
+		});
+
+		const unifiedAnnotationMode = new Vue({
+			delimiters: ['${', '}$'],
+			el: "#unified-annotation-mode",
+			store: store
+		});
+
+		{{ if and (ne .validationId "") (ne .imageId "") }}
+			EventBus.$emit("loadImage", {{ .imageId }}, {{ .validationId }});
+		{{ else if and (eq .validationId "") (ne .imageId "") }}
+			EventBus.$emit("loadImage", {{ .imageId }}, null);
+		{{ else }}
+		{{ if ne .query "" }}
+			EventBus.$emit("loadAnnotationBrowseFormLabels", {{ .query }});
+		{{ else }}
+			EventBus.$emit("loadAnnotationBrowseFormLabels");
+		{{ end }}
+		{{ end }}
+
+    };
+</script>
+
+<body>
+	<!--TODO mobile menu-->
+
+   	<annotationbrowseformcontainer id="annotation-browse-form-container" ref="annotationBrowseFormContainer"></annotationbrowseformcontainer>
+
+	<unifiedannotationmode id="unified-annotation-mode" ref="unifiedAnnotationMode"></unifiedannotationmode>
+	<simpleerrorpopup id="simple-error-popup" ref="simpleErrorPopup"></simpleerrorpopup>
+</body>
+
+</html>
+
+
+<!-- Components -->
+{{ template "loading_spinner.html" .}}
+{{ template "imagecanvas.html" .}}
+{{ template "annotationtoolbox.html" .}}
+{{ template "annotationnavbar.html" .}}
+{{ template "annotationlabellist.html" .}}
+{{ template "annotationbrowseform.html" .}}
+{{ template "annotationstatisticspopup.html" .}}
+{{ template "imagegrid.html" .}}
+{{ template "waveloadingbar.html" .}}
+{{ template "inlineerrormessage.html" .}}
+{{ template "globalnavbar.html" .}}
+{{ template "annotationbrowseformcontainer.html" .}}
+{{ template "unifiedannotationmode.html" .}}
+{{ template "removelabelconfirmationdialog.html" .}}
+{{ template "removeannotationconfirmationdialog.html" .}}
+{{ template "simpleerrorpopup.html" .}}
+{{ template "inlineinfomessage.html" .}}

@@ -1,0 +1,66 @@
+<script type="text/x-template" id="annotation-navigationbar-template">
+<div v-if="visible">
+    <nav class="bg-imagemonkeygray dark:bg-gray-800  shadow ">
+		<div class="max-w-7xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <p class="flex-shrink-0" href="/">
+                      <h3 class="text-white">ImageMonkey Annotation Tool</h3>
+                    </p>
+                </div>
+                <div class="block">
+                    <div class="ml-4 flex items-center md:ml-6">
+                        <!--<div class="ml-3 relative">
+                            <div class="relative inline-block text-left">
+                                <div>
+                                    <button type="button" class="  flex items-center justify-center w-full rounded-md  px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-50 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" id="options-menu">
+                                        <i class="fas fa-chevron-left fa-3x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+						
+						<div class="ml-3 relative">
+                            <div class="relative inline-block text-center">
+								Image
+							</div>
+						</div>
+						<div class="ml-3 relative">
+                            <div class="relative inline-block text-left">
+                                <div>
+                                    <button type="button" class="  flex items-center justify-center w-full rounded-md  px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-50 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-gray-500" id="options-menu">
+                                        <i class="fas fa-chevron-right fa-3x"></i>	
+									</button>
+                                </div>
+                            </div>
+                        </div>-->
+
+						<div class="ml-3 relative">
+							<div>
+								<button class="bg-white hover:bg-red-200 dark:hover:bg-red-500 text-red-500 border border-red-500 font-bold py-4 px-12 rounded" data-tooltip="Discard changes (ctrl+d)" data-position="bottom center" v-on:click="discard">
+									Discard
+								</button>
+							</div>
+						</div>
+						<div class="ml-3 relative">
+							<div>
+								<button class="bg-white hover:bg-green-200 dark:hover:bg-green-500 text-green-500 border border-green-500 font-bold py-4 px-12 rounded" data-tooltip="Save changes (ctrl+s)" data-position="bottom center" v-on:click="save">
+									Save
+								</button>
+							</div>
+						</div>
+
+						<div class="absolute top-6 left-6">
+                            <img class="object-cover w-7 h-7 rounded-full" :src="avatar" @click="avatarClicked" style="cursor: pointer"/>
+						</div>
+						<div class="absolute top-8 left-14">
+	                        <p class="text-white text-xs" @click="avatarClicked" style="cursor: pointer">${ username }$</p>
+						</div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</div>
+</script>

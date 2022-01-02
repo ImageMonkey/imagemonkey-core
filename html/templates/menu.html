@@ -37,6 +37,7 @@
         <div class="menu">
             <div class="center aligned item" onclick="window.location='/annotate?mode=default&view=unified';">Default</div>
             <div class="center aligned item" onclick="window.location='/annotate?mode=browse&view=unified';">Browse</div>
+            <div class="center aligned item" onclick="window.location='/annotate?mode=browse&view=unified&v=2';">Browse - <b>NEW</b></div>
         </div>
     </div>
 
@@ -119,7 +120,7 @@
   <a class="{{if (eq .activeMenuNr 12)}}active {{end}}item" href="/login">Login</a>
 </div>
 
-<script type="text/javascript">
+<script type="application/javascript">
   $(document).ready(function(){
     $('#developersMenuDropdown').dropdown();
     $('#datasetMenuDropdown').dropdown();

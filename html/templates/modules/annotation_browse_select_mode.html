@@ -165,10 +165,23 @@
     {{ end }}
 
     var url = '{{ .apiBaseUrl }}/v1/validations/unannotated';
-    if(browseAnnotationsOnlyMode)
-      url = '{{ .apiBaseUrl }}/v1/annotations';
+    let searchOption = '';
+    if(browseAnnotationsOnlyMode) {
+        url = '{{ .apiBaseUrl }}/v1/annotations';
+        searchOption = 'rework';
+    }
 
     var query = $("#annotationQuery").val();
+
+    let fullUrl = new URL(window.location);
+    fullUrl.searchParams.set('query', query);
+    fullUrl.searchParams.set('search_option', searchOption);
+    if(searchOption === '')
+        fullUrl.searchParams.delete('search_option');
+    else if(searchOption === 'rework')
+        fullUrl.searchParams.set('search_option', searchOption);
+    window.history.pushState({}, null, fullUrl);
+
     $.ajax({
           url: url,
           dataType: 'json',
@@ -345,6 +358,13 @@
 
     imageMonkeyApi.setToken(getCookie("imagemonkey"));
 
+    {{ if ne .query "" }}
+    $("#annotationQuery").val({{ .query }});
+    {{ if eq .searchOption "rework" }}
+    $("#annotationsOnlyCheckbox").checkbox("set checked");
+    {{ end }}
+    populateImageGrid();
+    {{ end }}
 
     var staticQueryAttributes = {{ .queryAttributes }};
     var availableLabels = staticQueryAttributes;
@@ -390,6 +410,14 @@
       var randomElem = availableLabels[getRandomInt(0, availableLabels.length - 1)];
       $("#annotationQuery").val(randomElem);
     });
+
+    $("#annotationQuery").keyup(function(event) {
+      if(event.keyCode === 13) { //when enter inside input field is pressed
+        event.preventDefault();
+        populateImageGrid();
+        $("#annotationQuery").blur();
+      }
+    });
   });
 </script>
 
@@ -397,7 +425,7 @@
 <div class="row" id="annotationQuerySearchContainer">
   <div class="four wide column"></div>
   <div class="eight wide center aligned column">
-    <form class="ui form segment">
+    <form class="ui form segment" onsubmit="return false;"> <!-- do not handle enter key presses in HTML form-->
       <div class="field">
        <p class="default-text">Search for annotation tasks you are interested in</p>
        <div class="ui action input">

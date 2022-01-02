@@ -58,11 +58,25 @@ fi
 
 if [ ${MODE} == "all" ] || [ ${MODE} == "only-ui" ]; then
 	echo "Starting UI tests"
+	echo "Run selenium tests"
 	cd ui/
 	python3 -m unittest
 	retVal=$?
 	if [ $retVal -ne 0 ]; then
 		echo "Aborting due to error"
+		exit $retVal
+	fi
+
+	echo "Run cypress tests"
+	cd /tmp/tests/
+	DEBUG=cypress:server:util:process_profiler /tmp/node_modules/.bin/cypress run --project ui/ --browser chromium
+	retVal=$?
+	if [ $retVal -ne 0 ]; then
+		echo "Aborting due to error"
+		echo "Copy cypress screenshots to /tmp/test_output"
+		cp -r /tmp/tests/ui/cypress/screenshots /tmp/test_output/
+		echo "Copy cypress videos to /tmp/test_output"
+		cp -r /tmp/tests/ui/cypress/videos /tmp/test_output/
 		exit $retVal
 	fi
 fi

@@ -73,10 +73,19 @@ jobs:
           mkdir -p data/donations
           mkdir -p data/quarantine
           mkdir -p data/unverified_donations
+          mkdir -p test_output
           echo "Preparing env file for github actions job"
           cp env/env.ci env/env_ui_tests.ci
           echo "TEST_MODE=only-ui" >> env/env_ui_tests.ci
           docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
+      - name: Upload cypress screenshots and videos of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: cypress-screenshots-and-videos-of-failed-tests
+          path: test_output/*
+          retention-days: 5
+
       
   unit-test:
     runs-on: ubuntu-latest
