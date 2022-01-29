@@ -40,16 +40,56 @@ RUN true #docker workaround (https://github.com/moby/moby/issues/37965)
 COPY src/parser /tmp/src/parser
 COPY env/postgres /tmp/env/postgres
 
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip wget unzip \
-	&& pip3 install selenium requests \
-	&& wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip --directory-prefix=/tmp/ \
-	&& cd /tmp \
-	&& unzip /tmp/chromedriver_linux64.zip \ 
-	&& cp /tmp/chromedriver /tmp/tests/ui \
-	&& rm /tmp/chromedriver_linux64.zip
+COPY src/webui/html/components /tmp/html/templates
+COPY src/webui/js/components /tmp/js/
+
+RUN apt-get update \
+  && apt-get install -y ca-certificates \
+  && echo "deb http://apt.postgresql.org/pub/repos/apt/ ${DEBIAN_VERSION}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends python3 chromium postgresql-client-${POSTGRES_VERSION} python3-pip python3-setuptools python3-dev libffi-dev libssl-dev unzip \
+  && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+  && export PATH=$PATH:$HOME/.cargo/bin \
+  && pip3 install selenium requests \
+  && wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip --directory-prefix=/tmp/ \
+  && cd /tmp \
+  && unzip /tmp/chromedriver_linux64.zip \
+  && ls -la /tmp \
+  && cp /tmp/chromedriver /tmp/tests/ui \
+  && rm /tmp/chromedriver_linux64.zip
+
+# install cypress dependencies
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y \
+  libgtk2.0-0 \
+  libgtk-3-0 \
+  libnotify-dev \
+  libgconf-2-4 \
+  libgbm-dev \
+  libnss3 \
+  libxss1 \
+  libasound2 \
+  libxtst6 \
+  xauth \
+  xvfb \
+  nodejs \
+  npm \
+  # clean up
+  && rm -rf /var/lib/apt/lists/*
+
+# a few environment variables to make NPM installs easier
+# good colors for most applications
+ENV TERM xterm
+# avoid million NPM install messages
+ENV npm_config_loglevel warn
+# allow installing when the main user is root
+ENV npm_config_unsafe_perm true
+
+RUN cd /tmp \
+	&& npm install cypress --save-dev \
+	&& npm install --save-dev cypress-file-upload \
+	&& npm install -D cypress-xpath
 
 RUN cd /tmp \
 	&& wget https://github.com/tsenart/vegeta/releases/download/v12.7.0/vegeta-12.7.0-linux-amd64.tar.gz --directory-prefix=/tmp/ \

@@ -39,3 +39,11 @@ type InvalidImageCollectionInputError struct {
 func (e *InvalidImageCollectionInputError) Error() string {
 	return e.Description
 }
+
+func (e *NotFoundError) Error() string {
+	return e.Description
+}
+
+type NotFoundError struct {
+	Description string
+}

@@ -1,0 +1,27 @@
+<script type="text/x-template" id="annotation-statistics-popup-template">
+
+<div class="ui modal" id="annotated-statistics-popup">
+  <i class="close icon"></i>
+  <div class="center aligned header">
+    Annotation Statistics
+  </div>
+  <div class="scrolling content">
+    <p>This list contains all the annotatable labels and the percentage of completeness.<br>Click on a label to search for it.</p>
+    <div id="annotated-statistics-popup-content">
+      <div class="ui progress" data-total="100" data-value="elem.percentage" v-for="elem in annotatedStatistics">
+        <div class="bar">
+          <div class="progress">
+          </div>
+        </div>
+        <div class="label"><a href="javascript:void(0);" v-on:click="labelClicked(elem.labelName)">${ elem.labelUrl }$</a></div>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui right labeled cancel button">
+      Close
+    </div>
+  </div>
+</div>
+
+</script>

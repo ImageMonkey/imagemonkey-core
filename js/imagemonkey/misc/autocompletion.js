@@ -1,13 +1,14 @@
 var AutoCompletion = (function() {
     function split(val) {
-      return val.split( / \s*/ );
+        return val.split(/ \s*/);
     }
-	
+
     function extractLast(term) {
-      return split(term).pop();
+        return split(term).pop();
     }
-	
-    function AutoCompletion(id, entries) {
+
+    function AutoCompletion(id, entries, callback = null) {
+        this.id = id;
         var maxResults = 10;
         $(id)
             // don't navigate away from the field on tab when selecting an item
@@ -42,6 +43,7 @@ var AutoCompletion = (function() {
                     // add placeholder to get the comma-and-space at the end
                     terms.push("");
                     this.value = terms.join("");
+                    if (callback) callback(this.value);
                     return false;
                 },
                 response: function(event, ui) {
@@ -69,5 +71,10 @@ var AutoCompletion = (function() {
                 }
             }
     }
+
+    AutoCompletion.prototype.close = function() {
+        $(this.id).autocomplete("close");
+    }
+
     return AutoCompletion;
 }());

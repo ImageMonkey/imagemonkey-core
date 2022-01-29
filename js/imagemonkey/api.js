@@ -5,8 +5,13 @@ var ImageMonkeyApi = (function() {
         this.token = '';
         this.availableLabels = null;
         this.clientSecret = null;
-        this.clientId = null
+        this.clientId = null;
+        this.browserFingerprint = null;
     };
+
+    ImageMonkeyApi.getBaseUrl = function() {
+        return this.baseUrl;
+    }
 
     ImageMonkeyApi.prototype.setToken = function(token) {
         this.token = token;
@@ -18,6 +23,10 @@ var ImageMonkeyApi = (function() {
 
     ImageMonkeyApi.prototype.setClientSecret = function(clientSecret) {
         this.clientSecret = clientSecret;
+    }
+
+    ImageMonkeyApi.prototype.setBrowserFingerprint = function(browserFingerprint) {
+        this.browserFingerprint = browserFingerprint;
     }
 
     ImageMonkeyApi.prototype.getAvailableLabels = function(useCache = false) {
@@ -52,6 +61,8 @@ var ImageMonkeyApi = (function() {
             xhr.open("POST", url);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            if (inst.browserFingerprint !== null)
+                xhr.setRequestHeader("X-Browser-Fingerprint", inst.browserFingerprint);
             xhr.onload = function() {
                 if (xhr.status >= 400)
                     reject();
@@ -259,7 +270,7 @@ var ImageMonkeyApi = (function() {
         var inst = this;
         return new Promise(function(resolve, reject) {
             var url = "";
-            if (validationId === undefined)
+            if (validationId === undefined || validationId === null)
                 url = (inst.baseUrl + "/" + inst.apiVersion + "/annotate?add_auto_annotations=true" +
                     ((labelId === null) ? "" : ("&label_id=" + labelId)));
             else
@@ -277,8 +288,8 @@ var ImageMonkeyApi = (function() {
                 reject();
             }
             xhr.onreadystatechange = function() {
-                if (xhr.status >= 400) {
-                    reject();
+                if (xhr.readyState === 4 && xhr.status >= 400) {
+                    reject(new Error(xhr.response["error"]));
                 }
             }
             xhr.send();
@@ -318,6 +329,265 @@ var ImageMonkeyApi = (function() {
         return new Promise(function(resolve, reject) {
             var url = inst.baseUrl + "/" + inst.apiVersion + "/statistics/contributions";
 
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.queryUnannotatedAnnotations = function(query, shuffle) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = (inst.baseUrl + "/" + inst.apiVersion + "/validations/unannotated?query=" +
+                encodeURIComponent(query) + "&shuffle=" + ((shuffle === true) ? "true" : "false"));
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.queryAnnotations = function(query, shuffle) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = (inst.baseUrl + "/" + inst.apiVersion + "/annotations?query=" +
+                encodeURIComponent(query) + "&shuffle=" + ((shuffle === true) ? "true" : "false"));
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getLabelsForImage = function(imageId, onlyUnlockedLabels) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + "/" + inst.apiVersion + '/donation/' + imageId + "/labels?only_unlocked_labels=" + (onlyUnlockedLabels ? "true" : "false");
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getAnnotatedStatistics = function() {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/statistics/annotated';
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getNumOfUnprocessedImageDescriptions = function() {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/donations/unprocessed-descriptions';
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("HEAD", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var numOfNotifications = xhr.getResponseHeader('X-Total-Count');
+                resolve(numOfNotifications);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.logout = function() {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/logout';
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("POST", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            if (inst.browserFingerprint !== null)
+                xhr.setRequestHeader("X-Browser-Fingerprint", inst.browserFingerprint);
+            xhr.onload = function() {
+                resolve();
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getAnnotationsForImage = function(imageId, imageUnlocked) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = '';
+            if (imageUnlocked)
+                url = inst.baseUrl + '/' + inst.apiVersion + '/donation/' + imageId + '/annotations';
+            else
+                url = inst.baseUrl + '/' + inst.apiVersion + '/unverified-donation/' + imageId + '/annotations?token=' + inst.token;
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.addAnnotations = function(imageId, data) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/donation/' + imageId + "/annotate";
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("POST", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            if (inst.browserFingerprint !== null)
+                xhr.setRequestHeader("X-Browser-Fingerprint", inst.browserFingerprint);
+            xhr.onload = function() {
+                resolve();
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send(JSON.stringify(data));
+        });
+    }
+
+    ImageMonkeyApi.prototype.getAvatarUrl = function(username) {
+        return this.baseUrl + '/' + this.apiVersion + '/user/' + username + '/profile/avatar';
+    }
+
+    ImageMonkeyApi.prototype.getImageUrl = function(imageId, isUnlocked) {
+        let url = this.baseUrl + '/' + this.apiVersion + (isUnlocked ? '/donation/' : '/unverified-donation/') + imageId;
+        if (!isUnlocked)
+            url += "?token=" + this.token;
+        return url;
+    }
+
+    ImageMonkeyApi.prototype.getStaticQueryAttributes = function(view) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/internal/view/' + view + '/static-query-attributes';
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = "json";
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Authorization", "Bearer " + inst.token);
+            xhr.onload = function() {
+                var jsonResponse = xhr.response;
+                resolve(jsonResponse);
+            }
+            xhr.onerror = function() {
+                reject();
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.status >= 400) {
+                    reject();
+                }
+            }
+            xhr.send();
+        });
+    }
+
+    ImageMonkeyApi.prototype.getImageDetails = function(imageId) {
+        var inst = this;
+        return new Promise(function(resolve, reject) {
+            var url = inst.baseUrl + '/' + inst.apiVersion + '/images/' + imageId + '/details';
             var xhr = new XMLHttpRequest();
             xhr.responseType = "json";
             xhr.open("GET", url);
