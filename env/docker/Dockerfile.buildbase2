@@ -1,4 +1,4 @@
-ARG POSTGRES_CLIENT_VERSION=9.6
+ARG POSTGRES_CLIENT_VERSION=14
 
 FROM bbernhard/imagemonkey-buildbase:latest
 
