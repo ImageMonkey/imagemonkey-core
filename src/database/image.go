@@ -661,7 +661,7 @@ func (p *ImageMonkeyDatabase) Export(parseResult parser.ParseResult, annotations
 						WHERE %s
 					  )
 
-					  SELECT i.image_uuid, CASE WHEN json_agg(q2.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q2.annotations)::jsonb END as annotations
+					  SELECT i.image_uuid, CASE WHEN json_agg(q2.annotations)::jsonb = '[null]'::jsonb THEN '[]' ELSE json_agg(q2.annotations)::jsonb END as annotations, validations, i.image_width, i.image_height
 					  	FROM unlocked_images i
 						JOIN
 						(
