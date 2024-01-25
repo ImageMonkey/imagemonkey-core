@@ -86,8 +86,9 @@ ENV npm_config_loglevel warn
 # allow installing when the main user is root
 ENV npm_config_unsafe_perm true
 
+# pin cypress to v9.5.4 until https://github.com/cypress-io/cypress/issues/9350 is fixed
 RUN cd /tmp \
-	&& npm install cypress --save-dev \
+	&& npm install cypress@9.5.4 --save-dev \
 	&& npm install --save-dev cypress-file-upload \
 	&& npm install -D cypress-xpath
 

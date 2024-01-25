@@ -1662,7 +1662,6 @@ func main() {
 			}
 
 			queryParser := parser.NewQueryParser(query)
-			queryParser.SetVersion(1)
 			parseResult, err := queryParser.Parse()
 			if err != nil {
 				c.JSON(422, gin.H{"error": err.Error()})

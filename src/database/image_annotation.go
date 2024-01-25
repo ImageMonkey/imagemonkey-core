@@ -31,7 +31,9 @@ func MakeAnnotationsProductive(tx pgx.Tx, trendingLabel string, labelId int64) e
 				  				  table_name = 'image_annotation_suggestion' or
 				  				  table_name= 'image_annotation_suggestion_revision' or
 				  				  table_name = 'annotation_suggestion_data' or
-				  				  table_name = 'user_image_annotation_suggestion'
+				  				  table_name = 'user_image_annotation_suggestion' or
+								  table_name = 'image_annotation_refinement' or
+								  table_name = 'image_annotation_suggestion_refinement'
 				  			GROUP BY table_name`)
 	if err != nil {
 		return err
@@ -67,8 +69,12 @@ func MakeAnnotationsProductive(tx pgx.Tx, trendingLabel string, labelId int64) e
 		return errors.New("either the image_annotation_revision or the image_annotation_suggestion_revision table has more columns than expected!")
 	}
 
+	if tableToColumnsMapping["image_annotation_refinement"] != 6 || tableToColumnsMapping["image_annotation_suggestion_refinement"] != 6 {
+		return errors.New("either the image_annotation_refinement or the image_annotation_suggestion_refinement table has more columns than expected!")
+	}
+
 	tempTables := []string{"temp_image_annotation_mapping", "temp_annotation_data_mapping", "temp_image_annotation_revision_mapping",
-		"temp_annotation_data_revision_mapping"}
+		"temp_annotation_data_revision_mapping", "temp_image_annotation_refinement_mapping"}
 
 	for _, tempTable := range tempTables {
 		_, err := tx.Exec(context.TODO(), fmt.Sprintf(`DROP TABLE IF EXISTS %s`, tempTable)) //controlled input, so no sql injection possible
@@ -153,6 +159,23 @@ func MakeAnnotationsProductive(tx pgx.Tx, trendingLabel string, labelId int64) e
 		return err
 	}
 
+
+	_, err = tx.Exec(context.TODO(),
+		`CREATE TEMPORARY TABLE temp_image_annotation_refinement_mapping(old_image_annotation_refinement_id bigint, new_image_annotation_refinement_id bigint,
+										old_annotation_data_id bigint, new_annotation_data_id bigint)`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(context.TODO(),
+		`INSERT INTO temp_image_annotation_refinement_mapping(old_image_annotation_refinement_id, new_image_annotation_refinement_id, old_annotation_data_id, new_annotation_data_id)
+			SELECT r.id, nextval('image_annotation_refinement_id_seq') as new_image_annotation_refinement_id, t.old_annotation_data_id as old_annotation_data_id, t.new_annotation_data_id as new_annotation_data_id 
+			FROM image_annotation_suggestion_refinement r
+			JOIN temp_annotation_data_mapping t ON t.old_annotation_data_id = r.annotation_suggestion_data_id`)
+	if err != nil {
+		return err
+	}
+
 	//insert
 	var insertedImageAnnotationRows int64 = 0
 	err = tx.QueryRow(context.TODO(),
@@ -185,6 +208,21 @@ func MakeAnnotationsProductive(tx pgx.Tx, trendingLabel string, labelId int64) e
 								RETURNING 1
 					   )
 					   SELECT count(*) FROM rows`).Scan(&insertedAnnotationDataRows)
+	if err != nil {
+		return err
+	}
+
+	var insertedImageAnnotationRefinementRows int64 = 0
+	err = tx.QueryRow(context.TODO(),
+			`WITH rows AS (
+							 INSERT INTO image_annotation_refinement(id, annotation_data_id, label_id, num_of_valid, sys_period, fingerprint_of_last_modification)
+							 	SELECT new_image_annotation_refinement_id, new_annotation_data_id, r.label_id, r.num_of_valid, r.sys_period, r.fingerprint_of_last_modification
+									FROM temp_image_annotation_refinement_mapping t
+									JOIN image_annotation_suggestion_refinement r ON r.id = t.old_image_annotation_refinement_id
+
+							    RETURNING 1
+						  )
+						  SELECT count(*) FROM rows`).Scan(&insertedImageAnnotationRefinementRows)
 	if err != nil {
 		return err
 	}
@@ -235,6 +273,23 @@ func MakeAnnotationsProductive(tx pgx.Tx, trendingLabel string, labelId int64) e
 					   SELECT count(*) FROM rows`).Scan(&insertedUserImageAnnotationRows)
 
 	//delete
+	var deletedImageAnnotationSuggestionRefinementRows int64 = 0
+	err = tx.QueryRow(context.TODO(),
+		`WITH rows AS (
+						DELETE FROM image_annotation_suggestion_refinement WHERE id IN
+							(SELECT old_image_annotation_refinement_id FROM temp_image_annotation_refinement_mapping)
+						RETURNING 1
+					  )
+					  SELECT count(*) FROM rows`).Scan(&deletedImageAnnotationSuggestionRefinementRows)
+	if err != nil {
+		return err
+	}
+
+	if insertedImageAnnotationRefinementRows != deletedImageAnnotationSuggestionRefinementRows {
+		return errors.New("inserted image_annotation_refinement rows differ from deleted image_annoation_suggestion_refinment rows!")
+	}
+
+
 	var deletedUserImageAnnotationSuggestionRows int64 = 0
 	err = tx.QueryRow(context.TODO(),
 		`WITH rows AS (
