@@ -9,11 +9,11 @@ import (
 
 func (p *ImageMonkeyDatabase) GetPgStatStatements() ([]datastructures.PgStatStatementResult, error) {
 	res := []datastructures.PgStatStatementResult{}
-	
+
 	rows, err := p.db.Query(context.TODO(),
 							`SELECT 
-  								(total_time / 1000 / 60) as total, 
- 	 							(total_time/calls) as avg, 
+  								(total_exec_time / 1000 / 60) as total, 
+ 	 							(total_exec_time/calls) as avg, 
   								query 
 							 FROM pg_stat_statements 
 							 ORDER BY 1 DESC 
@@ -23,7 +23,7 @@ func (p *ImageMonkeyDatabase) GetPgStatStatements() ([]datastructures.PgStatStat
 		raven.CaptureError(err, nil)
 		return res, err
 	}
-	
+
 	defer rows.Close()
 
 	for rows.Next() {
@@ -35,7 +35,7 @@ func (p *ImageMonkeyDatabase) GetPgStatStatements() ([]datastructures.PgStatStat
 			return res, err
 		}
 
-		res = append(res, r) 
+		res = append(res, r)
 	}
 
 	return res, nil

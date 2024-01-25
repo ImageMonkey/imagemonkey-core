@@ -1883,9 +1883,9 @@ func (p *ImageMonkeyDatabase) GetAvailableAnnotationTasks(apiUser datastructures
                       FROM
                       (
                         SELECT qq.image_key, qq.image_width, qq.image_height,
-                        CASE WHEN qq.validation_uuids <> '' THEN unnest(string_to_array(qq.validation_uuids, ',')) ELSE null END as validation_uuid,
-						qq.image_unlocked, CASE WHEN qq.label_types is not null THEN unnest(qq.label_types) ELSE unnest('{null}'::boolean[]) END as label_types,
-						CASE WHEN qq.filtered_accessors is not null THEN unnest(qq.filtered_accessors) ELSE unnest('{null}'::text[]) END as accessor
+                        unnest(CASE WHEN qq.validation_uuids <> '' THEN string_to_array(qq.validation_uuids, ',') ELSE '{null}' END) as validation_uuid,
+						qq.image_unlocked, unnest(CASE WHEN qq.label_types is not null THEN qq.label_types ELSE '{null}' END) as label_types,
+						unnest(CASE WHEN qq.filtered_accessors is not null THEN qq.filtered_accessors ELSE '{null}' END) as accessor
                         FROM
                         (
                               SELECT q.image_key, q.image_width, q.image_height, q.validation_uuids,

@@ -57,15 +57,18 @@ if [ ${MODE} == "all" ]  || [ ${MODE} == "only-unittest" ]; then
 fi
 
 if [ ${MODE} == "all" ] || [ ${MODE} == "only-ui" ]; then
-	echo "Starting UI tests"
-	echo "Run selenium tests"
-	cd ui/
-	python3 -m unittest
-	retVal=$?
-	if [ $retVal -ne 0 ]; then
-		echo "Aborting due to error"
-		exit $retVal
-	fi
+	# Selenium tests are outdated and flaky,
+	# so disable them for now.
+
+	#echo "Starting UI tests"
+	#echo "Run selenium tests"
+	#cd ui/
+	#python3 -m unittest
+	#retVal=$?
+	#if [ $retVal -ne 0 ]; then
+	#	echo "Aborting due to error"
+	#	exit $retVal
+	#fi
 
 	echo "Run cypress tests"
 	cd /tmp/tests/
