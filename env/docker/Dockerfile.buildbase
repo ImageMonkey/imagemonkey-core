@@ -1,4 +1,4 @@
-FROM golang:1.14.4-buster
+FROM golang:1.21.6-bullseye
 
 ENV GOPATH=/home/go
 ENV GOBIN=/home/go/bin
