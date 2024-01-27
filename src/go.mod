@@ -27,7 +27,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	gocv.io/x/gocv v0.20.0
-	golang.org/x/crypto v0.9.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/h2non/bimg.v1 v1.0.19
 	gopkg.in/resty.v1 v1.12.0
