@@ -21,7 +21,7 @@ require (
 	github.com/jackc/pgconn v1.1.0
 	github.com/jackc/pgtype v1.0.2
 	github.com/jackc/pgx/v4 v4.1.2
-	github.com/justinas/nosurf v0.0.0-20190416172904-05988550ea18 // indirect
+	github.com/justinas/nosurf v1.1.1 // indirect
 	github.com/lib/pq v1.2.0
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
