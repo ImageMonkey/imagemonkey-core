@@ -708,3 +708,10 @@ func TestQueryImageNumAnnotations2(t *testing.T) {
 	equals(t, len(parseResult.QueryValues), 0)
 	equals(t, parseResult.Query, "q.image_num_annotations=1")
 }
+
+func TestQueryCanContainSlash(t *testing.T) {
+	queryParser := NewQueryParser("a/b")
+	parseResult, err := queryParser.Parse()
+	ok(t, err)
+	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[]")
+}
