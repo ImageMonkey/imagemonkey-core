@@ -10,7 +10,7 @@ require (
 	github.com/bbernhard/imghash v0.0.0-20151018235733-6afea89d4c0e
 	github.com/certifi/gocertifi v0.0.0-20190506164543-d2eda7129713 // indirect
 	github.com/getsentry/raven-go v0.2.0
-	github.com/gin-gonic/gin v1.7.7
+	github.com/gin-gonic/gin v1.9.1
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/gomodule/redigo v2.0.0+incompatible
@@ -21,13 +21,13 @@ require (
 	github.com/jackc/pgconn v1.1.0
 	github.com/jackc/pgtype v1.0.2
 	github.com/jackc/pgx/v4 v4.1.2
-	github.com/justinas/nosurf v0.0.0-20190416172904-05988550ea18 // indirect
+	github.com/justinas/nosurf v1.1.1 // indirect
 	github.com/lib/pq v1.2.0
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	gocv.io/x/gocv v0.20.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/crypto v0.17.0
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/h2non/bimg.v1 v1.0.19
 	gopkg.in/resty.v1 v1.12.0

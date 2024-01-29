@@ -13,6 +13,6 @@ RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | su
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	postgresql-client-${POSTGRES_CLIENT_VERSION} \
-	# until this pull request (https://github.com/h2non/bimg/pull/266) is merged and https://github.com/h2non/bimg/issues/269 is resolved, use the fork
+	# until this pull request (https://github.com/h2non/bimg/pull/466) is merged, use this fork
 	&& curl -s https://raw.githubusercontent.com/bbernhard/bimg/master/preinstall.sh | bash - \
 	&& rm -rf /var/lib/apt/lists/*
