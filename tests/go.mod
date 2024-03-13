@@ -10,10 +10,9 @@ require (
 	github.com/chenzhuoyu/iasm v0.9.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/gin-gonic/gin v1.9.1 // indirect
 	github.com/go-playground/validator/v10 v10.17.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
-	github.com/gomodule/redigo v1.8.9
+	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/go-jsonnet v0.20.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/jackc/pgconn v1.14.1 // indirect
@@ -32,7 +31,7 @@ require (
 	golang.org/x/oauth2 v0.16.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/resty.v1 v1.12.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
