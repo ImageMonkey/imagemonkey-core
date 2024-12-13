@@ -62,7 +62,7 @@ jobs:
           echo "Preparing env file for github actions job"
           cp env/env.ci env/env_api_tests.ci
           echo "TEST_MODE=only-api" >> env/env_api_tests.ci
-          docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
+          docker compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
       
   ui-test:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
           echo "Preparing env file for github actions job"
           cp env/env.ci env/env_ui_tests.ci
           echo "TEST_MODE=only-ui" >> env/env_ui_tests.ci
-          docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
+          docker compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
       - name: Upload cypress screenshots and videos of failed tests
         if: failure()
         uses: actions/upload-artifact@v2
@@ -123,4 +123,4 @@ jobs:
           echo "Preparing env file for github actions job"
           cp env/env.ci env/env_unit_tests.ci
           echo "TEST_MODE=only-unittest" >> env/env_unit_tests.ci
-          docker-compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing 
+          docker compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
