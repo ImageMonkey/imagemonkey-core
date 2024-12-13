@@ -92,7 +92,7 @@ jobs:
           docker compose -f env/docker/docker-compose.ci.yml up --abort-on-container-exit --exit-code-from testing
       - name: Upload cypress screenshots and videos of failed tests
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: cypress-screenshots-and-videos-of-failed-tests
           path: test_output/*
