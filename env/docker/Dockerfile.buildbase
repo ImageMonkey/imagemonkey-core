@@ -19,7 +19,7 @@ RUN mkdir -p /home/go/bin \
 	&& cd /tmp/src \
 	&& go get -u -d gocv.io/x/gocv \
 	&& cd /home/go/pkg/mod/gocv.io/x \
-	&& cd $(ls -t | head -n 1) \ #pick the most recent version in case there are multiple
+	&& cd $(ls -t | head -n 1) #pick the most recent version in case there are multiple \
 	&& make install \
 	&& rm -rf /tmp/src \
 	&& rm -rf /home/go/bin
