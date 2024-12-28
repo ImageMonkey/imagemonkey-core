@@ -3,14 +3,14 @@
 package commons
 
 import (
-	"gopkg.in/src-d/go-git.v4"
+	"github.com/go-git/go-git/v5"
 	"golang.org/x/oauth2"
 	"github.com/gofrs/uuid"
-	http "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	http "github.com/go-git/go-git/v5/plumbing/transport/http"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/google/go-github/github"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"os"
 	"errors"
 	"context"
