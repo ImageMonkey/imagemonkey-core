@@ -1,6 +1,6 @@
 module github.com/bbernhard/imagemonkey-core-tests
 
-go 1.24.0
+go 1.24.6
 
 require (
 	github.com/bbernhard/imagemonkey-core v0.10.8
