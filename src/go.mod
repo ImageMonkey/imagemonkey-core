@@ -23,7 +23,7 @@ require (
 	github.com/lib/pq v1.10.2
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/sirupsen/logrus v1.9.1
-	gocv.io/x/gocv v0.39.0
+	gocv.io/x/gocv v0.42.0
 	golang.org/x/crypto v0.45.0
 	golang.org/x/oauth2 v0.27.0
 	gopkg.in/h2non/bimg.v1 v1.0.19

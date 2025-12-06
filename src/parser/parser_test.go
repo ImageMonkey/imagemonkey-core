@@ -1,12 +1,12 @@
 package parser
 
 import (
-	"testing"
-	"reflect"
-	"runtime"
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strings"
+	"testing"
 )
 
 // ok fails the test if an err is not nil.
@@ -36,16 +36,15 @@ func equals(tb testing.TB, exp, act interface{}) {
 	}
 }
 
-
-func TestParserCorrect(t *testing.T) {  
+func TestParserCorrect(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c")
 	_, err := queryParser.Parse(1)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 }
 
-func TestParserIncorrectSyntax(t *testing.T) {  
+func TestParserIncorrectSyntax(t *testing.T) {
 	queryParser := NewQueryParser("a & b & |")
 	_, err := queryParser.Parse(1)
 	if err == nil {
@@ -53,7 +52,7 @@ func TestParserIncorrectSyntax(t *testing.T) {
 	}
 }
 
-func TestParserIncorrectSyntax2(t *testing.T) {  
+func TestParserIncorrectSyntax2(t *testing.T) {
 	queryParser := NewQueryParser("a |")
 	_, err := queryParser.Parse(1)
 	if err == nil {
@@ -61,7 +60,7 @@ func TestParserIncorrectSyntax2(t *testing.T) {
 	}
 }
 
-func TestParserIncorrectBrackets(t *testing.T) {  
+func TestParserIncorrectBrackets(t *testing.T) {
 	queryParser := NewQueryParser("a & b & )")
 	_, err := queryParser.Parse(1)
 	if err == nil {
@@ -69,7 +68,7 @@ func TestParserIncorrectBrackets(t *testing.T) {
 	}
 }
 
-func TestParserIncorrectLength(t *testing.T) {  
+func TestParserIncorrectLength(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c & d & e & f & f & g & h & z & u)")
 	_, err := queryParser.Parse(1)
 	if err == nil {
@@ -77,7 +76,7 @@ func TestParserIncorrectLength(t *testing.T) {
 	}
 }
 
-func TestParserKeepWhitespacesInAssigment(t *testing.T) {  
+func TestParserKeepWhitespacesInAssigment(t *testing.T) {
 	queryParser := NewQueryParser("a | b.c = 'hello world'")
 	_, err := queryParser.Parse(1)
 	if err != nil {
@@ -85,7 +84,7 @@ func TestParserKeepWhitespacesInAssigment(t *testing.T) {
 	}
 }
 
-func TestParserAssignment(t *testing.T) {  
+func TestParserAssignment(t *testing.T) {
 	queryParser := NewQueryParser("hello='world'")
 	_, err := queryParser.Parse(1)
 	if err != nil {
@@ -93,7 +92,7 @@ func TestParserAssignment(t *testing.T) {
 	}
 }
 
-func TestParserAssignment1(t *testing.T) {  
+func TestParserAssignment1(t *testing.T) {
 	queryParser := NewQueryParser("a & hello='big world'")
 	_, err := queryParser.Parse(1)
 	if err != nil {
@@ -148,7 +147,6 @@ func TestWrongComplexQuery2(t *testing.T) {
 		t.Errorf("Expected not nil, but got nil: %s", err.Error())
 	}
 }
-
 
 func TestComplexQuery1(t *testing.T) {
 	queryParser := NewQueryParserV2("(a & (string with spaces | c) | d)")
@@ -311,5 +309,3 @@ func TestQueryImageWidth(t *testing.T) {
 	ok(t, err)
 	equals(t, strings.Contains(parseResult.Query, "image_width>50"), true)
 }
-
-

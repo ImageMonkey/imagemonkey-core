@@ -7,7 +7,7 @@ COPY src/go.mod /tmp/src/go.mod
 COPY src/go.sum /tmp/src/go.sum
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-	sudo lsb-release ca-certificates \
+	sudo lsb-release ca-certificates unzip cmake \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh --directory-prefix=/usr/bin \

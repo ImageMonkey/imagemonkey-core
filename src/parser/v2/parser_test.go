@@ -1,11 +1,11 @@
 package imagemonkeyquerylang
 
 import (
-	"testing"
-	"reflect"
-	"runtime"
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"runtime"
+	"testing"
 )
 
 // ok fails the test if an err is not nil.
@@ -35,63 +35,62 @@ func equals(tb testing.TB, exp, act interface{}) {
 	}
 }
 
-
-func TestParserCorrect(t *testing.T) {  
+func TestParserCorrect(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	equals(t, len(parseResult.QueryValues), 3)
 	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
 	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] AND q.accessors @> ARRAY[$2]::text[] AND q.accessors @> ARRAY[$3]::text[]")
 }
 
-func TestParserCorrectWithParentheses(t *testing.T) {  
+func TestParserCorrectWithParentheses(t *testing.T) {
 	queryParser := NewQueryParser("(a & b & c)")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	equals(t, len(parseResult.QueryValues), 3)
 	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
 	equals(t, parseResult.Query, "(q.accessors @> ARRAY[$1]::text[] AND q.accessors @> ARRAY[$2]::text[] AND q.accessors @> ARRAY[$3]::text[])")
 }
 
-func TestParserCorrectWithMultipleParentheses(t *testing.T) {  
+func TestParserCorrectWithMultipleParentheses(t *testing.T) {
 	queryParser := NewQueryParser("(a & (b | c))")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	equals(t, len(parseResult.QueryValues), 3)
 	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
 	equals(t, parseResult.Query, "(q.accessors @> ARRAY[$1]::text[] AND (q.accessors @> ARRAY[$2]::text[] OR q.accessors @> ARRAY[$3]::text[]))")
 }
 
-func TestParserCorrectWithMultipleParentheses2(t *testing.T) {  
+func TestParserCorrectWithMultipleParentheses2(t *testing.T) {
 	queryParser := NewQueryParser("(a | (b | c))")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	equals(t, len(parseResult.QueryValues), 3)
 	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
 	equals(t, parseResult.Query, "(q.accessors @> ARRAY[$1]::text[] OR (q.accessors @> ARRAY[$2]::text[] OR q.accessors @> ARRAY[$3]::text[]))")
 }
 
-func TestParserCorrectWithMultipleParentheses3(t *testing.T) {  
+func TestParserCorrectWithMultipleParentheses3(t *testing.T) {
 	queryParser := NewQueryParser("((a | (b | c)))")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	equals(t, len(parseResult.QueryValues), 3)
 	equals(t, parseResult.QueryValues, []interface{}{"a", "b", "c"})
 	equals(t, parseResult.Query, "((q.accessors @> ARRAY[$1]::text[] OR (q.accessors @> ARRAY[$2]::text[] OR q.accessors @> ARRAY[$3]::text[])))")
 }
 
-func TestParserIncorrectSyntax(t *testing.T) {  
+func TestParserIncorrectSyntax(t *testing.T) {
 	queryParser := NewQueryParser("a & b & |")
 	_, err := queryParser.Parse()
 	if err == nil {
@@ -99,7 +98,7 @@ func TestParserIncorrectSyntax(t *testing.T) {
 	}
 }
 
-func TestParserIncorrectSyntax2(t *testing.T) {  
+func TestParserIncorrectSyntax2(t *testing.T) {
 	queryParser := NewQueryParser("a |")
 	_, err := queryParser.Parse()
 	if err == nil {
@@ -107,7 +106,7 @@ func TestParserIncorrectSyntax2(t *testing.T) {
 	}
 }
 
-func TestParserIncorrectBrackets(t *testing.T) {  
+func TestParserIncorrectBrackets(t *testing.T) {
 	queryParser := NewQueryParser("a & b & )")
 	_, err := queryParser.Parse()
 	if err == nil {
@@ -115,7 +114,7 @@ func TestParserIncorrectBrackets(t *testing.T) {
 	}
 }
 
-func TestParserIncorrectLength(t *testing.T) {  
+func TestParserIncorrectLength(t *testing.T) {
 	queryParser := NewQueryParser("a & b & c & d & e & f & f & g & h & z & u)")
 	_, err := queryParser.Parse()
 	if err == nil {
@@ -123,7 +122,7 @@ func TestParserIncorrectLength(t *testing.T) {
 	}
 }
 
-func TestParserKeepWhitespacesInAssigment(t *testing.T) {  
+func TestParserKeepWhitespacesInAssigment(t *testing.T) {
 	queryParser := NewQueryParser("a | b.c = 'hello world'")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
@@ -134,7 +133,7 @@ func TestParserKeepWhitespacesInAssigment(t *testing.T) {
 	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] OR q.accessors @> ARRAY[$2]::text[]")
 }
 
-func TestParserKeepWhitespacesInAssigmentWithMultipleSpacesBefore(t *testing.T) {  
+func TestParserKeepWhitespacesInAssigmentWithMultipleSpacesBefore(t *testing.T) {
 	queryParser := NewQueryParser("a | b.c   =   'hello world'")
 	parseResult, err := queryParser.Parse()
 	if err != nil {
@@ -145,7 +144,7 @@ func TestParserKeepWhitespacesInAssigmentWithMultipleSpacesBefore(t *testing.T) 
 	equals(t, parseResult.Query, "q.accessors @> ARRAY[$1]::text[] OR q.accessors @> ARRAY[$2]::text[]")
 }
 
-func TestParserAssignment(t *testing.T) {  
+func TestParserAssignment(t *testing.T) {
 	queryParser := NewQueryParser("hello='world'")
 	_, err := queryParser.Parse()
 	if err != nil {
@@ -153,7 +152,7 @@ func TestParserAssignment(t *testing.T) {
 	}
 }
 
-func TestParserAssignment1(t *testing.T) {  
+func TestParserAssignment1(t *testing.T) {
 	queryParser := NewQueryParser("a & hello='big world'")
 	_, err := queryParser.Parse()
 	if err != nil {
