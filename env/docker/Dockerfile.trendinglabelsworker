@@ -1,4 +1,4 @@
-FROM golang:1.24.6-bullseye
+FROM golang:1.26-bookworm
 
 ENV USE_SENTRY=true
 ENV SINGLESHOT=false
