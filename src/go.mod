@@ -24,7 +24,7 @@ require (
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/sirupsen/logrus v1.9.3
 	gocv.io/x/gocv v0.42.0
-	golang.org/x/crypto v0.51.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/oauth2 v0.27.0
 	gopkg.in/h2non/bimg.v1 v1.0.19
 	gopkg.in/resty.v1 v1.12.0
