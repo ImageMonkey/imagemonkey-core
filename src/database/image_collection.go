@@ -1,15 +1,16 @@
 package imagemonkeydb
 
 import (
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgconn"
+	"context"
+	"fmt"
+	"time"
+
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
-	"fmt"
-	"time"
-	"context"
 )
 
 func (p *ImageMonkeyDatabase) GetImageCollections(apiUser datastructures.APIUser, apiBaseUrl string) ([]datastructures.ImageCollection, error) {

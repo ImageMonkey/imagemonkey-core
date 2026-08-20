@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 func (p *ImageMonkeyDatabase) GetNumOfDonatedImages() (int64, error) {

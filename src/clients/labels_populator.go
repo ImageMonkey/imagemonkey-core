@@ -1,12 +1,13 @@
 package clients
 
 import (
-	"errors"
-	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	commons "github.com/bbernhard/imagemonkey-core/commons"
-	"github.com/jackc/pgx/v4"
-	log "github.com/sirupsen/logrus"
 	"context"
+	"errors"
+
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/jackc/pgx/v5"
+	log "github.com/sirupsen/logrus"
 )
 
 type LabelsPopulatorClient struct {

@@ -2,8 +2,9 @@ package imagemonkeydb
 
 import (
 	"context"
+
 	"github.com/getsentry/raven-go"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ImageMonkeyDatabase struct {
@@ -21,8 +22,8 @@ func (p *ImageMonkeyDatabase) Open(connectionString string, maxNumConnections in
 	}
 
 	cfg.MaxConns = maxNumConnections
-	
-	p.db, err = pgxpool.ConnectConfig(context.Background(), cfg)
+
+	p.db, err = pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		return err
 	}

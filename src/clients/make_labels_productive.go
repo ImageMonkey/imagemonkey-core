@@ -1,16 +1,17 @@
 package clients
 
 import (
-	"golang.org/x/oauth2"
-	"errors"
 	"context"
-	"github.com/gofrs/uuid"
-	"github.com/google/go-github/github"
-	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"errors"
+
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/gofrs/uuid"
+	"github.com/google/go-github/github"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
-	"github.com/jackc/pgx/v4"
+	"golang.org/x/oauth2"
 )
 
 type MakeLabelsProductiveClient struct {

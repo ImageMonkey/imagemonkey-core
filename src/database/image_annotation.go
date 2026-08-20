@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
 	"github.com/getsentry/raven-go"
 	"github.com/gofrs/uuid"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
-	"image"
 )
 
 func MakeAnnotationsProductive(tx pgx.Tx, trendingLabel string, labelId int64) error {

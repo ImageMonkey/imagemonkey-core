@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -1,15 +1,16 @@
 package tests
 
 import (
-	"github.com/jackc/pgx/v4"
 	"bytes"
-	"os/exec"
-	"fmt"
-	"errors"
-	"math/rand"
-	"time"
-	"github.com/bbernhard/imagemonkey-core/commons"
 	"context"
+	"errors"
+	"fmt"
+	"math/rand"
+	"os/exec"
+	"time"
+
+	"github.com/bbernhard/imagemonkey-core/commons"
+	"github.com/jackc/pgx/v5"
 )
 
 func random(min, max int) int {

@@ -2,7 +2,7 @@ package main
 
 import (
 	commons "github.com/bbernhard/imagemonkey-core/commons"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
 	"context"
 	"flag"

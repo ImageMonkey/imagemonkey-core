@@ -4,15 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
+
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	imagemonkeydb "github.com/bbernhard/imagemonkey-core/database"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
 	"github.com/google/go-github/github"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"time"
 )
 
 var db *pgx.Conn

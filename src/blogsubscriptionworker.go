@@ -1,17 +1,18 @@
 package main
 
 import (
-	"fmt"
-	log "github.com/sirupsen/logrus"
-	"flag"
-	"github.com/gomodule/redigo/redis"
-	"time"
-	"github.com/jackc/pgx/v4"
-	"encoding/json"
-	"github.com/getsentry/raven-go"
-	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
-	commons "github.com/bbernhard/imagemonkey-core/commons"
 	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"time"
+
+	commons "github.com/bbernhard/imagemonkey-core/commons"
+	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
+	"github.com/getsentry/raven-go"
+	"github.com/gomodule/redigo/redis"
+	"github.com/jackc/pgx/v5"
+	log "github.com/sirupsen/logrus"
 )
 
 var db *pgx.Conn

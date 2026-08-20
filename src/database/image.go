@@ -1,17 +1,18 @@
 package imagemonkeydb
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
 	"github.com/getsentry/raven-go"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
-	"time"
-	"context"
-	"github.com/jackc/pgx/v4"
 )
 
 type ImageDonationErrorType int
