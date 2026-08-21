@@ -1,16 +1,17 @@
 package main
 
 import (
-	commons "github.com/bbernhard/imagemonkey-core/commons"
-	"github.com/jackc/pgx/v5"
-	log "github.com/sirupsen/logrus"
 	"context"
 	"flag"
-	"os"
 	"fmt"
-	"github.com/jackc/pgtype"
-	"golang.org/x/oauth2"
+	"os"
+
+	commons "github.com/bbernhard/imagemonkey-core/commons"
 	"github.com/google/go-github/github"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 )
 
 var unrecoverableDeletedAnnotationData int = 0

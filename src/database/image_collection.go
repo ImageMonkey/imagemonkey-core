@@ -8,8 +8,8 @@ import (
 	commons "github.com/bbernhard/imagemonkey-core/commons"
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	"github.com/getsentry/raven-go"
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	log "github.com/sirupsen/logrus"
 )
 

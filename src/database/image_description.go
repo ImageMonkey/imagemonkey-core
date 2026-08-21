@@ -3,12 +3,13 @@ package imagemonkeydb
 import (
 	"context"
 	"encoding/json"
+
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	languages "github.com/bbernhard/imagemonkey-core/languages"
 	"github.com/getsentry/raven-go"
 	"github.com/gofrs/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	log "github.com/sirupsen/logrus"
-	"github.com/jackc/pgtype"
 )
 
 type UnlockImageDescriptionErrorType int

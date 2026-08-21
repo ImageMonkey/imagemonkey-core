@@ -9,8 +9,8 @@ import (
 	datastructures "github.com/bbernhard/imagemonkey-core/datastructures"
 	parser "github.com/bbernhard/imagemonkey-core/parser/v2"
 	"github.com/getsentry/raven-go"
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	log "github.com/sirupsen/logrus"
 )
 
