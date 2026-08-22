@@ -97,7 +97,7 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 		return AddImageDescriptionInternalError
 	}
 
-	pgxLanguageIds := &pgtype.Int8Array{}
+	pgxLanguageIds := &pgtype.Array[int64]{}
 	pgxLanguageIds.Set(languageIds)
 
 	_, err = tx.Exec(context.TODO(),

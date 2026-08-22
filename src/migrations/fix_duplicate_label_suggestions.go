@@ -443,18 +443,18 @@ func unifyImageAnnotationSuggestions(tx pgx.Tx, sourceIds *pgtype.Int8Array, all
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) error {
-	sourceIds := &pgtype.Int8Array{}
+	sourceIds := &pgtype.Array[int64]{}
 	sourceIds.Set(source)
 
 	temp := []int64{}
 	temp = append(temp, source...)
 	temp = append(temp, target)
-	allIds := &pgtype.Int8Array{}
+	allIds := &pgtype.Array[int64]{}
 	allIds.Set(temp)
 
 	err := unifyImageLabelSuggestions(tx, sourceIds, allIds, target)
