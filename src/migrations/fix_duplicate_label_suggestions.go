@@ -454,8 +454,10 @@ func unifyDuplicateLabelSuggestions(tx pgx.Tx, source []int64, target int64) err
 	temp := []int64{}
 	temp = append(temp, source...)
 	temp = append(temp, target)
-	allIds := &pgtype.Array[int64]{}
-	allIds.Set(temp)
+	allIds := &pgtype.Array[int64]{
+		Elements: temp,
+		Valid:    true,
+	}
 
 	err := unifyImageLabelSuggestions(tx, sourceIds, allIds, target)
 	if err != nil {
