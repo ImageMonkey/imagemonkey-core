@@ -97,8 +97,10 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 		return AddImageDescriptionInternalError
 	}
 
-	pgxLanguageIds := &pgtype.Array[int64]{}
-	pgxLanguageIds.Set(languageIds)
+	pgxLanguageIds := &pgtype.Array[int64]{
+		Elements: languageIds,
+		Valid:    true,
+	}
 
 	_, err = tx.Exec(context.TODO(),
 		`INSERT INTO image_description(image_id, description, num_of_valid, num_of_invalid, state, processed_by, uuid, language_id)
