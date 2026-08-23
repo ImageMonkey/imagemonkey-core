@@ -76,7 +76,7 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 
 	defer rows.Close()
 
-	var languageIds []int64
+	languageIds := []int64{}
 	for rows.Next() {
 		var languageId int64
 		err = rows.Scan(&languageId)
