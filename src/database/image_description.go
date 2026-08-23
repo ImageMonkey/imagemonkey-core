@@ -8,7 +8,6 @@ import (
 	languages "github.com/bbernhard/imagemonkey-core/languages"
 	"github.com/getsentry/raven-go"
 	"github.com/gofrs/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -97,17 +96,12 @@ func (p *ImageMonkeyDatabase) AddImageDescriptions(imageId string, descriptions 
 		return AddImageDescriptionInternalError
 	}
 
-	pgxLanguageIds := &pgtype.Array[int64]{
-		Elements: languageIds,
-		Valid:    true,
-	}
-
 	_, err = tx.Exec(context.TODO(),
 		`INSERT INTO image_description(image_id, description, num_of_valid, num_of_invalid, state, processed_by, uuid, language_id)
 							SELECT (SELECT i.id FROM image i WHERE i.key = $1), 
 									unnest($2::text[]), 0, 0, 'unknown', null, uuid_generate_v4(), unnest($3::bigint[])
 						  ON CONFLICT(image_id, description) DO UPDATE SET num_of_valid = image_description.num_of_valid + 1`,
-		imageId, imageDescriptions, pgxLanguageIds)
+		imageId, imageDescriptions, languageIds)
 	if err != nil {
 		tx.Rollback(context.TODO())
 		log.Error("[Adding image description] Couldn't add image description: ", err.Error())
